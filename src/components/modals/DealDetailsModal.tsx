@@ -214,81 +214,102 @@ export function DealDetailsModal({
   };
 
   const fetchAdditionalCardData = async () => {
-    // Buscar dados do card específico com contato relacionado
-    const { data: card, error: cardError } = await supabase
-      .from('pipeline_cards')
-      .select(`
-        id,
-        title,
-        column_id,
-        pipeline_id,
-        contact_id,
-        contacts (
-          id,
-          name,
-          email,
-          phone,
-          profile_image_url
-        ),
-        pipelines (
-          id,
-          name,
-          type
-        )
-      `)
-      .eq('id', cardId)
-      .maybeSingle();
+    try {
+      console.log('🔍 Buscando dados do card:', cardId);
       
-    if (cardError || !card) {
-      console.error('❌ Erro ao buscar card:', cardError || 'Card não encontrado');
-      toast({
-        title: "Erro", 
-        description: cardError?.message || "Card não encontrado ou não foi possível carregar os dados.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    console.log('✅ Card encontrado:', card);
-    
-    // Definir dados do contato
-    const contact = card.contacts;
-    if (contact) {
-      setContactId(contact.id);
-      setContactData({
-        name: contact.name || 'Nome não informado',
-        email: contact.email,
-        phone: contact.phone,
-        profile_image_url: contact.profile_image_url
-      });
-
-      // Buscar todos os cards deste contato para contar
-      const { data: allCards } = await supabase
+      // Buscar dados do card específico sem joins primeiro
+      const { data: card, error: cardError } = await supabase
         .from('pipeline_cards')
-        .select('id, pipeline_id, pipelines (id, name, type)')
-        .eq('contact_id', contact.id)
-        .eq('status', 'aberto');
-
-      if (allCards && allCards.length > 0) {
-        // Extrair pipelines únicos
-        const uniquePipelines = allCards.reduce((acc, cardItem) => {
-          const pipeline = cardItem.pipelines;
-          if (pipeline && !acc.find(p => p.id === pipeline.id)) {
-            acc.push(pipeline);
-          }
-          return acc;
-        }, []);
+        .select('*')
+        .eq('id', cardId)
+        .maybeSingle();
         
-        setContactPipelines(uniquePipelines);
-        setPipelineCardsCount(allCards.length);
+      if (cardError) {
+        console.error('❌ Erro na consulta do card:', cardError);
+        toast({
+          title: "Erro", 
+          description: `Erro ao buscar card: ${cardError.message}`,
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Carregar tags e atividades em paralelo
-      await Promise.all([
-        fetchContactTags(contact.id),
-        fetchActivities(contact.id)
-      ]);
+      if (!card) {
+        console.error('❌ Card não encontrado:', cardId);
+        toast({
+          title: "Erro", 
+          description: "Card não encontrado ou não foi possível carregar os dados.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ Card encontrado:', card);
+      
+      // Buscar dados do contato separadamente
+      if (card.contact_id) {
+        const { data: contact, error: contactError } = await supabase
+          .from('contacts')
+          .select('id, name, email, phone, profile_image_url')
+          .eq('id', card.contact_id)
+          .maybeSingle();
+          
+        if (contact && !contactError) {
+          setContactId(contact.id);
+          setContactData({
+            name: contact.name || 'Nome não informado',
+            email: contact.email,
+            phone: contact.phone,
+            profile_image_url: contact.profile_image_url
+          });
+        }
+      }
+
+      // Buscar todos os cards deste contato para contar (se temos um contato)
+      if (card.contact_id) {
+        const { data: allCards } = await supabase
+          .from('pipeline_cards')
+          .select(`
+            id, 
+            pipeline_id,
+            pipelines!inner (
+              id,
+              name,
+              type
+            )
+          `)
+          .eq('contact_id', card.contact_id)
+          .eq('status', 'aberto');
+
+        if (allCards && allCards.length > 0) {
+          // Extrair pipelines únicos
+          const uniquePipelines = allCards.reduce((acc, cardItem) => {
+            const pipeline = cardItem.pipelines;
+            if (pipeline && !acc.find(p => p.id === pipeline.id)) {
+              acc.push(pipeline);
+            }
+            return acc;
+          }, []);
+          
+          setContactPipelines(uniquePipelines);
+          setPipelineCardsCount(allCards.length);
+        }
+
+        // Carregar tags e atividades em paralelo se temos um contato
+        await Promise.all([
+          fetchContactTags(card.contact_id),
+          fetchActivities(card.contact_id)
+        ]);
+      }
+    } catch (error) {
+      console.error('❌ Erro em fetchAdditionalCardData:', error);
+      toast({
+        title: "Erro",
+        description: "Erro interno ao carregar dados do card.",
+        variant: "destructive",
+      });
     }
+  };
   };
   const fetchContactTags = async (contactId: string) => {
     try {
@@ -1105,5 +1126,6 @@ export function DealDetailsModal({
         onMinuteSelect={handleMinuteSelect}
         isDarkMode={isDarkMode}
       />
-    </Dialog>;
+    </Dialog>
+  );
 }
