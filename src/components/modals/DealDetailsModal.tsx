@@ -23,11 +23,13 @@ import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { useUsersCache } from "@/hooks/useUsersCache";
+
 interface Tag {
   id: string;
   name: string;
   color: string;
 }
+
 interface Activity {
   id: string;
   type: string;
@@ -39,6 +41,7 @@ interface Activity {
     name: string;
   };
 }
+
 interface DealDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -57,6 +60,7 @@ interface DealDetailsModalProps {
     profile_image_url?: string;
   };
 }
+
 interface PipelineStep {
   id: string;
   name: string;
@@ -64,6 +68,7 @@ interface PipelineStep {
   isActive: boolean;
   isCompleted: boolean;
 }
+
 export function DealDetailsModal({
   isOpen,
   onClose,
@@ -120,6 +125,7 @@ export function DealDetailsModal({
   const { toast } = useToast();
   const { selectedPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(currentPipelineId);
+
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
@@ -134,6 +140,7 @@ export function DealDetailsModal({
     id: "contato",
     label: "Contato"
   }];
+
   // Carregar dados quando modal abrir - usando referência confiável do card
   useEffect(() => {
     if (isOpen && cardId) {
@@ -170,6 +177,7 @@ export function DealDetailsModal({
       });
     }
   }, [columns, currentColumnId]);
+
   const fetchCardData = async () => {
     setIsLoadingData(true);
     try {
@@ -310,20 +318,20 @@ export function DealDetailsModal({
       });
     }
   };
-  };
+
   const fetchContactTags = async (contactId: string) => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('contact_tags').select(`
+      const { data, error } = await supabase
+        .from('contact_tags')
+        .select(`
           id,
           tags (
             id,
             name,
             color
           )
-        `).eq('contact_id', contactId);
+        `)
+        .eq('contact_id', contactId);
       if (error) throw error;
       const tags = data?.map(item => item.tags).filter(Boolean) || [];
       setContactTags(tags as Tag[]);
@@ -331,35 +339,39 @@ export function DealDetailsModal({
       console.error('Erro ao buscar tags:', error);
     }
   };
+
   const fetchActivities = async (contactId: string) => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('activities').select(`
+      const { data, error } = await supabase
+        .from('activities')
+        .select(`
           id,
           type,
           subject,
           scheduled_for,
           responsible_id,
           is_completed
-        `).eq('contact_id', contactId).order('scheduled_for', {
-        ascending: true
-      });
+        `)
+        .eq('contact_id', contactId)
+        .order('scheduled_for', { ascending: true });
       if (error) throw error;
       setActivities(data || []);
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
     }
   };
+
   const handleTagAdded = (tag: Tag) => {
     setContactTags(prev => [...prev, tag]);
   };
+
   const handleRemoveTag = async (tagId: string) => {
     try {
-      const {
-        error
-      } = await supabase.from('contact_tags').delete().eq('contact_id', contactId).eq('tag_id', tagId);
+      const { error } = await supabase
+        .from('contact_tags')
+        .delete()
+        .eq('contact_id', contactId)
+        .eq('tag_id', tagId);
       if (error) throw error;
       setContactTags(prev => prev.filter(tag => tag.id !== tagId));
       toast({
@@ -374,6 +386,7 @@ export function DealDetailsModal({
       });
     }
   };
+
   const handleActivityCreated = (activity: Activity) => {
     setActivities(prev => [...prev, activity]);
   };
@@ -509,19 +522,20 @@ export function DealDetailsModal({
       loadUsers();
     }
   }, [activeTab, users.length, loadUsers]);
+
   const handleCompleteActivity = async (activityId: string) => {
     try {
-      const {
-        error
-      } = await supabase.from('activities').update({
-        is_completed: true,
-        completed_at: new Date().toISOString()
-      }).eq('id', activityId);
+      const { error } = await supabase
+        .from('activities')
+        .update({
+          is_completed: true,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', activityId);
       if (error) throw error;
-      setActivities(prev => prev.map(activity => activity.id === activityId ? {
-        ...activity,
-        is_completed: true
-      } : activity));
+      setActivities(prev => prev.map(activity => 
+        activity.id === activityId ? { ...activity, is_completed: true } : activity
+      ));
       toast({
         title: "Atividade concluída",
         description: "A atividade foi marcada como concluída."
@@ -574,15 +588,27 @@ export function DealDetailsModal({
                 </Badge>
                 
                 {/* Tags do contato */}
-                {contactTags.map(tag => <Badge key={tag.id} variant="outline" className={cn("border-gray-300 px-3 py-1 text-xs group relative", isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-600")} style={{
-                borderColor: tag.color,
-                color: tag.color
-              }}>
+                {contactTags.map(tag => (
+                  <Badge 
+                    key={tag.id} 
+                    variant="outline" 
+                    className={cn("border-gray-300 px-3 py-1 text-xs group relative", isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-600")} 
+                    style={{
+                      borderColor: tag.color,
+                      color: tag.color
+                    }}
+                  >
                     {tag.name}
-                    <Button size="icon" variant="ghost" className="ml-1 h-3 w-3 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveTag(tag.id)}>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="ml-1 h-3 w-3 p-0 opacity-0 group-hover:opacity-100 transition-opacity" 
+                      onClick={() => handleRemoveTag(tag.id)}
+                    >
                       <X className="w-2 h-2" />
                     </Button>
-                  </Badge>)}
+                  </Badge>
+                ))}
                 
                 {/* Botão "mais" para adicionar tags - funcional */}
                 {contactId && (
@@ -604,17 +630,33 @@ export function DealDetailsModal({
           </div>
         </DialogHeader>
 
-
         {/* Tabs */}
         <div className={cn("flex border-b", isDarkMode ? "border-gray-600" : "border-gray-200")}>
-          {tabs.map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-3 text-sm font-medium border-b-2 transition-colors", activeTab === tab.id ? "border-yellow-400 text-yellow-600" : "border-transparent", isDarkMode ? activeTab === tab.id ? "text-yellow-400" : "text-gray-400 hover:text-white" : activeTab === tab.id ? "text-yellow-600" : "text-gray-600 hover:text-gray-900")}>
+          {tabs.map(tab => (
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveTab(tab.id)} 
+              className={cn(
+                "px-6 py-3 text-sm font-medium border-b-2 transition-colors", 
+                activeTab === tab.id ? "border-yellow-400 text-yellow-600" : "border-transparent",
+                isDarkMode 
+                  ? activeTab === tab.id 
+                    ? "text-yellow-400" 
+                    : "text-gray-400 hover:text-white" 
+                  : activeTab === tab.id 
+                    ? "text-yellow-600" 
+                    : "text-gray-600 hover:text-gray-900"
+              )}
+            >
               {tab.label}
-            </button>)}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
-          {activeTab === "negocios" && <div className="space-y-6">
+          {activeTab === "negocios" && (
+            <div className="space-y-6">
               {/* Pipeline Selection */}
               <div className="space-y-2">
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
@@ -625,21 +667,21 @@ export function DealDetailsModal({
                     {isLoadingData ? 'Carregando...' : `${pipelineCardsCount} ${pipelineCardsCount === 1 ? 'Negócio' : 'Negócios'}`}
                   </span>
                   {contactPipelines.length > 0 && (
-                  <div className={cn("p-3 bg-gray-50 rounded-lg border", isDarkMode ? "bg-gray-800 border-gray-600" : "bg-gray-50 border-gray-200")}>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-sm font-medium", isDarkMode ? "text-gray-200" : "text-gray-700")}>
-                        Pipeline Atual:
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {contactPipelines.find(p => p.id === currentPipelineId)?.name || 'Pipeline não encontrado'}
-                      </Badge>
+                    <div className={cn("p-3 bg-gray-50 rounded-lg border", isDarkMode ? "bg-gray-800 border-gray-600" : "bg-gray-50 border-gray-200")}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-sm font-medium", isDarkMode ? "text-gray-200" : "text-gray-700")}>
+                          Pipeline Atual:
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {contactPipelines.find(p => p.id === currentPipelineId)?.name || 'Pipeline não encontrado'}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
                   )}
                 </div>
               </div>
 
-              {/* Pipeline Timeline - Baseado na imagem de referência */}
+              {/* Pipeline Timeline */}
               <div className="space-y-6">
                 {isLoadingColumns ? (
                   <div className="flex justify-center py-8">
@@ -657,20 +699,6 @@ export function DealDetailsModal({
                   </div>
                 ) : pipelineSteps.length > 0 ? (
                   <div className="w-full space-y-4">
-                    {/* Debug: renderização dos steps */}
-                    {(() => {
-                      console.log('🎨 Renderizando pipeline steps:', {
-                        currentColumnId,
-                        stepsLength: pipelineSteps.length,
-                        steps: pipelineSteps.map(s => ({ 
-                          name: s.name, 
-                          isActive: s.isActive, 
-                          isCompleted: s.isCompleted 
-                        }))
-                      });
-                      return null;
-                    })()}
-                    
                     {/* Informação da posição atual */}
                     {currentColumnId && (
                       <div className={cn("mb-4 p-3 rounded-lg border", 
@@ -775,20 +803,23 @@ export function DealDetailsModal({
                   <p>Nenhuma cadência de tarefas encontrada</p>
                 </div>
               </div>
-            </div>}
+            </div>
+          )}
 
-          {activeTab === "atividades" && <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {activeTab === "atividades" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Histórico de Atividades */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
                     Histórico de Atividades
                   </h3>
-                  
                 </div>
                 
-                {pendingActivities.length > 0 ? <div className="space-y-3">
-                    {pendingActivities.map(activity => <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                {pendingActivities.length > 0 ? (
+                  <div className="space-y-3">
+                    {pendingActivities.map(activity => (
+                      <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -803,20 +834,27 @@ export function DealDetailsModal({
                               {activity.subject}
                             </h4>
                             <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
-                        locale: ptBR
-                      })}
+                              {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                             </p>
                           </div>
-                          <Button size="sm" variant="outline" onClick={() => handleCompleteActivity(activity.id)} className="ml-4">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleCompleteActivity(activity.id)} 
+                            className="ml-4"
+                          >
                             <Check className="w-4 h-4 mr-1" />
                             Concluir
                           </Button>
                         </div>
-                      </div>)}
-                  </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                     <p>Nenhuma atividade pendente encontrada</p>
-                  </div>}
+                  </div>
+                )}
               </div>
 
               {/* Formulário Criar Atividade - Integrado */}
@@ -860,7 +898,7 @@ export function DealDetailsModal({
                           { value: "Ligação", label: "Ligação", icon: Phone },
                           { value: "Reunião", label: "Reunião", icon: User },
                           { value: "Agendamento", label: "Agendamento", icon: CalendarIcon },
-                        ].map((type) => {
+                        ].map(type => {
                           const Icon = type.icon;
                           return (
                             <SelectItem key={type.value} value={type.value}>
@@ -882,10 +920,10 @@ export function DealDetailsModal({
                     </label>
                     <Select value={activityForm.responsibleId} onValueChange={(value) => setActivityForm({...activityForm, responsibleId: value})}>
                       <SelectTrigger className={cn("w-full", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
-                        <SelectValue placeholder={isLoadingUsers ? "Carregando usuários..." : "Selecione um responsável"} />
+                        <SelectValue placeholder="Selecione um responsável" />
                       </SelectTrigger>
                       <SelectContent>
-                        {users.map((user) => (
+                        {users.map(user => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.name}
                           </SelectItem>
@@ -899,132 +937,132 @@ export function DealDetailsModal({
                     <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                       Assunto
                     </label>
-                    <Input 
-                      placeholder="Digite o assunto da atividade" 
+                    <Input
                       value={activityForm.subject}
                       onChange={(e) => setActivityForm({...activityForm, subject: e.target.value})}
-                      className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
+                      placeholder="Digite o assunto da atividade"
+                      className={cn("w-full", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}
                     />
-                  </div>
-
-                  {/* Data e Duração em linha */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        Agendar para
-                      </label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
-                            onClick={handleDateTimeClick}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate && selectedTime ? 
-                              `${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} ${selectedTime}` : 
-                              "Selecionar data e hora"
-                            }
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar 
-                            mode="single" 
-                            selected={selectedDate} 
-                            onSelect={handleDateSelect} 
-                            initialFocus 
-                            className="pointer-events-auto" 
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        Duração (minutos)
-                      </label>
-                      <Input 
-                        type="number" 
-                        value={activityForm.durationMinutes} 
-                        onChange={(e) => setActivityForm({...activityForm, durationMinutes: Number(e.target.value)})}
-                        className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Upload de arquivo */}
-                  <div className="space-y-2">
-                    <div className={cn("border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors", isDarkMode ? "border-gray-600 hover:border-gray-500 bg-[#1f1f1f]" : "border-gray-300 hover:border-gray-400 bg-gray-50")}>
-                      {attachedFile ? (
-                        <div className="flex items-center justify-between">
-                          <span className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                            {attachedFile.name}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={removeFile}
-                            className="h-6 w-6 p-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            accept="*/*"
-                          />
-                          <Upload className={cn("w-8 h-8 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
-                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            Clique aqui ou arraste o documento a ser salvo
-                          </p>
-                        </label>
-                      )}
-                    </div>
                   </div>
 
                   {/* Descrição */}
                   <div className="space-y-2">
                     <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                      Descrição
+                      Descrição (opcional)
                     </label>
-                    <Textarea 
-                      placeholder="Descrição" 
-                      rows={4} 
+                    <Textarea
                       value={activityForm.description}
                       onChange={(e) => setActivityForm({...activityForm, description: e.target.value})}
-                      className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
+                      placeholder="Adicione detalhes sobre a atividade"
+                      className={cn("w-full min-h-[80px]", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}
                     />
                   </div>
 
-                  {/* Botão Criar Atividade */}
+                  {/* Data e Hora */}
+                  <div className="space-y-2">
+                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                      Agendar para
+                    </label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate && selectedTime ? (
+                            format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) + ` às ${selectedTime}`
+                          ) : (
+                            <span>Selecione data e hora</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleDateSelect}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Duração */}
+                  <div className="space-y-2">
+                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                      Duração (minutos)
+                    </label>
+                    <Input
+                      type="number"
+                      value={activityForm.durationMinutes}
+                      onChange={(e) => setActivityForm({...activityForm, durationMinutes: parseInt(e.target.value) || 30})}
+                      min="5"
+                      max="480"
+                      className={cn("w-full", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}
+                    />
+                  </div>
+
+                  {/* Upload de arquivo */}
+                  <div className="space-y-2">
+                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                      Anexar arquivo (opcional)
+                    </label>
+                    <div className={cn("border-2 border-dashed rounded-lg p-4 text-center", isDarkMode ? "border-gray-600" : "border-gray-300")}>
+                      {attachedFile ? (
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                            {attachedFile.name}
+                          </span>
+                          <Button size="sm" variant="ghost" onClick={removeFile}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div>
+                          <Upload className={cn("w-8 h-8 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
+                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                            Clique para selecionar um arquivo
+                          </p>
+                          <input
+                            type="file"
+                            onChange={handleFileUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Botão Criar */}
                   <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
                     onClick={handleCreateActivity} 
-                    disabled={!contactId || isCreatingActivity}
+                    disabled={isCreatingActivity}
+                    className="w-full bg-yellow-400 text-black hover:bg-yellow-500"
                   >
-                    {isCreatingActivity ? "Criando..." : "Criar"}
+                    {isCreatingActivity ? "Criando..." : "Criar Atividade"}
                   </Button>
                 </div>
               </div>
-            </div>}
+            </div>
+          )}
 
-          {activeTab === "historico" && <div className="space-y-4">
+          {activeTab === "historico" && (
+            <div className="space-y-6">
               <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
                 Histórico de Atividades Concluídas
               </h3>
               
-              {completedActivities.length > 0 ? <div className="space-y-3">
-                  {completedActivities.map(activity => <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+              {completedActivities.length > 0 ? (
+                <div className="space-y-3">
+                  {completedActivities.map(activity => (
+                    <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
                       <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-200">
+                          Concluída
+                        </Badge>
                         <Badge variant="outline" className="text-xs">
                           {activity.type}
-                        </Badge>
-                        <Badge className="bg-green-100 text-green-800 text-xs">
-                          Concluída
                         </Badge>
                         <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
                           {activity.users?.name}
@@ -1034,15 +1072,18 @@ export function DealDetailsModal({
                         {activity.subject}
                       </h4>
                       <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
-                  locale: ptBR
-                })}
+                        {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
-                    </div>)}
-                </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                   <p>Nenhuma atividade concluída encontrada</p>
-                </div>}
-            </div>}
+                </div>
+              )}
+            </div>
+          )}
 
           {activeTab === "contato" && (
             <div className="space-y-6">
