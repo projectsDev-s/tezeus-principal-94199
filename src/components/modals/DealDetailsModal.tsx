@@ -1008,7 +1008,7 @@ export function DealDetailsModal({
                     <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                       Anexar arquivo (opcional)
                     </label>
-                    <div className={cn("border-2 border-dashed rounded-lg p-4 text-center", isDarkMode ? "border-gray-600" : "border-gray-300")}>
+                    <div className={cn("border-2 border-dashed rounded-lg p-4 text-center relative", isDarkMode ? "border-gray-600" : "border-gray-300")}>
                       {attachedFile ? (
                         <div className="flex items-center justify-between">
                           <span className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-700")}>
@@ -1019,7 +1019,7 @@ export function DealDetailsModal({
                           </Button>
                         </div>
                       ) : (
-                        <div>
+                        <label className="cursor-pointer block">
                           <Upload className={cn("w-8 h-8 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
                           <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                             Clique para selecionar um arquivo
@@ -1027,9 +1027,9 @@ export function DealDetailsModal({
                           <input
                             type="file"
                             onChange={handleFileUpload}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="hidden"
                           />
-                        </div>
+                        </label>
                       )}
                     </div>
                   </div>
