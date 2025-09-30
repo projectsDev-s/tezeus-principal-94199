@@ -1044,7 +1044,8 @@ export function DealDetailsModal({
                 </div>}
             </div>}
 
-          {activeTab === "contato" && <div className="space-y-6">
+          {activeTab === "contato" && (
+            <div className="space-y-6">
               {/* Informações de Contato */}
               <div className="space-y-4">
                 <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
@@ -1106,7 +1107,8 @@ export function DealDetailsModal({
                   </div>
                 )}
               </div>
-            </div>}
+            </div>
+          )}
         </div>
 
         {/* Modais */}
