@@ -534,9 +534,12 @@ export function DealDetailsModal({
       });
     }
   };
+
   const pendingActivities = activities.filter(activity => !activity.is_completed);
   const completedActivities = activities.filter(activity => activity.is_completed);
-  return <Dialog open={isOpen} onOpenChange={onClose}>
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
         {/* Header */}
         <DialogHeader className={cn("px-6 py-4 border-b", isDarkMode ? "border-gray-600" : "border-gray-200")}>
