@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { AddTagModal } from "./AddTagModal";
 import { AddContactTagButton } from "@/components/chat/AddContactTagButton";
 import { CreateActivityModal } from "./CreateActivityModal";
+import { TimePickerModal } from "./TimePickerModal";
+import { MinutePickerModal } from "./MinutePickerModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
@@ -91,9 +93,12 @@ export function DealDetailsModal({
   });
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState("13:00");
+  const [selectedHour, setSelectedHour] = useState<number>(13);
+  const [selectedMinute, setSelectedMinute] = useState<number>(0);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [isCreatingActivity, setIsCreatingActivity] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showMinutePicker, setShowMinutePicker] = useState(false);
   
   // Hook otimizado para usuários com cache
   const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache();
@@ -353,14 +358,31 @@ export function DealDetailsModal({
   };
 
   // Funções para o formulário de atividade integrado
-  const handleTimeClick = () => {
-    setShowTimePicker(!showTimePicker);
+  const handleDateTimeClick = () => {
+    // Este clique não faz nada, o calendário já abre automaticamente pelo Popover
   };
 
-  const handleTimeSelect = (hour: number, minute: number) => {
-    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-    setSelectedTime(timeString);
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      // Após selecionar a data, abrir o seletor de hora
+      setShowTimePicker(true);
+    }
+  };
+
+  const handleHourSelect = (hour: number) => {
+    setSelectedHour(hour);
     setShowTimePicker(false);
+    // Após selecionar a hora, abrir o seletor de minutos
+    setShowMinutePicker(true);
+  };
+
+  const handleMinuteSelect = (minute: number) => {
+    setSelectedMinute(minute);
+    setShowMinutePicker(false);
+    // Atualizar o selectedTime com a nova hora e minuto
+    const timeString = `${selectedHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    setSelectedTime(timeString);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -869,16 +891,23 @@ export function DealDetailsModal({
                       </label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}>
+                          <Button 
+                            variant="outline" 
+                            className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
+                            onClick={handleDateTimeClick}
+                          >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                            {selectedDate && selectedTime ? 
+                              `${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} ${selectedTime}` : 
+                              "Selecionar data e hora"
+                            }
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar 
                             mode="single" 
                             selected={selectedDate} 
-                            onSelect={(date) => date && setSelectedDate(date)} 
+                            onSelect={handleDateSelect} 
                             initialFocus 
                             className="pointer-events-auto" 
                           />
@@ -897,55 +926,6 @@ export function DealDetailsModal({
                         className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
                       />
                     </div>
-                  </div>
-
-                  {/* Hora */}
-                  <div className="space-y-2">
-                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                      Hora
-                    </label>
-                    <Popover open={showTimePicker} onOpenChange={setShowTimePicker}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
-                          )}
-                          onClick={handleTimeClick}
-                        >
-                          <Clock className="mr-2 h-4 w-4" />
-                          {selectedTime}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <div className="max-h-60 overflow-y-auto p-2">
-                          {(() => {
-                            const timeOptions = [];
-                            for (let hour = 0; hour < 24; hour++) {
-                              for (let minute = 0; minute < 60; minute += 30) {
-                                timeOptions.push({
-                                  hour,
-                                  minute,
-                                  display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-                                });
-                              }
-                            }
-                            return timeOptions.map((time) => (
-                              <Button
-                                key={time.display}
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start"
-                                onClick={() => handleTimeSelect(time.hour, time.minute)}
-                              >
-                                {time.display}
-                              </Button>
-                            ));
-                          })()}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
                   </div>
 
                   {/* Upload de arquivo */}
@@ -1110,5 +1090,20 @@ export function DealDetailsModal({
 
         <CreateActivityModal isOpen={showCreateActivityModal} onClose={() => setShowCreateActivityModal(false)} contactId={contactId} onActivityCreated={handleActivityCreated} isDarkMode={isDarkMode} />
       </DialogContent>
+
+      {/* Modais de seleção de hora e minuto */}
+      <TimePickerModal
+        isOpen={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onTimeSelect={handleHourSelect}
+        isDarkMode={isDarkMode}
+      />
+      
+      <MinutePickerModal
+        isOpen={showMinutePicker}
+        onClose={() => setShowMinutePicker(false)}
+        onMinuteSelect={handleMinuteSelect}
+        isDarkMode={isDarkMode}
+      />
     </Dialog>;
 }
