@@ -444,7 +444,49 @@ export function CRMNegocios({
         throw new Error('Contato não encontrado ou sem telefone');
       }
 
-      // 2. Criar ou buscar conversa existente
+      // 2. Verificar se já existe card ativo no pipeline para este contato
+      const { data: existingCards, error: cardsError } = await supabase
+        .from('pipeline_cards')
+        .select('id, status')
+        .eq('pipeline_id', selectedPipeline.id)
+        .eq('contact_id', business.lead)
+        .eq('status', 'aberto');
+
+      if (cardsError) {
+        console.error('Erro ao verificar cards existentes:', cardsError);
+      }
+
+      if (existingCards && existingCards.length > 0) {
+        toast({
+          title: "Card já existe",
+          description: "Este contato já possui um card ativo neste pipeline",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // 3. Verificar se já existe conversa ativa para este contato
+      const { data: existingConversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id, status')
+        .eq('contact_id', business.lead)
+        .eq('workspace_id', selectedWorkspace.workspace_id)
+        .eq('status', 'open');
+
+      if (convError) {
+        console.error('Erro ao verificar conversas existentes:', convError);
+      }
+
+      if (existingConversations && existingConversations.length > 0) {
+        toast({
+          title: "Conversa já existe",
+          description: "Este contato já possui uma conversa ativa",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // 4. Criar ou buscar conversa existente
       const { data: conversationData, error: conversationError } = await supabase.functions.invoke(
         'create-quick-conversation',
         {
@@ -457,14 +499,14 @@ export function CRMNegocios({
 
       if (conversationError) throw conversationError;
 
-      // 3. Pegar a primeira coluna do pipeline
+      // 5. Pegar a primeira coluna do pipeline
       const firstColumn = columns.sort((a, b) => a.order_position - b.order_position)[0];
       
       if (!firstColumn) {
         throw new Error('Nenhuma coluna encontrada no pipeline');
       }
 
-      // 4. Criar o card no pipeline
+      // 6. Criar o card no pipeline
       await createCard({
         column_id: firstColumn.id,
         contact_id: business.lead,
