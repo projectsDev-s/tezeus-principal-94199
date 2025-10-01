@@ -50,9 +50,9 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
       const memberIds = members.map(m => m.user_id);
       console.log(`📋 Encontrados ${memberIds.length} membros`);
 
-      // Buscar dados dos usuários
+      // Buscar dados dos usuários usando a view sem RLS
       const { data: usersData, error: usersError } = await supabase
-        .from('system_users')
+        .from('system_users_view')
         .select('id, name, profile')
         .in('id', memberIds)
         .eq('status', 'active');
