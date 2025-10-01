@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
 
 // Interface compatível com o componente existente
 interface Deal {
@@ -253,6 +254,7 @@ export function CRMNegocios({
     createPipeline,
     selectPipeline,
     createColumn,
+    createCard,
     moveCard,
     getCardsByColumn,
     updateCard
@@ -419,6 +421,76 @@ export function CRMNegocios({
       });
     }
   };
+
+  const handleCreateBusiness = async (business: any) => {
+    if (!selectedPipeline || !selectedWorkspace) {
+      toast({
+        title: "Erro",
+        description: "Pipeline ou workspace não selecionado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // 1. Buscar o contato para obter o phone
+      const { data: contact, error: contactError } = await supabase
+        .from('contacts')
+        .select('phone')
+        .eq('id', business.lead)
+        .single();
+
+      if (contactError || !contact?.phone) {
+        throw new Error('Contato não encontrado ou sem telefone');
+      }
+
+      // 2. Criar ou buscar conversa existente
+      const { data: conversationData, error: conversationError } = await supabase.functions.invoke(
+        'create-quick-conversation',
+        {
+          body: {
+            phoneNumber: contact.phone,
+            orgId: selectedWorkspace.workspace_id
+          }
+        }
+      );
+
+      if (conversationError) throw conversationError;
+
+      // 3. Pegar a primeira coluna do pipeline
+      const firstColumn = columns.sort((a, b) => a.order_position - b.order_position)[0];
+      
+      if (!firstColumn) {
+        throw new Error('Nenhuma coluna encontrada no pipeline');
+      }
+
+      // 4. Criar o card no pipeline
+      await createCard({
+        column_id: firstColumn.id,
+        contact_id: business.lead,
+        conversation_id: conversationData.conversationId,
+        responsible_user_id: business.responsible,
+        value: business.value,
+        title: `Novo negócio`,
+        description: 'Card criado através do formulário de negócios'
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Negócio criado com sucesso!"
+      });
+
+      setIsCriarNegocioModalOpen(false);
+    } catch (error) {
+      console.error('Erro ao criar negócio:', error);
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao criar negócio",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (!selectedWorkspace) {
     return <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -802,10 +874,7 @@ export function CRMNegocios({
 
       <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
 
-      <CriarNegocioModal isOpen={isCriarNegocioModalOpen} onClose={() => setIsCriarNegocioModalOpen(false)} onCreateBusiness={negocio => {
-      // Implementar criação de card baseado no negócio
-      setIsCriarNegocioModalOpen(false);
-    }} isDarkMode={isDarkMode} />
+      <CriarNegocioModal isOpen={isCriarNegocioModalOpen} onClose={() => setIsCriarNegocioModalOpen(false)} onCreateBusiness={handleCreateBusiness} isDarkMode={isDarkMode} />
 
       {selectedCard && (
         <DealDetailsModal 
