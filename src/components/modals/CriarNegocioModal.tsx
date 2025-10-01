@@ -50,12 +50,13 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
     fetchContacts();
   }, [selectedWorkspace]);
 
-  // Carregar usuários quando workspace mudar
+  // Carregar usuários quando modal abrir
   useEffect(() => {
-    if (selectedWorkspace?.workspace_id && isOpen) {
+    if (isOpen && selectedWorkspace?.workspace_id) {
+      console.log('🔄 Modal aberto, carregando usuários...');
       loadUsers();
     }
-  }, [selectedWorkspace?.workspace_id, isOpen]);
+  }, [isOpen, selectedWorkspace?.workspace_id]);
 
   // Preencher valor automaticamente ao selecionar produto
   useEffect(() => {
@@ -67,12 +68,17 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
     }
   }, [selectedProduct, products]);
 
-  const handleSubmit = () => {
+  // Validar se pode habilitar botão criar
+  const canCreate = selectedLead && selectedResponsible && value;
+
+  const handleSubmit = async () => {
+    if (!canCreate) return;
+    
     const newBusiness = {
       lead: selectedLead,
       responsible: selectedResponsible,
-      product: selectedProduct,
-      value: value
+      product: selectedProduct || null,
+      value: parseFloat(value)
     };
     
     onCreateBusiness(newBusiness);
@@ -201,7 +207,11 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-muted text-muted-foreground hover:bg-muted/80"
+            disabled={!canCreate}
+            className={cn(
+              "transition-opacity",
+              !canCreate && "opacity-50 cursor-not-allowed"
+            )}
           >
             Criar
           </Button>

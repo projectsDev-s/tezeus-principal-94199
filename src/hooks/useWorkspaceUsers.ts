@@ -13,7 +13,10 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
 
   useEffect(() => {
     if (workspaceId) {
+      console.log('🔄 useWorkspaceUsers: workspace mudou, carregando...', workspaceId);
       loadUsers();
+    } else {
+      console.warn('⚠️ useWorkspaceUsers: sem workspace ID');
     }
   }, [workspaceId]);
 
