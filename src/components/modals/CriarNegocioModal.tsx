@@ -52,10 +52,20 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
 
   // Carregar usuários quando workspace mudar
   useEffect(() => {
-    if (selectedWorkspace?.workspace_id) {
+    if (selectedWorkspace?.workspace_id && isOpen) {
       loadUsers();
     }
-  }, [selectedWorkspace?.workspace_id, loadUsers]);
+  }, [selectedWorkspace?.workspace_id, isOpen]);
+
+  // Preencher valor automaticamente ao selecionar produto
+  useEffect(() => {
+    if (selectedProduct) {
+      const product = products.find(p => p.id === selectedProduct);
+      if (product) {
+        setValue(product.value.toString());
+      }
+    }
+  }, [selectedProduct, products]);
 
   const handleSubmit = () => {
     const newBusiness = {

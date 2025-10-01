@@ -134,17 +134,18 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Se workspace_id mudou, recarregar
+    // Carregar usuários quando o componente montar ou workspace mudar
     if (workspaceId) {
       loadUsers();
-    } else if (globalUsersCache.length > 0) {
-      setUsers(globalUsersCache);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
   useEffect(() => {
-    // Adicionar listener para updates do cache global apenas se não tiver workspace específico
-    if (!workspaceId) {
+    // Listener para cache global apenas se não tiver workspace específico
+    if (!workspaceId && globalUsersCache.length > 0) {
+      setUsers(globalUsersCache);
+      
       const removeListener = addCacheListener((updatedUsers) => {
         setUsers(updatedUsers);
       });
@@ -152,7 +153,7 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
     }
   }, [workspaceId]);
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = async () => {
     setIsLoading(true);
     try {
       const fetchedUsers = await fetchUsersFromDB(workspaceId);
@@ -164,16 +165,16 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
     } finally {
       setIsLoading(false);
     }
-  }, [workspaceId]);
+  };
 
-  const refreshUsers = useCallback(async () => {
+  const refreshUsers = async () => {
     // Força atualização ignorando cache
     if (!workspaceId) {
       cacheTimestamp = 0;
       globalUsersCache = [];
     }
     return loadUsers();
-  }, [workspaceId, loadUsers]);
+  };
 
   // Filtrar usuários por perfil se especificado
   const filteredUsers = filterProfiles 
