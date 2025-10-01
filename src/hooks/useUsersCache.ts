@@ -46,45 +46,33 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
   try {
     console.log('🔄 Buscando usuários do banco...', workspaceId ? `workspace: ${workspaceId}` : 'todos');
     
-    // Se workspace_id foi fornecido, filtrar por membros do workspace
+    // Se workspace_id foi fornecido, buscar usuários desse workspace via JOIN
     if (workspaceId) {
-      console.log('📋 Buscando membros do workspace:', workspaceId);
-      const { data: members, error: membersError } = await supabase
-        .from('workspace_members')
-        .select('user_id')
-        .eq('workspace_id', workspaceId);
-
-      if (membersError) {
-        console.error('❌ Erro ao buscar membros do workspace:', membersError);
-        throw membersError;
-      }
-
-      const memberIds = members?.map(m => m.user_id) || [];
-      console.log(`📋 IDs de membros encontrados: ${memberIds.length}`, memberIds);
+      console.log('📋 Buscando usuários do workspace via JOIN');
       
-      if (memberIds.length === 0) {
-        console.warn('⚠️ Nenhum membro encontrado no workspace');
-        return [];
-      }
-
-      // Buscar usuários que são membros do workspace
       const { data, error } = await supabase
-        .from('system_users')
-        .select('id, name, profile')
-        .eq('status', 'active')
-        .in('id', memberIds)
-        .order('name')
-        .limit(100);
-      
+        .from('workspace_members')
+        .select(`
+          user_id,
+          system_users!inner (
+            id,
+            name,
+            profile,
+            status
+          )
+        `)
+        .eq('workspace_id', workspaceId)
+        .eq('system_users.status', 'active');
+
       if (error) {
-        console.error('❌ Erro ao buscar usuários:', error);
+        console.error('❌ Erro ao buscar usuários do workspace:', error);
         throw error;
       }
 
-      const users = data?.map(user => ({ 
-        id: user.id, 
-        name: user.name, 
-        profile: user.profile 
+      const users = data?.map((member: any) => ({
+        id: member.system_users.id,
+        name: member.system_users.name,
+        profile: member.system_users.profile
       })) || [];
       
       console.log(`✅ Usuários do workspace carregados: ${users.length}`, users.map(u => `${u.name} (${u.profile})`));
@@ -98,7 +86,7 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
       .eq('status', 'active')
       .order('name')
       .limit(100);
-    
+      
     if (error) {
       console.error('❌ Erro ao buscar usuários:', error);
       throw error;
@@ -110,19 +98,14 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
     if (!workspaceId) {
       globalUsersCache = users;
       cacheTimestamp = now;
+      notifyListeners(users);
     }
     
     console.log(`✅ Usuários carregados: ${users.length} usuários`);
     
-    // Notificar todos os listeners apenas se for cache global
-    if (!workspaceId) {
-      notifyListeners(users);
-    }
-    
     return users;
   } catch (error) {
     console.error('❌ Erro crítico ao buscar usuários:', error);
-    // Retornar cache antigo se houver erro
     return globalUsersCache;
   } finally {
     isFetching = false;
