@@ -25,7 +25,10 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
   const [contacts, setContacts] = useState<any[]>([]);
   
   const { selectedWorkspace } = useWorkspace();
-  const { users, loadUsers } = useUsersCache(['user', 'admin']);
+  const { users, loadUsers, isLoading: isLoadingUsers } = useUsersCache(
+    selectedWorkspace?.workspace_id, 
+    ['user', 'admin']
+  );
   const { products, isLoading: isLoadingProducts } = useProducts();
 
   // Buscar contatos
@@ -47,10 +50,12 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
     fetchContacts();
   }, [selectedWorkspace]);
 
-  // Carregar usuários do cache
+  // Carregar usuários quando workspace mudar
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    if (selectedWorkspace?.workspace_id) {
+      loadUsers();
+    }
+  }, [selectedWorkspace?.workspace_id, loadUsers]);
 
   const handleSubmit = () => {
     const newBusiness = {
@@ -107,17 +112,25 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
 
           {/* Seleção de responsável */}
           <div>
-            <Select value={selectedResponsible} onValueChange={setSelectedResponsible}>
+            <Select value={selectedResponsible} onValueChange={setSelectedResponsible} disabled={isLoadingUsers}>
               <SelectTrigger className="border-input">
-                <SelectValue placeholder="Selecione o responsável" />
+                <SelectValue placeholder={
+                  isLoadingUsers 
+                    ? "Carregando usuários..." 
+                    : users.length === 0 
+                      ? "Nenhum usuário disponível" 
+                      : "Selecione o responsável"
+                } />
               </SelectTrigger>
-              <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {users.length > 0 && (
+                <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              )}
             </Select>
           </div>
 
