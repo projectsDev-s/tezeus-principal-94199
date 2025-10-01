@@ -124,8 +124,14 @@ export const useUsersCache = (filterProfiles?: ('user' | 'admin' | 'master')[]) 
 
   // Filtrar usuários por perfil se especificado
   const filteredUsers = filterProfiles 
-    ? users.filter(user => filterProfiles.includes(user.profile as 'user' | 'admin' | 'master'))
+    ? users.filter(user => {
+        const matchesFilter = filterProfiles.includes(user.profile as 'user' | 'admin' | 'master');
+        console.log(`🔍 Filtrando usuário ${user.name} (perfil: ${user.profile}) - Match: ${matchesFilter}`);
+        return matchesFilter;
+      })
     : users;
+
+  console.log(`📊 Total usuários: ${users.length}, Filtrados: ${filteredUsers.length}, Filtros aplicados: ${filterProfiles?.join(', ') || 'nenhum'}`);
 
   return {
     users: filteredUsers,
