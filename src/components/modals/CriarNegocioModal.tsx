@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useUsersCache } from "@/hooks/useUsersCache";
+import { useProducts } from "@/hooks/useProducts";
 
 interface CriarNegocioModalProps {
   isOpen: boolean;
@@ -22,10 +23,10 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
   const [selectedProduct, setSelectedProduct] = useState("");
   const [value, setValue] = useState("");
   const [contacts, setContacts] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   
   const { selectedWorkspace } = useWorkspace();
-  const { users, loadUsers } = useUsersCache();
+  const { users, loadUsers } = useUsersCache(['user', 'admin']);
+  const { products, isLoading: isLoadingProducts } = useProducts();
 
   // Buscar contatos
   useEffect(() => {
@@ -50,16 +51,6 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
-
-  // Buscar produtos (placeholder - será implementado quando criar a aba)
-  useEffect(() => {
-    // TODO: Implementar busca de produtos quando a aba for criada
-    setProducts([
-      { id: '1', name: 'Produto A' },
-      { id: '2', name: 'Produto B' },
-      { id: '3', name: 'Produto C' }
-    ]);
-  }, []);
 
   const handleSubmit = () => {
     const newBusiness = {
@@ -132,17 +123,25 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
 
           {/* Seleção de produto (opcional) */}
           <div>
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+            <Select value={selectedProduct} onValueChange={setSelectedProduct} disabled={isLoadingProducts}>
               <SelectTrigger className="border-input">
-                <SelectValue placeholder="Selecione o produto (Opcional)" />
+                <SelectValue placeholder={
+                  isLoadingProducts 
+                    ? "Carregando produtos..." 
+                    : products.length === 0 
+                      ? "Nenhum produto disponível" 
+                      : "Selecione o produto (Opcional)"
+                } />
               </SelectTrigger>
-              <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {products.length > 0 && (
+                <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              )}
             </Select>
           </div>
 

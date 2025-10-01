@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface User {
   id: string;
   name: string;
+  profile: string;
 }
 
 // Cache global para usuários
@@ -46,7 +47,7 @@ const fetchUsersFromDB = async (): Promise<User[]> => {
     console.log('🔄 Buscando usuários do banco...');
     const { data, error } = await supabase
       .from('system_users')
-      .select('id, name')
+      .select('id, name, profile')
       .eq('status', 'active')
       .order('name')
       .limit(100);
@@ -56,7 +57,7 @@ const fetchUsersFromDB = async (): Promise<User[]> => {
       throw error;
     }
 
-    const users = data?.map(user => ({ id: user.id, name: user.name })) || [];
+    const users = data?.map(user => ({ id: user.id, name: user.name, profile: user.profile })) || [];
     globalUsersCache = users;
     cacheTimestamp = now;
     
@@ -75,7 +76,7 @@ const fetchUsersFromDB = async (): Promise<User[]> => {
   }
 };
 
-export const useUsersCache = () => {
+export const useUsersCache = (filterProfiles?: ('user' | 'admin' | 'master')[]) => {
   const [users, setUsers] = useState<User[]>(globalUsersCache);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -121,8 +122,13 @@ export const useUsersCache = () => {
     return loadUsers();
   };
 
+  // Filtrar usuários por perfil se especificado
+  const filteredUsers = filterProfiles 
+    ? users.filter(user => filterProfiles.includes(user.profile as 'user' | 'admin' | 'master'))
+    : users;
+
   return {
-    users,
+    users: filteredUsers,
     isLoading,
     loadUsers,
     refreshUsers
