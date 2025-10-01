@@ -1062,6 +1062,24 @@ export type Database = {
           },
         ]
       }
+      n8n_chat_histories: {
+        Row: {
+          id: number
+          message: Json
+          session_id: string
+        }
+        Insert: {
+          id?: number
+          message: Json
+          session_id: string
+        }
+        Update: {
+          id?: number
+          message?: Json
+          session_id?: string
+        }
+        Relationships: []
+      }
       pipeline_cards: {
         Row: {
           column_id: string
@@ -1507,6 +1525,33 @@ export type Database = {
           title?: string
           updated_at?: string
           workspace_id?: string
+        }
+        Relationships: []
+      }
+      sdr: {
+        Row: {
+          created_at: string
+          id: number
+          messages: Json | null
+          questions: Json | null
+          updated_at: string | null
+          user: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          messages?: Json | null
+          questions?: Json | null
+          updated_at?: string | null
+          user?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          messages?: Json | null
+          questions?: Json | null
+          updated_at?: string | null
+          user?: number | null
         }
         Relationships: []
       }
