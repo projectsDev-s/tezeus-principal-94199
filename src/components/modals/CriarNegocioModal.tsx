@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useUsersCache } from "@/hooks/useUsersCache";
+import { useWorkspaceUsers } from "@/hooks/useWorkspaceUsers";
 import { useProducts } from "@/hooks/useProducts";
 
 interface CriarNegocioModalProps {
@@ -25,7 +25,7 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
   const [contacts, setContacts] = useState<any[]>([]);
   
   const { selectedWorkspace } = useWorkspace();
-  const { users, loadUsers, isLoading: isLoadingUsers } = useUsersCache(
+  const { users, loadUsers, isLoading: isLoadingUsers } = useWorkspaceUsers(
     selectedWorkspace?.workspace_id, 
     ['user', 'admin']
   );
