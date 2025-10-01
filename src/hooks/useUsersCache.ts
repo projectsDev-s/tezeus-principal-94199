@@ -46,16 +46,9 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
   try {
     console.log('🔄 Buscando usuários do banco...', workspaceId ? `workspace: ${workspaceId}` : 'todos');
     
-    let query = supabase
-      .from('system_users')
-      .select('id, name, profile')
-      .eq('status', 'active')
-      .neq('profile', 'master')
-      .order('name')
-      .limit(100);
-
     // Se workspace_id foi fornecido, filtrar por membros do workspace
     if (workspaceId) {
+      console.log('📋 Buscando membros do workspace:', workspaceId);
       const { data: members, error: membersError } = await supabase
         .from('workspace_members')
         .select('user_id')
@@ -67,17 +60,46 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
       }
 
       const memberIds = members?.map(m => m.user_id) || [];
-      console.log(`📋 IDs de membros do workspace: ${memberIds.length}`);
+      console.log(`📋 IDs de membros encontrados: ${memberIds.length}`, memberIds);
       
-      if (memberIds.length > 0) {
-        query = query.in('id', memberIds);
-      } else {
-        // Se não há membros, retornar array vazio
+      if (memberIds.length === 0) {
+        console.warn('⚠️ Nenhum membro encontrado no workspace');
         return [];
       }
-    }
+
+      // Buscar usuários que são membros do workspace
+      const { data, error } = await supabase
+        .from('system_users')
+        .select('id, name, profile')
+        .eq('status', 'active')
+        .neq('profile', 'master')
+        .in('id', memberIds)
+        .order('name')
+        .limit(100);
       
-    const { data, error } = await query;
+      if (error) {
+        console.error('❌ Erro ao buscar usuários:', error);
+        throw error;
+      }
+
+      const users = data?.map(user => ({ 
+        id: user.id, 
+        name: user.name, 
+        profile: user.profile 
+      })) || [];
+      
+      console.log(`✅ Usuários do workspace carregados: ${users.length}`, users.map(u => `${u.name} (${u.profile})`));
+      return users;
+    }
+
+    // Busca global (sem filtro de workspace)
+    const { data, error } = await supabase
+      .from('system_users')
+      .select('id, name, profile')
+      .eq('status', 'active')
+      .neq('profile', 'master')
+      .order('name')
+      .limit(100);
     
     if (error) {
       console.error('❌ Erro ao buscar usuários:', error);
