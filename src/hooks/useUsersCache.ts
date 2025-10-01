@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface User {
@@ -72,7 +72,6 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
         .from('system_users')
         .select('id, name, profile')
         .eq('status', 'active')
-        .neq('profile', 'master')
         .in('id', memberIds)
         .order('name')
         .limit(100);
@@ -97,7 +96,6 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
       .from('system_users')
       .select('id, name, profile')
       .eq('status', 'active')
-      .neq('profile', 'master')
       .order('name')
       .limit(100);
     
@@ -154,7 +152,7 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
     }
   }, [workspaceId]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const fetchedUsers = await fetchUsersFromDB(workspaceId);
@@ -166,16 +164,16 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workspaceId]);
 
-  const refreshUsers = async () => {
+  const refreshUsers = useCallback(async () => {
     // Força atualização ignorando cache
     if (!workspaceId) {
       cacheTimestamp = 0;
       globalUsersCache = [];
     }
     return loadUsers();
-  };
+  }, [workspaceId, loadUsers]);
 
   // Filtrar usuários por perfil se especificado
   const filteredUsers = filterProfiles 
