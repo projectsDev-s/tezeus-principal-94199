@@ -157,7 +157,9 @@ export function ContactSidePanel({
     try {
       // Converter campos customizados de volta para extra_info
       const updatedExtraInfo = customFields.reduce((acc, field) => {
-        acc[field.key] = field.value;
+        if (field.key.trim() && field.value.trim()) {
+          acc[field.key] = field.value;
+        }
         return acc;
       }, {} as Record<string, any>);
       
@@ -165,26 +167,27 @@ export function ContactSidePanel({
       console.log('📧 Email a ser salvo:', editingContact.email);
       console.log('📞 Telefone a ser salvo:', editingContact.phone);
       console.log('👤 Nome a ser salvo:', editingContact.name);
-      console.log('📝 Campos personalizados:', customFields);
       console.log('📦 Extra info:', updatedExtraInfo);
 
       // Atualizar o contato no banco de dados
-      const {
-        supabase
-      } = await import('@/integrations/supabase/client');
+      const { supabase } = await import('@/integrations/supabase/client');
       
       const updateData = {
         name: editingContact.name?.trim() || '',
         phone: editingContact.phone?.trim() || '',
-        email: editingContact.email?.trim() || null,
+        email: editingContact.email?.trim() || '',
         extra_info: updatedExtraInfo
       };
       
-      console.log('📤 Dados que serão enviados:', updateData);
+      console.log('📤 Enviando UPDATE com dados:', updateData);
       
-      const {
-        error: updateError
-      } = await supabase.from('contacts').update(updateData).eq('id', editingContact.id);
+      const { data: updatedData, error: updateError } = await supabase
+        .from('contacts')
+        .update(updateData)
+        .eq('id', editingContact.id)
+        .select()
+        .single();
+        
       if (updateError) {
         console.error('❌ Erro ao atualizar contato:', updateError);
         toast({
@@ -194,30 +197,16 @@ export function ContactSidePanel({
         });
         throw updateError;
       }
-      console.log('✅ Contato atualizado com sucesso');
       
-      toast({
-        title: "Sucesso",
-        description: "Dados do contato salvos com sucesso!",
-      });
-
-      // Recarregar o contato atualizado do banco
-      const {
-        data: updatedContact,
-        error: fetchError
-      } = await supabase.from('contacts').select('*').eq('id', editingContact.id).single();
-      if (fetchError) {
-        console.error('❌ Erro ao recarregar contato:', fetchError);
-      } else {
-        console.log('🔄 Contato recarregado:', updatedContact);
-        console.log('📦 Extra info recarregado:', updatedContact.extra_info);
+      console.log('✅ Contato atualizado com sucesso:', updatedData);
+      
+      // Atualizar estado local com dados salvos
+      if (updatedData) {
+        setEditingContact(updatedData as Contact);
         
-        // ✨ Atualizar o estado local com os dados recarregados
-        setEditingContact(updatedContact as Contact);
-        
-        // ✨ Converter extra_info em campos personalizados
-        if (updatedContact.extra_info && typeof updatedContact.extra_info === 'object') {
-          const fields = Object.entries(updatedContact.extra_info as Record<string, any>).map(([key, value]) => ({
+        // Converter extra_info em campos personalizados
+        if (updatedData.extra_info && typeof updatedData.extra_info === 'object') {
+          const fields = Object.entries(updatedData.extra_info as Record<string, any>).map(([key, value]) => ({
             key,
             value: String(value)
           }));
@@ -226,48 +215,18 @@ export function ContactSidePanel({
           setCustomFields([]);
         }
       }
+      
+      toast({
+        title: "Sucesso",
+        description: "Dados do contato salvos com sucesso!",
+      });
 
-      // Se um pipeline foi selecionado, criar um card na primeira coluna
-      if (selectedPipeline && selectedPipeline !== 'no-pipelines') {
-        // Buscar as colunas do pipeline selecionado
-        await fetchColumns();
-
-        // Encontrar a primeira coluna (menor order_position)
-        const firstColumn = columns.sort((a, b) => a.order_position - b.order_position)[0];
-        if (firstColumn) {
-          await createCard({
-            column_id: firstColumn.id,
-            contact_id: contact.id,
-            title: contact.name,
-            description: `Contato: ${contact.phone}${contact.email ? ` - ${contact.email}` : ''}`,
-            value: 0,
-            status: 'aberto'
-          });
-          toast({
-            title: "Sucesso",
-            description: "Dados salvos e card criado no pipeline!"
-          });
-        } else {
-          toast({
-            title: "Aviso",
-            description: "Pipeline selecionado não possui colunas. Dados salvos."
-          });
-        }
-      } else {
-        toast({
-          title: "Sucesso",
-          description: "Dados do contato salvos com sucesso"
-        });
-      }
-
-      // Fecha o painel após salvar
-      onClose();
     } catch (error) {
-      console.error('Erro ao salvar:', error);
+      console.error('❌ Erro geral ao salvar contato:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar dados do contato",
-        variant: "destructive"
+        description: "Erro ao salvar alterações",
+        variant: "destructive",
       });
     }
   };
