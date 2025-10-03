@@ -353,11 +353,8 @@ export function ContactSidePanel({
             <div className="space-y-6 py-6">
               {/* Seção: Dados do contato */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Dados do contato</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Avatar e upload de imagem */}
+                <CardContent className="space-y-4 pt-6">
+                  {/* Avatar e título */}
                   <div className="flex items-center gap-4">
                     <Avatar className="h-16 w-16">
                       {editingContact?.profile_image_url && <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />}
@@ -367,7 +364,7 @@ export function ContactSidePanel({
                         {getInitials(editingContact?.name || '')}
                       </AvatarFallback>
                     </Avatar>
-                    
+                    <h3 className="text-base font-semibold">Dados do contato</h3>
                   </div>
 
                   {/* Campos editáveis */}
