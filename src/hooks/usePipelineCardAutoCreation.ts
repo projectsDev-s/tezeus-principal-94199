@@ -11,105 +11,48 @@ export function usePipelineCardAutoCreation() {
   const checkAndCreateCard = useCallback(async (
     conversationId: string,
     contactId: string,
-    workspaceId: string
+    workspaceId: string,
+    pipelineId?: string
   ) => {
     try {
       setIsCreating(true);
 
-      // Verificar se já existe um card para esta conversa
-      const { data: existingCard } = await supabase
-        .from('pipeline_cards')
-        .select('id')
-        .eq('conversation_id', conversationId)
-        .maybeSingle();
-
-      if (existingCard) {
-        console.log('Card já existe para esta conversa:', existingCard.id);
-        return existingCard;
-      }
-
-      // Buscar o primeiro pipeline ativo do workspace
-      const headers = getHeaders();
-      const { data: pipelines } = await supabase.functions.invoke('pipeline-management/pipelines', {
-        method: 'GET',
-        headers
-      });
-
-      if (!pipelines || pipelines.length === 0) {
-        console.warn('Nenhum pipeline encontrado para auto-criação de card');
-        return null;
-      }
-
-      const firstPipeline = pipelines[0];
-      
-      // Buscar a primeira coluna do pipeline
-      const { data: columns } = await supabase.functions.invoke(`pipeline-management/columns?pipeline_id=${firstPipeline.id}`, {
-        method: 'GET',
-        headers
-      });
-
-      if (!columns || columns.length === 0) {
-        console.warn('Nenhuma coluna encontrada no pipeline para auto-criação de card');
-        return null;
-      }
-
-      const firstColumn = columns[0];
-
-      // Buscar informações do contato e da conversa
-      const { data: contact } = await supabase
-        .from('contacts')
-        .select('name, phone')
-        .eq('id', contactId)
-        .single();
-
-      if (!contact) {
-        console.error('Contato não encontrado para auto-criação de card');
-        return null;
-      }
-
-      // Buscar informações da conversa para obter o usuário responsável
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('assigned_user_id')
-        .eq('id', conversationId)
-        .single();
-
-      // Criar o card automaticamente
-      const { data: newCard } = await supabase.functions.invoke('pipeline-management/cards', {
-        method: 'POST',
-        headers,
+      // Usar a Edge Function inteligente que gerencia unicidade
+      const { data, error } = await supabase.functions.invoke('smart-pipeline-card-manager', {
         body: {
-          pipeline_id: firstPipeline.id,
-          column_id: firstColumn.id,
-          conversation_id: conversationId,
-          contact_id: contactId,
-          responsible_user_id: conversation?.assigned_user_id || null,
-          title: contact.name || contact.phone || 'Contato sem nome',
-          description: 'Card criado automaticamente',
-          value: 0,
-          status: 'aberto',
-          tags: []
+          contactId,
+          conversationId,
+          workspaceId,
+          pipelineId
         }
       });
 
-      if (newCard) {
-        console.log('Card criado automaticamente:', newCard);
+      if (error) {
+        console.error('Erro na Edge Function:', error);
+        return null;
+      }
+
+      // Mostrar toast apenas se foi criado um novo card
+      if (data?.action === 'created') {
+        console.log('✅ Card criado:', data.card);
         toast({
           title: 'CRM atualizado',
           description: 'Novo negócio criado automaticamente',
         });
+      } else if (data?.action === 'updated') {
+        console.log('✅ Card atualizado:', data.card);
+        // Não mostrar toast para atualizações silenciosas
       }
 
-      return newCard;
+      return data?.card || null;
 
     } catch (error) {
-      console.error('Erro ao criar card automaticamente:', error);
-      // Não mostrar erro ao usuário, apenas log interno
+      console.error('Erro ao gerenciar card:', error);
       return null;
     } finally {
       setIsCreating(false);
     }
-  }, [getHeaders, toast]);
+  }, [toast]);
 
   return {
     checkAndCreateCard,
