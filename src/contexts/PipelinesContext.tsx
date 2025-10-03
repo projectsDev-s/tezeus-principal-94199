@@ -100,7 +100,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     return headers;
   }, [selectedWorkspace?.workspace_id]);
 
-  const fetchPipelines = useCallback(async () => {
+  const fetchPipelines = useCallback(async (forceSelectFirst = false) => {
     if (!getHeaders) {
       setIsLoading(false);
       return;
@@ -121,8 +121,9 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       setPipelines(data || []);
       
-      // Auto-select first pipeline if none selected and we have pipelines
-      if (data?.length > 0 && !selectedPipeline) {
+      // Auto-select first pipeline if forced or if none selected and we have pipelines
+      if (data?.length > 0 && (forceSelectFirst || !selectedPipeline)) {
+        console.log('🎯 Auto-selecionando primeiro pipeline:', data[0].name);
         setSelectedPipeline(data[0]);
       }
     } catch (error) {
@@ -403,13 +404,14 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   // Buscar pipelines quando o workspace mudar
   useEffect(() => {
     if (selectedWorkspace?.workspace_id && getHeaders) {
+      console.log('🏢 Workspace mudou, limpando dados e buscando pipelines...');
       // Limpar dados anteriores imediatamente para mostrar loading
       setColumns([]);
       setCards([]);
       setSelectedPipeline(null);
       
-      // Buscar novos pipelines
-      fetchPipelines();
+      // Buscar novos pipelines e forçar seleção do primeiro
+      fetchPipelines(true);
     } else {
       setPipelines([]);
       setSelectedPipeline(null);
