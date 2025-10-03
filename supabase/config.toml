@@ -230,3 +230,6 @@ verify_jwt = false
 
 [functions.pipeline-management]
 verify_jwt = false
+
+[functions.smart-pipeline-card-manager]
+verify_jwt = false
