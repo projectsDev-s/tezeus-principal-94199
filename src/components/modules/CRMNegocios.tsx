@@ -164,7 +164,7 @@ function DraggableDeal({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <h3 className={cn("text-sm font-medium truncate pr-2", "text-foreground")}>
-                {deal.name}
+                {deal.contact?.name || deal.name}
               </h3>
               <div className="flex-shrink-0">
                 {deal.value > 0 ? <span className={cn("text-sm font-semibold cursor-pointer hover:bg-primary/10 px-2 py-1 rounded", "text-primary")} onClick={e => {
