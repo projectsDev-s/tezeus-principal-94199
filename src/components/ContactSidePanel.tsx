@@ -467,7 +467,16 @@ export function ContactSidePanel({
                   </div>
 
                   {/* Botão Salvar */}
-                  <Button onClick={handleSaveContact} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
+                  <Button 
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🔴 BOTÃO CLICADO!');
+                      handleSaveContact();
+                    }} 
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                  >
                     Salvar
                   </Button>
                 </CardContent>
