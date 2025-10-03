@@ -335,7 +335,8 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   const getCardsByColumn = useCallback((columnId: string) => {
     if (!selectedPipeline) return [];
     
-    return cards.filter(card => {
+    // Primeiro filtra por coluna e permissões
+    const filteredCards = cards.filter(card => {
       // Filtro básico por coluna
       if (card.column_id !== columnId) return false;
       
@@ -359,6 +360,44 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       
       return true;
     });
+
+    // Deduplica por contact_id, mantendo apenas o card mais recente
+    const deduplicatedCards = filteredCards.reduce((acc, card) => {
+      // Se não tem contact_id, mantém o card (pode ser um card manual)
+      if (!card.contact_id) {
+        acc.push(card);
+        return acc;
+      }
+
+      // Verifica se já existe um card deste contato na lista
+      const existingCardIndex = acc.findIndex(c => c.contact_id === card.contact_id);
+      
+      if (existingCardIndex === -1) {
+        // Não existe, adiciona
+        acc.push(card);
+      } else {
+        // Existe, compara updated_at e mantém o mais recente
+        const existingCard = acc[existingCardIndex];
+        const currentCardDate = new Date(card.updated_at);
+        const existingCardDate = new Date(existingCard.updated_at);
+        
+        if (currentCardDate > existingCardDate) {
+          // Card atual é mais recente, substitui
+          acc[existingCardIndex] = card;
+          console.log(`🔄 Card duplicado filtrado: mantendo card mais recente para contato ${card.contact_id}`);
+        }
+      }
+      
+      return acc;
+    }, [] as PipelineCard[]);
+
+    // Log se houve deduplicação
+    const removedCount = filteredCards.length - deduplicatedCards.length;
+    if (removedCount > 0) {
+      console.log(`✨ Deduplicação: ${removedCount} card(s) duplicado(s) removido(s) da visualização`);
+    }
+
+    return deduplicatedCards;
   }, [cards, userRole, selectedPipeline]);
 
   // Buscar pipelines quando o workspace mudar
