@@ -188,6 +188,20 @@ export function ContactSidePanel({
       } else {
         console.log('🔄 Contato recarregado:', updatedContact);
         console.log('📦 Extra info recarregado:', updatedContact.extra_info);
+        
+        // ✨ Atualizar o estado local com os dados recarregados
+        setEditingContact(updatedContact as Contact);
+        
+        // ✨ Converter extra_info em campos personalizados
+        if (updatedContact.extra_info && typeof updatedContact.extra_info === 'object') {
+          const fields = Object.entries(updatedContact.extra_info as Record<string, any>).map(([key, value]) => ({
+            key,
+            value: String(value)
+          }));
+          setCustomFields(fields);
+        } else {
+          setCustomFields([]);
+        }
       }
 
       // Se um pipeline foi selecionado, criar um card na primeira coluna
