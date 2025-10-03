@@ -1528,33 +1528,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sdr: {
-        Row: {
-          created_at: string
-          id: number
-          messages: Json | null
-          questions: Json | null
-          updated_at: string | null
-          user: number | null
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          messages?: Json | null
-          questions?: Json | null
-          updated_at?: string | null
-          user?: number | null
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          messages?: Json | null
-          questions?: Json | null
-          updated_at?: string | null
-          user?: number | null
-        }
-        Relationships: []
-      }
       system_customization: {
         Row: {
           background_color: string | null
