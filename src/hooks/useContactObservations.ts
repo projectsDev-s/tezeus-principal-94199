@@ -125,6 +125,70 @@ export const useContactObservations = (contactId: string) => {
     }
   };
 
+  const updateObservation = async (id: string, content: string) => {
+    if (!contactId || !currentWorkspace?.workspace_id || !content.trim()) return false;
+
+    try {
+      const { error } = await supabase
+        .from('contact_observations')
+        .update({ content: content.trim(), updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('workspace_id', currentWorkspace.workspace_id);
+
+      if (error) throw error;
+
+      setObservations(prev => 
+        prev.map(obs => obs.id === id ? { ...obs, content: content.trim() } : obs)
+      );
+
+      toast({
+        title: "Sucesso",
+        description: "Observação atualizada com sucesso"
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar observação:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a observação",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  const deleteObservation = async (id: string) => {
+    if (!contactId || !currentWorkspace?.workspace_id) return false;
+
+    try {
+      const { error } = await supabase
+        .from('contact_observations')
+        .delete()
+        .eq('id', id)
+        .eq('workspace_id', currentWorkspace.workspace_id);
+
+      if (error) throw error;
+
+      setObservations(prev => prev.filter(obs => obs.id !== id));
+
+      toast({
+        title: "Sucesso",
+        description: "Observação excluída com sucesso"
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir observação:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a observação",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const downloadFile = (fileUrl: string, fileName: string) => {
     const link = document.createElement('a');
     link.href = fileUrl;
@@ -158,6 +222,8 @@ export const useContactObservations = (contactId: string) => {
     isLoading,
     isUploading,
     addObservation,
+    updateObservation,
+    deleteObservation,
     downloadFile,
     getFileIcon,
     refetch: fetchObservations

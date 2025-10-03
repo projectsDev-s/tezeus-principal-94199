@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, FileText, Paperclip } from "lucide-react";
+import { X, Plus, Upload, FileText, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,18 @@ import { usePipelines } from "@/hooks/usePipelines";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { usePipelineCards } from "@/hooks/usePipelineCards";
 import { useContactPipelineCards } from '@/hooks/useContactPipelineCards';
-import { useContactObservations } from '@/hooks/useContactObservations';
+import { useContactObservations, ContactObservation } from '@/hooks/useContactObservations';
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 interface Contact {
   id: string;
   name: string;
@@ -76,6 +86,9 @@ export function ContactSidePanel({
   const [selectedPipeline, setSelectedPipeline] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
+  const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [deletingObservationId, setDeletingObservationId] = useState<string | null>(null);
 
   // Hook para buscar pipelines reais
   const {
@@ -106,6 +119,8 @@ export function ContactSidePanel({
   const {
     observations: realObservations,
     addObservation,
+    updateObservation,
+    deleteObservation,
     downloadFile,
     getFileIcon,
     isUploading
@@ -270,6 +285,33 @@ export function ContactSidePanel({
 
   const triggerFileSelect = () => {
     fileInputRef?.click();
+  };
+
+  const handleEditObservation = (obs: ContactObservation) => {
+    setEditingObservationId(obs.id);
+    setEditingContent(obs.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingObservationId) return;
+    
+    const success = await updateObservation(editingObservationId, editingContent);
+    if (success) {
+      setEditingObservationId(null);
+      setEditingContent('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingObservationId(null);
+    setEditingContent('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingObservationId) return;
+    
+    await deleteObservation(deletingObservationId);
+    setDeletingObservationId(null);
   };
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -485,22 +527,73 @@ export function ContactSidePanel({
                   <ScrollArea className="max-h-32">
                     <div className="space-y-3 pr-4">
                       {realObservations.map((obs) => (
-                        <div key={obs.id} className="p-3 bg-muted rounded-lg">
-                          <p className="text-sm">{obs.content}</p>
-                          {obs.file_name && obs.file_url && (
-                            <div className="mt-2">
-                              <button
-                                onClick={() => downloadFile(obs.file_url!, obs.file_name!)}
-                                className="text-xs text-muted-foreground cursor-pointer hover:text-primary flex items-center gap-1"
-                              >
-                                <span>{getFileIcon(obs.file_type)}</span>
-                                {obs.file_name}
-                              </button>
+                        <div key={obs.id} className="p-3 bg-muted rounded-lg group">
+                          {editingObservationId === obs.id ? (
+                            // Modo de edição
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingContent}
+                                onChange={(e) => setEditingContent(e.target.value)}
+                                className="min-h-[80px] border-yellow-500 focus:border-yellow-600"
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleSaveEdit}
+                                  className="text-xs"
+                                >
+                                  Salvar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                  className="text-xs"
+                                >
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            // Modo de visualização
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <p className="text-sm">{obs.content}</p>
+                                {obs.file_name && obs.file_url && (
+                                  <div className="mt-2">
+                                    <button
+                                      onClick={() => downloadFile(obs.file_url!, obs.file_name!)}
+                                      className="text-xs text-muted-foreground cursor-pointer hover:text-primary flex items-center gap-1"
+                                    >
+                                      <span>{getFileIcon(obs.file_type)}</span>
+                                      {obs.file_name}
+                                    </button>
+                                  </div>
+                                )}
+                                <span className="text-xs text-muted-foreground block mt-1">
+                                  {formatDate(obs.created_at)}
+                                </span>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                  onClick={() => handleEditObservation(obs)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => setDeletingObservationId(obs.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </div>
                           )}
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(obs.created_at)}
-                          </span>
                         </div>
                       ))}
                       {realObservations.length === 0 && (
@@ -569,5 +662,26 @@ export function ContactSidePanel({
           </ScrollArea>
         </div>
       </SheetContent>
+
+      {/* Modal de confirmação de exclusão */}
+      <AlertDialog open={!!deletingObservationId} onOpenChange={() => setDeletingObservationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta observação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>;
 }
