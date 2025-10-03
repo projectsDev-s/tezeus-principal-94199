@@ -52,6 +52,13 @@ export const useContactObservations = (contactId: string) => {
 
     setIsUploading(true);
     try {
+      // Obter o usuário atual do localStorage
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (!currentUserStr) {
+        throw new Error('Usuário não autenticado');
+      }
+      const currentUser = JSON.parse(currentUserStr);
+      
       let fileData: { name?: string; url?: string; type?: string } = {};
 
       // Upload file if provided
@@ -86,12 +93,16 @@ export const useContactObservations = (contactId: string) => {
           content: content.trim(),
           file_name: fileData.name,
           file_url: fileData.url,
-          file_type: fileData.type
+          file_type: fileData.type,
+          created_by: currentUser.id
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado ao inserir observação:', error);
+        throw error;
+      }
 
       setObservations(prev => [data, ...prev]);
       
