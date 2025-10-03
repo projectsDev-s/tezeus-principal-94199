@@ -18,16 +18,7 @@ import { usePipelineCards } from "@/hooks/usePipelineCards";
 import { useContactPipelineCards } from '@/hooks/useContactPipelineCards';
 import { useContactObservations, ContactObservation } from '@/hooks/useContactObservations';
 import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 interface Contact {
   id: string;
   name: string;
@@ -103,7 +94,12 @@ export function ContactSidePanel({
   } = usePipelineColumns(selectedPipeline || null);
 
   // Hook para buscar cards do contato
-  const { cards: contactCards, currentPipeline, transferToPipeline, isLoading: cardsLoading } = useContactPipelineCards(contact?.id || null);
+  const {
+    cards: contactCards,
+    currentPipeline,
+    transferToPipeline,
+    isLoading: cardsLoading
+  } = useContactPipelineCards(contact?.id || null);
 
   // Hook para criar cards
   const {
@@ -160,37 +156,33 @@ export function ContactSidePanel({
         acc[field.key] = field.value;
         return acc;
       }, {} as Record<string, any>);
-
       console.log('💾 Salvando contato:', editingContact.id);
       console.log('📝 Campos personalizados:', customFields);
       console.log('📦 Extra info:', updatedExtraInfo);
 
       // Atualizar o contato no banco de dados
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { error: updateError } = await supabase
-        .from('contacts')
-        .update({
-          name: editingContact.name,
-          phone: editingContact.phone,
-          email: editingContact.email,
-          extra_info: updatedExtraInfo
-        })
-        .eq('id', editingContact.id);
-
+      const {
+        supabase
+      } = await import('@/integrations/supabase/client');
+      const {
+        error: updateError
+      } = await supabase.from('contacts').update({
+        name: editingContact.name,
+        phone: editingContact.phone,
+        email: editingContact.email,
+        extra_info: updatedExtraInfo
+      }).eq('id', editingContact.id);
       if (updateError) {
         console.error('❌ Erro ao atualizar contato:', updateError);
         throw updateError;
       }
-
       console.log('✅ Contato atualizado com sucesso');
 
       // Recarregar o contato atualizado do banco
-      const { data: updatedContact, error: fetchError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('id', editingContact.id)
-        .single();
-
+      const {
+        data: updatedContact,
+        error: fetchError
+      } = await supabase.from('contacts').select('*').eq('id', editingContact.id).single();
       if (fetchError) {
         console.error('❌ Erro ao recarregar contato:', fetchError);
       } else {
@@ -280,7 +272,6 @@ export function ContactSidePanel({
   };
   const handleAddObservation = async () => {
     if (!newObservation.trim()) return;
-    
     const success = await addObservation(newObservation, selectedFile || undefined);
     if (success) {
       setNewObservation("");
@@ -290,7 +281,6 @@ export function ContactSidePanel({
       }
     }
   };
-
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -306,34 +296,27 @@ export function ContactSidePanel({
       setSelectedFile(file);
     }
   };
-
   const triggerFileSelect = () => {
     fileInputRef?.click();
   };
-
   const handleEditObservation = (obs: ContactObservation) => {
     setEditingObservationId(obs.id);
     setEditingContent(obs.content);
   };
-
   const handleSaveEdit = async () => {
     if (!editingObservationId) return;
-    
     const success = await updateObservation(editingObservationId, editingContent);
     if (success) {
       setEditingObservationId(null);
       setEditingContent('');
     }
   };
-
   const handleCancelEdit = () => {
     setEditingObservationId(null);
     setEditingContent('');
   };
-
   const handleConfirmDelete = async () => {
     if (!deletingObservationId) return;
-    
     await deleteObservation(deletingObservationId);
     setDeletingObservationId(null);
   };
@@ -384,10 +367,7 @@ export function ContactSidePanel({
                         {getInitials(editingContact?.name || '')}
                       </AvatarFallback>
                     </Avatar>
-                    <Button variant="outline" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Alterar foto
-                    </Button>
+                    
                   </div>
 
                   {/* Campos editáveis */}
@@ -479,78 +459,50 @@ export function ContactSidePanel({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Lista de negócios */}
-                  {cardsLoading ? (
-                    <p className="text-sm text-muted-foreground">Carregando negócios...</p>
-                  ) : deals.length > 0 ? (
-                    <div className="space-y-2">
-                      {deals.map(deal => (
-                        <div key={deal.id} className="p-3 bg-muted rounded-md">
+                  {cardsLoading ? <p className="text-sm text-muted-foreground">Carregando negócios...</p> : deals.length > 0 ? <div className="space-y-2">
+                      {deals.map(deal => <div key={deal.id} className="p-3 bg-muted rounded-md">
                           <div className="flex justify-between items-start mb-1">
                             <p className="text-sm font-medium">{deal.title}</p>
                             <Badge variant="outline" className="text-xs">{deal.pipeline}</Badge>
                           </div>
-                          {deal.description && (
-                            <p className="text-xs text-muted-foreground mb-2">{deal.description}</p>
-                          )}
+                          {deal.description && <p className="text-xs text-muted-foreground mb-2">{deal.description}</p>}
                           <div className="flex justify-between items-center">
                             <span className="text-xs font-semibold text-primary">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}
+                              {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        }).format(deal.value)}
                             </span>
                             <Badge variant="secondary" className="text-xs">{deal.status}</Badge>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nenhum negócio encontrado</p>
-                  )}
+                        </div>)}
+                    </div> : <p className="text-sm text-muted-foreground">Nenhum negócio encontrado</p>}
 
                   <Separator />
 
                   {/* Criar novo negócio */}
                   <div className="space-y-2">
-                    <Select 
-                      value={selectedPipeline} 
-                      onValueChange={(value) => {
-                        if (value !== selectedPipeline && value !== "no-pipelines") {
-                          const pipeline = pipelines.find(p => p.id === value);
-                          if (pipeline) {
-                            transferToPipeline(value, pipeline.name);
-                          }
-                        }
-                        setSelectedPipeline(value);
-                      }} 
-                      disabled={pipelinesLoading || cardsLoading}
-                    >
+                    <Select value={selectedPipeline} onValueChange={value => {
+                    if (value !== selectedPipeline && value !== "no-pipelines") {
+                      const pipeline = pipelines.find(p => p.id === value);
+                      if (pipeline) {
+                        transferToPipeline(value, pipeline.name);
+                      }
+                    }
+                    setSelectedPipeline(value);
+                  }} disabled={pipelinesLoading || cardsLoading}>
                       <SelectTrigger>
-                        <SelectValue 
-                          placeholder={
-                            cardsLoading ? "Carregando..." :
-                            currentPipeline ? `Pipeline Atual: ${currentPipeline.name}` :
-                            pipelinesLoading ? "Carregando pipelines..." : 
-                            "Selecionar pipeline/negócio"
-                          } 
-                        />
+                        <SelectValue placeholder={cardsLoading ? "Carregando..." : currentPipeline ? `Pipeline Atual: ${currentPipeline.name}` : pipelinesLoading ? "Carregando pipelines..." : "Selecionar pipeline/negócio"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {currentPipeline && (
-                          <SelectItem value={currentPipeline.id} disabled className="font-medium">
+                        {currentPipeline && <SelectItem value={currentPipeline.id} disabled className="font-medium">
                             📍 {currentPipeline.name} (Atual)
-                          </SelectItem>
-                        )}
-                        {pipelines.length > 0 ? (
-                          pipelines
-                            .filter(pipeline => pipeline.id !== currentPipeline?.id)
-                            .map(pipeline => (
-                              <SelectItem key={pipeline.id} value={pipeline.id}>
+                          </SelectItem>}
+                        {pipelines.length > 0 ? pipelines.filter(pipeline => pipeline.id !== currentPipeline?.id).map(pipeline => <SelectItem key={pipeline.id} value={pipeline.id}>
                                 {pipeline.name} ({pipeline.type})
-                              </SelectItem>
-                            ))
-                        ) : (
-                          <SelectItem value="no-pipelines" disabled>
+                              </SelectItem>) : <SelectItem value="no-pipelines" disabled>
                             Nenhum pipeline encontrado
-                          </SelectItem>
-                        )}
+                          </SelectItem>}
                       </SelectContent>
                     </Select>
                     
@@ -567,132 +519,69 @@ export function ContactSidePanel({
                   {/* Lista de observações */}
                   <ScrollArea className="max-h-32">
                     <div className="space-y-3 pr-4">
-                      {realObservations.map((obs) => (
-                        <div key={obs.id} className="p-3 bg-muted rounded-lg group">
-                          {editingObservationId === obs.id ? (
-                            // Modo de edição
-                            <div className="space-y-2">
-                              <Textarea
-                                value={editingContent}
-                                onChange={(e) => setEditingContent(e.target.value)}
-                                className="min-h-[80px] border-yellow-500 focus:border-yellow-600"
-                              />
+                      {realObservations.map(obs => <div key={obs.id} className="p-3 bg-muted rounded-lg group">
+                          {editingObservationId === obs.id ?
+                      // Modo de edição
+                      <div className="space-y-2">
+                              <Textarea value={editingContent} onChange={e => setEditingContent(e.target.value)} className="min-h-[80px] border-yellow-500 focus:border-yellow-600" />
                               <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={handleSaveEdit}
-                                  className="text-xs"
-                                >
+                                <Button size="sm" onClick={handleSaveEdit} className="text-xs">
                                   Salvar
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={handleCancelEdit}
-                                  className="text-xs"
-                                >
+                                <Button size="sm" variant="outline" onClick={handleCancelEdit} className="text-xs">
                                   Cancelar
                                 </Button>
                               </div>
-                            </div>
-                          ) : (
-                            // Modo de visualização
-                            <div className="flex items-start justify-between gap-2">
+                            </div> :
+                      // Modo de visualização
+                      <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
                                 <p className="text-sm">{obs.content}</p>
-                                {obs.file_name && obs.file_url && (
-                                  <div className="mt-2">
-                                    <button
-                                      onClick={() => downloadFile(obs.file_url!, obs.file_name!)}
-                                      className="text-xs text-muted-foreground cursor-pointer hover:text-primary flex items-center gap-1"
-                                    >
+                                {obs.file_name && obs.file_url && <div className="mt-2">
+                                    <button onClick={() => downloadFile(obs.file_url!, obs.file_name!)} className="text-xs text-muted-foreground cursor-pointer hover:text-primary flex items-center gap-1">
                                       <span>{getFileIcon(obs.file_type)}</span>
                                       {obs.file_name}
                                     </button>
-                                  </div>
-                                )}
+                                  </div>}
                                 <span className="text-xs text-muted-foreground block mt-1">
                                   {formatDate(obs.created_at)}
                                 </span>
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                  onClick={() => handleEditObservation(obs)}
-                                >
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50" onClick={() => handleEditObservation(obs)}>
                                   <Pencil className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => setDeletingObservationId(obs.id)}
-                                >
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeletingObservationId(obs.id)}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {realObservations.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
+                            </div>}
+                        </div>)}
+                      {realObservations.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
                           Nenhuma observação encontrada
-                        </p>
-                      )}
+                        </p>}
                      </div>
                   </ScrollArea>
 
                   {/* Adicionar nova observação */}
                   <div className="space-y-2">
-                    <Textarea
-                      placeholder="Digite uma observação..."
-                      value={newObservation}
-                      onChange={(e) => setNewObservation(e.target.value)}
-                      className="min-h-[80px]"
-                    />
+                    <Textarea placeholder="Digite uma observação..." value={newObservation} onChange={e => setNewObservation(e.target.value)} className="min-h-[80px]" />
                     
                     {/* Preview do arquivo selecionado */}
-                    {selectedFile && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-2 rounded">
+                    {selectedFile && <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-2 rounded">
                         <span>{getFileIcon(selectedFile.type)}</span>
                         <span>{selectedFile.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedFile(null)}
-                          className="h-4 w-4 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)} className="h-4 w-4 p-0">
                           ✕
                         </Button>
-                      </div>
-                    )}
+                      </div>}
                     
                     <div className="flex gap-2">
-                      <input
-                        type="file"
-                        ref={setFileInputRef}
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        accept="*/*"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onClick={triggerFileSelect}
-                        disabled={isUploading}
-                      >
+                      <input type="file" ref={setFileInputRef} onChange={handleFileSelect} className="hidden" accept="*/*" />
+                      <Button variant="outline" size="sm" className="text-xs" onClick={triggerFileSelect} disabled={isUploading}>
                         📎 Anexar arquivo
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleAddObservation}
-                        className="text-xs"
-                        disabled={!newObservation.trim() || isUploading}
-                      >
+                      <Button size="sm" onClick={handleAddObservation} className="text-xs" disabled={!newObservation.trim() || isUploading}>
                         {isUploading ? "Enviando..." : "Adicionar"}
                       </Button>
                     </div>
@@ -715,10 +604,7 @@ export function ContactSidePanel({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
