@@ -174,9 +174,19 @@ export function ContactSidePanel({
       }).eq('id', editingContact.id);
       if (updateError) {
         console.error('❌ Erro ao atualizar contato:', updateError);
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar dados do contato",
+          variant: "destructive",
+        });
         throw updateError;
       }
       console.log('✅ Contato atualizado com sucesso');
+      
+      toast({
+        title: "Sucesso",
+        description: "Dados do contato salvos com sucesso!",
+      });
 
       // Recarregar o contato atualizado do banco
       const {
