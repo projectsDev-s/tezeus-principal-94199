@@ -290,6 +290,7 @@ export function CRMNegocios({
 
   // O loading é gerenciado automaticamente pelo PipelinesContext
   // quando o workspace muda, ele limpa os dados e mostra skeleton
+  // Atualizado: 2025-10-03 - removido isRefreshing
 
   // Função para formatar valores monetários
   const formatCurrency = (value: number) => {
