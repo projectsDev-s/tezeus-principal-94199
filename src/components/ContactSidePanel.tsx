@@ -103,7 +103,7 @@ export function ContactSidePanel({
   } = usePipelineColumns(selectedPipeline || null);
 
   // Hook para buscar cards do contato
-  const { currentPipeline, transferToPipeline, isLoading: cardsLoading } = useContactPipelineCards(contact?.id || null);
+  const { cards: contactCards, currentPipeline, transferToPipeline, isLoading: cardsLoading } = useContactPipelineCards(contact?.id || null);
 
   // Hook para criar cards
   const {
@@ -126,20 +126,15 @@ export function ContactSidePanel({
     isUploading
   } = useContactObservations(contact?.id || "");
 
-  // Mock data para demonstração
-  const [deals] = useState<Deal[]>([{
-    id: '1',
-    title: 'Proposta de Vendas',
-    value: 5000,
-    status: 'Em Negociação',
-    pipeline: 'Vendas'
-  }, {
-    id: '2',
-    title: 'Upsell Premium',
-    value: 1500,
-    status: 'Qualificado',
-    pipeline: 'Expansão'
-  }]);
+  // Converter cards do contato em formato de deals para exibição
+  const deals = contactCards.map(card => ({
+    id: card.id,
+    title: card.title,
+    description: card.description,
+    value: Number(card.value) || 0,
+    status: card.status,
+    pipeline: pipelines.find(p => p.id === card.pipeline_id)?.name || 'Pipeline'
+  }));
   useEffect(() => {
     if (contact) {
       setEditingContact({
@@ -455,14 +450,31 @@ export function ContactSidePanel({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Lista de negócios */}
-                  {deals.length > 0 && <div className="space-y-2">
+                  {cardsLoading ? (
+                    <p className="text-sm text-muted-foreground">Carregando negócios...</p>
+                  ) : deals.length > 0 ? (
+                    <div className="space-y-2">
                       {deals.map(deal => (
                         <div key={deal.id} className="p-3 bg-muted rounded-md">
-                          <p className="text-sm font-medium">{deal.title}</p>
-                          <p className="text-xs text-muted-foreground">{deal.description}</p>
+                          <div className="flex justify-between items-start mb-1">
+                            <p className="text-sm font-medium">{deal.title}</p>
+                            <Badge variant="outline" className="text-xs">{deal.pipeline}</Badge>
+                          </div>
+                          {deal.description && (
+                            <p className="text-xs text-muted-foreground mb-2">{deal.description}</p>
+                          )}
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-semibold text-primary">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">{deal.status}</Badge>
+                          </div>
                         </div>
                       ))}
-                    </div>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum negócio encontrado</p>
+                  )}
 
                   <Separator />
 
