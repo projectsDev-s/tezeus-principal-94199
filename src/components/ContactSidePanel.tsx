@@ -17,7 +17,9 @@ import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { usePipelineCards } from "@/hooks/usePipelineCards";
 import { useContactPipelineCards } from '@/hooks/useContactPipelineCards';
 import { useContactObservations, ContactObservation } from '@/hooks/useContactObservations';
+import { useContactExtraInfo } from '@/hooks/useContactExtraInfo';
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 interface Contact {
   id: string;
@@ -107,9 +109,10 @@ export function ContactSidePanel({
   } = usePipelineCards(selectedPipeline || null);
 
   // Hook para toast
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  
+  // Hook para workspace
+  const { selectedWorkspace } = useWorkspace();
 
   // Hook para observações
   const {
@@ -121,6 +124,12 @@ export function ContactSidePanel({
     getFileIcon,
     isUploading
   } = useContactObservations(contact?.id || "");
+  
+  // 🆕 Hook para informações extras do contato
+  const { 
+    fields: extraFields, 
+    saveFields: saveExtraFields 
+  } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
 
   // Converter cards do contato em formato de deals para exibição
   const deals = contactCards.map(card => ({
@@ -134,35 +143,25 @@ export function ContactSidePanel({
   useEffect(() => {
     if (contact) {
       console.log('🔄 useEffect disparado - contact mudou:', contact);
-      console.log('📦 extra_info recebido:', contact.extra_info);
-      console.log('📦 Tipo de extra_info:', typeof contact.extra_info);
-      console.log('📦 É objeto?', contact.extra_info && typeof contact.extra_info === 'object');
-      
-      setEditingContact({
-        ...contact
-      });
-      
-      // Converter extra_info em campos personalizados
-      if (contact.extra_info && typeof contact.extra_info === 'object') {
-        console.log('🔍 Convertendo extra_info em campos...');
-        const entries = Object.entries(contact.extra_info);
-        console.log('📋 Entries:', entries);
-        
-        const fields = entries.map(([key, value]) => ({
-          key,
-          value: String(value)
-        }));
-        
-        console.log('✅ Campos convertidos:', fields);
-        setCustomFields(fields);
-      } else {
-        console.log('⚠️ extra_info está vazio ou não é objeto');
-        setCustomFields([]);
-      }
+      setEditingContact({ ...contact });
     } else {
       console.log('⚠️ Contact é null/undefined');
     }
   }, [contact]);
+  
+  // 🆕 useEffect separado para converter extraFields em customFields
+  useEffect(() => {
+    if (extraFields.length > 0) {
+      console.log('📋 Convertendo extraFields para customFields:', extraFields);
+      const fields = extraFields.map(field => ({
+        key: field.field_name,
+        value: field.field_value
+      }));
+      setCustomFields(fields);
+    } else {
+      setCustomFields([]);
+    }
+  }, [extraFields]);
   const handleSaveContact = async () => {
     console.log('🚀 handleSaveContact CHAMADA!');
     
@@ -174,31 +173,16 @@ export function ContactSidePanel({
     console.log('🔍 Estado editingContact antes de salvar:', editingContact);
     
     try {
-      // Converter campos customizados de volta para extra_info
-      const updatedExtraInfo = customFields.reduce((acc, field) => {
-        if (field.key.trim() && field.value.trim()) {
-          acc[field.key] = field.value;
-        }
-        return acc;
-      }, {} as Record<string, any>);
-      
-      console.log('💾 Salvando contato:', editingContact.id);
-      console.log('📧 Email a ser salvo:', editingContact.email);
-      console.log('📞 Telefone a ser salvo:', editingContact.phone);
-      console.log('👤 Nome a ser salvo:', editingContact.name);
-      console.log('📦 Extra info:', updatedExtraInfo);
-
-      // Atualizar o contato no banco de dados
       const { supabase } = await import('@/integrations/supabase/client');
       
+      // 1️⃣ Salvar dados básicos do contato
       const updateData = {
         name: editingContact.name?.trim() || '',
         phone: editingContact.phone?.trim() || '',
         email: editingContact.email?.trim() || '',
-        extra_info: updatedExtraInfo
       };
       
-      console.log('📤 Enviando UPDATE com dados:', updateData);
+      console.log('📤 Salvando dados básicos:', updateData);
       
       const { data: updatedData, error: updateError } = await supabase
         .from('contacts')
@@ -217,28 +201,33 @@ export function ContactSidePanel({
         throw updateError;
       }
       
-      console.log('✅ Contato atualizado com sucesso:', updatedData);
+      console.log('✅ Dados básicos salvos:', updatedData);
       
-      // Atualizar estado local com dados salvos
-      if (updatedData) {
-        setEditingContact(updatedData as Contact);
-        
-        // Converter extra_info em campos personalizados
-        if (updatedData.extra_info && typeof updatedData.extra_info === 'object') {
-          const fields = Object.entries(updatedData.extra_info as Record<string, any>).map(([key, value]) => ({
-            key,
-            value: String(value)
-          }));
-          setCustomFields(fields);
-        } else {
-          setCustomFields([]);
-        }
+      // 2️⃣ Salvar informações extras usando a nova tabela
+      const fieldsToSave = customFields.map(f => ({
+        field_name: f.key,
+        field_value: f.value
+      }));
+      
+      console.log('📤 Salvando informações extras:', fieldsToSave);
+      const saveSuccess = await saveExtraFields(fieldsToSave);
+      
+      if (!saveSuccess) {
+        toast({
+          title: "Aviso",
+          description: "Dados do contato salvos, mas houve erro ao salvar informações adicionais",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Todos os dados salvos com sucesso!",
+        });
       }
       
-      toast({
-        title: "Sucesso",
-        description: "Dados do contato salvos com sucesso!",
-      });
+      // Atualizar estado local
+      if (updatedData) {
+        setEditingContact(updatedData as Contact);
+      }
 
     } catch (error) {
       console.error('❌ Erro geral ao salvar contato:', error);

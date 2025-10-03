@@ -431,6 +431,44 @@ export type Database = {
           },
         ]
       }
+      contact_extra_info: {
+        Row: {
+          contact_id: string
+          created_at: string
+          field_name: string
+          field_value: string
+          id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          field_name: string
+          field_value: string
+          id?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          field_name?: string
+          field_value?: string
+          id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_extra_info_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_observations: {
         Row: {
           contact_id: string
