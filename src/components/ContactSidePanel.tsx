@@ -184,6 +184,20 @@ export function ContactSidePanel({
 
       console.log('✅ Contato atualizado com sucesso');
 
+      // Recarregar o contato atualizado do banco
+      const { data: updatedContact, error: fetchError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', editingContact.id)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Erro ao recarregar contato:', fetchError);
+      } else {
+        console.log('🔄 Contato recarregado:', updatedContact);
+        console.log('📦 Extra info recarregado:', updatedContact.extra_info);
+      }
+
       // Se um pipeline foi selecionado, criar um card na primeira coluna
       if (selectedPipeline && selectedPipeline !== 'no-pipelines') {
         // Buscar as colunas do pipeline selecionado
