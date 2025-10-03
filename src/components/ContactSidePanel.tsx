@@ -150,7 +150,12 @@ export function ContactSidePanel({
     }
   }, [contact]);
   const handleSaveContact = async () => {
-    if (!editingContact) return;
+    console.log('🚀 handleSaveContact CHAMADA!');
+    
+    if (!editingContact) {
+      console.log('⚠️ editingContact é null/undefined');
+      return;
+    }
     
     console.log('🔍 Estado editingContact antes de salvar:', editingContact);
     
