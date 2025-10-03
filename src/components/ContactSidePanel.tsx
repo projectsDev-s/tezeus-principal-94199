@@ -134,19 +134,33 @@ export function ContactSidePanel({
   useEffect(() => {
     if (contact) {
       console.log('🔄 useEffect disparado - contact mudou:', contact);
+      console.log('📦 extra_info recebido:', contact.extra_info);
+      console.log('📦 Tipo de extra_info:', typeof contact.extra_info);
+      console.log('📦 É objeto?', contact.extra_info && typeof contact.extra_info === 'object');
+      
       setEditingContact({
         ...contact
       });
+      
       // Converter extra_info em campos personalizados
-      if (contact.extra_info) {
-        const fields = Object.entries(contact.extra_info).map(([key, value]) => ({
+      if (contact.extra_info && typeof contact.extra_info === 'object') {
+        console.log('🔍 Convertendo extra_info em campos...');
+        const entries = Object.entries(contact.extra_info);
+        console.log('📋 Entries:', entries);
+        
+        const fields = entries.map(([key, value]) => ({
           key,
           value: String(value)
         }));
+        
+        console.log('✅ Campos convertidos:', fields);
         setCustomFields(fields);
       } else {
+        console.log('⚠️ extra_info está vazio ou não é objeto');
         setCustomFields([]);
       }
+    } else {
+      console.log('⚠️ Contact é null/undefined');
     }
   }, [contact]);
   const handleSaveContact = async () => {
