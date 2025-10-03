@@ -32,7 +32,7 @@ export function useContactPipelineCards(contactId: string | null) {
       setIsLoading(true);
       const headers = getHeaders();
       
-      // Buscar cards ativos do contato
+      // Buscar todos os cards do contato
       const { data: cardsData, error: cardsError } = await supabase
         .from('pipeline_cards')
         .select(`
@@ -45,8 +45,7 @@ export function useContactPipelineCards(contactId: string | null) {
           description,
           pipelines!inner(id, name)
         `)
-        .eq('contact_id', contactId)
-        .eq('status', 'aberto');
+        .eq('contact_id', contactId);
 
       if (cardsError) throw cardsError;
 
