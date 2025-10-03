@@ -278,7 +278,6 @@ export function CRMNegocios({
   const [appliedFilters, setAppliedFilters] = useState<{
     tags: string[];
   } | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTransferirModalOpen, setIsTransferirModalOpen] = useState(false);
   const [selectedColumnForAction, setSelectedColumnForAction] = useState<string | null>(null);
   const [isSetValueModalOpen, setIsSetValueModalOpen] = useState(false);
@@ -289,18 +288,8 @@ export function CRMNegocios({
     }
   }));
 
-  // useEffect para simular refresh dos dados na montagem do componente
-  useEffect(() => {
-    const refreshData = async () => {
-      setIsRefreshing(true);
-      // Simula carregamento de 300ms para atualizar dados
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setIsRefreshing(false);
-    };
-    if (selectedWorkspace?.workspace_id) {
-      refreshData();
-    }
-  }, [selectedWorkspace?.workspace_id]);
+  // O loading é gerenciado automaticamente pelo PipelinesContext
+  // quando o workspace muda, ele limpa os dados e mostra skeleton
 
   // Função para formatar valores monetários
   const formatCurrency = (value: number) => {
@@ -574,13 +563,13 @@ export function CRMNegocios({
       </div>;
   }
 
-  // Mostrar loading de refresh se estiver carregando
-  if (isRefreshing || isLoading) {
+  // Mostrar loading quando estiver carregando pipelines
+  if (isLoading) {
     return <div className="p-6">
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-muted-foreground text-sm">Atualizando dados do pipeline...</p>
+            <p className="text-muted-foreground text-sm">Carregando pipelines...</p>
           </div>
         </div>
       </div>;

@@ -403,12 +403,20 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   // Buscar pipelines quando o workspace mudar
   useEffect(() => {
     if (selectedWorkspace?.workspace_id && getHeaders) {
+      // Limpar dados anteriores imediatamente para mostrar loading
+      setColumns([]);
+      setCards([]);
+      setSelectedPipeline(null);
+      
+      // Buscar novos pipelines
       fetchPipelines();
     } else {
       setPipelines([]);
       setSelectedPipeline(null);
+      setColumns([]);
+      setCards([]);
     }
-  }, [selectedWorkspace?.workspace_id, fetchPipelines]);
+  }, [selectedWorkspace?.workspace_id, fetchPipelines, getHeaders]);
 
   // Buscar colunas e cards quando o pipeline selecionado mudar
   useEffect(() => {
