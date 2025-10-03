@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, FileText, Paperclip, Pencil, Trash2 } from "lucide-react";
+import { X, Plus, Upload, FileText, Paperclip, Pencil, Trash2, Star } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -408,58 +408,81 @@ export function ContactSidePanel({
                     </div>
                   </div>
 
-                  <Button onClick={handleSaveContact} className="w-full">
-                    Salvar alterações
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Seção: Informações adicionais */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Informações adicionais</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Lista de campos personalizados */}
-                  {customFields.length > 0 && <div className="space-y-2">
-                      {customFields.map((field, index) => <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                          <div>
-                            <span className="font-medium text-sm">{field.key}:</span>
-                            <span className="text-sm ml-2">{field.value}</span>
+                  {/* Informações adicionais integradas */}
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-sm font-semibold">Informações adicionais</h4>
+                    
+                    {/* Lista de campos personalizados */}
+                    {customFields.length > 0 && (
+                      <div className="space-y-2">
+                        {customFields.map((field, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                            <div className="flex-1 grid grid-cols-2 gap-2">
+                              <Input 
+                                value={field.key} 
+                                readOnly
+                                className="text-sm font-medium border-0 bg-transparent px-0"
+                              />
+                              <Input 
+                                value={field.value} 
+                                readOnly
+                                className="text-sm border-0 bg-transparent px-0"
+                              />
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 flex-shrink-0"
+                              onClick={() => handleRemoveCustomField(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveCustomField(index)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>)}
-                    </div>}
+                        ))}
+                      </div>
+                    )}
 
-                   {/* Adicionar novo campo */}
-                   <div className="space-y-3">
-                     <div className="grid grid-cols-2 gap-3">
-                       <div className="space-y-1">
-                         <Label htmlFor="field-name" className="text-xs text-muted-foreground">
-                           Nome do campo
-                         </Label>
-                         <Input id="field-name" placeholder="ex: Nome da empresa" value={newCustomField.key} onChange={e => setNewCustomField(prev => ({
-                        ...prev,
-                        key: e.target.value
-                      }))} className="text-sm" />
-                       </div>
-                       <div className="space-y-1">
-                         <Label htmlFor="field-value" className="text-xs text-muted-foreground">
-                           Valor
-                         </Label>
-                         <Input id="field-value" placeholder="ex: empresa-x" value={newCustomField.value} onChange={e => setNewCustomField(prev => ({
-                        ...prev,
-                        value: e.target.value
-                      }))} className="text-sm" />
-                       </div>
-                     </div>
-                     <Button variant="outline" size="sm" onClick={handleAddCustomField} disabled={!newCustomField.key.trim() || !newCustomField.value.trim()} className="w-full">
-                       <Plus className="h-4 w-4 mr-2" />
-                       Adicionar informação
-                     </Button>
-                   </div>
+                    {/* Adicionar novo campo */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input 
+                        id="field-name" 
+                        placeholder="Nome da compra" 
+                        value={newCustomField.key} 
+                        onChange={e => setNewCustomField(prev => ({
+                          ...prev,
+                          key: e.target.value
+                        }))} 
+                        className="text-sm" 
+                      />
+                      <Input 
+                        id="field-value" 
+                        placeholder="Valor" 
+                        value={newCustomField.value} 
+                        onChange={e => setNewCustomField(prev => ({
+                          ...prev,
+                          value: e.target.value
+                        }))} 
+                        className="text-sm" 
+                      />
+                    </div>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleAddCustomField} 
+                      disabled={!newCustomField.key.trim() || !newCustomField.value.trim()} 
+                      className="w-full text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar informação
+                    </Button>
+                  </div>
+
+                  {/* Botão Salvar */}
+                  <Button onClick={handleSaveContact} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
+                    Salvar
+                  </Button>
                 </CardContent>
               </Card>
 
