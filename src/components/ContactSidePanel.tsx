@@ -161,13 +161,28 @@ export function ContactSidePanel({
         return acc;
       }, {} as Record<string, any>);
 
-      // Atualizar o contato com os novos dados
-      const updatedContact = {
-        ...editingContact,
-        extra_info: updatedExtraInfo
-      };
-      console.log('Salvando contato:', updatedContact);
-      console.log('Campos personalizados:', customFields);
+      console.log('💾 Salvando contato:', editingContact.id);
+      console.log('📝 Campos personalizados:', customFields);
+      console.log('📦 Extra info:', updatedExtraInfo);
+
+      // Atualizar o contato no banco de dados
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { error: updateError } = await supabase
+        .from('contacts')
+        .update({
+          name: editingContact.name,
+          phone: editingContact.phone,
+          email: editingContact.email,
+          extra_info: updatedExtraInfo
+        })
+        .eq('id', editingContact.id);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar contato:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Contato atualizado com sucesso');
 
       // Se um pipeline foi selecionado, criar um card na primeira coluna
       if (selectedPipeline && selectedPipeline !== 'no-pipelines') {
