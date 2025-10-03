@@ -133,6 +133,7 @@ export function ContactSidePanel({
   }));
   useEffect(() => {
     if (contact) {
+      console.log('🔄 useEffect disparado - contact mudou:', contact);
       setEditingContact({
         ...contact
       });
@@ -150,13 +151,20 @@ export function ContactSidePanel({
   }, [contact]);
   const handleSaveContact = async () => {
     if (!editingContact) return;
+    
+    console.log('🔍 Estado editingContact antes de salvar:', editingContact);
+    
     try {
       // Converter campos customizados de volta para extra_info
       const updatedExtraInfo = customFields.reduce((acc, field) => {
         acc[field.key] = field.value;
         return acc;
       }, {} as Record<string, any>);
+      
       console.log('💾 Salvando contato:', editingContact.id);
+      console.log('📧 Email a ser salvo:', editingContact.email);
+      console.log('📞 Telefone a ser salvo:', editingContact.phone);
+      console.log('👤 Nome a ser salvo:', editingContact.name);
       console.log('📝 Campos personalizados:', customFields);
       console.log('📦 Extra info:', updatedExtraInfo);
 
@@ -164,14 +172,19 @@ export function ContactSidePanel({
       const {
         supabase
       } = await import('@/integrations/supabase/client');
+      
+      const updateData = {
+        name: editingContact.name?.trim() || '',
+        phone: editingContact.phone?.trim() || '',
+        email: editingContact.email?.trim() || null,
+        extra_info: updatedExtraInfo
+      };
+      
+      console.log('📤 Dados que serão enviados:', updateData);
+      
       const {
         error: updateError
-      } = await supabase.from('contacts').update({
-        name: editingContact.name,
-        phone: editingContact.phone,
-        email: editingContact.email,
-        extra_info: updatedExtraInfo
-      }).eq('id', editingContact.id);
+      } = await supabase.from('contacts').update(updateData).eq('id', editingContact.id);
       if (updateError) {
         console.error('❌ Erro ao atualizar contato:', updateError);
         toast({
