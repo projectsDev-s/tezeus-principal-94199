@@ -102,13 +102,21 @@ export function TezeusCRM() {
   const activeModule = getModuleFromPath(location.pathname);
   const editingAgentId = params.agentId || null;
 
-  // Handle conversation selection from URL search params
+  // Handle conversation selection from URL search params OR location state
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    const conversationId = searchParams.get('id');
+    const conversationIdFromParams = searchParams.get('id');
+    const conversationIdFromState = (location.state as any)?.selectedConversationId;
+    
+    const conversationId = conversationIdFromParams || conversationIdFromState;
     
     if (conversationId && conversationId !== selectedConversationId) {
       setSelectedConversationId(conversationId);
+      
+      // Se veio do state, atualizar URL também para manter consistência
+      if (conversationIdFromState && !conversationIdFromParams) {
+        navigate(`/conversas?id=${conversationId}`, { replace: true });
+      }
       
       // ✅ CORREÇÃO 4: Só bloquear navegação se NÃO for via notificação
       if (!isNotificationNavigation) {
@@ -125,7 +133,7 @@ export function TezeusCRM() {
       setSelectedConversationId(null);
       setCanNavigateFreely(true);
     }
-  }, [location.search, selectedConversationId, isNotificationNavigation]);
+  }, [location.search, location.state, selectedConversationId, isNotificationNavigation, navigate]);
 
   // Listener para navegação via toast
   useEffect(() => {
