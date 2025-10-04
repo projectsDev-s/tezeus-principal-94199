@@ -863,9 +863,8 @@ export const useWhatsAppConversations = () => {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           // Real-time subscription active
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Erro na subscription de conversations');
         }
+        // Channel errors handled silently
       });
 
     // Monitor subscription status
