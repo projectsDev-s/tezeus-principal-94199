@@ -1044,17 +1044,36 @@ export function CRMNegocios({
                               id: card.conversation_id
                             } : undefined)
                           };
-                          return <DraggableDeal key={card.id} deal={deal} isDarkMode={isDarkMode} onClick={() => openCardDetails(card)} columnColor={column.color} onChatClick={dealData => {
-                            console.log('🎯 CRM: Abrindo chat para deal:', dealData);
-                            console.log('🆔 CRM: Deal ID:', dealData.id);
-                            console.log('🗣️ CRM: Deal conversation:', dealData.conversation);
-                            console.log('👤 CRM: Deal contact:', dealData.contact);
-                            setSelectedChatCard(dealData);
-                            setIsChatModalOpen(true);
-                          }} onValueClick={dealData => {
-                            setSelectedCardForValue(dealData);
-                            setIsSetValueModalOpen(true);
-                          }} />;
+                          return <DraggableDeal 
+                            key={card.id} 
+                            deal={deal} 
+                            isDarkMode={isDarkMode} 
+                            onClick={() => !isSelectionMode && openCardDetails(card)} 
+                            columnColor={column.color} 
+                            onChatClick={dealData => {
+                              console.log('🎯 CRM: Abrindo chat para deal:', dealData);
+                              console.log('🆔 CRM: Deal ID:', dealData.id);
+                              console.log('🗣️ CRM: Deal conversation:', dealData.conversation);
+                              console.log('👤 CRM: Deal contact:', dealData.contact);
+                              setSelectedChatCard(dealData);
+                              setIsChatModalOpen(true);
+                            }} 
+                            onValueClick={dealData => {
+                              setSelectedCardForValue(dealData);
+                              setIsSetValueModalOpen(true);
+                            }}
+                            isSelectionMode={isSelectionMode && selectedColumnForAction === column.id}
+                            isSelected={selectedCardsForTransfer.has(card.id)}
+                            onToggleSelection={() => {
+                              const newSet = new Set(selectedCardsForTransfer);
+                              if (newSet.has(card.id)) {
+                                newSet.delete(card.id);
+                              } else {
+                                newSet.add(card.id);
+                              }
+                              setSelectedCardsForTransfer(newSet);
+                            }}
+                          />;
                         })}
                                 
                                 {/* Invisible drop zone for empty columns and bottom of lists */}
