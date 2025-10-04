@@ -131,14 +131,14 @@ export function ContactSidePanel({
     saveFields: saveExtraFields 
   } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
 
-  // Converter cards do contato em formato de deals para exibição
-  const deals = contactCards.map(card => ({
+  // Dados mockados de deals baseados nos cards do contato
+  const deals: Deal[] = contactCards.map(card => ({
     id: card.id,
     title: card.title,
     description: card.description,
-    value: Number(card.value) || 0,
+    value: card.value || 0,
     status: card.status,
-    pipeline: pipelines.find(p => p.id === card.pipeline_id)?.name || 'Pipeline'
+    pipeline: card.pipeline_name
   }));
   useEffect(() => {
     if (contact) {
