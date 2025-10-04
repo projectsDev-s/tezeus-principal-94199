@@ -86,15 +86,17 @@ export function TransferirModal({
 
       // Transfer each selected card
       for (const cardId of selectedCards) {
-        const { error } = await supabase.functions.invoke('pipeline-management/cards', {
-          method: 'PUT',
-          headers,
-          body: {
-            card_id: cardId,
-            pipeline_id: targetPipelineId,
-            column_id: targetColumnId,
-          },
-        });
+        const { error } = await supabase.functions.invoke(
+          `pipeline-management/cards?id=${cardId}`,
+          {
+            method: 'PUT',
+            headers,
+            body: {
+              pipeline_id: targetPipelineId,
+              column_id: targetColumnId,
+            },
+          }
+        );
 
         if (error) throw error;
       }
