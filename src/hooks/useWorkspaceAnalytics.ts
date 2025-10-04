@@ -61,7 +61,7 @@ export const useWorkspaceAnalytics = () => {
         throw conversationsError;
       }
       
-      console.log('✅ Analytics: Conversations fetched', { count: conversations?.length || 0 });
+      // Conversations fetched
 
       const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
       const totalConversations = conversations?.length || 0;
@@ -79,10 +79,10 @@ export const useWorkspaceAnalytics = () => {
       }
 
       const pipelineIds = pipelines?.map(p => p.id) || [];
-      console.log('✅ Analytics: Pipelines fetched', { count: pipelines?.length || 0, pipelineIds });
+      // Pipelines fetched
 
       if (pipelineIds.length === 0) {
-        console.log('⚠️ Analytics: No pipelines found, skipping cards fetch');
+        // No pipelines found, skipping cards fetch
         // Continue with just conversation data
         const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
         const totalConversations = conversations?.length || 0;
@@ -113,7 +113,7 @@ export const useWorkspaceAnalytics = () => {
         throw columnsError;
       }
       
-      console.log('✅ Analytics: Columns fetched', { count: columns?.length || 0 });
+      // Columns fetched
 
       // Fetch pipeline cards
       // Fetching pipeline cards
@@ -134,7 +134,7 @@ export const useWorkspaceAnalytics = () => {
         throw cardsError;
       }
       
-      console.log('✅ Analytics: Cards fetched', { count: cards?.length || 0 });
+      // Cards fetched
 
       // Create a map of column names
       const columnMap = new Map(columns?.map(col => [col.id, col.name.toLowerCase()]) || []);
@@ -207,7 +207,7 @@ export const useWorkspaceAnalytics = () => {
         dealTrends,
       };
       
-      console.log('📈 Analytics: Final results', finalAnalytics);
+      // Analytics calculation completed
       setAnalytics(finalAnalytics);
 
     } catch (error) {

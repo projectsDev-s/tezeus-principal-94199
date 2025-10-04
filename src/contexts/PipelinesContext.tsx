@@ -123,7 +123,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       
       // Auto-select first pipeline if forced or if none selected and we have pipelines
       if (data?.length > 0 && (forceSelectFirst || !selectedPipeline)) {
-        console.log('🎯 Auto-selecionando primeiro pipeline:', data[0].name);
+        // Auto-selecting first pipeline
         setSelectedPipeline(data[0]);
       }
     } catch (error) {

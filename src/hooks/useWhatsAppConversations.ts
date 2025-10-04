@@ -66,9 +66,7 @@ export const useWhatsAppConversations = () => {
     
     try {
       setLoading(true);
-      if (DEBUG_CONVERSATIONS) {
-        console.log('🔄 Carregando conversas do WhatsApp...');
-      }
+      // Loading WhatsApp conversations
 
       // Get current user from localStorage (custom auth system)
       const userData = localStorage.getItem('currentUser');
