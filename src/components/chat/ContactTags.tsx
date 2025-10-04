@@ -85,9 +85,9 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
           key={tag.id}
           variant="outline"
           style={{ 
-            backgroundColor: tag.color,
+            backgroundColor: `${tag.color}15`,
             borderColor: tag.color,
-            color: '#fff'
+            color: tag.color
           }}
           className="text-xs px-2 py-0.5 h-auto rounded-full font-medium flex items-center gap-1"
         >
@@ -97,7 +97,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
               e.stopPropagation();
               removeTag(tag.id);
             }}
-            className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+            className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
             disabled={isLoading}
           >
             <X className="w-2.5 h-2.5" />

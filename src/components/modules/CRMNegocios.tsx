@@ -199,9 +199,9 @@ function DraggableDeal({
               key={tag.id}
               variant="outline"
               style={{ 
-                backgroundColor: tag.color,
+                backgroundColor: `${tag.color}15`,
                 borderColor: tag.color,
-                color: '#fff'
+                color: tag.color
               }}
               className="text-xs px-2 py-0.5 h-auto rounded-full font-medium flex items-center gap-1"
             >
@@ -222,7 +222,7 @@ function DraggableDeal({
                     console.error('Erro ao remover tag:', error);
                   }
                 }}
-                className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
               >
                 <X className="w-2.5 h-2.5" />
               </button>
