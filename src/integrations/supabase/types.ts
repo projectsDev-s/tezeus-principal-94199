@@ -512,18 +512,21 @@ export type Database = {
         Row: {
           contact_id: string
           created_at: string
+          created_by: string | null
           id: string
           tag_id: string
         }
         Insert: {
           contact_id: string
           created_at?: string
+          created_by?: string | null
           id?: string
           tag_id: string
         }
         Update: {
           contact_id?: string
           created_at?: string
+          created_by?: string | null
           id?: string
           tag_id?: string
         }
@@ -533,6 +536,20 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "system_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "system_users_view"
             referencedColumns: ["id"]
           },
           {

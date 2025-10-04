@@ -57,11 +57,22 @@ export function useContactTags(contactId?: string) {
 
     setIsLoading(true);
     try {
+      // Buscar o ID do usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Buscar system_user_id baseado no email do usuário autenticado
+      const { data: systemUser } = await supabase
+        .from('system_users')
+        .select('id')
+        .eq('email', user?.email)
+        .maybeSingle();
+
       const { error } = await supabase
         .from('contact_tags')
         .upsert({
           contact_id: contactId,
-          tag_id: tagId
+          tag_id: tagId,
+          created_by: systemUser?.id || null
         }, {
           onConflict: 'contact_id,tag_id',
           ignoreDuplicates: true

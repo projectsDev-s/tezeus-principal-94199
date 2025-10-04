@@ -217,7 +217,7 @@ export function CRMTags() {
                           {tag.name}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">0</TableCell>
+                      <TableCell className="text-center">{tag.contact_count || 0}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
