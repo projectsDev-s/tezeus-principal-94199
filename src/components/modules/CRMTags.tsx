@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Edit, Trash2, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, Trash2, RotateCcw, X } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -20,7 +19,10 @@ export function CRMTags() {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isUserSelectorOpen, setIsUserSelectorOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   const { selectedWorkspace } = useWorkspace();
   const { members: fetchedMembers, isLoading: loadingMembers } = useWorkspaceMembers(selectedWorkspace?.workspace_id || "");
@@ -28,12 +30,41 @@ export function CRMTags() {
   const { tags, isLoading, error, refetch } = useTags(startDate, endDate, selectedUserId);
 
   const selectedUser = members.find(m => m.user_id === selectedUserId);
+  
+  const filteredMembers = members.filter(member => 
+    member.user?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleResetFilters = () => {
     setSelectedUserId("");
     setStartDate(undefined);
     setEndDate(undefined);
+    setSearchTerm("");
   };
+  
+  const handleSelectUser = (userId: string) => {
+    setSelectedUserId(userId);
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+  };
+  
+  const handleClearUser = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedUserId("");
+    setSearchTerm("");
+  };
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="p-6">
@@ -43,44 +74,46 @@ export function CRMTags() {
           
           {/* Filters */}
           <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <Popover open={isUserSelectorOpen} onOpenChange={setIsUserSelectorOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={isUserSelectorOpen}
-                    className="max-w-sm justify-between"
-                    disabled={loadingMembers}
+            <div className="flex-1 relative" ref={dropdownRef}>
+              <div className="relative max-w-sm">
+                <Input
+                  type="text"
+                  placeholder={loadingMembers ? "Carregando..." : selectedUser?.user?.name || "Buscar usuário"}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClick={() => setIsDropdownOpen(true)}
+                  disabled={loadingMembers}
+                  className="pr-8"
+                />
+                {selectedUser && (
+                  <button
+                    onClick={handleClearUser}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {loadingMembers 
-                      ? "Carregando..." 
-                      : selectedUser?.user?.name || "Buscar usuário"}
-                  </Button>
-                </PopoverTrigger>
-                {!loadingMembers && members.length > 0 && (
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar usuário..." />
-                      <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
-                      <CommandGroup>
-                        {members.map((member) => (
-                          <CommandItem
-                            key={member.id}
-                            value={member.user?.name || ''}
-                            onSelect={() => {
-                              setSelectedUserId(member.user_id === selectedUserId ? "" : member.user_id);
-                              setIsUserSelectorOpen(false);
-                            }}
-                          >
-                            {member.user?.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
+                    <X className="h-4 w-4" />
+                  </button>
                 )}
-              </Popover>
+              </div>
+              
+              {isDropdownOpen && !loadingMembers && (
+                <div className="absolute top-full left-0 mt-1 w-full max-w-sm bg-background border rounded-md shadow-lg z-50 max-h-[300px] overflow-y-auto">
+                  {filteredMembers.length === 0 ? (
+                    <div className="p-3 text-sm text-muted-foreground text-center">
+                      Nenhum usuário encontrado
+                    </div>
+                  ) : (
+                    filteredMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        onClick={() => handleSelectUser(member.user_id)}
+                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors"
+                      >
+                        {member.user?.name}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
             
             <Popover>
