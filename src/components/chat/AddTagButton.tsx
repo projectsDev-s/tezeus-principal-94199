@@ -109,7 +109,7 @@ export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }:
             </div>
           </div>
           
-          {/* Lista de tags disponíveis */}
+          {/* Lista de tags disponíveis - Padrão sólido Imagem 1 */}
           <ScrollArea className="max-h-48">
             <div className="p-2 space-y-1">
               {filteredTags.map((tag) => {
