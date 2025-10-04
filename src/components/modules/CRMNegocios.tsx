@@ -155,13 +155,44 @@ function DraggableDeal({
       return `há ${daysAgo} ${daysAgo === 1 ? 'dia' : 'dias'}`;
     }
   };
-  return <Card ref={setNodeRef} style={{
-    ...style,
-    borderLeftColor: columnColor
-  }} {...attributes} {...listeners} className={cn("cursor-pointer hover:shadow-md transition-shadow mb-3 border-l-4", isDarkMode ? "bg-card border-border" : "bg-card border-border")} onClick={onClick}>
-      <CardContent className="p-3">
-        {/* Header com avatar, nome e valor */}
-        <div className="flex items-start gap-3 mb-3">
+  
+  return <Card 
+    ref={setNodeRef} 
+    style={{
+      ...style,
+      borderLeftColor: columnColor
+    }} 
+    {...(!isSelectionMode && { ...attributes, ...listeners })} 
+    className={cn(
+      "hover:shadow-md transition-shadow mb-3 border-l-4 relative",
+      !isSelectionMode && "cursor-pointer",
+      isSelectionMode && "cursor-pointer hover:bg-accent/50",
+      isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30",
+      isDarkMode ? "bg-card border-border" : "bg-card border-border"
+    )} 
+    onClick={isSelectionMode ? (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggleSelection?.();
+    } : onClick}
+  >
+    <CardContent className="p-3">
+      {isSelectionMode && (
+        <div className="absolute top-2 right-2 z-10">
+          <input 
+            type="checkbox" 
+            checked={isSelected} 
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggleSelection?.();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-5 h-5 cursor-pointer accent-primary"
+          />
+        </div>
+      )}
+      {/* Header com avatar, nome e valor */}
+      <div className="flex items-start gap-3 mb-3">
           {/* Avatar do contato */}
           <div className="flex-shrink-0">
             {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-10 h-10 rounded-full object-cover border border-primary/20" onError={e => {
