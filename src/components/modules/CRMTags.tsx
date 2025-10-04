@@ -11,6 +11,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTags } from "@/hooks/useTags";
 import { CriarTagModal } from "@/components/modals/CriarTagModal";
+import { EditarTagModal } from "@/components/modals/EditarTagModal";
+import { DeletarTagModal } from "@/components/modals/DeletarTagModal";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -19,6 +21,9 @@ export function CRMTags() {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<{ id: string; name: string; color: string } | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -55,6 +60,16 @@ export function CRMTags() {
     e.stopPropagation();
     setSelectedUserId("");
     setSearchTerm("");
+  };
+  
+  const handleEditTag = (tag: { id: string; name: string; color: string }) => {
+    setSelectedTag(tag);
+    setIsEditModalOpen(true);
+  };
+  
+  const handleDeleteTag = (tag: { id: string; name: string; color: string }) => {
+    setSelectedTag(tag);
+    setIsDeleteModalOpen(true);
   };
   
   // Close dropdown when clicking outside
@@ -220,10 +235,20 @@ export function CRMTags() {
                       <TableCell className="text-center">{tag.contact_count || 0}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleEditTag(tag)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteTag(tag)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -243,6 +268,30 @@ export function CRMTags() {
         onTagCreated={() => {
           refetch?.();
         }}
+      />
+
+      <EditarTagModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTag(null);
+        }}
+        onTagUpdated={() => {
+          refetch?.();
+        }}
+        tag={selectedTag}
+      />
+
+      <DeletarTagModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedTag(null);
+        }}
+        onTagDeleted={() => {
+          refetch?.();
+        }}
+        tag={selectedTag}
       />
     </div>
   );
