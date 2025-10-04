@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail } from "lucide-react";
+import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { useUsersCache } from "@/hooks/useUsersCache";
+import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 interface Tag {
   id: string;
   name: string;
@@ -78,6 +79,7 @@ export function DealDetailsModal({
   
   const [activeTab, setActiveTab] = useState("negocios");
   const [contactId, setContactId] = useState<string>("");
+  const [workspaceId, setWorkspaceId] = useState<string>("");
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showAddTagModal, setShowAddTagModal] = useState(false);
@@ -120,6 +122,9 @@ export function DealDetailsModal({
   const { toast } = useToast();
   const { selectedPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(currentPipelineId);
+  
+  // Hook para informações adicionais do contato
+  const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
@@ -228,7 +233,8 @@ export function DealDetailsModal({
           name,
           email,
           phone,
-          profile_image_url
+          profile_image_url,
+          workspace_id
         ),
         pipelines (
           id,
@@ -255,6 +261,7 @@ export function DealDetailsModal({
     const contact = card.contacts;
     if (contact) {
       setContactId(contact.id);
+      setWorkspaceId(contact.workspace_id);
       setContactData({
         name: contact.name || 'Nome não informado',
         email: contact.email,
@@ -1079,6 +1086,71 @@ export function DealDetailsModal({
                     <div className={cn("text-center", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                       Carregando informações do contato...
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Informações Adicionais */}
+              <div className="space-y-4">
+                <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
+                  Informações Adicionais
+                </h3>
+                
+                {isLoadingExtraInfo ? (
+                  <div className="flex justify-center py-8">
+                    <div className={cn("text-center", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                      Carregando informações adicionais...
+                    </div>
+                  </div>
+                ) : extraFields.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {extraFields.map((field, index) => {
+                      // Mapeamento especial para os dois primeiros campos
+                      let displayLabel = field.field_name;
+                      let icon = Info;
+                      
+                      if (index === 0) {
+                        displayLabel = "Título";
+                        icon = FileText;
+                      } else if (index === 1) {
+                        displayLabel = "Contexto";
+                        icon = FileText;
+                      }
+                      
+                      const Icon = icon;
+                      
+                      return (
+                        <div 
+                          key={field.id || index}
+                          className={cn(
+                            "border rounded-lg p-4 flex items-center gap-3",
+                            isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                          )}>
+                            <Icon className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                              {displayLabel}
+                            </p>
+                            <p className={cn("text-sm truncate", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              {field.field_value}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "text-center py-8 border rounded-lg",
+                    isDarkMode ? "text-gray-400 border-gray-600" : "text-gray-500 border-gray-200"
+                  )}>
+                    <p>Nenhuma informação adicional cadastrada</p>
                   </div>
                 )}
               </div>
