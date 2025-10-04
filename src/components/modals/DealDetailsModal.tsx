@@ -178,8 +178,11 @@ export function DealDetailsModal({
     try {
       console.log('🔍 Buscando dados do card:', cardId);
       
+      let contactIdToUse: string | null = null;
+      
       // Se já temos dados do contato, buscar os dados completos
       if (initialContactData) {
+        contactIdToUse = initialContactData.id;
         setContactId(initialContactData.id);
         
         // Buscar dados completos do contato
@@ -204,13 +207,51 @@ export function DealDetailsModal({
             fetchActivities(initialContactData.id)
           ]);
         }
-        
-        setIsLoadingData(false);
-        return;
+      } else {
+        // Fallback: buscar todos os dados se não tivermos dados iniciais
+        await fetchAdditionalCardData();
+        contactIdToUse = contactId;
       }
       
-      // Fallback: buscar todos os dados se não tivermos dados iniciais
-      await fetchAdditionalCardData();
+      // SEMPRE buscar os pipelines do contato (independente do fluxo acima)
+      if (contactIdToUse) {
+        console.log('🔍 Buscando pipelines do contato:', contactIdToUse);
+        
+        const { data: allCards, error: allCardsError } = await supabase
+          .from('pipeline_cards')
+          .select(`
+            id, 
+            pipeline_id, 
+            column_id,
+            pipelines (
+              id, 
+              name, 
+              type
+            )
+          `)
+          .eq('contact_id', contactIdToUse)
+          .eq('status', 'aberto');
+
+        console.log('📊 Cards do contato:', { allCards, allCardsError, count: allCards?.length });
+
+        if (allCards && allCards.length > 0) {
+          setAvailableCards(allCards);
+          
+          // Extrair pipelines únicos
+          const uniquePipelines = allCards.reduce((acc: any[], cardItem: any) => {
+            const pipeline = cardItem.pipelines;
+            if (pipeline && !acc.find(p => p.id === pipeline.id)) {
+              acc.push(pipeline);
+            }
+            return acc;
+          }, []);
+          
+          console.log('🔄 Pipelines únicos encontrados:', uniquePipelines);
+          
+          setContactPipelines(uniquePipelines);
+          setPipelineCardsCount(allCards.length);
+        }
+      }
       
     } catch (error) {
       console.error('❌ Erro ao buscar dados do card:', error);
