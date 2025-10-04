@@ -1090,16 +1090,16 @@ export function DealDetailsModal({
                       </div>
                     )}
                     
-                    {/* Campos extras em pares: o valor do primeiro campo vira label, o valor do segundo vira conteúdo */}
+                    {/* Campos extras em pares: índice par = contexto (valor), índice ímpar = título (label) */}
                     {extraFields.map((field, index) => {
-                      // Pular índices ímpares (eles são usados como valores dos pares)
+                      // Pular índices ímpares (eles são usados como labels dos pares)
                       if (index % 2 !== 0) return null;
                       
-                      const labelField = extraFields[index]; // Campo atual (índice par)
-                      const valueField = extraFields[index + 1]; // Próximo campo (se existir)
+                      const contextField = extraFields[index]; // Campo atual (índice par) = CONTEXTO
+                      const titleField = extraFields[index + 1]; // Próximo campo (índice ímpar) = TÍTULO
                       
                       // Só renderiza se ambos existirem e tiverem valores
-                      if (!labelField?.field_value || !valueField?.field_value) return null;
+                      if (!contextField?.field_value || !titleField?.field_value) return null;
                       
                       return (
                         <div 
@@ -1117,10 +1117,10 @@ export function DealDetailsModal({
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                              {labelField.field_value}
+                              {titleField.field_value}
                             </p>
                             <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              {valueField.field_value}
+                              {contextField.field_value}
                             </p>
                           </div>
                         </div>
