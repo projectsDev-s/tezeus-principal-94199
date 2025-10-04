@@ -180,15 +180,26 @@ export function DealDetailsModal({
     try {
       console.log('🔍 Buscando dados do card:', cardId);
       
-      // Se já temos dados do contato, usar eles diretamente para acelerar
+      // Se já temos dados do contato, buscar os dados completos
       if (initialContactData) {
         setContactId(initialContactData.id);
-        setContactData({
-          name: initialContactData.name,
-          email: null, // Será carregado depois se necessário
-          phone: initialContactData.phone || contactNumber,
-          profile_image_url: initialContactData.profile_image_url
-        });
+        
+        // Buscar dados completos do contato
+        const { data: fullContact } = await supabase
+          .from('contacts')
+          .select('id, name, email, phone, profile_image_url, workspace_id')
+          .eq('id', initialContactData.id)
+          .single();
+        
+        if (fullContact) {
+          setWorkspaceId(fullContact.workspace_id);
+          setContactData({
+            name: fullContact.name,
+            email: fullContact.email,
+            phone: fullContact.phone,
+            profile_image_url: fullContact.profile_image_url
+          });
+        }
         
         // Carregar dados adicionais em paralelo (não bloquear a UI)
         Promise.all([
@@ -1036,121 +1047,103 @@ export function DealDetailsModal({
                 
                 {contactData ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Card Email */}
-                    <div className={cn(
-                      "border rounded-lg p-4 flex items-center gap-3",
-                      isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                    )}>
+                    {/* Card Email - só exibe se tiver email */}
+                    {contactData.email && (
                       <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                        "border rounded-lg p-4 flex items-center gap-3",
+                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
                       )}>
-                        <Mail className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                        )}>
+                          <Mail className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                        </div>
+                        <div className="flex-1">
+                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                            Email
+                          </p>
+                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            {contactData.email}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                          Email
-                        </p>
-                        <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                          {contactData.email || "Não informado"}
-                        </p>
-                      </div>
-                    </div>
+                    )}
 
-                    {/* Card Telefone */}
-                    <div className={cn(
-                      "border rounded-lg p-4 flex items-center gap-3",
-                      isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                    )}>
+                    {/* Card Telefone - só exibe se tiver telefone */}
+                    {contactData.phone && (
                       <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                        "border rounded-lg p-4 flex items-center gap-3",
+                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
                       )}>
-                        <Phone className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                        )}>
+                          <Phone className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                        </div>
+                        <div className="flex-1">
+                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                            Telefone
+                          </p>
+                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            {contactData.phone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                          Telefone
-                        </p>
-                        <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                          {contactData.phone ? 
-                            contactData.phone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3') : 
-                            "Não informado"
-                          }
-                        </p>
+                    )}
+                    
+                    {/* Card Título - primeiro campo extra (só exibe se existir) */}
+                    {extraFields.length > 0 && extraFields[0] && (
+                      <div className={cn(
+                        "border rounded-lg p-4 flex items-center gap-3",
+                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
+                      )}>
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                        )}>
+                          <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                            Título
+                          </p>
+                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            {extraFields[0].field_value}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    
+                    {/* Card Contexto - segundo campo extra (só exibe se existir) */}
+                    {extraFields.length > 1 && extraFields[1] && (
+                      <div className={cn(
+                        "border rounded-lg p-4 flex items-center gap-3",
+                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
+                      )}>
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center",
+                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                        )}>
+                          <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                            Contexto
+                          </p>
+                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            {extraFields[1].field_value}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex justify-center py-8">
                     <div className={cn("text-center", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                       Carregando informações do contato...
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Informações Adicionais */}
-              <div className="space-y-4">
-                <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
-                  Informações Adicionais
-                </h3>
-                
-                {isLoadingExtraInfo ? (
-                  <div className="flex justify-center py-8">
-                    <div className={cn("text-center", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-                      Carregando informações adicionais...
-                    </div>
-                  </div>
-                ) : extraFields.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {extraFields.map((field, index) => {
-                      // Mapeamento especial para os dois primeiros campos
-                      let displayLabel = field.field_name;
-                      let icon = Info;
-                      
-                      if (index === 0) {
-                        displayLabel = "Título";
-                        icon = FileText;
-                      } else if (index === 1) {
-                        displayLabel = "Contexto";
-                        icon = FileText;
-                      }
-                      
-                      const Icon = icon;
-                      
-                      return (
-                        <div 
-                          key={field.id || index}
-                          className={cn(
-                            "border rounded-lg p-4 flex items-center gap-3",
-                            isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                          )}
-                        >
-                          <div className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center",
-                            isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                          )}>
-                            <Icon className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                              {displayLabel}
-                            </p>
-                            <p className={cn("text-sm truncate", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              {field.field_value}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className={cn(
-                    "text-center py-8 border rounded-lg",
-                    isDarkMode ? "text-gray-400 border-gray-600" : "text-gray-500 border-gray-200"
-                  )}>
-                    <p>Nenhuma informação adicional cadastrada</p>
                   </div>
                 )}
               </div>
