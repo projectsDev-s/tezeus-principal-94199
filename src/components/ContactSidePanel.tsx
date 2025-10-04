@@ -538,7 +538,7 @@ export function ContactSidePanel({
                           {/* Informações do negócio */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {selectedDeal.title} - {selectedDeal.column_name}
+                              {selectedDeal.pipeline} - {selectedDeal.column_name}
                             </p>
                             <p className="text-sm font-semibold text-primary">
                               {new Intl.NumberFormat('pt-BR', {
