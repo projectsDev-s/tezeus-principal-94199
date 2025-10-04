@@ -108,6 +108,10 @@ export function DealDetailsModal({
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>([]);
   const [contactPipelines, setContactPipelines] = useState<any[]>([]);
   const [pipelineCardsCount, setPipelineCardsCount] = useState(0);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>(currentPipelineId);
+  const [selectedCardId, setSelectedCardId] = useState<string>(cardId);
+  const [selectedColumnId, setSelectedColumnId] = useState<string>(currentColumnId);
+  const [availableCards, setAvailableCards] = useState<any[]>([]);
   const [contactData, setContactData] = useState<{
     name: string;
     email: string | null;
@@ -121,7 +125,7 @@ export function DealDetailsModal({
   } : null);
   const { toast } = useToast();
   const { selectedPipeline } = usePipelinesContext();
-  const { columns, isLoading: isLoadingColumns } = usePipelineColumns(currentPipelineId);
+  const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
@@ -154,9 +158,9 @@ export function DealDetailsModal({
 
   // Converter colunas em steps de progresso
   useEffect(() => {
-    if (columns.length > 0 && currentColumnId) {
+    if (columns.length > 0 && selectedColumnId) {
       const sortedColumns = [...columns].sort((a, b) => a.order_position - b.order_position);
-      const currentIndex = sortedColumns.findIndex(col => col.id === currentColumnId);
+      const currentIndex = sortedColumns.findIndex(col => col.id === selectedColumnId);
       
       const steps: PipelineStep[] = sortedColumns.map((column, index) => ({
         id: column.id,
@@ -167,9 +171,8 @@ export function DealDetailsModal({
       }));
       
       setPipelineSteps(steps);
-      // Pipeline steps created
     }
-  }, [columns, currentColumnId]);
+  }, [columns, selectedColumnId]);
   const fetchCardData = async () => {
     setIsLoadingData(true);
     try {
@@ -275,11 +278,13 @@ export function DealDetailsModal({
       // Buscar todos os cards deste contato para contar
       const { data: allCards } = await supabase
         .from('pipeline_cards')
-        .select('id, pipeline_id, pipelines (id, name, type)')
+        .select('id, pipeline_id, column_id, pipelines (id, name, type)')
         .eq('contact_id', contact.id)
         .eq('status', 'aberto');
 
       if (allCards && allCards.length > 0) {
+        setAvailableCards(allCards);
+        
         // Extrair pipelines únicos
         const uniquePipelines = allCards.reduce((acc, cardItem) => {
           const pipeline = cardItem.pipelines;
@@ -525,6 +530,18 @@ export function DealDetailsModal({
   };
   const pendingActivities = activities.filter(activity => !activity.is_completed);
   const completedActivities = activities.filter(activity => activity.is_completed);
+
+  // Função para mudar o pipeline/negócio selecionado
+  const handlePipelineChange = (newPipelineId: string) => {
+    // Encontrar o card deste contato no pipeline selecionado
+    const cardInPipeline = availableCards.find(c => c.pipeline_id === newPipelineId);
+    
+    if (cardInPipeline) {
+      setSelectedPipelineId(newPipelineId);
+      setSelectedCardId(cardInPipeline.id);
+      setSelectedColumnId(cardInPipeline.column_id);
+    }
+  };
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
         {/* Header */}
@@ -604,23 +621,29 @@ export function DealDetailsModal({
               {/* Pipeline Selection */}
               <div className="space-y-2">
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                  Selecione o Negócio
+                  Negócios do Contato
                 </label>
-                <div className="flex items-center gap-2">
-                  <span className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                <div className="flex items-center gap-3">
+                  <span className={cn("text-sm font-semibold", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                     {isLoadingData ? 'Carregando...' : `${pipelineCardsCount} ${pipelineCardsCount === 1 ? 'Negócio' : 'Negócios'}`}
                   </span>
+                  
                   {contactPipelines.length > 0 && (
-                  <div className={cn("p-3 bg-gray-50 rounded-lg border", isDarkMode ? "bg-gray-800 border-gray-600" : "bg-gray-50 border-gray-200")}>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-sm font-medium", isDarkMode ? "text-gray-200" : "text-gray-700")}>
-                        Pipeline Atual:
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {contactPipelines.find(p => p.id === currentPipelineId)?.name || 'Pipeline não encontrado'}
-                      </Badge>
-                    </div>
-                  </div>
+                    <Select 
+                      value={selectedPipelineId} 
+                      onValueChange={handlePipelineChange}
+                    >
+                      <SelectTrigger className={cn("flex-1", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
+                        <SelectValue placeholder="Selecione um negócio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contactPipelines.map((pipeline) => (
+                          <SelectItem key={pipeline.id} value={pipeline.id}>
+                            {pipeline.name} ({pipeline.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
               </div>
@@ -658,7 +681,7 @@ export function DealDetailsModal({
                     })()}
                     
                     {/* Informação da posição atual */}
-                    {currentColumnId && (
+                    {selectedColumnId && (
                       <div className={cn("mb-4 p-3 rounded-lg border", 
                         isDarkMode 
                           ? "bg-yellow-900/30 border-yellow-700 text-yellow-300" 
