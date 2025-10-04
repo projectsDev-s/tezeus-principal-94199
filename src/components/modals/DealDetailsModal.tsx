@@ -671,24 +671,25 @@ export function DealDetailsModal({
                     )}
                     
                     {/* Pipeline Visual */}
-                    <div className="relative py-8">
+                    <div className="relative py-8 px-4">
                       {/* Linha de fundo */}
-                      <div className={cn("absolute top-1/2 left-0 right-0 h-1 transform -translate-y-1/2 z-0", 
+                      <div className={cn("absolute left-0 right-0 h-1 z-0", 
                         isDarkMode ? "bg-gray-600" : "bg-gray-300"
-                      )}></div>
+                      )} style={{ top: '24px' }}></div>
                       
                       {/* Linha de progresso */}
                       {pipelineSteps.length > 1 && (
                         <div 
-                          className="absolute top-1/2 left-0 h-1 bg-yellow-400 transform -translate-y-1/2 z-10 transition-all duration-500"
+                          className="absolute left-0 h-1 bg-yellow-400 z-10 transition-all duration-500"
                           style={{ 
+                            top: '24px',
                             width: `${Math.max(0, Math.min(100, ((pipelineSteps.findIndex(step => step.isActive) + 0.5) / Math.max(1, pipelineSteps.length - 1)) * 100))}%`
                           }}
                         ></div>
                       )}
                       
                       {/* Etapas do Pipeline */}
-                      <div className="relative flex justify-between items-center z-20">
+                      <div className="relative flex justify-between z-20">
                         {pipelineSteps.map((step, index) => {
                           const currentStepIndex = pipelineSteps.findIndex(s => s.isActive);
                           const isCompleted = currentStepIndex >= 0 && index < currentStepIndex;
@@ -698,16 +699,16 @@ export function DealDetailsModal({
                           return (
                             <div 
                               key={step.id} 
-                              className="flex flex-col items-center relative"
+                              className="flex flex-col items-center"
                               style={{ flex: '1' }}
                             >
-                              {/* Círculo da etapa - Centralizado na linha */}
+                              {/* Círculo da etapa - Alinhado exatamente na linha */}
                               <div 
                                 className={cn(
-                                  "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all duration-300 relative z-20 bg-white",
+                                  "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all duration-300 z-20",
                                   isCompleted && "bg-green-500 border-green-500 text-white",
                                   isActive && "bg-yellow-400 border-yellow-400 text-black",
-                                  isFuture && "bg-gray-200 border-gray-300 text-gray-500"
+                                  isFuture && "bg-white border-gray-300 text-gray-500"
                                 )}
                               >
                                 {isCompleted ? (
@@ -717,8 +718,8 @@ export function DealDetailsModal({
                                 )}
                               </div>
                               
-                              {/* Nome da etapa */}
-                              <div className="mt-3 text-center max-w-20">
+                              {/* Nome da etapa - Separado abaixo do círculo */}
+                              <div className="mt-4 text-center max-w-24">
                                 <p 
                                   className={cn(
                                     "text-xs font-medium leading-tight",
