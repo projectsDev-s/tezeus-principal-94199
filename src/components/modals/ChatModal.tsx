@@ -68,6 +68,12 @@ export function ChatModal({
         contactPhone,
         contactAvatar
       });
+      
+      if (!conversationId || conversationId === '') {
+        console.error('❌ ChatModal: conversationId está vazio ou inválido!');
+      } else {
+        console.log('✅ ChatModal: conversationId válido:', conversationId);
+      }
     }
   }, [isOpen, conversationId, contactName, contactPhone, contactAvatar]);
   

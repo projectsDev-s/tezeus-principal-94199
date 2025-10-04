@@ -928,7 +928,7 @@ export function CRMNegocios({
           console.log('🔽 Fechando ChatModal');
           setIsChatModalOpen(false);
         }} 
-        conversationId={selectedChatCard?.conversation?.id || ""} 
+        conversationId={selectedChatCard?.conversation?.id || selectedChatCard?.conversation_id || ""} 
         contactName={selectedChatCard?.contact?.name || selectedChatCard?.name || ""} 
         contactPhone={selectedChatCard?.contact?.phone || ""} 
         contactAvatar={selectedChatCard?.contact?.profile_image_url || ""} 

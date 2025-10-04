@@ -20,12 +20,18 @@ export function usePipelineCards(pipelineId: string | null) {
       setIsLoading(true);
       const headers = getHeaders();
       
+      console.log('🔍 usePipelineCards: Buscando cards para pipeline:', pipelineId);
+      
       const { data, error } = await supabase.functions.invoke(`pipeline-management/cards?pipeline_id=${pipelineId}`, {
         method: 'GET',
         headers
       });
 
       if (error) throw error;
+      
+      console.log('📦 usePipelineCards: Cards carregados:', data?.length || 0);
+      console.log('🔎 usePipelineCards: Primeiro card exemplo:', data?.[0]);
+      
       setCards(data || []);
     } catch (error) {
       console.error('Error fetching cards:', error);
