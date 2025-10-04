@@ -228,7 +228,15 @@ export function CRMTags() {
                   tags.map((tag) => (
                     <TableRow key={tag.id}>
                       <TableCell>
-                        <Badge variant="secondary" style={{ backgroundColor: tag.color, color: 'white' }}>
+                        <Badge 
+                          variant="outline" 
+                          style={{ 
+                            backgroundColor: `${tag.color}15`,
+                            borderColor: tag.color,
+                            color: tag.color
+                          }}
+                          className="text-xs px-2 py-0.5 h-auto rounded-full font-medium"
+                        >
                           {tag.name}
                         </Badge>
                       </TableCell>
