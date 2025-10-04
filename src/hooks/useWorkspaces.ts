@@ -19,7 +19,7 @@ export function useWorkspaces() {
     setIsLoading(true);
     try {
       // Always use the Edge function to bypass RLS issues
-      console.log('Fetching workspaces via Edge function for user:', user.id, 'role:', userRole);
+      // Fetching workspaces via Edge function
       
       const { data, error } = await supabase.functions.invoke('list-user-workspaces', {
         headers: {
@@ -44,12 +44,12 @@ export function useWorkspaces() {
         connections_count: w.connections_count || 0
       })) || [];
 
-      console.log('Found workspaces for user:', workspaceData);
+      // Workspaces fetched
       setWorkspaces(workspaceData);
 
       // Fallback: buscar connections_count diretamente se não veio da Edge function
       if (workspaceData.some((w: any) => !w.connections_count && w.connections_count !== 0)) {
-        console.log('Fetching connections count as fallback...');
+        // Fetching connections count as fallback
         try {
           const { data: connectionsData } = await supabase
             .from('connections')
@@ -68,7 +68,7 @@ export function useWorkspaces() {
           
           setWorkspaces(updatedWorkspaces);
         } catch (fallbackError) {
-          console.log('Fallback connections count failed, using 0:', fallbackError);
+          // Fallback connections count failed
           // Não mostrar erro para fallback, apenas usar os workspaces sem connection count
         }
       }

@@ -66,9 +66,7 @@ export function useSystemCustomization() {
       const saturation = isNaN(s) ? 0 : Math.round(s * 100);
       const lightness = isNaN(l) ? 50 : Math.round(l * 100);
       
-      const result = `${hue} ${saturation}% ${lightness}%`;
-      console.log('🎨 Converted', hex, 'to HSL:', result);
-      return result;
+      return `${hue} ${saturation}% ${lightness}%`;
     } catch (error) {
       console.error('❌ Error converting hex to HSL:', error);
       return '0 0% 50%'; // Safe fallback
@@ -114,13 +112,6 @@ export function useSystemCustomization() {
     root.style.setProperty('--popover', headerHsl);
     root.style.setProperty('--sidebar-background', sidebarHsl);
     root.style.setProperty('--sidebar', sidebarHsl);
-    
-    console.log('🎨 Applied system customization:', {
-      background: backgroundHsl,
-      primary: primaryHsl,
-      header: headerHsl,
-      sidebar: sidebarHsl
-    });
   };
 
   // Load customization settings
@@ -190,7 +181,6 @@ export function useSystemCustomization() {
       if (data) {
         setCustomization(data);
         applyCustomization(data);
-        console.log('✅ System customization updated successfully');
       }
 
       return data;

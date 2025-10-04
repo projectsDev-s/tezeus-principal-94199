@@ -206,9 +206,6 @@ export function useNotifications() {
 
   // Subscription em tempo real para mudanças otimizada
   useEffect(() => {
-    if (DEBUG_NOTIFICATIONS) {
-      console.log('🔔 Configurando subscription para mudanças de read_at...');
-    }
     
     const channel = supabase
       .channel('notifications-updates')
@@ -263,9 +260,6 @@ export function useNotifications() {
       .subscribe();
 
     return () => {
-      if (DEBUG_NOTIFICATIONS) {
-        console.log('🔔 Removendo subscription de notificações');
-      }
       supabase.removeChannel(channel);
     };
   }, []);

@@ -53,7 +53,7 @@ export const useWorkspaceAnalytics = () => {
         conversationQuery = conversationQuery.eq('assigned_user_id', user.id);
       }
 
-      console.log('🔍 Analytics: Fetching conversations...');
+      // Fetching conversations
       const { data: conversations, error: conversationsError } = await conversationQuery;
       
       if (conversationsError) {
@@ -67,7 +67,7 @@ export const useWorkspaceAnalytics = () => {
       const totalConversations = conversations?.length || 0;
 
       // Fetch pipelines for this workspace first
-      console.log('🔍 Analytics: Fetching pipelines...');
+      // Fetching pipelines
       const { data: pipelines, error: pipelinesError } = await supabase
         .from('pipelines')
         .select('id')
@@ -102,7 +102,7 @@ export const useWorkspaceAnalytics = () => {
       }
 
       // Fetch pipeline columns
-      console.log('🔍 Analytics: Fetching pipeline columns...');
+      // Fetching pipeline columns
       const { data: columns, error: columnsError } = await supabase
         .from('pipeline_columns')
         .select('id, name')
@@ -116,7 +116,7 @@ export const useWorkspaceAnalytics = () => {
       console.log('✅ Analytics: Columns fetched', { count: columns?.length || 0 });
 
       // Fetch pipeline cards
-      console.log('🔍 Analytics: Fetching pipeline cards...');
+      // Fetching pipeline cards
       let cardsQuery = supabase
         .from('pipeline_cards')
         .select('id, column_id, value, created_at, updated_at')

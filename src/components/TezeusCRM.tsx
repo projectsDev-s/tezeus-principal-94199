@@ -95,8 +95,6 @@ export function TezeusCRM() {
     if (path.startsWith("editar-agente/")) return "editar-agente";
     if (path.includes("/usuarios")) return "workspace-usuarios";
     
-    // Debug log to see what path we're getting
-    console.log('🔍 URL Path:', path);
     
     return path as ModuleType;
   };
@@ -109,10 +107,7 @@ export function TezeusCRM() {
     const searchParams = new URLSearchParams(location.search);
     const conversationId = searchParams.get('id');
     
-    console.log('🔔 TezeusCRM - Mudança de URL:', conversationId, 'atual:', selectedConversationId);
-    
     if (conversationId && conversationId !== selectedConversationId) {
-      console.log('🔔 Atualizando selectedConversationId para:', conversationId);
       setSelectedConversationId(conversationId);
       
       // ✅ CORREÇÃO 4: Só bloquear navegação se NÃO for via notificação
@@ -127,8 +122,6 @@ export function TezeusCRM() {
         return () => clearTimeout(timer);
       }
     } else if (!conversationId && selectedConversationId) {
-      // ✅ CORREÇÃO 5: Limpar estado quando não há conversa na URL
-      console.log('🔔 Limpando selectedConversationId');
       setSelectedConversationId(null);
       setCanNavigateFreely(true);
     }
@@ -217,10 +210,6 @@ export function TezeusCRM() {
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
         onNavigateToConversation={(conversationId) => {
-          console.log('🔔 TezeusCRM - Navegação via notificação:', conversationId);
-          console.log('🔔 canNavigateFreely:', canNavigateFreely);
-          
-          // ✅ CORREÇÃO 2: Sempre permitir navegação via notificação
           setIsNotificationNavigation(true);
           setSelectedConversationId(conversationId);
           navigate(`/conversas?id=${conversationId}`);
