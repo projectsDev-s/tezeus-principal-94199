@@ -1093,51 +1093,42 @@ export function DealDetailsModal({
                       </div>
                     )}
                     
-                    {/* Card Título - primeiro campo extra (só exibe se existir) */}
-                    {extraFields.length > 0 && extraFields[0] && (
-                      <div className={cn(
-                        "border rounded-lg p-4 flex items-center gap-3",
-                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                      )}>
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
-                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                        )}>
-                          <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                    {/* Campos extras em pares: o valor do primeiro campo vira label, o valor do segundo vira conteúdo */}
+                    {extraFields.map((field, index) => {
+                      // Pular índices ímpares (eles são usados como valores dos pares)
+                      if (index % 2 !== 0) return null;
+                      
+                      const labelField = extraFields[index]; // Campo atual (índice par)
+                      const valueField = extraFields[index + 1]; // Próximo campo (se existir)
+                      
+                      // Só renderiza se ambos existirem e tiverem valores
+                      if (!labelField?.field_value || !valueField?.field_value) return null;
+                      
+                      return (
+                        <div 
+                          key={field.id || index}
+                          className={cn(
+                            "border rounded-lg p-4 flex items-center gap-3",
+                            isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                          )}>
+                            <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                              {labelField.field_value}
+                            </p>
+                            <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              {valueField.field_value}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                            Título
-                          </p>
-                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            {extraFields[0].field_value}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Card Contexto - segundo campo extra (só exibe se existir) */}
-                    {extraFields.length > 1 && extraFields[1] && (
-                      <div className={cn(
-                        "border rounded-lg p-4 flex items-center gap-3",
-                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                      )}>
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
-                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                        )}>
-                          <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                            Contexto
-                          </p>
-                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            {extraFields[1].field_value}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex justify-center py-8">
