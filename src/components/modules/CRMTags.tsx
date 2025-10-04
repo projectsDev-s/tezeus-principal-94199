@@ -51,35 +51,35 @@ export function CRMTags() {
                     role="combobox"
                     aria-expanded={isUserSelectorOpen}
                     className="max-w-sm justify-between"
-                    disabled={loadingMembers || members.length === 0}
+                    disabled={loadingMembers}
                   >
                     {loadingMembers 
                       ? "Carregando..." 
                       : selectedUser?.user?.name || "Buscar usuário"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar usuário..." />
-                    <CommandEmpty>
-                      {loadingMembers ? "Carregando usuários..." : "Nenhum usuário encontrado."}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {members.length > 0 && members.map((member) => (
-                        <CommandItem
-                          key={member.id}
-                          value={member.user?.name || ''}
-                          onSelect={() => {
-                            setSelectedUserId(member.user_id === selectedUserId ? "" : member.user_id);
-                            setIsUserSelectorOpen(false);
-                          }}
-                        >
-                          {member.user?.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
+                {!loadingMembers && members.length > 0 && (
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar usuário..." />
+                      <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {members.map((member) => (
+                          <CommandItem
+                            key={member.id}
+                            value={member.user?.name || ''}
+                            onSelect={() => {
+                              setSelectedUserId(member.user_id === selectedUserId ? "" : member.user_id);
+                              setIsUserSelectorOpen(false);
+                            }}
+                          >
+                            {member.user?.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                )}
               </Popover>
             </div>
             
