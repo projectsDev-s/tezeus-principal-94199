@@ -1,24 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Edit, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, Trash2, RotateCcw } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTags } from "@/hooks/useTags";
 import { CriarTagModal } from "@/components/modals/CriarTagModal";
+import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export function CRMTags() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isUserSelectorOpen, setIsUserSelectorOpen] = useState(false);
   
-  const { tags, isLoading, error, refetch } = useTags(startDate, endDate);
+  const { selectedWorkspace } = useWorkspace();
+  const { members } = useWorkspaceMembers(selectedWorkspace?.workspace_id || "");
+  const { tags, isLoading, error, refetch } = useTags(startDate, endDate, selectedUserId);
+
+  const selectedUser = members.find(m => m.user_id === selectedUserId);
+
+  const handleResetFilters = () => {
+    setSelectedUserId("");
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
 
   return (
     <div className="p-6">
@@ -29,12 +43,38 @@ export function CRMTags() {
           {/* Filters */}
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
-              <Input
-                placeholder="Buscar usuário"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+              <Popover open={isUserSelectorOpen} onOpenChange={setIsUserSelectorOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isUserSelectorOpen}
+                    className="max-w-sm justify-between"
+                  >
+                    {selectedUser?.user?.name || "Buscar usuário"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar usuário..." />
+                    <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {members.map((member) => (
+                        <CommandItem
+                          key={member.id}
+                          value={member.user?.name || ''}
+                          onSelect={() => {
+                            setSelectedUserId(member.user_id === selectedUserId ? "" : member.user_id);
+                            setIsUserSelectorOpen(false);
+                          }}
+                        >
+                          {member.user?.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             
             <Popover>
@@ -85,6 +125,15 @@ export function CRMTags() {
                 />
               </PopoverContent>
             </Popover>
+
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={handleResetFilters}
+              title="Restaurar filtros"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
             
             <Button 
               variant="yellow" 

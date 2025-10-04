@@ -7,7 +7,7 @@ interface Tag {
   color: string;
 }
 
-export function useTags(startDate?: Date, endDate?: Date) {
+export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export function useTags(startDate?: Date, endDate?: Date) {
 
   useEffect(() => {
     fetchTags();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, userId]);
 
   return { tags, isLoading, error, refetch: fetchTags };
 }
