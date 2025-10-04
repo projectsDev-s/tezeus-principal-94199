@@ -31,9 +31,12 @@ export function CRMTags() {
 
   const selectedUser = members.find(m => m.user_id === selectedUserId);
   
-  const filteredMembers = members.filter(member => 
-    member.user?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar usuários master e aplicar busca por nome
+  const filteredMembers = members
+    .filter(member => member.role !== 'master')
+    .filter(member => 
+      member.user?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const handleResetFilters = () => {
     setSelectedUserId("");
@@ -78,7 +81,7 @@ export function CRMTags() {
               <div className="relative max-w-sm">
                 <Input
                   type="text"
-                  placeholder={loadingMembers ? "Carregando..." : selectedUser?.user?.name || "Buscar usuário"}
+                  placeholder={loadingMembers ? "Carregando..." : (selectedUser?.user?.name || "Procurar por usuário")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onClick={() => setIsDropdownOpen(true)}
