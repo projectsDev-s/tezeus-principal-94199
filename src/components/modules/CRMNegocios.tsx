@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 // Interface compatível com o componente existente
@@ -239,23 +240,41 @@ function DraggableDeal({
               </Button>
             </PopoverTrigger>
             <PopoverContent 
-              className="w-64 p-0" 
+              className="w-64 p-0 bg-background border border-border shadow-lg z-50" 
               align="start"
               onClick={(e) => e.stopPropagation()}
             >
-              <Command>
-                <CommandInput 
-                  placeholder="Buscar tags..." 
-                  value={searchTerm}
-                  onValueChange={setSearchTerm}
-                />
-                <CommandList>
-                  <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
-                  <CommandGroup>
+              <div className="space-y-0">
+                {/* Campo de busca */}
+                <div className="p-3 border-b border-border">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Buscar tags..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 h-9 text-sm bg-muted/30 border-0 focus:bg-muted/50"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                
+                {/* Lista de tags disponíveis - Padrão sólido Imagem 1 */}
+                <ScrollArea className="max-h-48">
+                  <div className="p-2 space-y-1">
                     {getFilteredTags(searchTerm).map((tag) => (
-                      <CommandItem
+                      <Badge
                         key={tag.id}
-                        onSelect={async () => {
+                        variant="outline"
+                        style={{ 
+                          backgroundColor: tag.color,
+                          borderColor: tag.color,
+                          color: 'white'
+                        }}
+                        className="cursor-pointer hover:opacity-80 transition-all text-xs px-3 py-1.5 w-full justify-start rounded-full font-medium border-0"
+                        onClick={async (e) => {
+                          e.stopPropagation();
                           try {
                             await addTagToContact(tag.id);
                             await refreshTags();
@@ -266,18 +285,17 @@ function DraggableDeal({
                           }
                         }}
                       >
-                        <div className="flex items-center gap-2 w-full">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: tag.color }}
-                          />
-                          <span>{tag.name}</span>
-                        </div>
-                      </CommandItem>
+                        {tag.name}
+                      </Badge>
                     ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
+                    {getFilteredTags(searchTerm).length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        {searchTerm ? "Nenhuma tag encontrada" : "Nenhuma tag disponível"}
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </PopoverContent>
           </Popover>
         </div>
