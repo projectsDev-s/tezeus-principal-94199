@@ -23,7 +23,8 @@ export function CRMTags() {
   const [isUserSelectorOpen, setIsUserSelectorOpen] = useState(false);
   
   const { selectedWorkspace } = useWorkspace();
-  const { members } = useWorkspaceMembers(selectedWorkspace?.workspace_id || "");
+  const { members: fetchedMembers, isLoading: loadingMembers } = useWorkspaceMembers(selectedWorkspace?.workspace_id || "");
+  const members = fetchedMembers || [];
   const { tags, isLoading, error, refetch } = useTags(startDate, endDate, selectedUserId);
 
   const selectedUser = members.find(m => m.user_id === selectedUserId);
@@ -50,16 +51,21 @@ export function CRMTags() {
                     role="combobox"
                     aria-expanded={isUserSelectorOpen}
                     className="max-w-sm justify-between"
+                    disabled={loadingMembers || members.length === 0}
                   >
-                    {selectedUser?.user?.name || "Buscar usuário"}
+                    {loadingMembers 
+                      ? "Carregando..." 
+                      : selectedUser?.user?.name || "Buscar usuário"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar usuário..." />
-                    <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+                    <CommandEmpty>
+                      {loadingMembers ? "Carregando usuários..." : "Nenhum usuário encontrado."}
+                    </CommandEmpty>
                     <CommandGroup>
-                      {members.map((member) => (
+                      {members.length > 0 && members.map((member) => (
                         <CommandItem
                           key={member.id}
                           value={member.user?.name || ''}
