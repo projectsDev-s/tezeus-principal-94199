@@ -61,9 +61,7 @@ export const useSessionManager = () => {
     // Listener simplificado para mudanças de estado de auth do Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔄 Supabase auth state changed:', event);
-        
-        // Só agir em casos específicos de logout explícito
+        // Only act on explicit logout
         if (event === 'SIGNED_OUT' && !localStorage.getItem('currentUser')) {
           handleSessionExpired();
         }
