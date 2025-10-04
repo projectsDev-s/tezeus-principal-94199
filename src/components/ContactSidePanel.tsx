@@ -541,31 +541,50 @@ export function ContactSidePanel({
                   </div>
 
                   {/* Select de Pipeline com botão + */}
-                  <div className="space-y-2">
-                    <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
-                    <div className="flex items-center gap-2">
-                      <Select value={selectedCardId} onValueChange={setSelectedCardId}>
-                        <SelectTrigger className="h-9 flex-1">
-                          <SelectValue placeholder="Selecionar pipeline" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {deals.map(deal => (
-                            <SelectItem key={deal.id} value={deal.id}>
-                              {deal.pipeline}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        size="icon" 
-                        variant="outline"
-                        className="h-9 w-9 flex-shrink-0"
-                        onClick={() => setIsCreateDealModalOpen(true)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                  {deals.length > 0 ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
+                      <div className="flex items-center gap-2">
+                        <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                          <SelectTrigger className="h-9 flex-1">
+                            <SelectValue placeholder="Selecionar pipeline" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {deals.map(deal => (
+                              <SelectItem key={deal.id} value={deal.id}>
+                                {deal.pipeline}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          size="icon" 
+                          variant="outline"
+                          className="h-9 w-9 flex-shrink-0"
+                          onClick={() => setIsCreateDealModalOpen(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 text-sm text-muted-foreground">
+                          Nenhum pipeline vinculado
+                        </div>
+                        <Button 
+                          size="icon" 
+                          variant="outline"
+                          className="h-9 w-9 flex-shrink-0"
+                          onClick={() => setIsCreateDealModalOpen(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Botão Salvar */}
                   <Button 
