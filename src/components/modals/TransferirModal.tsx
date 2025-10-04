@@ -84,27 +84,58 @@ export function TransferirModal({
       setIsLoading(true);
       const headers = getHeaders();
 
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
       // Transfer each selected card
       for (const cardId of selectedCards) {
-        const { error } = await supabase.functions.invoke(
-          `pipeline-management/cards?id=${cardId}`,
-          {
-            method: 'PUT',
-            headers,
-            body: {
-              pipeline_id: targetPipelineId,
-              column_id: targetColumnId,
-            },
-          }
-        );
+        try {
+          const { error } = await supabase.functions.invoke(
+            `pipeline-management/cards?id=${cardId}`,
+            {
+              method: 'PUT',
+              headers,
+              body: {
+                pipeline_id: targetPipelineId,
+                column_id: targetColumnId,
+              },
+            }
+          );
 
-        if (error) throw error;
+          if (error) {
+            errorCount++;
+            // Check if it's a duplicate constraint error
+            if (error.message?.includes('idx_unique_contact_pipeline_open')) {
+              errors.push('Um ou mais contatos já possuem negócios abertos no pipeline de destino');
+            } else {
+              throw error;
+            }
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error('Error transferring card:', cardId, err);
+          errorCount++;
+        }
       }
 
-      toast({
-        title: "Sucesso",
-        description: `${selectedCards.length} negócio(s) transferido(s) com sucesso`,
-      });
+      if (successCount > 0) {
+        toast({
+          title: "Sucesso",
+          description: `${successCount} negócio(s) transferido(s) com sucesso`,
+        });
+      }
+
+      if (errorCount > 0) {
+        toast({
+          title: errorCount === selectedCards.length ? "Erro" : "Atenção",
+          description: errors.length > 0 
+            ? errors[0] 
+            : `${errorCount} negócio(s) não puderam ser transferidos`,
+          variant: "destructive",
+        });
+      }
 
       // Close first, then refresh
       onClose();
