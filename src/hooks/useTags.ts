@@ -18,7 +18,7 @@ export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
       setIsLoading(true);
       setError(null);
       
-      // Query base para buscar tags com contagem de contatos
+      // Query base para buscar todas as tags (LEFT JOIN para incluir tags sem contatos)
       let query = supabase
         .from('tags')
         .select(`
@@ -26,7 +26,7 @@ export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
           name, 
           color, 
           created_at,
-          contact_tags!inner(
+          contact_tags(
             id,
             contact_id,
             created_by
@@ -55,45 +55,40 @@ export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
           .lte('created_at', end.toISOString());
       }
 
-      // Filtro por usuário que atribuiu a tag
-      if (userId) {
-        query = query.eq('contact_tags.created_by', userId);
-      }
-
       const { data, error } = await query;
 
       if (error) throw error;
 
       // Processar dados para contar contatos únicos por tag
-      const tagsMap = new Map<string, { id: string; name: string; color: string; contacts: Set<string> }>();
-      
-      data?.forEach((item: any) => {
-        if (!tagsMap.has(item.id)) {
-          tagsMap.set(item.id, {
-            id: item.id,
-            name: item.name,
-            color: item.color,
-            contacts: new Set()
-          });
-        }
+      const processedTags = data?.map((item: any) => {
+        const contacts = new Set<string>();
         
-        // Adicionar contatos únicos
+        // Filtrar por usuário e adicionar contatos únicos
         item.contact_tags?.forEach((ct: any) => {
+          // Se há filtro de usuário, verificar se o created_by corresponde
+          if (userId && ct.created_by !== userId) {
+            return; // Pular este contact_tag
+          }
+          
           if (ct.contact_id) {
-            tagsMap.get(item.id)?.contacts.add(ct.contact_id);
+            contacts.add(ct.contact_id);
           }
         });
-      });
 
-      // Converter para array com contagem
-      const processedTags = Array.from(tagsMap.values()).map(tag => ({
-        id: tag.id,
-        name: tag.name,
-        color: tag.color,
-        contact_count: tag.contacts.size
-      }));
+        return {
+          id: item.id,
+          name: item.name,
+          color: item.color,
+          contact_count: contacts.size
+        };
+      }) || [];
 
-      setTags(processedTags);
+      // Se houver filtro de usuário, remover tags com 0 contatos (não atribuídas pelo usuário)
+      const finalTags = userId 
+        ? processedTags.filter(tag => tag.contact_count > 0)
+        : processedTags;
+
+      setTags(finalTags);
     } catch (err) {
       console.error('Error fetching tags:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar tags');
