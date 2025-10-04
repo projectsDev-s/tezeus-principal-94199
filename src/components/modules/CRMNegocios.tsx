@@ -36,7 +36,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 // Interface compatível com o componente existente
@@ -267,17 +266,13 @@ function DraggableDeal({
                           }
                         }}
                       >
-                        <Badge
-                          variant="outline"
-                          style={{ 
-                            backgroundColor: tag.color,
-                            borderColor: tag.color,
-                            color: 'white'
-                          }}
-                          className="cursor-pointer text-xs px-3 py-1 rounded-full font-medium border-0 w-full justify-start"
-                        >
-                          {tag.name}
-                        </Badge>
+                        <div className="flex items-center gap-2 w-full">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          <span>{tag.name}</span>
+                        </div>
                       </CommandItem>
                     ))}
                   </CommandGroup>

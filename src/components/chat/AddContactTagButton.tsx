@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useContactTags } from "@/hooks/useContactTags";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,9 @@ interface AddContactTagButtonProps {
 
 export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded }: AddContactTagButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedTagId, setSelectedTagId] = useState<string>("");
   const [isHovered, setIsHovered] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { 
     availableTags,
@@ -26,6 +29,39 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
 
   // Verificar quais tags já estão atribuídas ao contato
   const assignedTagIds = contactTags.map(tag => tag.id);
+
+  // Filtrar tags por busca
+  const filteredTags = availableTags.filter(tag => 
+    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAddTag = async () => {
+    if (!selectedTagId) return;
+    
+    const success = await addTagToContact(selectedTagId);
+    if (success) {
+      setIsOpen(false);
+      setSelectedTagId("");
+      setSearchTerm("");
+      onTagAdded?.();
+    }
+  };
+
+  const handleTagSelect = (tagId: string) => {
+    setSelectedTagId(tagId);
+  };
+
+  const handleCancel = () => {
+    setIsOpen(false);
+    setSelectedTagId("");
+    setSearchTerm("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleCancel();
+    }
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -54,29 +90,37 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
       </PopoverTrigger>
       
       <PopoverContent 
-        className="w-64 p-0" 
+        className="w-64 p-0 bg-background border border-border shadow-lg z-50" 
         align="start"
+        onKeyDown={handleKeyDown}
       >
-        <Command>
-          <CommandInput placeholder="Buscar tags..." />
-          <CommandList>
-            <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
-            <CommandGroup>
-              {availableTags.map((tag) => {
+        <div className="space-y-0">
+          {/* Campo de busca */}
+          <div className="p-3 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar tags..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-9 text-sm bg-muted/30 border-0 focus:bg-muted/50"
+                autoFocus
+              />
+            </div>
+          </div>
+          
+          {/* Lista de tags disponíveis */}
+          <ScrollArea className="max-h-48">
+            <div className="p-2 space-y-1">
+              {filteredTags.map((tag) => {
                 const isAssigned = assignedTagIds.includes(tag.id);
                 return (
-                  <CommandItem
-                    key={tag.id}
-                    disabled={isAssigned}
-                    onSelect={async () => {
-                      if (!isAssigned) {
-                        const success = await addTagToContact(tag.id);
-                        if (success) {
-                          setIsOpen(false);
-                          onTagAdded?.();
-                        }
-                      }
-                    }}
+                  <div 
+                    key={tag.id} 
+                    className={cn(
+                      "relative",
+                      isAssigned && "opacity-50"
+                    )}
                   >
                     <Badge
                       variant="outline"
@@ -86,19 +130,46 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
                         color: 'white'
                       }}
                       className={cn(
-                        "text-xs px-3 py-1 rounded-full font-medium border-0 w-full justify-start",
-                        isAssigned && "opacity-50 cursor-not-allowed"
+                        "cursor-pointer hover:opacity-80 transition-all text-xs px-3 py-1.5 w-full justify-start rounded-full font-medium border-0",
+                        selectedTagId === tag.id && "ring-2 ring-offset-1 ring-primary",
+                        isAssigned && "cursor-not-allowed"
                       )}
+                      onClick={() => !isAssigned && handleTagSelect(tag.id)}
                     >
                       {tag.name}
                       {isAssigned && <span className="ml-2 text-xs opacity-80">(já atribuída)</span>}
                     </Badge>
-                  </CommandItem>
+                  </div>
                 );
               })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+              {filteredTags.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {searchTerm ? "Nenhuma tag encontrada" : "Nenhuma tag disponível"}
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+          
+          {/* Botões */}
+          <div className="flex gap-2 p-3 border-t border-border">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="flex-1 h-9"
+              size="sm"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddTag}
+              disabled={!selectedTagId || isLoading}
+              className="flex-1 h-9"
+              size="sm"
+            >
+              {isLoading ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );
