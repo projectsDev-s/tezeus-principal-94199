@@ -36,6 +36,7 @@ interface Deal {
   value: number;
   status: string;
   pipeline: string;
+  column_name: string;
 }
 interface Observation {
   id: string;
@@ -138,7 +139,8 @@ export function ContactSidePanel({
     description: card.description,
     value: card.value || 0,
     status: card.status,
-    pipeline: card.pipeline_name
+    pipeline: card.pipeline_name,
+    column_name: card.column_name
   }));
   useEffect(() => {
     if (contact) {
@@ -536,7 +538,7 @@ export function ContactSidePanel({
                           {/* Informações do negócio */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {selectedDeal.pipeline} &gt; {selectedDeal.title}
+                              {selectedDeal.title} - {selectedDeal.column_name}
                             </p>
                             <p className="text-sm font-semibold text-primary">
                               {new Intl.NumberFormat('pt-BR', {

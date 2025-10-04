@@ -8,6 +8,7 @@ export interface ContactPipelineCard {
   pipeline_id: string;
   pipeline_name: string;
   column_id: string;
+  column_name: string;
   status: string;
   value?: number;
   title: string;
@@ -43,7 +44,8 @@ export function useContactPipelineCards(contactId: string | null) {
           value,
           title,
           description,
-          pipelines!inner(id, name)
+          pipelines!inner(id, name),
+          pipeline_columns!inner(id, name)
         `)
         .eq('contact_id', contactId);
 
@@ -54,6 +56,7 @@ export function useContactPipelineCards(contactId: string | null) {
         pipeline_id: card.pipeline_id,
         pipeline_name: (card.pipelines as any)?.name || '',
         column_id: card.column_id,
+        column_name: (card.pipeline_columns as any)?.name || '',
         status: card.status,
         value: card.value,
         title: card.title,
