@@ -99,6 +99,9 @@ function DraggableDeal({
   onChatClick,
   onValueClick
 }: DraggableDealProps) {
+  const { selectedWorkspace } = useWorkspace();
+  const { toast } = useToast();
+  
   const {
     attributes,
     listeners,
@@ -196,9 +199,46 @@ function DraggableDeal({
         {/* Footer com ícones de ação e prioridade */}
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-green-100 hover:text-green-600" onClick={e => {
+            <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-green-100 hover:text-green-600" onClick={async (e) => {
             e.stopPropagation();
-            onChatClick?.(deal);
+            
+            // Buscar conversa do contato antes de abrir o modal
+            if (deal.contact?.id) {
+              try {
+                const { data: conversations, error } = await supabase
+                  .from('conversations')
+                  .select('id')
+                  .eq('contact_id', deal.contact.id)
+                  .eq('workspace_id', selectedWorkspace?.workspace_id)
+                  .eq('status', 'open')
+                  .limit(1);
+                
+                if (error) throw error;
+                
+                if (conversations && conversations.length > 0) {
+                  // Anexar conversation_id ao deal antes de passar para o modal
+                  const dealWithConversation = {
+                    ...deal,
+                    conversation_id: conversations[0].id,
+                    conversation: { id: conversations[0].id }
+                  };
+                  onChatClick?.(dealWithConversation);
+                } else {
+                  toast({
+                    title: "Conversa não encontrada",
+                    description: "Não há conversa ativa para este contato",
+                    variant: "destructive",
+                  });
+                }
+              } catch (error) {
+                console.error('Erro ao buscar conversa:', error);
+                toast({
+                  title: "Erro",
+                  description: "Erro ao buscar conversa do contato",
+                  variant: "destructive",
+                });
+              }
+            }
           }}>
               <MessageCircle className="w-3.5 h-3.5" />
             </Button>
