@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight } from "lucide-react";
+import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { FilterModal } from "@/components/modals/FilterModal";
@@ -195,15 +195,38 @@ function DraggableDeal({
         {/* Área central para tags do contato */}
         <div className="mb-3 min-h-[28px] flex items-start flex-wrap gap-1">
           {contactTags.map((tag) => (
-            <span 
-              key={tag.id} 
-              className="px-2 py-1 text-xs rounded-full font-medium text-white" 
-              style={{
-                backgroundColor: tag.color
+            <Badge
+              key={tag.id}
+              variant="outline"
+              style={{ 
+                backgroundColor: tag.color,
+                borderColor: tag.color,
+                color: '#fff'
               }}
+              className="text-xs px-2 py-0.5 h-auto rounded-full font-medium flex items-center gap-1"
             >
-              {tag.name}
-            </span>
+              <span>{tag.name}</span>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    // Remove tag from contact
+                    await supabase
+                      .from('contact_tags')
+                      .delete()
+                      .eq('contact_id', deal.contact?.id)
+                      .eq('tag_id', tag.id);
+                    
+                    await refreshTags();
+                  } catch (error) {
+                    console.error('Erro ao remover tag:', error);
+                  }
+                }}
+                className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </Badge>
           ))}
           <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
             <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
