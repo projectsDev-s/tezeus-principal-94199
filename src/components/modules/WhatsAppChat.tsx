@@ -187,6 +187,7 @@ export function WhatsAppChat({
   const [peekConversationId, setPeekConversationId] = useState<string | null>(null);
   const [contactPanelOpen, setContactPanelOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -1159,15 +1160,46 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4" ref={(node) => {
+              if (node) {
+                const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
+                if (scrollContainer && !messagesScrollRef.current) {
+                  messagesScrollRef.current = scrollContainer as HTMLElement;
+                }
+              }
+            }}>
               {/* ✅ Loading inicial das mensagens */}
               {messagesLoading && messages.length === 0 && <div className="flex justify-center p-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 </div>}
               
-              {/* ✅ Botão Load More (scroll infinito) */}
+              {/* ✅ Botão Load More no TOPO (scroll infinito) */}
               {hasMore && messages.length > 0 && <div className="flex justify-center p-2">
-                  <Button variant="ghost" size="sm" onClick={loadMoreMessages} disabled={loadingMore}>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={async () => {
+                      // Guardar altura do scroll antes de carregar
+                      if (messagesScrollRef.current) {
+                        const scrollContainer = messagesScrollRef.current;
+                        const scrollHeightBefore = scrollContainer.scrollHeight;
+                        
+                        await loadMoreMessages();
+                        
+                        // Após carregar, ajustar scroll para manter posição
+                        setTimeout(() => {
+                          if (scrollContainer) {
+                            const scrollHeightAfter = scrollContainer.scrollHeight;
+                            const heightDifference = scrollHeightAfter - scrollHeightBefore;
+                            scrollContainer.scrollTop = heightDifference;
+                          }
+                        }, 50);
+                      } else {
+                        await loadMoreMessages();
+                      }
+                    }}
+                    disabled={loadingMore}
+                  >
                     {loadingMore ? 'Carregando...' : 'Carregar mensagens anteriores'}
                   </Button>
                 </div>}

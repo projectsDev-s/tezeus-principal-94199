@@ -57,6 +57,7 @@ export function ChatModal({
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLElement | null>(null);
   const { toast } = useToast();
   
   // Debug quando o modal abre
@@ -79,7 +80,7 @@ export function ChatModal({
   }, [isOpen, conversationId, contactName, contactPhone, contactAvatar]);
   
   // Usar o hook existente para buscar mensagens
-  const { messages, loading, loadInitial } = useConversationMessages();
+  const { messages, loading, loadInitial, loadMore, loadingMore, hasMore } = useConversationMessages();
 
   // Carregar mensagens quando abrir o modal
   useEffect(() => {
@@ -301,7 +302,14 @@ export function ChatModal({
           </div>
 
           {/* Área de mensagens igual ao WhatsAppChat */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4" ref={(node) => {
+            if (node) {
+              const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
+              if (scrollContainer && !messagesScrollRef.current) {
+                messagesScrollRef.current = scrollContainer as HTMLElement;
+              }
+            }
+          }}>
             {loading ? (
               <div className="flex items-center justify-center h-32">
                 <p className="text-muted-foreground">Carregando mensagens...</p>
@@ -318,6 +326,38 @@ export function ChatModal({
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Botão carregar mais no topo */}
+                {hasMore && messages.length > 0 && (
+                  <div className="flex justify-center p-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={async () => {
+                        // Guardar altura do scroll antes de carregar
+                        if (messagesScrollRef.current) {
+                          const scrollContainer = messagesScrollRef.current;
+                          const scrollHeightBefore = scrollContainer.scrollHeight;
+                          
+                          await loadMore();
+                          
+                          // Após carregar, ajustar scroll para manter posição
+                          setTimeout(() => {
+                            if (scrollContainer) {
+                              const scrollHeightAfter = scrollContainer.scrollHeight;
+                              const heightDifference = scrollHeightAfter - scrollHeightBefore;
+                              scrollContainer.scrollTop = heightDifference;
+                            }
+                          }, 50);
+                        } else {
+                          await loadMore();
+                        }
+                      }}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? 'Carregando...' : 'Carregar mensagens anteriores'}
+                    </Button>
+                  </div>
+                )}
                 {messages.map((message) => (
                   <div key={message.id} className={cn(
                     "flex items-start gap-3 max-w-[80%]",
