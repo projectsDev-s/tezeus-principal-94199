@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User } from "lucide-react";
+import { IniciarConversaContatoModal } from "@/components/modals/IniciarConversaContatoModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProfileImageDebug } from "@/components/debug/ProfileImageDebug";
@@ -55,6 +56,8 @@ export function CRMContatos() {
   const [debugContact, setDebugContact] = useState<Contact | null>(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [selectedContactForTag, setSelectedContactForTag] = useState<string | null>(null);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [selectedContactForWhatsApp, setSelectedContactForWhatsApp] = useState<Contact | null>(null);
   const headerCheckboxRef = useRef<HTMLButtonElement>(null);
   const {
     tags
@@ -601,15 +604,23 @@ export function CRMContatos() {
                 <TableCell className="text-center">{contact.createdAt}</TableCell>
                 <TableCell>
                   <div className="flex justify-center gap-1">
-                    
-                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedContactForWhatsApp(contact);
+                        setIsWhatsAppModalOpen(true);
+                      }}
+                      title="Iniciar conversa no WhatsApp"
+                    >
+                      <MessageCircle className="h-4 w-4 text-green-600" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleEditContact(contact)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setDeletingContact(contact)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                    
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
@@ -722,6 +733,17 @@ export function CRMContatos() {
 
       {/* Bulk Delete Confirmation Modal */}
       <DeletarTicketModal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} onConfirm={handleBulkDelete} />
+
+      {/* WhatsApp Conversation Modal */}
+      {selectedContactForWhatsApp && (
+        <IniciarConversaContatoModal
+          open={isWhatsAppModalOpen}
+          onOpenChange={setIsWhatsAppModalOpen}
+          contactId={selectedContactForWhatsApp.id}
+          contactName={selectedContactForWhatsApp.name}
+          contactPhone={selectedContactForWhatsApp.phone}
+        />
+      )}
 
       {/* Debug Profile Image Modal */}
       {showDebugModal && debugContact && selectedWorkspace && <Dialog open={showDebugModal} onOpenChange={setShowDebugModal}>
