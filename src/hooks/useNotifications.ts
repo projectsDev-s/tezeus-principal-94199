@@ -215,15 +215,10 @@ export function useNotifications() {
         table: 'messages',
         filter: 'sender_type=eq.contact'
       }, (payload) => {
-        if (DEBUG_NOTIFICATIONS) {
-          console.log('🔔 Real-time: Mensagem atualizada:', payload);
-        }
+        // Real-time: Message updated check
         
         // Se read_at foi atualizado (mensagem lida), forçar re-processamento
         if (payload.new?.read_at && !payload.old?.read_at) {
-          if (DEBUG_NOTIFICATIONS) {
-            console.log('🔔 Mensagem marcada como lida em tempo real');
-          }
           // Trigger debounced update sem logs
           if (debounceTimeoutRef.current) {
             clearTimeout(debounceTimeoutRef.current);
@@ -239,15 +234,10 @@ export function useNotifications() {
         schema: 'public',
         table: 'conversations'
       }, (payload) => {
-        if (DEBUG_NOTIFICATIONS) {
-          console.log('🔔 Real-time: Conversa atualizada:', payload);
-        }
+        // Real-time: Conversation updated check
         
         // Se unread_count foi alterado, forçar re-processamento
         if (payload.new?.unread_count !== payload.old?.unread_count) {
-          if (DEBUG_NOTIFICATIONS) {
-            console.log('🔔 Contador de não lidas alterado em tempo real');
-          }
           if (debounceTimeoutRef.current) {
             clearTimeout(debounceTimeoutRef.current);
           }

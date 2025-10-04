@@ -314,7 +314,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return;
     }
 
-    console.log('🔔 Configurando real-time subscription para conversa:', currentConversationId);
+    // Setting up real-time subscription for conversation
 
     const channel = supabase
       .channel(`conversation-messages-${currentConversationId}`)
@@ -327,7 +327,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          console.log('📩 Nova mensagem recebida via real-time:', payload.new);
+          // New message received via real-time
           const newMessage = payload.new as WhatsAppMessage;
           
           // Verificar se é do workspace atual
@@ -345,7 +345,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          console.log('🔄 Mensagem atualizada via real-time:', payload.new);
+          // Message updated via real-time
           const updatedMessage = payload.new as WhatsAppMessage;
           
           // Verificar se é do workspace atual

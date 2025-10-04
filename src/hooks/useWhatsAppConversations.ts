@@ -552,13 +552,7 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('🔔 Realtime: Nova mensagem recebida:', {
-            id: payload.new?.id,
-            conversation_id: payload.new?.conversation_id,
-            workspace_id: payload.new?.workspace_id,
-            sender_type: payload.new?.sender_type,
-            current_workspace: selectedWorkspace?.workspace_id
-          });
+          // Realtime: New message received
           const newMessage = payload.new as any;
           
           // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
@@ -693,12 +687,7 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'conversations' },
         async (payload) => {
-          console.log('🔔 Realtime: Nova conversa recebida:', {
-            id: payload.new?.id,
-            workspace_id: payload.new?.workspace_id,
-            canal: payload.new?.canal,
-            current_workspace: selectedWorkspace?.workspace_id
-          });
+          // Realtime: New conversation received
           const newConv = payload.new as any;
           
           // Só processar conversas do WhatsApp
@@ -874,7 +863,6 @@ export const useWhatsAppConversations = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Conversations channel status:', status);
         if (status === 'SUBSCRIBED') {
           // Real-time subscription active
         } else if (status === 'CHANNEL_ERROR') {
@@ -883,19 +871,7 @@ export const useWhatsAppConversations = () => {
       });
 
     // Monitor subscription status
-    messagesChannel.subscribe((status) => {
-      console.log('📡 Messages channel status:', status);
-    });
-
-    // Test realtime connection
-    setTimeout(() => {
-      console.log('🔍 Realtime debug info:', {
-        messagesChannelState: messagesChannel.state,
-        conversationsChannelState: conversationsChannel.state,
-        workspace: selectedWorkspace?.workspace_id,
-        subscriptions: supabase.getChannels().length
-      });
-    }, 2000);
+    messagesChannel.subscribe();
 
     return () => {
       // Cleaning up realtime subscriptions
