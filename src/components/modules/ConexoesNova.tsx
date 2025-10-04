@@ -146,7 +146,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
 
   const loadConnections = async () => {
     try {
-      console.log('🔄 ConexoesNova.loadConnections called with workspaceId:', workspaceId);
+      // Loading connections
       setIsLoading(true);
       
       const response = await evolutionProvider.listConnections(workspaceId);
@@ -236,7 +236,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         defaultPipelineId: selectedPipeline || undefined
       });
 
-      console.log('✅ Created connection successfully:', connection);
+      // Connection created
 
       toast({
         title: 'Sucesso',
@@ -578,7 +578,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         return;
       }
 
-      console.log('✅ Webhook configured successfully:', data);
+      // Webhook configured
       
       toast({
         title: 'Sucesso',

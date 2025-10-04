@@ -44,11 +44,11 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
 
   isFetching = true;
   try {
-    console.log('🔄 Buscando usuários do banco...', workspaceId ? `workspace: ${workspaceId}` : 'todos');
+    // Fetching users from database
     
     // Se workspace_id foi fornecido, buscar usuários desse workspace via JOIN
     if (workspaceId) {
-      console.log('📋 Buscando usuários do workspace via JOIN');
+      // Fetching workspace users via JOIN
       
       const { data, error } = await supabase
         .from('workspace_members')
@@ -75,7 +75,7 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
         profile: member.system_users.profile
       })) || [];
       
-      console.log(`✅ Usuários do workspace carregados: ${users.length}`, users.map(u => `${u.name} (${u.profile})`));
+      // Workspace users loaded successfully
       return users;
     }
 
@@ -101,7 +101,7 @@ const fetchUsersFromDB = async (workspaceId?: string): Promise<User[]> => {
       notifyListeners(users);
     }
     
-    console.log(`✅ Usuários carregados: ${users.length} usuários`);
+    // All users loaded successfully
     
     return users;
   } catch (error) {
@@ -167,7 +167,7 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
       })
     : users;
 
-  console.log(`📊 Workspace: ${workspaceId || 'global'}, Total: ${users.length}, Filtrados: ${filteredUsers.length}, Filtros: ${filterProfiles?.join(', ') || 'nenhum'}`);
+  // Users filter applied
 
   return {
     users: filteredUsers,

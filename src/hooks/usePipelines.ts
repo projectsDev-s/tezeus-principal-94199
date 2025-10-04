@@ -73,7 +73,7 @@ export function usePipelines() {
         throw headerError;
       }
       
-      console.log('🔄 Fetching pipelines with headers:', headers);
+      // Fetching pipelines
       
       const { data, error } = await supabase.functions.invoke('pipeline-management/pipelines', {
         method: 'GET',
@@ -98,7 +98,7 @@ export function usePipelines() {
         setSelectedPipeline(data[0]);
       }
       
-      console.log('✅ Pipelines loaded successfully:', data?.length || 0);
+      // Pipelines loaded
       
     } catch (error) {
       console.error('Error fetching pipelines:', error);

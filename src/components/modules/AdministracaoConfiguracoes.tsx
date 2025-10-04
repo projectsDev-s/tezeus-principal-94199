@@ -36,7 +36,7 @@ export function AdministracaoConfiguracoes() {
       if (!selectedWorkspace?.workspace_id) return;
       
       try {
-        console.log('🔍 Loading workspace limits for workspace:', selectedWorkspace.workspace_id);
+        // Loading workspace limits
         
         // Use edge function to get workspace limits to avoid RLS issues
         const userData = localStorage.getItem('currentUser');
@@ -65,7 +65,7 @@ export function AdministracaoConfiguracoes() {
 
         if (data?.connection_limit) {
           setConnectionLimit(data.connection_limit.toString());
-          console.log('✅ Loaded connection limit:', data.connection_limit);
+          // Connection limit loaded
         }
       } catch (error) {
         console.error('❌ Error loading settings:', error);

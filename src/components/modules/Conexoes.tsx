@@ -8,8 +8,7 @@ export function Conexoes() {
   // Only proceed if a workspace is selected
   const workspaceId = selectedWorkspace?.workspace_id;
   
-  console.log('🏢 Conexoes component - selectedWorkspace:', selectedWorkspace);
-  console.log('🔑 Conexoes component - using workspaceId:', workspaceId);
+  // Conexoes component initialized
   
   if (!workspaceId) {
     return <div className="p-4 text-center text-muted-foreground">Selecione um workspace para continuar</div>;

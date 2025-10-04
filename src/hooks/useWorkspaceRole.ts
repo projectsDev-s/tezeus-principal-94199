@@ -33,7 +33,7 @@ export function useWorkspaceRole(): WorkspaceRoleHook {
       }
 
       try {
-        console.log('Fetching workspace roles via Edge function for user:', user.id);
+        // Fetching workspace roles via Edge function
         
         // Use the Edge function to get workspace data and role information
         const { data, error } = await supabase.functions.invoke('list-user-workspaces', {

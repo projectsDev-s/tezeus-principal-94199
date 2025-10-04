@@ -33,7 +33,7 @@ export const useWorkspaceAnalytics = () => {
 
   const fetchAnalytics = async () => {
     if (!selectedWorkspace || !user) {
-      console.log('🚫 Analytics: Missing workspace or user', { selectedWorkspace, user });
+      // Missing workspace or user data
       return;
     }
     
@@ -41,7 +41,7 @@ export const useWorkspaceAnalytics = () => {
     try {
       const workspaceId = selectedWorkspace.workspace_id;
       const isUser = userRole === 'user';
-      console.log('📊 Analytics: Starting fetch for workspace', { workspaceId, userRole, isUser });
+      // Starting analytics fetch
 
       // Fetch conversations data
       let conversationQuery = supabase
@@ -124,7 +124,7 @@ export const useWorkspaceAnalytics = () => {
 
       if (isUser) {
         cardsQuery = cardsQuery.eq('responsible_user_id', user.id);
-        console.log('👤 Analytics: Filtering cards by user', user.id);
+        // Filtering cards by user
       }
 
       const { data: cards, error: cardsError } = await cardsQuery;

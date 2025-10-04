@@ -75,8 +75,7 @@ export const useWhatsAppConversations = () => {
       const currentUserData = userData ? JSON.parse(userData) : null;
       
       if (DEBUG_CONVERSATIONS) {
-        console.log('👤 Usuário autenticado:', currentUserData?.email, 'ID:', currentUserData?.id);
-        console.log('🏢 Workspace selecionado:', selectedWorkspace?.name, 'ID:', selectedWorkspace?.workspace_id);
+        // User authenticated - workspace selected
       }
       
       if (!currentUserData?.id) {
@@ -99,7 +98,7 @@ export const useWhatsAppConversations = () => {
       if (selectedWorkspace?.workspace_id) {
         headers['x-workspace-id'] = selectedWorkspace.workspace_id;
       } else {
-        console.log('❌ Workspace não selecionado - aguardando seleção automática...');
+        // Workspace not selected - awaiting selection
         return;
       }
 
@@ -140,7 +139,7 @@ export const useWhatsAppConversations = () => {
       
       setConversations(formattedConversations);
       if (DEBUG_CONVERSATIONS) {
-        console.log(`✅ ${formattedConversations.length} conversas carregadas (SEM mensagens)`);
+        // Conversations loaded
         
         if (formattedConversations.length === 0) {
           console.log('ℹ️ Nenhuma conversa encontrada. Verifique se há conexões configuradas e conversas ativas.');
@@ -356,7 +355,7 @@ export const useWhatsAppConversations = () => {
       }
 
       if (DEBUG_CONVERSATIONS) {
-        console.log('✅ Mensagem enviada com sucesso:', sendResult);
+        // Message sent successfully
       }
     } catch (error) {
       console.error('❌ Erro ao enviar mensagem:', error);
@@ -481,8 +480,7 @@ export const useWhatsAppConversations = () => {
       ));
 
       if (DEBUG_CONVERSATIONS) {
-        console.log('✅ Conversa marcada como lida - notificações atualizadas');
-        console.log('✅ Conversa marcada como lida com sucesso');
+        // Conversation marked as read
       }
     } catch (error) {
       console.error('❌ Erro ao marcar como lida:', error);
@@ -520,7 +518,7 @@ export const useWhatsAppConversations = () => {
     if (currentUserData?.id && selectedWorkspace?.workspace_id) {
       const DEBUG_CONVERSATIONS = false;
       if (DEBUG_CONVERSATIONS) {
-        console.log('🏢 Workspace mudou para:', selectedWorkspace?.workspace_id, '- Recarregando conversas');
+        // Workspace changed - reloading conversations
       }
       
       // Forçar limpeza completa das conversas quando workspace muda
@@ -532,7 +530,7 @@ export const useWhatsAppConversations = () => {
         fetchConversations();
       }, 200);
     } else if (currentUserData?.id && !selectedWorkspace?.workspace_id) {
-      console.log('🏢 Aguardando seleção de workspace...');
+      // Awaiting workspace selection
       setLoading(true);
     }
   }, [selectedWorkspace?.workspace_id]); // Re-fetch when workspace changes
@@ -547,7 +545,7 @@ export const useWhatsAppConversations = () => {
     }
 
     // Subscription para novas mensagens  
-    console.log('🔌 Setting up realtime subscriptions for workspace:', selectedWorkspace?.workspace_id);
+    // Setting up realtime subscriptions
     
     const messagesChannel = supabase
       .channel('whatsapp-messages')
@@ -565,7 +563,7 @@ export const useWhatsAppConversations = () => {
           
           // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
           if (newMessage.workspace_id !== selectedWorkspace?.workspace_id) {
-            console.log(`🚫 Mensagem ignorada - workspace diferente: ${newMessage.workspace_id} vs ${selectedWorkspace?.workspace_id}`);
+            // Message from different workspace - ignored
             return;
           }
           
@@ -708,7 +706,7 @@ export const useWhatsAppConversations = () => {
           
           // ✅ Filtrar por workspace_id para garantir que apenas conversas do workspace atual sejam processadas
           if (newConv.workspace_id !== selectedWorkspace?.workspace_id) {
-            console.log(`🚫 Nova conversa ignorada - workspace diferente: ${newConv.workspace_id} vs ${selectedWorkspace?.workspace_id}`);
+            // Conversation from different workspace - ignored
             return;
           }
           
@@ -794,7 +792,7 @@ export const useWhatsAppConversations = () => {
           
           // ✅ Filtrar por workspace_id para garantir que apenas conversas do workspace atual sejam processadas
           if (updatedConv.workspace_id !== selectedWorkspace?.workspace_id) {
-            console.log(`🚫 Atualização de conversa ignorada - workspace diferente: ${updatedConv.workspace_id} vs ${selectedWorkspace?.workspace_id}`);
+            // Conversation update from different workspace - ignored
             return;
           }
           
@@ -878,7 +876,7 @@ export const useWhatsAppConversations = () => {
       .subscribe((status) => {
         console.log('📡 Conversations channel status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription para conversations ATIVA');
+          // Real-time subscription active
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Erro na subscription de conversations');
         }
@@ -900,7 +898,7 @@ export const useWhatsAppConversations = () => {
     }, 2000);
 
     return () => {
-      console.log('🧹 Limpando subscriptions real-time para workspace:', selectedWorkspace?.workspace_id);
+      // Cleaning up realtime subscriptions
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };

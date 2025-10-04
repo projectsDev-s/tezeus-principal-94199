@@ -26,7 +26,7 @@ export function EvolutionApiConfig() {
       if (!selectedWorkspace?.workspace_id) return;
       
       try {
-        console.log('🔍 Loading Evolution config for workspace:', selectedWorkspace.workspace_id);
+        // Loading Evolution config
         
         // Use the edge function to get configuration instead of direct DB access
         const headers = getHeaders();
@@ -40,7 +40,7 @@ export function EvolutionApiConfig() {
           throw error;
         }
 
-        console.log('✅ Evolution config response:', data);
+        // Config loaded
 
         if (data?.url) {
           setEvolutionUrl(data.url);
@@ -118,7 +118,7 @@ export function EvolutionApiConfig() {
 
     setClearing(true);
     try {
-      console.log('🧹 Clearing Evolution config for workspace:', selectedWorkspace.workspace_id);
+      // Clearing Evolution config
       
       const headers = getHeaders();
       const { data, error } = await supabase.functions.invoke('clear-workspace-evolution-config', {
@@ -131,7 +131,7 @@ export function EvolutionApiConfig() {
         throw error;
       }
 
-      console.log('✅ Configuration cleared successfully:', data);
+      // Configuration cleared
 
       // Clear form fields
       setEvolutionUrl('');
@@ -167,7 +167,7 @@ export function EvolutionApiConfig() {
 
     setLoading(true);
     try {
-      console.log('💾 Saving Evolution config for workspace:', selectedWorkspace.workspace_id);
+      // Saving Evolution config
       console.log('🔗 New URL:', evolutionUrl.trim());
       
       // Use edge function to save configuration instead of direct DB access
@@ -186,7 +186,7 @@ export function EvolutionApiConfig() {
         throw error;
       }
 
-      console.log('✅ Configuration saved successfully:', data);
+      // Configuration saved
 
       toast({
         title: 'Configuração salva',

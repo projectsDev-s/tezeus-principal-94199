@@ -36,7 +36,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        console.log('🏢 WorkspaceContext: Restoring workspace from localStorage:', parsed);
+        // Restoring workspace from localStorage
         setSelectedWorkspaceState(parsed);
       } catch (error) {
         console.error('Error parsing stored workspace:', error);
@@ -48,7 +48,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   // Auto-select first workspace when workspaces load and none is selected
   useEffect(() => {
     if (!selectedWorkspace && workspaces.length > 0 && !isLoadingWorkspaces) {
-      console.log('🏢 WorkspaceContext: Auto-selecting first available workspace:', workspaces[0]);
+      // Auto-selecting first available workspace
       setSelectedWorkspace(workspaces[0]);
     }
   }, [selectedWorkspace, workspaces, isLoadingWorkspaces]);

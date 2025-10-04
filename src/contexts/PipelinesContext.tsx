@@ -404,7 +404,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   // Buscar pipelines quando o workspace mudar
   useEffect(() => {
     if (selectedWorkspace?.workspace_id && getHeaders) {
-      console.log('🏢 Workspace mudou, limpando dados e buscando pipelines...');
+      // Workspace changed - clearing and fetching pipelines
       // Limpar dados anteriores imediatamente para mostrar loading
       setColumns([]);
       setCards([]);

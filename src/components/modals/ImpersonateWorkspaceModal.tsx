@@ -25,7 +25,7 @@ export function ImpersonateWorkspaceModal({ open, onOpenChange }: ImpersonateWor
   const handleConfirm = () => {
     const workspace = workspaces.find(w => w.workspace_id === selectedWorkspaceId);
     if (workspace) {
-      console.log('🏢 Personificando empresa:', workspace.name, 'ID:', workspace.workspace_id);
+      // Impersonating workspace
       setSelectedWorkspace(workspace);
     }
     onOpenChange(false);

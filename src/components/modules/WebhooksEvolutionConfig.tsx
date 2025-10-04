@@ -34,8 +34,7 @@ export function WebhooksEvolutionConfig() {
   const { selectedWorkspace } = useWorkspace();
   const workspaceId = selectedWorkspace?.workspace_id;
   
-  console.log('🔧 WebhooksEvolutionConfig - selectedWorkspace:', selectedWorkspace);
-  console.log('🔧 WebhooksEvolutionConfig - workspaceId:', workspaceId);
+  // WebhooksEvolutionConfig initialized
   
   const {
     webhookConfig,
@@ -68,7 +67,7 @@ export function WebhooksEvolutionConfig() {
   // Sync webhookUrl with config when it loads
   useEffect(() => {
     console.log('🔧 WebhookConfig effect - webhookConfig:', webhookConfig);
-    console.log('🔧 WebhookConfig effect - workspaceId:', workspaceId);
+    // WebhookConfig effect triggered
     console.log('🔧 WebhookConfig effect - isLoading:', isLoading);
     
     if (webhookConfig?.webhook_url) {

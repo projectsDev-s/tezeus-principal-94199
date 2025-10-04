@@ -30,7 +30,7 @@ export const useSessionManager = () => {
           return;
         }
         
-        console.log('✅ Sessão customizada válida:', parsedUser.email);
+        // Valid custom session found
       } catch (error) {
         console.log('🔒 Erro ao parsear usuário do localStorage');
         handleSessionExpired();

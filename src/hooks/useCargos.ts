@@ -36,7 +36,7 @@ export const useCargos = () => {
   const listCargos = async (): Promise<{ data?: Cargo[], error?: string }> => {
     try {
       setLoading(true);
-      console.log('🔄 Listando cargos...');
+      // Listing cargos
       
       const { data, error } = await supabase.functions.invoke('manage-cargos', {
         body: { action: 'list' }
@@ -52,7 +52,7 @@ export const useCargos = () => {
         return { error: data.error };
       }
 
-      console.log('✅ Cargos listados com sucesso:', data.data);
+      // Cargos listed
       return { data: data.data };
     } catch (error: any) {
       console.error('❌ Erro inesperado ao listar cargos:', error);
@@ -65,7 +65,7 @@ export const useCargos = () => {
   const createCargo = async (cargoData: CreateCargoData) => {
     try {
       setLoading(true);
-      console.log('🔄 Criando cargo:', cargoData);
+      // Creating cargo
       
       const { data, error } = await supabase.functions.invoke('manage-cargos', {
         body: { 
@@ -94,7 +94,7 @@ export const useCargos = () => {
         return { error: data.error };
       }
 
-      console.log('✅ Cargo criado com sucesso:', data.data);
+      // Cargo created
       toast({
         title: "Sucesso",
         description: "Cargo criado com sucesso",
@@ -117,7 +117,7 @@ export const useCargos = () => {
   const updateCargo = async (cargoData: UpdateCargoData) => {
     try {
       setLoading(true);
-      console.log('🔄 Atualizando cargo:', cargoData);
+      // Updating cargo
       
       const { data, error } = await supabase.functions.invoke('manage-cargos', {
         body: { 
@@ -146,7 +146,7 @@ export const useCargos = () => {
         return { error: data.error };
       }
 
-      console.log('✅ Cargo atualizado com sucesso:', data.data);
+      // Cargo updated
       toast({
         title: "Sucesso",
         description: "Cargo atualizado com sucesso",
@@ -169,7 +169,7 @@ export const useCargos = () => {
   const deleteCargo = async (cargoId: string) => {
     try {
       setLoading(true);
-      console.log('🔄 Deletando cargo:', cargoId);
+      // Deleting cargo
       
       const { data, error } = await supabase.functions.invoke('manage-cargos', {
         body: { 
@@ -198,7 +198,7 @@ export const useCargos = () => {
         return { error: data.error };
       }
 
-      console.log('✅ Cargo deletado com sucesso:', data.data);
+      // Cargo deleted
       toast({
         title: "Sucesso",
         description: "Cargo deletado com sucesso",

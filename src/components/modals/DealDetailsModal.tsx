@@ -167,12 +167,7 @@ export function DealDetailsModal({
       }));
       
       setPipelineSteps(steps);
-      console.log('📊 Pipeline steps criados:', {
-        currentColumnId,
-        currentIndex,
-        totalSteps: steps.length,
-        activeStep: steps.find(s => s.isActive)?.name
-      });
+      // Pipeline steps created
     }
   }, [columns, currentColumnId]);
   const fetchCardData = async () => {
@@ -263,7 +258,7 @@ export function DealDetailsModal({
       return;
     }
 
-    console.log('✅ Card encontrado:', card);
+    // Card found
     
     // Definir dados do contato
     const contact = card.contacts;

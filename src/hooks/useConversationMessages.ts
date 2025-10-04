@@ -58,7 +58,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
   const loadInitial = useCallback(async (conversationId: string) => {
     console.log('🔄 loadInitial chamado para conversationId:', conversationId);
-    console.log('🏢 Workspace selecionado:', selectedWorkspace?.workspace_id);
+    // Loading initial conversation messages
     
     if (!selectedWorkspace?.workspace_id) {
       console.error('❌ Nenhum workspace selecionado!');
@@ -282,7 +282,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   // Effect para limpar cache e recarregar mensagens quando workspace muda
   useEffect(() => {
     if (currentConversationId) {
-      console.log('🔄 Workspace mudou para:', selectedWorkspace?.workspace_id, 'recarregando conversa:', currentConversationId);
+      // Workspace changed - reloading conversation
       // Limpar todo o cache
       cacheRef.current.clear();
       // Limpar mensagens atuais
