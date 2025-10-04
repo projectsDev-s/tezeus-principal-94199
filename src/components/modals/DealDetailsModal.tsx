@@ -1090,16 +1090,16 @@ export function DealDetailsModal({
                       </div>
                     )}
                     
-                    {/* Campos extras em pares: índice par = contexto (valor), índice ímpar = título (label) */}
+                    {/* Campos extras em pares: índice par = título (label), índice ímpar = contexto (valor) */}
                     {extraFields.map((field, index) => {
-                      // Pular índices ímpares (eles são usados como labels dos pares)
+                      // Pular índices ímpares (eles são usados como valores dos pares)
                       if (index % 2 !== 0) return null;
                       
-                      const contextField = extraFields[index]; // Campo atual (índice par) = CONTEXTO
-                      const titleField = extraFields[index + 1]; // Próximo campo (índice ímpar) = TÍTULO
+                      const titleField = extraFields[index]; // Campo atual (índice par) = TÍTULO
+                      const contextField = extraFields[index + 1]; // Próximo campo (índice ímpar) = CONTEXTO
                       
                       // Só renderiza se ambos existirem e tiverem valores
-                      if (!contextField?.field_value || !titleField?.field_value) return null;
+                      if (!titleField?.field_value || !contextField?.field_value) return null;
                       
                       return (
                         <div 
