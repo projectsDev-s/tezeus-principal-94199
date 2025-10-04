@@ -199,16 +199,13 @@ export function DealDetailsModal({
             phone: fullContact.phone,
             profile_image_url: fullContact.profile_image_url
           });
+          
+          // Carregar tags e atividades em paralelo
+          await Promise.all([
+            fetchContactTags(initialContactData.id),
+            fetchActivities(initialContactData.id)
+          ]);
         }
-        
-        // Carregar dados adicionais em paralelo (não bloquear a UI)
-        Promise.all([
-          fetchContactTags(initialContactData.id),
-          fetchActivities(initialContactData.id),
-          fetchAdditionalCardData()
-        ]).catch(error => {
-          console.error('Erro ao carregar dados adicionais:', error);
-        });
         
         setIsLoadingData(false);
         return;
