@@ -1091,41 +1091,63 @@ export function DealDetailsModal({
                     )}
                     
                     {/* Campos extras em pares: índice par = título (label), índice ímpar = contexto (valor) */}
-                    {extraFields.map((field, index) => {
-                      // Pular índices ímpares (eles são usados como valores dos pares)
-                      if (index % 2 !== 0) return null;
+                    {(() => {
+                      console.log('🔍 Extra fields recebidos:', {
+                        total: extraFields.length,
+                        fields: extraFields.map((f, i) => ({ 
+                          index: i, 
+                          name: f.field_name, 
+                          value: f.field_value 
+                        }))
+                      });
                       
-                      const titleField = extraFields[index]; // Campo atual (índice par) = TÍTULO
-                      const contextField = extraFields[index + 1]; // Próximo campo (índice ímpar) = CONTEXTO
-                      
-                      // Só renderiza se ambos existirem e tiverem valores
-                      if (!titleField?.field_value || !contextField?.field_value) return null;
-                      
-                      return (
-                        <div 
-                          key={field.id || index}
-                          className={cn(
-                            "border rounded-lg p-4 flex items-center gap-3",
-                            isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                          )}
-                        >
-                          <div className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center",
-                            isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                          )}>
-                            <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                      return extraFields.map((field, index) => {
+                        // Pular índices ímpares (eles são usados como valores dos pares)
+                        if (index % 2 !== 0) return null;
+                        
+                        const titleField = extraFields[index]; // Campo atual (índice par) = TÍTULO
+                        const contextField = extraFields[index + 1]; // Próximo campo (índice ímpar) = CONTEXTO
+                        
+                        console.log(`📋 Processando par ${index/2 + 1}:`, {
+                          titleField: titleField?.field_value,
+                          contextField: contextField?.field_value,
+                          willRender: !!(titleField?.field_value && contextField?.field_value)
+                        });
+                        
+                        // Só renderiza se ambos existirem e tiverem valores
+                        if (!titleField?.field_value || !contextField?.field_value) {
+                          console.warn(`⚠️ Par ${index/2 + 1} NÃO será renderizado - faltam dados`);
+                          return null;
+                        }
+                        
+                        console.log(`✅ Renderizando par ${index/2 + 1}`);
+                        
+                        return (
+                          <div 
+                            key={field.id || index}
+                            className={cn(
+                              "border rounded-lg p-4 flex items-center gap-3",
+                              isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-10 h-10 rounded-lg flex items-center justify-center",
+                              isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                            )}>
+                              <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                                {titleField.field_value}
+                              </p>
+                              <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                                {contextField.field_value}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                              {titleField.field_value}
-                            </p>
-                            <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              {contextField.field_value}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="flex justify-center py-8">
