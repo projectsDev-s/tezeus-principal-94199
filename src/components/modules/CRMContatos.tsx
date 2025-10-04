@@ -280,23 +280,46 @@ export function CRMContatos() {
       tags: [],
       extra_info: {}
     });
-    setCustomFields([{
-      name: "Nome da Loja",
-      value: ""
-    }]);
+    // Default fields - Título e Contexto
+    setCustomFields([
+      { name: "Título", value: "" },
+      { name: "Contexto", value: "" }
+    ]);
   };
-  const handleEditContact = (contact: Contact) => {
+  const handleEditContact = async (contact: Contact) => {
     setEditingContact(contact);
 
-    // Load existing custom fields from extra_info
-    const existingFields = contact.extra_info && typeof contact.extra_info === 'object' && contact.extra_info !== null ? Object.entries(contact.extra_info).map(([name, value]) => ({
-      name,
-      value: value as string
-    })) : [{
-      name: "Nome da Loja",
-      value: ""
-    }];
-    setCustomFields(existingFields);
+    // Load existing custom fields from contact_extra_info table
+    try {
+      const { data: extraInfoData, error } = await supabase
+        .from('contact_extra_info')
+        .select('*')
+        .eq('contact_id', contact.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (extraInfoData && extraInfoData.length > 0) {
+        // Map database fields to form fields
+        const existingFields = extraInfoData.map(field => ({
+          name: field.field_name,
+          value: field.field_value
+        }));
+        setCustomFields(existingFields);
+      } else {
+        // Default fields - Título e Contexto
+        setCustomFields([
+          { name: "Título", value: "" },
+          { name: "Contexto", value: "" }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading extra info:', error);
+      setCustomFields([
+        { name: "Título", value: "" },
+        { name: "Contexto", value: "" }
+      ]);
+    }
   };
   const handleSaveContact = async () => {
     if (!editingContact) return;
@@ -312,13 +335,6 @@ export function CRMContatos() {
     }
     setIsSaving(true);
     try {
-      // Prepare extra_info from custom fields
-      const extraInfo = customFields.reduce((acc, field) => {
-        if (field.name.trim() && field.value.trim()) {
-          acc[field.name.trim()] = field.value.trim();
-        }
-        return acc;
-      }, {} as Record<string, string>);
       if (isCreateMode) {
         // Create new contact
         const {
@@ -328,10 +344,29 @@ export function CRMContatos() {
           name: editingContact.name.trim(),
           phone: editingContact.phone.trim() || null,
           email: editingContact.email.trim() || null,
-          extra_info: extraInfo,
           workspace_id: selectedWorkspace!.workspace_id
         }).select().single();
         if (error) throw error;
+
+        // Save custom fields to contact_extra_info table
+        const fieldsToInsert = customFields
+          .filter(field => field.name.trim() && field.value.trim())
+          .map(field => ({
+            contact_id: newContactData.id,
+            workspace_id: selectedWorkspace!.workspace_id,
+            field_name: field.name.trim(),
+            field_value: field.value.trim()
+          }));
+
+        if (fieldsToInsert.length > 0) {
+          const { error: extraInfoError } = await supabase
+            .from('contact_extra_info')
+            .insert(fieldsToInsert);
+          
+          if (extraInfoError) {
+            console.error('Error saving extra info:', extraInfoError);
+          }
+        }
 
         // Add to local state
         const newContact: Contact = {
@@ -342,7 +377,7 @@ export function CRMContatos() {
           createdAt: format(new Date(newContactData.created_at), 'dd/MM/yyyy HH:mm:ss'),
           tags: [],
           profile_image_url: newContactData.profile_image_url,
-          extra_info: newContactData.extra_info as Record<string, any> || {}
+          extra_info: {}
         };
         setContacts(prev => [newContact, ...prev]);
         toast({
@@ -357,18 +392,42 @@ export function CRMContatos() {
           name: editingContact.name.trim(),
           phone: editingContact.phone.trim() || null,
           email: editingContact.email.trim() || null,
-          extra_info: extraInfo,
           updated_at: new Date().toISOString()
         }).eq('id', editingContact.id);
         if (error) throw error;
+
+        // Delete existing extra info fields
+        await supabase
+          .from('contact_extra_info')
+          .delete()
+          .eq('contact_id', editingContact.id);
+
+        // Insert new extra info fields
+        const fieldsToInsert = customFields
+          .filter(field => field.name.trim() && field.value.trim())
+          .map(field => ({
+            contact_id: editingContact.id,
+            workspace_id: selectedWorkspace!.workspace_id,
+            field_name: field.name.trim(),
+            field_value: field.value.trim()
+          }));
+
+        if (fieldsToInsert.length > 0) {
+          const { error: extraInfoError } = await supabase
+            .from('contact_extra_info')
+            .insert(fieldsToInsert);
+          
+          if (extraInfoError) {
+            console.error('Error saving extra info:', extraInfoError);
+          }
+        }
 
         // Update local contacts list
         setContacts(prev => prev.map(contact => contact.id === editingContact.id ? {
           ...contact,
           name: editingContact.name.trim(),
           phone: editingContact.phone.trim(),
-          email: editingContact.email.trim(),
-          extra_info: extraInfo
+          email: editingContact.email.trim()
         } : contact));
         toast({
           title: "Contato atualizado",
@@ -616,11 +675,19 @@ export function CRMContatos() {
               <Label className="text-sm font-medium">Informações adicionais</Label>
               <div className="space-y-3 mt-2">
                 {customFields.map((field, index) => <div key={index} className="flex gap-2">
-                    <Input placeholder="Nome do campo" value={field.name} onChange={e => updateCustomField(index, 'name', e.target.value)} className="flex-1" />
+                    <Input 
+                      placeholder={index === 0 ? "Título" : index === 1 ? "Contexto" : "Nome do campo"} 
+                      value={field.name} 
+                      onChange={e => updateCustomField(index, 'name', e.target.value)} 
+                      className="flex-1"
+                      disabled={index === 0 || index === 1} // Título e Contexto são fixos
+                    />
                     <Input placeholder="Valor" value={field.value} onChange={e => updateCustomField(index, 'value', e.target.value)} className="flex-1" />
-                    <Button variant="ghost" size="sm" onClick={() => removeCustomField(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {index > 1 && (
+                      <Button variant="ghost" size="sm" onClick={() => removeCustomField(index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>)}
                 
                 <Button variant="ghost" size="sm" onClick={addCustomField} className="text-yellow-600 hover:text-yellow-700">
