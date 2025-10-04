@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useNavigate } from "react-router-dom";
+import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
 
 interface IniciarConversaContatoModalProps {
   open: boolean;
@@ -22,13 +23,6 @@ interface Queue {
   color: string;
 }
 
-interface Connection {
-  id: string;
-  instance_name: string;
-  phone_number: string;
-  status: string;
-}
-
 export function IniciarConversaContatoModal({ 
   open, 
   onOpenChange, 
@@ -40,10 +34,14 @@ export function IniciarConversaContatoModal({
   const [selectedQueue, setSelectedQueue] = useState<string>("");
   const [selectedConnection, setSelectedConnection] = useState<string>("");
   const [queues, setQueues] = useState<Queue[]>([]);
-  const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Usar hook para buscar conexões
+  const { connections, isLoading: connectionsLoading } = useWorkspaceConnections(
+    selectedWorkspace?.workspace_id
+  );
 
   // Carregar filas
   useEffect(() => {
@@ -70,35 +68,12 @@ export function IniciarConversaContatoModal({
     }
   }, [open, selectedWorkspace]);
 
-  // Carregar conexões
+  // Selecionar primeira conexão automaticamente quando carregadas
   useEffect(() => {
-    const fetchConnections = async () => {
-      if (!selectedWorkspace) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('connections')
-          .select('id, instance_name, phone_number, status')
-          .eq('workspace_id', selectedWorkspace.workspace_id)
-          .eq('status', 'connected')
-          .order('instance_name');
-
-        if (error) throw error;
-        setConnections(data || []);
-        
-        // Selecionar primeira conexão por padrão
-        if (data && data.length > 0) {
-          setSelectedConnection(data[0].id);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar conexões:', error);
-      }
-    };
-
-    if (open) {
-      fetchConnections();
+    if (connections.length > 0 && !selectedConnection) {
+      setSelectedConnection(connections[0].id);
     }
-  }, [open, selectedWorkspace]);
+  }, [connections, selectedConnection]);
 
   const handleIniciar = async () => {
     if (!selectedConnection) {
@@ -247,7 +222,11 @@ export function IniciarConversaContatoModal({
                 <SelectValue placeholder="Selecione uma Conexão" />
               </SelectTrigger>
               <SelectContent>
-                {connections.length === 0 ? (
+                {connectionsLoading ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    Carregando conexões...
+                  </div>
+                ) : connections.length === 0 ? (
                   <div className="p-2 text-sm text-muted-foreground">
                     Nenhuma conexão disponível
                   </div>
@@ -256,7 +235,9 @@ export function IniciarConversaContatoModal({
                     <SelectItem key={connection.id} value={connection.id}>
                       <div className="flex items-center gap-2">
                         {connection.instance_name} {connection.phone_number && `(${connection.phone_number})`}
-                        <span className="text-xs text-green-500 font-semibold">CONNECTED</span>
+                        {connection.status === 'connected' && (
+                          <span className="text-xs text-green-500 font-semibold">CONECTADO</span>
+                        )}
                       </div>
                     </SelectItem>
                   ))
