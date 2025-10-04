@@ -261,7 +261,7 @@ export function DealDetailsModal({
       return;
     }
 
-    // Card found
+    console.log('✅ Card encontrado:', card);
     
     // Definir dados do contato
     const contact = card.contacts;
@@ -276,23 +276,36 @@ export function DealDetailsModal({
       });
 
       // Buscar todos os cards deste contato para contar
-      const { data: allCards } = await supabase
+      const { data: allCards, error: allCardsError } = await supabase
         .from('pipeline_cards')
-        .select('id, pipeline_id, column_id, pipelines (id, name, type)')
+        .select(`
+          id, 
+          pipeline_id, 
+          column_id,
+          pipelines (
+            id, 
+            name, 
+            type
+          )
+        `)
         .eq('contact_id', contact.id)
         .eq('status', 'aberto');
+
+      console.log('📊 Cards do contato:', { allCards, allCardsError, count: allCards?.length });
 
       if (allCards && allCards.length > 0) {
         setAvailableCards(allCards);
         
         // Extrair pipelines únicos
-        const uniquePipelines = allCards.reduce((acc, cardItem) => {
+        const uniquePipelines = allCards.reduce((acc: any[], cardItem: any) => {
           const pipeline = cardItem.pipelines;
           if (pipeline && !acc.find(p => p.id === pipeline.id)) {
             acc.push(pipeline);
           }
           return acc;
         }, []);
+        
+        console.log('🔄 Pipelines únicos encontrados:', uniquePipelines);
         
         setContactPipelines(uniquePipelines);
         setPipelineCardsCount(allCards.length);
