@@ -34,6 +34,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
+import { useContactTags } from "@/hooks/useContactTags";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 // Interface compatível com o componente existente
 interface Deal {
@@ -101,6 +104,9 @@ function DraggableDeal({
 }: DraggableDealProps) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
+  const [isTagPopoverOpen, setIsTagPopoverOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const { contactTags, availableTags, addTagToContact, getFilteredTags, refreshTags } = useContactTags(deal.contact?.id || null);
   
   const {
     attributes,
@@ -187,13 +193,70 @@ function DraggableDeal({
         </div>
         
         {/* Área central para tags do contato */}
-        <div className="mb-3 min-h-[28px] flex items-center flex-wrap gap-1">
-          {deal.contact?.contact_tags?.map((contactTag, index) => <span key={index} className="px-2 py-1 text-xs rounded-full font-medium text-white" style={{
-          backgroundColor: contactTag.tags.color
-        }}>
-              {contactTag.tags.name}
-            </span>)}
-          {(!deal.contact?.contact_tags || deal.contact.contact_tags.length === 0) && <span className="text-xs text-muted-foreground italic">Sem tags</span>}
+        <div className="mb-3 min-h-[28px] flex items-start flex-wrap gap-1">
+          {contactTags.map((tag) => (
+            <span 
+              key={tag.id} 
+              className="px-2 py-1 text-xs rounded-full font-medium text-white" 
+              style={{
+                backgroundColor: tag.color
+              }}
+            >
+              {tag.name}
+            </span>
+          ))}
+          <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
+            <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent 
+              className="w-64 p-0" 
+              align="start"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Command>
+                <CommandInput 
+                  placeholder="Buscar tags..." 
+                  value={searchTerm}
+                  onValueChange={setSearchTerm}
+                />
+                <CommandList>
+                  <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
+                  <CommandGroup>
+                    {getFilteredTags(searchTerm).map((tag) => (
+                      <CommandItem
+                        key={tag.id}
+                        onSelect={async () => {
+                          try {
+                            await addTagToContact(tag.id);
+                            await refreshTags();
+                            setIsTagPopoverOpen(false);
+                            setSearchTerm("");
+                          } catch (error) {
+                            console.error('Erro ao adicionar tag:', error);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          <span>{tag.name}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         
         {/* Footer com ícones de ação e prioridade */}
