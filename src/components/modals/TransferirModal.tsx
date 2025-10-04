@@ -106,8 +106,13 @@ export function TransferirModal({
         description: `${selectedCards.length} negócio(s) transferido(s) com sucesso`,
       });
 
-      onTransferComplete();
+      // Close first, then refresh
       onClose();
+      
+      // Give a small delay to ensure the modal is closed before refresh
+      setTimeout(() => {
+        onTransferComplete();
+      }, 100);
     } catch (error) {
       console.error('Error transferring cards:', error);
       toast({

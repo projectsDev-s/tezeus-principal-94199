@@ -404,22 +404,29 @@ serve(async (req) => {
             );
           }
 
+          console.log('📝 Updating card:', cardId, 'with data:', body);
+
+          const updateData: any = {};
+          if (body.column_id !== undefined) updateData.column_id = body.column_id;
+          if (body.pipeline_id !== undefined) updateData.pipeline_id = body.pipeline_id;
+          if (body.title !== undefined) updateData.title = body.title;
+          if (body.description !== undefined) updateData.description = body.description;
+          if (body.value !== undefined) updateData.value = body.value;
+          if (body.status !== undefined) updateData.status = body.status;
+          if (body.tags !== undefined) updateData.tags = body.tags;
+          if (body.responsible_user_id !== undefined) updateData.responsible_user_id = body.responsible_user_id;
+
           const { data: card, error } = await supabaseClient
             .from('pipeline_cards')
-            .update({
-              column_id: body.column_id,
-              title: body.title,
-              description: body.description,
-              value: body.value,
-              status: body.status,
-              tags: body.tags,
-              responsible_user_id: body.responsible_user_id,
-            })
+            .update(updateData)
             .eq('id', cardId)
             .select()
             .single();
 
           if (error) throw error;
+          
+          console.log('✅ Card updated successfully:', card);
+          
           return new Response(JSON.stringify(card), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
