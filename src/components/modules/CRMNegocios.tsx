@@ -94,6 +94,9 @@ interface DraggableDealProps {
   columnColor?: string;
   onChatClick?: (deal: Deal) => void;
   onValueClick?: (deal: Deal) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: () => void;
 }
 function DraggableDeal({
   deal,
@@ -101,7 +104,10 @@ function DraggableDeal({
   onClick,
   columnColor = '#6b7280',
   onChatClick,
-  onValueClick
+  onValueClick,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelection
 }: DraggableDealProps) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
@@ -425,6 +431,8 @@ export function CRMNegocios({
   const [selectedColumnForAction, setSelectedColumnForAction] = useState<string | null>(null);
   const [isSetValueModalOpen, setIsSetValueModalOpen] = useState(false);
   const [selectedCardForValue, setSelectedCardForValue] = useState<any>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedCardsForTransfer, setSelectedCardsForTransfer] = useState<Set<string>>(new Set());
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -880,6 +888,34 @@ export function CRMNegocios({
                 }}>
                         {/* Cabeçalho da coluna - fundo branco/claro */}
                         <div className="bg-white p-4 pb-3 flex-shrink-0 rounded-t border-b border-border/20">
+                          {isSelectionMode && selectedColumnForAction === column.id ? <div className="mb-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" checked={columnCards.length > 0 && columnCards.every(card => selectedCardsForTransfer.has(card.id))} onChange={e => {
+                              const newSet = new Set(selectedCardsForTransfer);
+                              columnCards.forEach(card => {
+                                if (e.target.checked) {
+                                  newSet.add(card.id);
+                                } else {
+                                  newSet.delete(card.id);
+                                }
+                              });
+                              setSelectedCardsForTransfer(newSet);
+                            }} className="w-4 h-4 cursor-pointer" />
+                                    <span className="font-medium">Selecionar todos</span>
+                                  </label>
+                                  <Button size="sm" variant="ghost" onClick={() => {
+                              setIsSelectionMode(false);
+                              setSelectedCardsForTransfer(new Set());
+                              setSelectedColumnForAction(null);
+                            }}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                {selectedCardsForTransfer.size > 0 && <Button onClick={() => setIsTransferirModalOpen(true)} className="w-full" size="sm">
+                                    Transferir ({selectedCardsForTransfer.size})
+                                  </Button>}
+                              </div> : null}
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <h3 className="font-semibold text-foreground text-base mb-1">
@@ -915,7 +951,8 @@ export function CRMNegocios({
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => {
                             setSelectedColumnForAction(column.id);
-                            setIsTransferirModalOpen(true);
+                            setIsSelectionMode(true);
+                            setSelectedCardsForTransfer(new Set());
                           }}>
                                   <ArrowRight className="mr-2 h-4 w-4" />
                                   Transferir negócios
@@ -1078,10 +1115,25 @@ export function CRMNegocios({
         contactId={selectedChatCard?.contact?.id || ""}
       />
 
-      <TransferirModal isOpen={isTransferirModalOpen} onClose={() => {
-      setIsTransferirModalOpen(false);
-      setSelectedColumnForAction(null);
-    }} />
+      <TransferirModal 
+        isOpen={isTransferirModalOpen} 
+        onClose={() => {
+          setIsTransferirModalOpen(false);
+          setSelectedColumnForAction(null);
+          setIsSelectionMode(false);
+          setSelectedCardsForTransfer(new Set());
+        }} 
+        selectedCards={Array.from(selectedCardsForTransfer)}
+        currentPipelineId={selectedPipeline?.id || ""}
+        currentPipelineName={selectedPipeline?.name || ""}
+        onTransferComplete={() => {
+          refreshCurrentPipeline();
+          setIsSelectionMode(false);
+          setSelectedCardsForTransfer(new Set());
+          setSelectedColumnForAction(null);
+        }}
+        isDarkMode={isDarkMode}
+      />
 
       <SetValueModal isOpen={isSetValueModalOpen} onClose={() => {
       setIsSetValueModalOpen(false);
