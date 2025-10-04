@@ -922,10 +922,17 @@ export function CRMNegocios({
         />
       )}
 
-      <ChatModal isOpen={isChatModalOpen} onClose={() => {
-      console.log('🔽 Fechando ChatModal');
-      setIsChatModalOpen(false);
-    }} conversationId={selectedChatCard?.conversation?.id || selectedChatCard?.id || ""} contactName={selectedChatCard?.contact?.name || selectedChatCard?.name || ""} contactPhone={selectedChatCard?.contact?.phone || ""} contactAvatar={selectedChatCard?.contact?.profile_image_url || ""} />
+      <ChatModal 
+        isOpen={isChatModalOpen} 
+        onClose={() => {
+          console.log('🔽 Fechando ChatModal');
+          setIsChatModalOpen(false);
+        }} 
+        conversationId={selectedChatCard?.conversation?.id || ""} 
+        contactName={selectedChatCard?.contact?.name || selectedChatCard?.name || ""} 
+        contactPhone={selectedChatCard?.contact?.phone || ""} 
+        contactAvatar={selectedChatCard?.contact?.profile_image_url || ""} 
+      />
 
       <TransferirModal isOpen={isTransferirModalOpen} onClose={() => {
       setIsTransferirModalOpen(false);
