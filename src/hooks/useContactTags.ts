@@ -81,10 +81,6 @@ export function useContactTags(contactId?: string) {
       if (error) throw error;
 
       await fetchContactTags();
-      toast({
-        title: "Tag adicionada",
-        description: "A tag foi adicionada ao contato com sucesso.",
-      });
       
       return true;
     } catch (error: any) {

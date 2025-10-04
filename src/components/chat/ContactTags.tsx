@@ -63,18 +63,8 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
       
       setTags(prev => prev.filter(tag => tag.id !== tagId));
       onTagRemoved?.();
-      
-      toast({
-        title: "Tag removida",
-        description: "A tag foi removida do contato com sucesso.",
-      });
     } catch (error: any) {
       console.error('Error removing tag:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover a tag. Tente novamente.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -89,37 +79,31 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
   }
 
   return (
-    <div className="flex items-center gap-1 ml-2">
-      {tags.slice(0, 3).map((tag) => (
+    <div className="flex items-center gap-1 flex-wrap">
+      {tags.map((tag) => (
         <Badge
           key={tag.id}
           variant="outline"
           style={{ 
-            backgroundColor: tag.color + '20', 
+            backgroundColor: tag.color,
             borderColor: tag.color,
-            color: tag.color
+            color: '#fff'
           }}
-          className={cn(
-            "text-xs px-2 py-0.5 h-auto cursor-pointer hover:opacity-80 group relative",
-            "max-w-20 truncate"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeTag(tag.id);
-          }}
+          className="text-xs px-2 py-0.5 h-auto rounded-full font-medium flex items-center gap-1"
         >
-          <span className="truncate">{tag.name}</span>
-          <X className="w-2.5 h-2.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <span>{tag.name}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              removeTag(tag.id);
+            }}
+            className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+            disabled={isLoading}
+          >
+            <X className="w-2.5 h-2.5" />
+          </button>
         </Badge>
       ))}
-      {tags.length > 3 && (
-        <Badge
-          variant="outline"
-          className="text-xs px-2 py-0.5 h-auto text-muted-foreground"
-        >
-          +{tags.length - 3}
-        </Badge>
-      )}
     </div>
   );
 }
