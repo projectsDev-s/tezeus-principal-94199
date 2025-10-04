@@ -267,7 +267,7 @@ export function ChatModal({
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
                   <h3 className="font-medium text-gray-900 text-base">{contactName}</h3>
                   {realContactId && (
                     <ContactTags 
@@ -277,13 +277,13 @@ export function ChatModal({
                       }}
                     />
                   )}
+                  <AddTagButton 
+                    conversationId={conversationId} 
+                    onTagAdded={() => {
+                      loadInitial(conversationId);
+                    }} 
+                  />
                 </div>
-                <AddTagButton 
-                  conversationId={conversationId} 
-                  onTagAdded={() => {
-                    loadInitial(conversationId);
-                  }} 
-                />
               </div>
               <div className="flex items-center gap-3">
                 {/* Botão Agente IA */}
