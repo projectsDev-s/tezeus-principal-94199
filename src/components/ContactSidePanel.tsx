@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, FileText, Paperclip, Pencil, Trash2, Star, Copy } from "lucide-react";
+import { X, Upload, FileText, Paperclip, Pencil, Trash2, Star, Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,7 @@ export function ContactSidePanel({
     value: ''
   });
   const [newObservation, setNewObservation] = useState('');
-  const [selectedPipeline, setSelectedPipeline] = useState('');
+  const [selectedCardId, setSelectedCardId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
   const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export function ContactSidePanel({
   const {
     columns,
     fetchColumns
-  } = usePipelineColumns(selectedPipeline || null);
+  } = usePipelineColumns(null);
 
   // Hook para buscar cards do contato
   const {
@@ -106,7 +106,7 @@ export function ContactSidePanel({
   // Hook para criar cards
   const {
     createCard
-  } = usePipelineCards(selectedPipeline || null);
+  } = usePipelineCards(null);
 
   // Hook para toast
   const { toast } = useToast();
@@ -486,72 +486,71 @@ export function ContactSidePanel({
               </Card>
 
               {/* Seção: Negócios */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                  <CardTitle className="text-base">Negócios</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {cardsLoading ? (
-                    <p className="text-sm text-muted-foreground">Carregando negócios...</p>
-                  ) : deals.length > 0 ? (
-                    <>
-                      {/* Card de negócio com foto */}
-                      {deals.map(deal => (
-                        <div key={deal.id} className="flex items-start gap-3">
+              {deals.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Negócios</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Select para filtrar negócios */}
+                    <Select 
+                      value={selectedCardId || deals[0]?.id} 
+                      onValueChange={setSelectedCardId}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione um negócio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id}>
+                            {deal.pipeline}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Informações do negócio selecionado */}
+                    {(() => {
+                      const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
+                      if (!selectedDeal) return null;
+                      
+                      return (
+                        <div className="flex items-start gap-3">
                           {/* Avatar do cliente */}
-                          {editingContact?.profile_image_url && (
-                            <Avatar className="h-10 w-10 flex-shrink-0">
-                              <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />
-                              <AvatarFallback className="text-white font-medium" style={{
+                          <Avatar className="h-10 w-10 flex-shrink-0">
+                            <AvatarImage 
+                              src={editingContact?.profile_image_url} 
+                              alt={editingContact?.name} 
+                              className="object-cover" 
+                            />
+                            <AvatarFallback 
+                              className="text-white font-medium" 
+                              style={{
                                 backgroundColor: getAvatarColor(editingContact?.name || '')
-                              }}>
-                                {getInitials(editingContact?.name || '')}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
+                              }}
+                            >
+                              {getInitials(editingContact?.name || '')}
+                            </AvatarFallback>
+                          </Avatar>
                           
                           {/* Informações do negócio */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {deal.pipeline} &gt; {deal.title}
+                              {selectedDeal.pipeline} &gt; {selectedDeal.title}
                             </p>
                             <p className="text-sm font-semibold text-primary">
                               {new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
                                 currency: 'BRL'
-                              }).format(deal.value)}
+                              }).format(selectedDeal.value)}
                             </p>
                           </div>
                         </div>
-                      ))}
-                      
-                      {/* Select para filtrar negócios */}
-                      <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sucesso do Cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {deals.map(deal => (
-                            <SelectItem key={deal.id} value={deal.id}>
-                              {deal.pipeline}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {/* Botão adicionar */}
-                      <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nenhum negócio encontrado</p>
-                  )}
-                </CardContent>
-              </Card>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Seção: Observações */}
               <Card>
