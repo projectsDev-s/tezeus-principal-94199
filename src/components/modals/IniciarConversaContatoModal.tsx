@@ -104,7 +104,7 @@ export function IniciarConversaContatoModal({
     if (!selectedConnection) {
       toast({
         title: "Atenção",
-        description: "Selecione um canal de atendimento.",
+        description: "Selecione uma conexão.",
         variant: "destructive"
       });
       return;
@@ -239,22 +239,28 @@ export function IniciarConversaContatoModal({
             </Select>
           </div>
 
-          {/* Seleção de Canal */}
+          {/* Seleção de Conexão */}
           <div className="space-y-2">
-            <Label htmlFor="connection">Selecione um Canal de Atendimento</Label>
+            <Label htmlFor="connection">Selecione uma Conexão</Label>
             <Select value={selectedConnection} onValueChange={setSelectedConnection}>
               <SelectTrigger id="connection">
-                <SelectValue placeholder="Selecione um Canal de Atendimento" />
+                <SelectValue placeholder="Selecione uma Conexão" />
               </SelectTrigger>
               <SelectContent>
-                {connections.map((connection) => (
-                  <SelectItem key={connection.id} value={connection.id}>
-                    <div className="flex items-center gap-2">
-                      {connection.instance_name} {connection.phone_number && `(${connection.phone_number})`}
-                      <span className="text-xs text-green-500 font-semibold">CONNECTED</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {connections.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    Nenhuma conexão disponível
+                  </div>
+                ) : (
+                  connections.map((connection) => (
+                    <SelectItem key={connection.id} value={connection.id}>
+                      <div className="flex items-center gap-2">
+                        {connection.instance_name} {connection.phone_number && `(${connection.phone_number})`}
+                        <span className="text-xs text-green-500 font-semibold">CONNECTED</span>
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
