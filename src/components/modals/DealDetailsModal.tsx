@@ -156,6 +156,14 @@ export function DealDetailsModal({
     }
   }, [isOpen, cardId]);
 
+  // Recarregar atividades quando mudar de negócio
+  useEffect(() => {
+    if (contactId && selectedCardId) {
+      console.log('🔄 Recarregando atividades para o card:', selectedCardId);
+      fetchActivities(contactId);
+    }
+  }, [selectedCardId, contactId]);
+
   // Converter colunas em steps de progresso
   useEffect(() => {
     if (columns.length > 0 && selectedColumnId) {
