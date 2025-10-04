@@ -542,7 +542,7 @@ export function ContactSidePanel({
 
                   {/* Select de Pipeline com botão + */}
                   {deals.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
                       <div className="flex items-center gap-2">
                         <Select value={selectedCardId} onValueChange={setSelectedCardId}>
@@ -566,6 +566,46 @@ export function ContactSidePanel({
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
+
+                      {/* Informações do negócio selecionado */}
+                      {(() => {
+                        const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
+                        if (!selectedDeal) return null;
+                        
+                        return (
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                            {/* Avatar do cliente */}
+                            <Avatar className="h-10 w-10 flex-shrink-0">
+                              <AvatarImage 
+                                src={editingContact?.profile_image_url} 
+                                alt={editingContact?.name} 
+                                className="object-cover" 
+                              />
+                              <AvatarFallback 
+                                className="text-white font-medium" 
+                                style={{
+                                  backgroundColor: getAvatarColor(editingContact?.name || '')
+                                }}
+                              >
+                                {getInitials(editingContact?.name || '')}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            {/* Informações do negócio */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {selectedDeal.pipeline} - {selectedDeal.column_name}
+                              </p>
+                              <p className="text-sm font-semibold text-primary">
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                }).format(selectedDeal.value)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="space-y-2">
