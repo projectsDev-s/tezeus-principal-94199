@@ -985,7 +985,8 @@ export function CRMNegocios({
         conversationId={selectedChatCard?.conversation?.id || selectedChatCard?.conversation_id || ""} 
         contactName={selectedChatCard?.contact?.name || selectedChatCard?.name || ""} 
         contactPhone={selectedChatCard?.contact?.phone || ""} 
-        contactAvatar={selectedChatCard?.contact?.profile_image_url || ""} 
+        contactAvatar={selectedChatCard?.contact?.profile_image_url || ""}
+        contactId={selectedChatCard?.contact?.id || ""}
       />
 
       <TransferirModal isOpen={isTransferirModalOpen} onClose={() => {

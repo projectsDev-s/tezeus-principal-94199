@@ -25,6 +25,7 @@ interface ChatModalProps {
   contactName: string;
   contactPhone?: string;
   contactAvatar?: string;
+  contactId?: string;
 }
 
 interface WhatsAppMessage {
@@ -50,12 +51,14 @@ export function ChatModal({
   conversationId, 
   contactName, 
   contactPhone, 
-  contactAvatar 
+  contactAvatar,
+  contactId 
 }: ChatModalProps) {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [realContactId, setRealContactId] = useState<string | null>(contactId || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLElement | null>(null);
   const { toast } = useToast();
@@ -81,6 +84,13 @@ export function ChatModal({
   
   // Usar o hook existente para buscar mensagens
   const { messages, loading, loadInitial, loadMore, loadingMore, hasMore } = useConversationMessages();
+
+  // Usar contactId da prop ou buscar do workspace_id das mensagens
+  useEffect(() => {
+    if (contactId) {
+      setRealContactId(contactId);
+    }
+  }, [contactId]);
 
   // Carregar mensagens quando abrir o modal
   useEffect(() => {
@@ -257,27 +267,23 @@ export function ChatModal({
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-1">
                   <h3 className="font-medium text-gray-900 text-base">{contactName}</h3>
-                  <div className="flex items-center">
-                    {/* Botão Add Tag funcional */}
-                    <AddTagButton 
-                      conversationId={conversationId} 
-                      onTagAdded={() => {
-                        // Refresh na conversa após adicionar tag
-                        loadInitial(conversationId);
-                      }} 
-                    />
-                    {/* Tags do contato funcionais */}
+                  {realContactId && (
                     <ContactTags 
-                      contactId={conversationId} // Usando conversationId como fallback
+                      contactId={realContactId}
                       onTagRemoved={() => {
-                        // Refresh na conversa após remover tag
                         loadInitial(conversationId);
                       }}
                     />
-                  </div>
+                  )}
                 </div>
+                <AddTagButton 
+                  conversationId={conversationId} 
+                  onTagAdded={() => {
+                    loadInitial(conversationId);
+                  }} 
+                />
               </div>
               <div className="flex items-center gap-3">
                 {/* Botão Agente IA */}
