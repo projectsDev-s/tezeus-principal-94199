@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
+import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
 import { FilterModal } from "@/components/modals/FilterModal";
 import { CriarPipelineModal } from "@/components/modals/CriarPipelineModal";
 import { CriarNegocioModal } from "@/components/modals/CriarNegocioModal";
@@ -397,7 +398,8 @@ export function CRMNegocios({
     createCard,
     moveCard,
     getCardsByColumn,
-    updateCard
+    updateCard,
+    refreshCurrentPipeline
   } = usePipelinesContext();
   const {
     activeUsers,
@@ -407,6 +409,7 @@ export function CRMNegocios({
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [selectedChatCard, setSelectedChatCard] = useState<any>(null);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isEditarColunaModalOpen, setIsEditarColunaModalOpen] = useState(false);
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isCriarPipelineModalOpen, setIsCriarPipelineModalOpen] = useState(false);
@@ -904,7 +907,7 @@ export function CRMNegocios({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => {
                             setSelectedColumnForAction(column.id);
-                            setIsConfigModalOpen(true);
+                            setIsEditarColunaModalOpen(true);
                           }}>
                                   <Edit className="mr-2 h-4 w-4" />
                                   Editar coluna
@@ -1084,5 +1087,16 @@ export function CRMNegocios({
       setIsSetValueModalOpen(false);
       setSelectedCardForValue(null);
     }} onSave={handleSetCardValue} currentValue={selectedCardForValue?.value || 0} isDarkMode={isDarkMode} />
+
+      <EditarColunaModal
+        open={isEditarColunaModalOpen}
+        onOpenChange={setIsEditarColunaModalOpen}
+        columnId={selectedColumnForAction}
+        columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''}
+        columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'}
+        onUpdate={() => {
+          refreshCurrentPipeline();
+        }}
+      />
     </DndContext>;
 }
