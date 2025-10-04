@@ -112,10 +112,14 @@ export function ContactSidePanel({
   } = usePipelineCards(null);
 
   // Hook para toast
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
+
   // Hook para workspace
-  const { selectedWorkspace } = useWorkspace();
+  const {
+    selectedWorkspace
+  } = useWorkspace();
 
   // Hook para observações
   const {
@@ -127,11 +131,11 @@ export function ContactSidePanel({
     getFileIcon,
     isUploading
   } = useContactObservations(contact?.id || "");
-  
+
   // 🆕 Hook para informações extras do contato
-  const { 
-    fields: extraFields, 
-    saveFields: saveExtraFields 
+  const {
+    fields: extraFields,
+    saveFields: saveExtraFields
   } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
 
   // Dados mockados de deals baseados nos cards do contato
@@ -147,12 +151,14 @@ export function ContactSidePanel({
   useEffect(() => {
     if (contact) {
       console.log('🔄 useEffect disparado - contact mudou:', contact);
-      setEditingContact({ ...contact });
+      setEditingContact({
+        ...contact
+      });
     } else {
       console.log('⚠️ Contact é null/undefined');
     }
   }, [contact]);
-  
+
   // 🆕 useEffect separado para converter extraFields em customFields
   useEffect(() => {
     if (extraFields.length > 0) {
@@ -168,77 +174,67 @@ export function ContactSidePanel({
   }, [extraFields]);
   const handleSaveContact = async () => {
     console.log('🚀 handleSaveContact CHAMADA!');
-    
     if (!editingContact) {
       console.log('⚠️ editingContact é null/undefined');
       return;
     }
-    
     console.log('🔍 Estado editingContact antes de salvar:', editingContact);
-    
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
+      const {
+        supabase
+      } = await import('@/integrations/supabase/client');
+
       // 1️⃣ Salvar dados básicos do contato
       const updateData = {
         name: editingContact.name?.trim() || '',
         phone: editingContact.phone?.trim() || '',
-        email: editingContact.email?.trim() || '',
+        email: editingContact.email?.trim() || ''
       };
-      
       console.log('📤 Salvando dados básicos:', updateData);
-      
-      const { data: updatedData, error: updateError } = await supabase
-        .from('contacts')
-        .update(updateData)
-        .eq('id', editingContact.id)
-        .select()
-        .single();
-        
+      const {
+        data: updatedData,
+        error: updateError
+      } = await supabase.from('contacts').update(updateData).eq('id', editingContact.id).select().single();
       if (updateError) {
         console.error('❌ Erro ao atualizar contato:', updateError);
         toast({
           title: "Erro",
           description: "Erro ao salvar dados do contato",
-          variant: "destructive",
+          variant: "destructive"
         });
         throw updateError;
       }
-      
       console.log('✅ Dados básicos salvos:', updatedData);
-      
+
       // 2️⃣ Salvar informações extras usando a nova tabela
       const fieldsToSave = customFields.map(f => ({
         field_name: f.key,
         field_value: f.value
       }));
-      
       console.log('📤 Salvando informações extras:', fieldsToSave);
       const saveSuccess = await saveExtraFields(fieldsToSave);
-      
       if (!saveSuccess) {
         toast({
           title: "Aviso",
-          description: "Dados do contato salvos, mas houve erro ao salvar informações adicionais",
+          description: "Dados do contato salvos, mas houve erro ao salvar informações adicionais"
         });
       } else {
         toast({
           title: "Sucesso",
-          description: "Todos os dados salvos com sucesso!",
+          description: "Todos os dados salvos com sucesso!"
         });
       }
-      
+
       // Atualizar estado local
       if (updatedData) {
         setEditingContact(updatedData as Contact);
       }
-
     } catch (error) {
       console.error('❌ Erro geral ao salvar contato:', error);
       toast({
         title: "Erro",
         description: "Erro ao salvar alterações",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -360,71 +356,7 @@ export function ContactSidePanel({
           <ScrollArea className="flex-1 px-6">
             <div className="space-y-6 py-6">
               {/* Seção: Negócios - Movido para o topo */}
-              {deals.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Negócios</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Select para filtrar negócios */}
-                    <Select 
-                      value={selectedCardId} 
-                      onValueChange={setSelectedCardId}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione um negócio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {deals.map(deal => (
-                          <SelectItem key={deal.id} value={deal.id}>
-                            {deal.pipeline}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Informações do negócio selecionado */}
-                    {(() => {
-                      const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
-                      if (!selectedDeal) return null;
-                      
-                      return (
-                        <div className="flex items-start gap-3">
-                          {/* Avatar do cliente */}
-                          <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage 
-                              src={editingContact?.profile_image_url} 
-                              alt={editingContact?.name} 
-                              className="object-cover" 
-                            />
-                            <AvatarFallback 
-                              className="text-white font-medium" 
-                              style={{
-                                backgroundColor: getAvatarColor(editingContact?.name || '')
-                              }}
-                            >
-                              {getInitials(editingContact?.name || '')}
-                            </AvatarFallback>
-                          </Avatar>
-                          
-                          {/* Informações do negócio */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {selectedDeal.pipeline} - {selectedDeal.column_name}
-                            </p>
-                            <p className="text-sm font-semibold text-primary">
-                              {new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(selectedDeal.value)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-              )}
+              {deals.length > 0}
 
               {/* Seção: Dados do contato */}
               <Card>
@@ -474,75 +406,39 @@ export function ContactSidePanel({
                     <h4 className="text-sm font-semibold">Informações adicionais</h4>
                     
                     {/* Lista de campos personalizados */}
-                    {customFields.length > 0 && (
-                      <div className="space-y-2">
-                        {customFields.map((field, index) => (
-                          <div key={index} className="flex items-center gap-2">
+                    {customFields.length > 0 && <div className="space-y-2">
+                        {customFields.map((field, index) => <div key={index} className="flex items-center gap-2">
                             <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
                             <div className="flex-1 grid grid-cols-2 gap-2">
-                              <Input 
-                                value={field.key} 
-                                readOnly
-                                className="text-sm font-medium border-0 bg-transparent px-0"
-                              />
-                              <Input 
-                                value={field.value} 
-                                readOnly
-                                className="text-sm border-0 bg-transparent px-0"
-                              />
+                              <Input value={field.key} readOnly className="text-sm font-medium border-0 bg-transparent px-0" />
+                              <Input value={field.value} readOnly className="text-sm border-0 bg-transparent px-0" />
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 flex-shrink-0"
-                              onClick={() => handleRemoveCustomField(index)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleRemoveCustomField(index)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          </div>)}
+                      </div>}
 
                     {/* Adicionar novo campo */}
                     <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        id="field-name" 
-                        placeholder="Nome da compra" 
-                        value={newCustomField.key} 
-                        onChange={e => setNewCustomField(prev => ({
-                          ...prev,
-                          key: e.target.value
-                        }))} 
-                        className="text-sm" 
-                      />
-                      <Input 
-                        id="field-value" 
-                        placeholder="Valor" 
-                        value={newCustomField.value} 
-                        onChange={e => setNewCustomField(prev => ({
-                          ...prev,
-                          value: e.target.value
-                        }))} 
-                        className="text-sm" 
-                      />
+                      <Input id="field-name" placeholder="Nome da compra" value={newCustomField.key} onChange={e => setNewCustomField(prev => ({
+                      ...prev,
+                      key: e.target.value
+                    }))} className="text-sm" />
+                      <Input id="field-value" placeholder="Valor" value={newCustomField.value} onChange={e => setNewCustomField(prev => ({
+                      ...prev,
+                      value: e.target.value
+                    }))} className="text-sm" />
                     </div>
                     
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleAddCustomField} 
-                      disabled={!newCustomField.key.trim() || !newCustomField.value.trim()} 
-                      className="w-full text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={handleAddCustomField} disabled={!newCustomField.key.trim() || !newCustomField.value.trim()} className="w-full text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50">
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar informação
                     </Button>
                   </div>
 
                   {/* Select de Pipeline com botão + */}
-                  {deals.length > 0 ? (
-                    <div className="space-y-3">
+                  {deals.length > 0 ? <div className="space-y-3">
                       <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
                       <div className="flex items-center gap-2">
                         <Select value={selectedCardId} onValueChange={setSelectedCardId}>
@@ -550,43 +446,27 @@ export function ContactSidePanel({
                             <SelectValue placeholder="Selecionar pipeline" />
                           </SelectTrigger>
                           <SelectContent>
-                            {deals.map(deal => (
-                              <SelectItem key={deal.id} value={deal.id}>
+                            {deals.map(deal => <SelectItem key={deal.id} value={deal.id}>
                                 {deal.pipeline}
-                              </SelectItem>
-                            ))}
+                              </SelectItem>)}
                           </SelectContent>
                         </Select>
-                        <Button 
-                          size="icon" 
-                          variant="outline"
-                          className="h-9 w-9 flex-shrink-0"
-                          onClick={() => setIsCreateDealModalOpen(true)}
-                        >
+                        <Button size="icon" variant="outline" className="h-9 w-9 flex-shrink-0" onClick={() => setIsCreateDealModalOpen(true)}>
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
 
                       {/* Informações do negócio selecionado */}
                       {(() => {
-                        const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
-                        if (!selectedDeal) return null;
-                        
-                        return (
-                          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                    const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
+                    if (!selectedDeal) return null;
+                    return <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                             {/* Avatar do cliente */}
                             <Avatar className="h-10 w-10 flex-shrink-0">
-                              <AvatarImage 
-                                src={editingContact?.profile_image_url} 
-                                alt={editingContact?.name} 
-                                className="object-cover" 
-                              />
-                              <AvatarFallback 
-                                className="text-white font-medium" 
-                                style={{
-                                  backgroundColor: getAvatarColor(editingContact?.name || '')
-                                }}
-                              >
+                              <AvatarImage src={editingContact?.profile_image_url} alt={editingContact?.name} className="object-cover" />
+                              <AvatarFallback className="text-white font-medium" style={{
+                          backgroundColor: getAvatarColor(editingContact?.name || '')
+                        }}>
                                 {getInitials(editingContact?.name || '')}
                               </AvatarFallback>
                             </Avatar>
@@ -598,116 +478,39 @@ export function ContactSidePanel({
                               </p>
                               <p className="text-sm font-semibold text-primary">
                                 {new Intl.NumberFormat('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                }).format(selectedDeal.value)}
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format(selectedDeal.value)}
                               </p>
                             </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
+                          </div>;
+                  })()}
+                    </div> : <div className="space-y-2">
                       <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 text-sm text-muted-foreground">
                           Nenhum pipeline vinculado
                         </div>
-                        <Button 
-                          size="icon" 
-                          variant="outline"
-                          className="h-9 w-9 flex-shrink-0"
-                          onClick={() => setIsCreateDealModalOpen(true)}
-                        >
+                        <Button size="icon" variant="outline" className="h-9 w-9 flex-shrink-0" onClick={() => setIsCreateDealModalOpen(true)}>
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Botão Salvar */}
-                  <Button 
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('🔴 BOTÃO CLICADO!');
-                      handleSaveContact();
-                    }} 
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                  >
+                  <Button type="button" onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔴 BOTÃO CLICADO!');
+                  handleSaveContact();
+                }} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
                     Salvar
                   </Button>
                 </CardContent>
               </Card>
 
               {/* Seção: Negócios */}
-              {deals.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Negócios</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Select para filtrar negócios */}
-                    <Select 
-                      value={selectedCardId || deals[0]?.id} 
-                      onValueChange={setSelectedCardId}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione um negócio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {deals.map(deal => (
-                          <SelectItem key={deal.id} value={deal.id}>
-                            {deal.pipeline}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Informações do negócio selecionado */}
-                    {(() => {
-                      const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
-                      if (!selectedDeal) return null;
-                      
-                      return (
-                        <div className="flex items-start gap-3">
-                          {/* Avatar do cliente */}
-                          <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage 
-                              src={editingContact?.profile_image_url} 
-                              alt={editingContact?.name} 
-                              className="object-cover" 
-                            />
-                            <AvatarFallback 
-                              className="text-white font-medium" 
-                              style={{
-                                backgroundColor: getAvatarColor(editingContact?.name || '')
-                              }}
-                            >
-                              {getInitials(editingContact?.name || '')}
-                            </AvatarFallback>
-                          </Avatar>
-                          
-                          {/* Informações do negócio */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {selectedDeal.pipeline} - {selectedDeal.column_name}
-                            </p>
-                            <p className="text-sm font-semibold text-primary">
-                              {new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(selectedDeal.value)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-              )}
+              {deals.length > 0}
 
               {/* Seção: Observações */}
               <Card>
@@ -811,11 +614,6 @@ export function ContactSidePanel({
       </AlertDialog>
 
       {/* Modal de Criar Negócio */}
-      <CriarNegocioModal
-        open={isCreateDealModalOpen}
-        onOpenChange={setIsCreateDealModalOpen}
-        preSelectedContactId={contact.id}
-        preSelectedContactName={contact.name}
-      />
+      <CriarNegocioModal open={isCreateDealModalOpen} onOpenChange={setIsCreateDealModalOpen} preSelectedContactId={contact.id} preSelectedContactName={contact.name} />
     </Sheet>;
 }
