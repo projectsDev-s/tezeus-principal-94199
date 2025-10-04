@@ -240,41 +240,23 @@ function DraggableDeal({
               </Button>
             </PopoverTrigger>
             <PopoverContent 
-              className="w-64 p-0 bg-background border border-border shadow-lg z-50" 
+              className="w-64 p-0" 
               align="start"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="space-y-0">
-                {/* Campo de busca */}
-                <div className="p-3 border-b border-border">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Buscar tags..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 h-9 text-sm bg-muted/30 border-0 focus:bg-muted/50"
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                </div>
-                
-                {/* Lista de tags disponíveis - Padrão sólido Imagem 1 */}
-                <ScrollArea className="max-h-48">
-                  <div className="p-2 space-y-1">
+              <Command>
+                <CommandInput 
+                  placeholder="Buscar tags..." 
+                  value={searchTerm}
+                  onValueChange={setSearchTerm}
+                />
+                <CommandList>
+                  <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
+                  <CommandGroup>
                     {getFilteredTags(searchTerm).map((tag) => (
-                      <Badge
+                      <CommandItem
                         key={tag.id}
-                        variant="outline"
-                        style={{ 
-                          backgroundColor: tag.color,
-                          borderColor: tag.color,
-                          color: 'white'
-                        }}
-                        className="cursor-pointer hover:opacity-80 transition-all text-xs px-3 py-1.5 w-full justify-start rounded-full font-medium border-0"
-                        onClick={async (e) => {
-                          e.stopPropagation();
+                        onSelect={async () => {
                           try {
                             await addTagToContact(tag.id);
                             await refreshTags();
@@ -285,17 +267,22 @@ function DraggableDeal({
                           }
                         }}
                       >
-                        {tag.name}
-                      </Badge>
+                        <Badge
+                          variant="outline"
+                          style={{ 
+                            backgroundColor: tag.color,
+                            borderColor: tag.color,
+                            color: 'white'
+                          }}
+                          className="cursor-pointer text-xs px-3 py-1 rounded-full font-medium border-0 w-full justify-start"
+                        >
+                          {tag.name}
+                        </Badge>
+                      </CommandItem>
                     ))}
-                    {getFilteredTags(searchTerm).length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        {searchTerm ? "Nenhuma tag encontrada" : "Nenhuma tag disponível"}
-                      </p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
+                  </CommandGroup>
+                </CommandList>
+              </Command>
             </PopoverContent>
           </Popover>
         </div>
