@@ -71,6 +71,7 @@ export function ChatModal({
       
       if (!conversationId || conversationId === '') {
         console.error('❌ ChatModal: conversationId está vazio ou inválido!');
+        console.error('Props recebidas:', { conversationId, contactName, contactPhone, contactAvatar });
       } else {
         console.log('✅ ChatModal: conversationId válido:', conversationId);
       }
@@ -82,10 +83,12 @@ export function ChatModal({
 
   // Carregar mensagens quando abrir o modal
   useEffect(() => {
-    if (isOpen && conversationId) {
+    if (isOpen && conversationId && conversationId !== '') {
       console.log('🔄 ChatModal: Carregando mensagens para conversationId:', conversationId);
       console.log('📋 ChatModal: Contato:', { contactName, contactPhone });
       loadInitial(conversationId);
+    } else if (isOpen) {
+      console.warn('⚠️ ChatModal aberto mas conversationId inválido:', conversationId);
     }
   }, [isOpen, conversationId, loadInitial]);
 
@@ -304,10 +307,13 @@ export function ChatModal({
                 <p className="text-muted-foreground">Carregando mensagens...</p>
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex items-center justify-center h-32">
+              <div className="flex flex-col items-center justify-center h-32 gap-2">
                 <p className="text-muted-foreground">Nenhuma mensagem ainda</p>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Conversation ID: {conversationId}
+                <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded">
+                  Conversation ID: {conversationId || 'vazio'}
+                </div>
+                <div className="text-xs text-red-500">
+                  {!conversationId ? '⚠️ ID da conversa não foi fornecido' : '✅ ID válido mas sem mensagens'}
                 </div>
               </div>
             ) : (

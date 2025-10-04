@@ -202,9 +202,14 @@ function DraggableDeal({
             <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-green-100 hover:text-green-600" onClick={async (e) => {
             e.stopPropagation();
             
+            console.log('🎯 Clique no botão de chat - Deal:', deal);
+            console.log('📞 Contact ID:', deal.contact?.id);
+            
             // Buscar conversa do contato antes de abrir o modal
             if (deal.contact?.id) {
               try {
+                console.log('🔍 Buscando conversa para contact_id:', deal.contact.id);
+                
                 const { data: conversations, error } = await supabase
                   .from('conversations')
                   .select('id')
@@ -212,6 +217,8 @@ function DraggableDeal({
                   .eq('workspace_id', selectedWorkspace?.workspace_id)
                   .eq('status', 'open')
                   .limit(1);
+                
+                console.log('📊 Resultado da busca:', { conversations, error });
                 
                 if (error) throw error;
                 
@@ -222,8 +229,13 @@ function DraggableDeal({
                     conversation_id: conversations[0].id,
                     conversation: { id: conversations[0].id }
                   };
+                  
+                  console.log('✅ Conversa encontrada! ID:', conversations[0].id);
+                  console.log('📦 Deal com conversa:', dealWithConversation);
+                  
                   onChatClick?.(dealWithConversation);
                 } else {
+                  console.warn('⚠️ Nenhuma conversa encontrada para o contato');
                   toast({
                     title: "Conversa não encontrada",
                     description: "Não há conversa ativa para este contato",
@@ -231,13 +243,15 @@ function DraggableDeal({
                   });
                 }
               } catch (error) {
-                console.error('Erro ao buscar conversa:', error);
+                console.error('❌ Erro ao buscar conversa:', error);
                 toast({
                   title: "Erro",
                   description: "Erro ao buscar conversa do contato",
                   variant: "destructive",
                 });
               }
+            } else {
+              console.error('❌ Deal não tem contact_id');
             }
           }}>
               <MessageCircle className="w-3.5 h-3.5" />
