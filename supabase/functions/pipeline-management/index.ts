@@ -407,6 +407,29 @@ serve(async (req) => {
 
             console.log('📝 Updating card:', cardId, 'with data:', body);
 
+            // Validate that column belongs to the target pipeline if both are being updated
+            if (body.column_id && body.pipeline_id) {
+              const { data: column, error: colError } = await supabaseClient
+                .from('pipeline_columns')
+                .select('pipeline_id')
+                .eq('id', body.column_id)
+                .single();
+
+              if (colError) {
+                console.error('❌ Column not found:', body.column_id);
+                throw new Error('Coluna não encontrada');
+              }
+
+              if (column.pipeline_id !== body.pipeline_id) {
+                console.error('❌ Column does not belong to pipeline:', {
+                  column_id: body.column_id,
+                  column_pipeline: column.pipeline_id,
+                  target_pipeline: body.pipeline_id
+                });
+                throw new Error('A coluna não pertence ao pipeline de destino');
+              }
+            }
+
             const updateData: any = {};
             if (body.column_id !== undefined) updateData.column_id = body.column_id;
             if (body.pipeline_id !== undefined) updateData.pipeline_id = body.pipeline_id;
