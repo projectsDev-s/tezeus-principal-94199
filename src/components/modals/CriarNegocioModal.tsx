@@ -11,14 +11,33 @@ import { useWorkspaceUsers } from "@/hooks/useWorkspaceUsers";
 import { useProducts } from "@/hooks/useProducts";
 
 interface CriarNegocioModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreateBusiness: (business: any) => void;
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
+  onCreateBusiness?: (business: any) => void;
   isDarkMode?: boolean;
+  preSelectedContactId?: string;
+  preSelectedContactName?: string;
 }
 
-export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMode = false }: CriarNegocioModalProps) {
-  const [selectedLead, setSelectedLead] = useState("");
+export function CriarNegocioModal({ 
+  isOpen, 
+  open, 
+  onClose, 
+  onOpenChange, 
+  onCreateBusiness, 
+  isDarkMode = false,
+  preSelectedContactId,
+  preSelectedContactName
+}: CriarNegocioModalProps) {
+  const modalOpen = open ?? isOpen ?? false;
+  const handleClose = () => {
+    if (onOpenChange) onOpenChange(false);
+    if (onClose) onClose();
+  };
+
+  const [selectedLead, setSelectedLead] = useState(preSelectedContactId || "");
   const [selectedResponsible, setSelectedResponsible] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
   const [value, setValue] = useState("");
@@ -52,11 +71,18 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
 
   // Carregar usuários quando modal abrir
   useEffect(() => {
-    if (isOpen && selectedWorkspace?.workspace_id) {
+    if (modalOpen && selectedWorkspace?.workspace_id) {
       console.log('🔄 Modal aberto, carregando usuários...');
       loadUsers();
     }
-  }, [isOpen, selectedWorkspace?.workspace_id]);
+  }, [modalOpen, selectedWorkspace?.workspace_id]);
+
+  // Pré-selecionar contato quando fornecido
+  useEffect(() => {
+    if (preSelectedContactId) {
+      setSelectedLead(preSelectedContactId);
+    }
+  }, [preSelectedContactId]);
 
   // Preencher valor automaticamente ao selecionar produto
   useEffect(() => {
@@ -81,19 +107,21 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
       value: parseFloat(value)
     };
     
-    onCreateBusiness(newBusiness);
+    if (onCreateBusiness) {
+      onCreateBusiness(newBusiness);
+    }
     
     // Reset form
-    setSelectedLead("");
+    setSelectedLead(preSelectedContactId || "");
     setSelectedResponsible("");
     setSelectedProduct("");
     setValue("");
     
-    onClose();
+    handleClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={modalOpen} onOpenChange={handleClose}>
       <DialogContent className={cn(
         "max-w-md",
         isDarkMode 
@@ -112,9 +140,9 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
         <div className="space-y-4">
           {/* Seleção de Lead */}
           <div>
-            <Select value={selectedLead} onValueChange={setSelectedLead}>
+            <Select value={selectedLead} onValueChange={setSelectedLead} disabled={!!preSelectedContactId}>
               <SelectTrigger className="border-input">
-                <SelectValue placeholder="Selecione o Lead" />
+                <SelectValue placeholder={preSelectedContactName || "Selecione o Lead"} />
               </SelectTrigger>
               <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
                 {contacts.map((contact) => (
@@ -200,7 +228,7 @@ export function CriarNegocioModal({ isOpen, onClose, onCreateBusiness, isDarkMod
         <div className="flex justify-end gap-2 mt-6">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={handleClose}
             className="text-red-500 hover:text-red-600"
           >
             Cancelar

@@ -18,6 +18,7 @@ import { usePipelineCards } from "@/hooks/usePipelineCards";
 import { useContactPipelineCards } from '@/hooks/useContactPipelineCards';
 import { useContactObservations, ContactObservation } from '@/hooks/useContactObservations';
 import { useContactExtraInfo } from '@/hooks/useContactExtraInfo';
+import { CriarNegocioModal } from './modals/CriarNegocioModal';
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -83,6 +84,7 @@ export function ContactSidePanel({
   const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [deletingObservationId, setDeletingObservationId] = useState<string | null>(null);
+  const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
 
   // Hook para buscar pipelines reais
   const {
@@ -357,6 +359,73 @@ export function ContactSidePanel({
 
           <ScrollArea className="flex-1 px-6">
             <div className="space-y-6 py-6">
+              {/* Seção: Negócios - Movido para o topo */}
+              {deals.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Negócios</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Select para filtrar negócios */}
+                    <Select 
+                      value={selectedCardId} 
+                      onValueChange={setSelectedCardId}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione um negócio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id}>
+                            {deal.pipeline}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Informações do negócio selecionado */}
+                    {(() => {
+                      const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
+                      if (!selectedDeal) return null;
+                      
+                      return (
+                        <div className="flex items-start gap-3">
+                          {/* Avatar do cliente */}
+                          <Avatar className="h-10 w-10 flex-shrink-0">
+                            <AvatarImage 
+                              src={editingContact?.profile_image_url} 
+                              alt={editingContact?.name} 
+                              className="object-cover" 
+                            />
+                            <AvatarFallback 
+                              className="text-white font-medium" 
+                              style={{
+                                backgroundColor: getAvatarColor(editingContact?.name || '')
+                              }}
+                            >
+                              {getInitials(editingContact?.name || '')}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          {/* Informações do negócio */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {selectedDeal.pipeline} - {selectedDeal.column_name}
+                            </p>
+                            <p className="text-sm font-semibold text-primary">
+                              {new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                              }).format(selectedDeal.value)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Seção: Dados do contato */}
               <Card>
                 <CardContent className="space-y-4 pt-6">
@@ -469,6 +538,33 @@ export function ContactSidePanel({
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar informação
                     </Button>
+                  </div>
+
+                  {/* Select de Pipeline com botão + */}
+                  <div className="space-y-2">
+                    <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                        <SelectTrigger className="h-9 flex-1">
+                          <SelectValue placeholder="Selecionar pipeline" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {deals.map(deal => (
+                            <SelectItem key={deal.id} value={deal.id}>
+                              {deal.pipeline}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        size="icon" 
+                        variant="outline"
+                        className="h-9 w-9 flex-shrink-0"
+                        onClick={() => setIsCreateDealModalOpen(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Botão Salvar */}
@@ -654,5 +750,13 @@ export function ContactSidePanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Criar Negócio */}
+      <CriarNegocioModal
+        open={isCreateDealModalOpen}
+        onOpenChange={setIsCreateDealModalOpen}
+        preSelectedContactId={contact.id}
+        preSelectedContactName={contact.name}
+      />
     </Sheet>;
 }
