@@ -1,12 +1,9 @@
 import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Command, CommandInput, CommandList, CommandGroup, CommandItem } from "@/components/ui/command";
 import { useConversationTags } from "@/hooks/useConversationTags";
-import { cn } from "@/lib/utils";
 
 interface AddTagButtonProps {
   conversationId: string;
@@ -16,51 +13,21 @@ interface AddTagButtonProps {
 
 export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }: AddTagButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTagId, setSelectedTagId] = useState<string>("");
   const [isHovered, setIsHovered] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
   const { 
     availableTags,
     conversationTags,
-    addTagToConversation, 
-    isLoading 
+    addTagToConversation
   } = useConversationTags(conversationId);
 
   // Verificar quais tags já estão atribuídas à conversa
   const assignedTagIds = conversationTags.map(ct => ct.tag_id);
 
-  // Filtrar tags por busca
-  const filteredTags = availableTags.filter(tag => 
-    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleAddTag = async () => {
-    if (!selectedTagId) return;
-    
-    const success = await addTagToConversation(selectedTagId);
-    if (success) {
-      setIsOpen(false);
-      setSelectedTagId("");
-      setSearchTerm("");
-      onTagAdded?.();
-    }
-  };
-
-  const handleTagSelect = (tagId: string) => {
-    setSelectedTagId(tagId);
-  };
-
-  const handleCancel = () => {
+  const handleSelectTag = async (tagId: string) => {
+    await addTagToConversation(tagId);
     setIsOpen(false);
-    setSelectedTagId("");
-    setSearchTerm("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleCancel();
-    }
+    onTagAdded?.();
   };
 
   return (
@@ -89,87 +56,33 @@ export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }:
         </div>
       </PopoverTrigger>
       
-      <PopoverContent 
-        className="w-64 p-0 bg-background border border-border shadow-lg z-50" 
-        align="start"
-        onKeyDown={handleKeyDown}
-      >
-        <div className="space-y-0">
-          {/* Campo de busca */}
-          <div className="p-3 border-b border-border">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar tags..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-9 text-sm bg-muted/30 border-0 focus:bg-muted/50"
-                autoFocus
-              />
-            </div>
-          </div>
-          
-          {/* Lista de tags disponíveis - Padrão sólido Imagem 1 */}
-          <ScrollArea className="max-h-48">
-            <div className="p-2 space-y-1">
-              {filteredTags.map((tag) => {
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar tags..." />
+          <CommandList>
+            <CommandGroup>
+              {availableTags.map((tag) => {
                 const isAssigned = assignedTagIds.includes(tag.id);
+                
                 return (
-                  <div 
-                    key={tag.id} 
-                    className={cn(
-                      "relative",
-                      isAssigned && "opacity-50"
-                    )}
+                  <CommandItem
+                    key={tag.id}
+                    onSelect={() => !isAssigned && handleSelectTag(tag.id)}
+                    disabled={isAssigned}
                   >
-                    <Badge
-                      variant="outline"
-                      style={{ 
-                        backgroundColor: tag.color,
-                        borderColor: tag.color,
-                        color: 'white'
-                      }}
-                      className={cn(
-                        "cursor-pointer hover:opacity-80 transition-all text-xs px-3 py-1.5 w-full justify-start rounded-full font-medium border-0",
-                        selectedTagId === tag.id && "ring-2 ring-offset-1 ring-primary",
-                        isAssigned && "cursor-not-allowed"
-                      )}
-                      onClick={() => !isAssigned && handleTagSelect(tag.id)}
-                    >
-                      {tag.name}
-                      {isAssigned && <span className="ml-2 text-xs opacity-80">(já atribuída)</span>}
-                    </Badge>
-                  </div>
+                    <div className="flex items-center gap-2 w-full">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span>{tag.name}</span>
+                    </div>
+                  </CommandItem>
                 );
               })}
-              {filteredTags.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {searchTerm ? "Nenhuma tag encontrada" : "Nenhuma tag disponível"}
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-          
-          {/* Botões */}
-          <div className="flex gap-2 p-3 border-t border-border">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="flex-1 h-9"
-              size="sm"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleAddTag}
-              disabled={!selectedTagId || isLoading}
-              className="flex-1 h-9"
-              size="sm"
-            >
-              {isLoading ? "Adicionando..." : "Adicionar"}
-            </Button>
-          </div>
-        </div>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   );
