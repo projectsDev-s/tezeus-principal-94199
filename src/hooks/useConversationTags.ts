@@ -101,10 +101,6 @@ export function useConversationTags(conversationId?: string) {
       }
 
       await fetchConversationTags();
-      toast({
-        title: "Tag adicionada",
-        description: "A tag foi adicionada ao contato com sucesso.",
-      });
       
       return true;
     } catch (error: any) {

@@ -5,7 +5,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User } from "lucide-react";
+import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X } from "lucide-react";
+import { ContactTags } from "@/components/chat/ContactTags";
+import { useContactTags } from "@/hooks/useContactTags";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ContactTagSelector } from "@/components/crm/ContactTagSelector";
 import { IniciarConversaContatoModal } from "@/components/modals/IniciarConversaContatoModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -562,41 +566,39 @@ export function CRMContatos() {
                 </TableCell>
               </TableRow> : filteredContacts.map(contact => <TableRow key={contact.id}>
                 <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      {contact.profile_image_url ? <AvatarImage src={contact.profile_image_url} alt={contact.name} /> : <AvatarFallback>
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>}
-                    </Avatar>
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        {contact.profile_image_url ? <AvatarImage src={contact.profile_image_url} alt={contact.name} /> : <AvatarFallback>
+                            <User className="h-4 w-4" />
+                          </AvatarFallback>}
+                      </Avatar>
                       <span className="font-medium">{contact.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 ml-11">
+                      <ContactTags 
+                        contactId={contact.id} 
+                        onTagRemoved={fetchContacts}
+                      />
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-6 w-6 p-0 border-dashed border-muted-foreground/30 rounded-full hover:border-muted-foreground/50" 
-                            aria-label="Adicionar tag"
-                            onClick={() => setSelectedContactForTag(contact.id)}
+                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="w-3 h-3" />
                           </Button>
                         </PopoverTrigger>
-                        <AdicionarTagModal
-                          contactId={contact.id}
-                          onAddTag={handleAddTagToContact}
-                        />
+                        <PopoverContent 
+                          className="w-64 p-0" 
+                          align="start"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
+                        </PopoverContent>
                       </Popover>
                     </div>
-                    {contact.tags.length > 0 && <div className="flex items-center gap-2 mt-1">
-                        {contact.tags.map((tag, index) => <Badge key={index} variant="secondary" className="text-xs" style={{
-                    backgroundColor: `${tag.color}20`,
-                    color: tag.color,
-                    border: `1px solid ${tag.color}40`
-                  }}>
-                            {tag.name}
-                          </Badge>)}
-                      </div>}
                   </div>
                 </TableCell>
                 <TableCell className="text-center">{contact.phone}</TableCell>
