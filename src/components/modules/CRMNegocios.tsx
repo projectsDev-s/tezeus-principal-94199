@@ -22,6 +22,8 @@ import { ChatModal } from "@/components/modals/ChatModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { TransferirModal } from "@/components/modals/TransferirModal";
 import { SetValueModal } from "@/components/modals/SetValueModal";
+import { EditarContatoModal } from "@/components/modals/EditarContatoModal";
+import { VincularProdutoModal } from "@/components/modals/VincularProdutoModal";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { usePipelineActiveUsers } from "@/hooks/usePipelineActiveUsers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -97,6 +99,9 @@ interface DraggableDealProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: () => void;
+  onEditContact?: (contactId: string) => void;
+  onLinkProduct?: (cardId: string, currentValue: number) => void;
+  onDeleteCard?: (cardId: string) => void;
 }
 function DraggableDeal({
   deal,
@@ -107,7 +112,10 @@ function DraggableDeal({
   onValueClick,
   isSelectionMode = false,
   isSelected = false,
-  onToggleSelection
+  onToggleSelection,
+  onEditContact,
+  onLinkProduct,
+  onDeleteCard
 }: DraggableDealProps) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
@@ -191,7 +199,7 @@ function DraggableDeal({
           />
         </div>
       )}
-      {/* Header com avatar, nome e valor */}
+      {/* Header com avatar, nome, menu e valor */}
       <div className="flex items-start gap-3 mb-3">
           {/* Avatar do contato */}
           <div className="flex-shrink-0">
@@ -207,12 +215,74 @@ function DraggableDeal({
             </div>
           </div>
           
-          {/* Nome e valor */}
+          {/* Nome, menu e valor */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
-              <h3 className={cn("text-sm font-medium truncate pr-2", "text-foreground")}>
+            <div className="flex items-start justify-between gap-1">
+              <h3 className={cn("text-sm font-medium truncate pr-2 flex-1", "text-foreground")}>
                 {deal.contact?.name || deal.name}
               </h3>
+              
+              {/* Menu de ações */}
+              {!isSelectionMode && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground flex-shrink-0"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClick();
+                      }}
+                    >
+                      Transferir Atendimento
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClick();
+                      }}
+                    >
+                      Trocar Negócio
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (deal.contact?.id) {
+                          onEditContact?.(deal.contact.id);
+                        }
+                      }}
+                    >
+                      Editar Contato
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onLinkProduct?.(deal.id, deal.value);
+                      }}
+                    >
+                      Vincular Produto
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteCard?.(deal.id);
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
               <div className="flex-shrink-0">
                 {deal.value > 0 ? <span className={cn("text-sm font-semibold cursor-pointer hover:bg-primary/10 px-2 py-1 rounded", "text-primary")} onClick={e => {
                 e.stopPropagation();
@@ -464,6 +534,10 @@ export function CRMNegocios({
   const [selectedCardForValue, setSelectedCardForValue] = useState<any>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedCardsForTransfer, setSelectedCardsForTransfer] = useState<Set<string>>(new Set());
+  const [isEditarContatoModalOpen, setIsEditarContatoModalOpen] = useState(false);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [isVincularProdutoModalOpen, setIsVincularProdutoModalOpen] = useState(false);
+  const [selectedCardForProduct, setSelectedCardForProduct] = useState<{id: string, value: number} | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -1073,6 +1147,40 @@ export function CRMNegocios({
                               }
                               setSelectedCardsForTransfer(newSet);
                             }}
+                            onEditContact={(contactId) => {
+                              setSelectedContactId(contactId);
+                              setIsEditarContatoModalOpen(true);
+                            }}
+                            onLinkProduct={(cardId, currentValue) => {
+                              setSelectedCardForProduct({ id: cardId, value: currentValue });
+                              setIsVincularProdutoModalOpen(true);
+                            }}
+                            onDeleteCard={async (cardId) => {
+                              if (confirm('Tem certeza que deseja excluir este negócio?')) {
+                                try {
+                                  const { error } = await supabase
+                                    .from('pipeline_cards')
+                                    .delete()
+                                    .eq('id', cardId);
+
+                                  if (error) throw error;
+
+                                  toast({
+                                    title: "Sucesso",
+                                    description: "Negócio excluído com sucesso"
+                                  });
+
+                                  refreshCurrentPipeline();
+                                } catch (error) {
+                                  console.error('Erro ao excluir negócio:', error);
+                                  toast({
+                                    title: "Erro",
+                                    description: "Erro ao excluir negócio",
+                                    variant: "destructive"
+                                  });
+                                }
+                              }
+                            }}
                           />;
                         })}
                                 
@@ -1199,6 +1307,27 @@ export function CRMNegocios({
         onUpdate={() => {
           refreshCurrentPipeline();
         }}
+      />
+
+      <EditarContatoModal 
+        isOpen={isEditarContatoModalOpen} 
+        onClose={() => {
+          setIsEditarContatoModalOpen(false);
+          setSelectedContactId(null);
+        }} 
+        contactId={selectedContactId}
+        onContactUpdated={() => refreshCurrentPipeline()}
+      />
+
+      <VincularProdutoModal 
+        isOpen={isVincularProdutoModalOpen} 
+        onClose={() => {
+          setIsVincularProdutoModalOpen(false);
+          setSelectedCardForProduct(null);
+        }} 
+        cardId={selectedCardForProduct?.id || null}
+        currentValue={selectedCardForProduct?.value || 0}
+        onProductLinked={() => refreshCurrentPipeline()}
       />
     </DndContext>;
 }
