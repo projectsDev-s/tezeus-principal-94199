@@ -1100,13 +1100,13 @@ export function WhatsAppChat({
                     <h3 className="font-medium text-gray-900 text-base">
                       {selectedConversation.contact.name}
                     </h3>
-                    <div className="flex items-center">
-                      <AddTagButton conversationId={selectedConversation.id} isDarkMode={isDarkMode} onTagAdded={() => {
-                    // Refresh conversations after adding tag
-                    fetchConversations();
-                  }} />
+                    <div className="flex items-center gap-2">
                       <ContactTags contactId={selectedConversation.contact.id} isDarkMode={isDarkMode} onTagRemoved={() => {
                     // Refresh conversations after removing tag
+                    fetchConversations();
+                  }} />
+                      <AddTagButton conversationId={selectedConversation.id} isDarkMode={isDarkMode} onTagAdded={() => {
+                    // Refresh conversations after adding tag
                     fetchConversations();
                   }} />
                     </div>
