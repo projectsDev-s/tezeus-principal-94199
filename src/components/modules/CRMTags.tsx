@@ -3,17 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, Trash2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { useTags } from "@/hooks/useTags";
 import { CriarTagModal } from "@/components/modals/CriarTagModal";
 
 export function CRMTags() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
-  const { tags, isLoading, error, refetch } = useTags();
+  const { tags, isLoading, error, refetch } = useTags(startDate, endDate);
 
   return (
     <div className="p-6">
@@ -32,27 +37,54 @@ export function CRMTags() {
               />
             </div>
             
-            <div className="relative">
-              <Input
-                type="date"
-                placeholder="Data inicial"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="pr-10"
-              />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[200px] justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP", { locale: ptBR }) : "Data inicial"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
             
-            <div className="relative">
-              <Input
-                type="date"
-                placeholder="Data final"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="pr-10"
-              />
-              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[200px] justify-start text-left font-normal",
+                    !endDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "PPP", { locale: ptBR }) : "Data final"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                  initialFocus
+                  disabled={(date) => startDate ? date < startDate : false}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
             
             <Button 
               variant="yellow" 

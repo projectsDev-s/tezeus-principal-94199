@@ -7,7 +7,7 @@ interface Tag {
   color: string;
 }
 
-export function useTags() {
+export function useTags(startDate?: Date, endDate?: Date) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,10 +16,35 @@ export function useTags() {
     try {
       setIsLoading(true);
       setError(null);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('tags')
-        .select('id, name, color')
+        .select('id, name, color, created_at')
         .order('name');
+
+      if (startDate && endDate) {
+        // Filtrar por período
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        query = query
+          .gte('created_at', start.toISOString())
+          .lte('created_at', end.toISOString());
+      } else if (startDate) {
+        // Filtrar apenas por data inicial (mesmo dia)
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(startDate);
+        end.setHours(23, 59, 59, 999);
+        
+        query = query
+          .gte('created_at', start.toISOString())
+          .lte('created_at', end.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setTags(data || []);
@@ -32,7 +57,7 @@ export function useTags() {
 
   useEffect(() => {
     fetchTags();
-  }, []);
+  }, [startDate, endDate]);
 
   return { tags, isLoading, error, refetch: fetchTags };
 }
