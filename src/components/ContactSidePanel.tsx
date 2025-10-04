@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, FileText, Paperclip, Pencil, Trash2, Star } from "lucide-react";
+import { X, Plus, Upload, FileText, Paperclip, Pencil, Trash2, Star, Copy } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -487,59 +487,69 @@ export function ContactSidePanel({
 
               {/* Seção: Negócios */}
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                   <CardTitle className="text-base">Negócios</CardTitle>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Copy className="h-4 w-4" />
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Lista de negócios */}
-                  {cardsLoading ? <p className="text-sm text-muted-foreground">Carregando negócios...</p> : deals.length > 0 ? <div className="space-y-2">
-                      {deals.map(deal => <div key={deal.id} className="p-3 bg-muted rounded-md">
-                          <div className="flex justify-between items-start mb-1">
-                            <p className="text-sm font-medium">{deal.title}</p>
-                            <Badge variant="outline" className="text-xs">{deal.pipeline}</Badge>
-                          </div>
-                          {deal.description && <p className="text-xs text-muted-foreground mb-2">{deal.description}</p>}
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-semibold text-primary">
+                  {cardsLoading ? (
+                    <p className="text-sm text-muted-foreground">Carregando negócios...</p>
+                  ) : deals.length > 0 ? (
+                    <>
+                      {/* Card de negócio com foto */}
+                      {deals.map(deal => (
+                        <div key={deal.id} className="flex items-start gap-3">
+                          {/* Avatar do cliente */}
+                          {editingContact?.profile_image_url && (
+                            <Avatar className="h-10 w-10 flex-shrink-0">
+                              <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />
+                              <AvatarFallback className="text-white font-medium" style={{
+                                backgroundColor: getAvatarColor(editingContact?.name || '')
+                              }}>
+                                {getInitials(editingContact?.name || '')}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          
+                          {/* Informações do negócio */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {deal.pipeline} &gt; {deal.title}
+                            </p>
+                            <p className="text-sm font-semibold text-primary">
                               {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        }).format(deal.value)}
-                            </span>
-                            <Badge variant="secondary" className="text-xs">{deal.status}</Badge>
+                                style: 'currency',
+                                currency: 'BRL'
+                              }).format(deal.value)}
+                            </p>
                           </div>
-                        </div>)}
-                    </div> : <p className="text-sm text-muted-foreground">Nenhum negócio encontrado</p>}
-
-                  <Separator />
-
-                  {/* Criar novo negócio */}
-                  <div className="space-y-2">
-                    <Select value={selectedPipeline} onValueChange={value => {
-                    if (value !== selectedPipeline && value !== "no-pipelines") {
-                      const pipeline = pipelines.find(p => p.id === value);
-                      if (pipeline) {
-                        transferToPipeline(value, pipeline.name);
-                      }
-                    }
-                    setSelectedPipeline(value);
-                  }} disabled={pipelinesLoading || cardsLoading}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={cardsLoading ? "Carregando..." : currentPipeline ? `Pipeline Atual: ${currentPipeline.name}` : pipelinesLoading ? "Carregando pipelines..." : "Selecionar pipeline/negócio"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currentPipeline && <SelectItem value={currentPipeline.id} disabled className="font-medium">
-                            📍 {currentPipeline.name} (Atual)
-                          </SelectItem>}
-                        {pipelines.length > 0 ? pipelines.filter(pipeline => pipeline.id !== currentPipeline?.id).map(pipeline => <SelectItem key={pipeline.id} value={pipeline.id}>
-                                {pipeline.name} ({pipeline.type})
-                              </SelectItem>) : <SelectItem value="no-pipelines" disabled>
-                            Nenhum pipeline encontrado
-                          </SelectItem>}
-                      </SelectContent>
-                    </Select>
-                    
-                  </div>
+                        </div>
+                      ))}
+                      
+                      {/* Select para filtrar negócios */}
+                      <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sucesso do Cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {deals.map(deal => (
+                            <SelectItem key={deal.id} value={deal.id}>
+                              {deal.pipeline}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Botão adicionar */}
+                      <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum negócio encontrado</p>
+                  )}
                 </CardContent>
               </Card>
 
