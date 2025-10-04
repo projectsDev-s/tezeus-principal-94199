@@ -125,19 +125,19 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
                     <Badge
                       variant="outline"
                       style={{ 
-                        backgroundColor: `${tag.color}15`,
+                        backgroundColor: tag.color,
                         borderColor: tag.color,
-                        color: tag.color
+                        color: 'white'
                       }}
                       className={cn(
-                        "cursor-pointer hover:opacity-80 transition-all text-xs px-3 py-1.5 w-full justify-start rounded-full font-normal",
+                        "cursor-pointer hover:opacity-80 transition-all text-xs px-3 py-1.5 w-full justify-start rounded-full font-medium border-0",
                         selectedTagId === tag.id && "ring-2 ring-offset-1 ring-primary",
                         isAssigned && "cursor-not-allowed"
                       )}
                       onClick={() => !isAssigned && handleTagSelect(tag.id)}
                     >
                       {tag.name}
-                      {isAssigned && <span className="ml-2 text-xs opacity-60">(já atribuída)</span>}
+                      {isAssigned && <span className="ml-2 text-xs opacity-80">(já atribuída)</span>}
                     </Badge>
                   </div>
                 );
