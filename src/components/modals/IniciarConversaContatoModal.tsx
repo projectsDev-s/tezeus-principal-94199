@@ -88,7 +88,7 @@ export function IniciarConversaContatoModal({
     try {
       setLoading(true);
 
-      // Verificar se já existe uma conversa aberta com este contato
+      // Verificar se já existe uma conversa com este contato
       const { data: existingConversation, error: checkError } = await supabase
         .from('conversations')
         .select('id, status')
@@ -101,30 +101,32 @@ export function IniciarConversaContatoModal({
       if (checkError) throw checkError;
 
       let conversationId;
+      const connectionData = connections.find(c => c.id === selectedConnection);
 
-      if (existingConversation && existingConversation.status === 'open') {
-        // Conversa já existe e está aberta
+      if (existingConversation) {
+        // Conversa já existe - atualizar para status 'open' e configurações
         conversationId = existingConversation.id;
         
-        // Atualizar fila se selecionada
-        if (selectedQueue) {
-          await supabase
-            .from('conversations')
-            .update({ 
-              queue_id: selectedQueue,
-              last_activity_at: new Date().toISOString()
-            })
-            .eq('id', conversationId);
-        }
+        await supabase
+          .from('conversations')
+          .update({ 
+            status: 'open',
+            queue_id: selectedQueue || null,
+            connection_id: selectedConnection,
+            evolution_instance: connectionData?.instance_name,
+            last_activity_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversationId);
 
         toast({
-          title: "Conversa encontrada",
-          description: "Redirecionando para a conversa existente.",
+          title: "Conversa iniciada",
+          description: existingConversation.status === 'open' 
+            ? "Redirecionando para a conversa." 
+            : "Conversa reaberta com sucesso!",
         });
       } else {
-        // Criar nova conversa
-        const connectionData = connections.find(c => c.id === selectedConnection);
-        
+        // Criar nova conversa com status 'open'
         const { data: newConversation, error: conversationError } = await supabase
           .from('conversations')
           .insert({
@@ -145,8 +147,8 @@ export function IniciarConversaContatoModal({
         conversationId = newConversation.id;
 
         toast({
-          title: "Conversa iniciada",
-          description: "Nova conversa criada com sucesso!",
+          title: "Conversa criada",
+          description: "Nova conversa iniciada com sucesso!",
         });
       }
 
