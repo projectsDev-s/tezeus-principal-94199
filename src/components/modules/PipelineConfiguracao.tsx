@@ -29,6 +29,7 @@ interface SortableColumnProps {
   isDarkMode: boolean;
   onDelete: (column: { id: string; name: string }) => void;
   onUpdatePermissions: (columnId: string, userIds: string[]) => void;
+  onUpdateViewAllDealsPermissions: (columnId: string, userIds: string[]) => void;
   onUpdateColumnName: (columnId: string, newName: string) => void;
   isLoading?: boolean;
 }
@@ -53,6 +54,7 @@ function SortableColumn({
   isDarkMode,
   onDelete,
   onUpdatePermissions,
+  onUpdateViewAllDealsPermissions,
   onUpdateColumnName,
   isLoading = false
 }: SortableColumnProps) {
@@ -66,6 +68,7 @@ function SortableColumn({
     members
   } = useWorkspaceMembers(selectedWorkspace?.workspace_id);
   const [selectedUsers, setSelectedUsers] = useState<string[]>(column.permissions || []);
+  const [viewAllDealsUsers, setViewAllDealsUsers] = useState<string[]>(column.view_all_deals_permissions || []);
   const [isEditingName, setIsEditingName] = useState(false);
   const [columnName, setColumnName] = useState(column.name);
   const {
@@ -264,10 +267,48 @@ function SortableColumn({
         <p className="text-xs text-gray-500 mt-1">Usuarios que podem ver todos os negócios</p>
         <div className="flex items-center mt-1 mb-2">
           <Users className="h-3 w-3 mr-2 text-gray-400" />
-          <span className="text-xs text-gray-500">0 usuários</span>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
-            <Pencil className="h-3 w-3" />
-          </Button>
+          <span className="text-xs text-gray-500">{viewAllDealsUsers.length} usuário{viewAllDealsUsers.length !== 1 ? 's' : ''}</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <h4 className="font-medium">Usuários que veem todos os negócios</h4>
+                <p className="text-sm text-muted-foreground">
+                  Usuários selecionados verão todos os negócios desta coluna
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {members?.filter(member => !member.is_hidden).map(member => <div key={member.id} className="flex items-center space-x-2">
+                      <Checkbox id={`view-all-${member.id}`} checked={viewAllDealsUsers.includes(member.user_id)} onCheckedChange={checked => {
+                    if (checked) {
+                      setViewAllDealsUsers([...viewAllDealsUsers, member.user_id]);
+                    } else {
+                      setViewAllDealsUsers(viewAllDealsUsers.filter(id => id !== member.user_id));
+                    }
+                  }} />
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>
+                            <User className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <label htmlFor={`view-all-${member.id}`} className="text-sm font-medium cursor-pointer">
+                          {member.user?.name}
+                        </label>
+                      </div>
+                    </div>)}
+                </div>
+                <Button className="w-full" onClick={() => {
+                onUpdateViewAllDealsPermissions(column.id, viewAllDealsUsers);
+              }}>
+                  Salvar
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </div>;
@@ -329,6 +370,42 @@ export default function PipelineConfiguracao({
       // (Pode ser implementado posteriormente se precisar)
     } catch (error) {
       console.error('Error updating column permissions:', error);
+    }
+  };
+
+  const handleUpdateViewAllDealsPermissions = async (columnId: string, userIds: string[]) => {
+    try {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
+        method: 'PUT',
+        headers: {
+          'x-system-user-id': user?.id || '',
+          'x-system-user-email': user?.email || '',
+          'x-workspace-id': selectedWorkspace?.workspace_id || ''
+        },
+        body: {
+          view_all_deals_permissions: userIds
+        }
+      });
+      if (error) throw error;
+      console.log('View all deals permissions updated successfully:', {
+        columnId,
+        userIds
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Permissões de visualização de negócios atualizadas",
+      });
+    } catch (error) {
+      console.error('Error updating view all deals permissions:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar permissões de visualização de negócios",
+        variant: "destructive",
+      });
     }
   };
   const handleDeleteColumn = (column: { id: string; name: string }) => {
@@ -582,6 +659,7 @@ export default function PipelineConfiguracao({
                   isDarkMode={isDarkMode}
                    onDelete={() => {}}
                    onUpdatePermissions={() => {}}
+                   onUpdateViewAllDealsPermissions={() => {}}
                    onUpdateColumnName={() => {}}
                    isLoading={true}
                 />
@@ -616,6 +694,7 @@ export default function PipelineConfiguracao({
                       isDarkMode={isDarkMode} 
                        onDelete={handleDeleteColumn}
                        onUpdatePermissions={handleUpdateColumnPermissions}
+                       onUpdateViewAllDealsPermissions={handleUpdateViewAllDealsPermissions}
                        onUpdateColumnName={handleUpdateColumnName}
                       isLoading={false}
                     />

@@ -19,6 +19,8 @@ export interface PipelineColumn {
   name: string;
   color: string;
   order_position: number;
+  permissions?: string[];
+  view_all_deals_permissions?: string[];
   created_at: string;
 }
 

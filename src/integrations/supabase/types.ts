@@ -1235,6 +1235,7 @@ export type Database = {
           order_position: number
           permissions: Json | null
           pipeline_id: string
+          view_all_deals_permissions: Json | null
         }
         Insert: {
           color?: string
@@ -1244,6 +1245,7 @@ export type Database = {
           order_position?: number
           permissions?: Json | null
           pipeline_id: string
+          view_all_deals_permissions?: Json | null
         }
         Update: {
           color?: string
@@ -1253,6 +1255,7 @@ export type Database = {
           order_position?: number
           permissions?: Json | null
           pipeline_id?: string
+          view_all_deals_permissions?: Json | null
         }
         Relationships: [
           {

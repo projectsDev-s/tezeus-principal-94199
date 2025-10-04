@@ -269,6 +269,9 @@ serve(async (req) => {
           if (body.permissions !== undefined) {
             updateData.permissions = body.permissions;
           }
+          if (body.view_all_deals_permissions !== undefined) {
+            updateData.view_all_deals_permissions = body.view_all_deals_permissions;
+          }
           if (body.order_position !== undefined) {
             updateData.order_position = body.order_position;
           }
