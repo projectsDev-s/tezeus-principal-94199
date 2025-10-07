@@ -771,7 +771,7 @@ export function CRMNegocios({
         return;
       }
 
-      // 3. Verificar se já existe conversa ativa para este contato
+      // 3. Verificar se já existe conversa ativa (para reusar se existir)
       const { data: existingConversations, error: convError } = await supabase
         .from('conversations')
         .select('id, status')
@@ -783,27 +783,24 @@ export function CRMNegocios({
         console.error('Erro ao verificar conversas existentes:', convError);
       }
 
-      if (existingConversations && existingConversations.length > 0) {
-        toast({
-          title: "Conversa já existe",
-          description: "Este contato já possui uma conversa ativa",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Se existe conversa, reusar. Se não existe, criar nova
+      let conversationId = existingConversations?.[0]?.id;
 
-      // 4. Criar ou buscar conversa existente
-      const { data: conversationData, error: conversationError } = await supabase.functions.invoke(
-        'create-quick-conversation',
-        {
-          body: {
-            phoneNumber: contact.phone,
-            orgId: selectedWorkspace.workspace_id
+      // 4. Criar conversa apenas se não existe
+      if (!conversationId) {
+        const { data: conversationData, error: conversationError } = await supabase.functions.invoke(
+          'create-quick-conversation',
+          {
+            body: {
+              phoneNumber: contact.phone,
+              orgId: selectedWorkspace.workspace_id
+            }
           }
-        }
-      );
+        );
 
-      if (conversationError) throw conversationError;
+        if (conversationError) throw conversationError;
+        conversationId = conversationData?.conversationId;
+      }
 
       // 5. Pegar a primeira coluna do pipeline
       const firstColumn = columns.sort((a, b) => a.order_position - b.order_position)[0];
@@ -816,7 +813,7 @@ export function CRMNegocios({
       await createCard({
         column_id: firstColumn.id,
         contact_id: business.lead,
-        conversation_id: conversationData.conversationId,
+        conversation_id: conversationId,
         responsible_user_id: business.responsible,
         value: business.value,
         title: `Novo negócio`,
