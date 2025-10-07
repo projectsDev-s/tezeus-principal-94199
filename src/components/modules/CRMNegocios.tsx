@@ -107,7 +107,7 @@ interface DraggableDealProps {
   onLinkProduct?: (cardId: string, currentValue: number) => void;
   onDeleteCard?: (cardId: string) => void;
   onOpenTransferModal?: (cardId: string) => void;
-  onVincularResponsavel?: (cardId: string, conversationId?: string, currentResponsibleId?: string) => void;
+  onVincularResponsavel?: (cardId: string, conversationId?: string, currentResponsibleId?: string, contactId?: string) => void;
 }
 function DraggableDeal({
   deal,
@@ -228,7 +228,8 @@ function DraggableDeal({
                     onVincularResponsavel?.(
                       deal.id, 
                       deal.conversation?.id, 
-                      deal.responsible_user_id
+                      deal.responsible_user_id,
+                      deal.contact?.id
                     );
                   }}
                 >
@@ -569,6 +570,7 @@ export function CRMNegocios({
   const [selectedCardForResponsavel, setSelectedCardForResponsavel] = useState<{
     cardId: string;
     conversationId?: string;
+    contactId?: string;
     currentResponsibleId?: string;
   } | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, {
@@ -711,10 +713,11 @@ export function CRMNegocios({
     refreshCurrentPipeline();
   }, [refreshCurrentPipeline]);
 
-  const handleVincularResponsavel = useCallback((cardId: string, conversationId?: string, currentResponsibleId?: string) => {
+  const handleVincularResponsavel = useCallback((cardId: string, conversationId?: string, currentResponsibleId?: string, contactId?: string) => {
     setSelectedCardForResponsavel({
       cardId,
       conversationId,
+      contactId,
       currentResponsibleId
     });
     setIsVincularResponsavelModalOpen(true);
@@ -1393,6 +1396,7 @@ export function CRMNegocios({
         }}
         cardId={selectedCardForResponsavel?.cardId || ""}
         conversationId={selectedCardForResponsavel?.conversationId}
+        contactId={selectedCardForResponsavel?.contactId}
         currentResponsibleId={selectedCardForResponsavel?.currentResponsibleId}
         onSuccess={() => refreshCurrentPipeline()}
       />

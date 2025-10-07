@@ -12,6 +12,7 @@ interface VincularResponsavelModalProps {
   onClose: () => void;
   cardId: string;
   conversationId?: string;
+  contactId?: string;
   currentResponsibleId?: string;
   onSuccess?: () => void;
 }
@@ -27,6 +28,7 @@ export function VincularResponsavelModal({
   onClose,
   cardId,
   conversationId,
+  contactId,
   currentResponsibleId,
   onSuccess
 }: VincularResponsavelModalProps) {
@@ -130,6 +132,7 @@ export function VincularResponsavelModal({
       console.log('🔄 Vinculando responsável:', {
         cardId,
         conversationId,
+        contactId,
         selectedUserId,
         currentResponsibleId
       });
@@ -146,21 +149,46 @@ export function VincularResponsavelModal({
       }
       console.log('✅ Card atualizado com responsible_user_id:', selectedUserId);
 
+      // Buscar conversa do contato se não tiver conversationId mas tiver contactId
+      let targetConversationId = conversationId;
+      
+      if (!targetConversationId && contactId) {
+        console.log('🔍 Buscando conversa para o contato:', contactId);
+        const { data: conversations, error: searchError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('contact_id', contactId)
+          .eq('status', 'open')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (searchError) {
+          console.error('⚠️ Erro ao buscar conversa:', searchError);
+        } else if (conversations && conversations.length > 0) {
+          targetConversationId = conversations[0].id;
+          console.log('✅ Conversa encontrada:', targetConversationId);
+        } else {
+          console.log('⚠️ Nenhuma conversa aberta encontrada para o contato');
+        }
+      }
+
       // Atualizar a conversa se houver conversation_id
-      if (conversationId) {
+      if (targetConversationId) {
         const { error: convError } = await supabase
           .from('conversations')
           .update({ 
             assigned_user_id: selectedUserId,
             assigned_at: new Date().toISOString()
           })
-          .eq('id', conversationId);
+          .eq('id', targetConversationId);
 
         if (convError) {
           console.error('❌ Erro ao atualizar conversa:', convError);
           throw convError;
         }
         console.log('✅ Conversa atualizada com assigned_user_id:', selectedUserId);
+      } else {
+        console.log('ℹ️ Nenhuma conversa para atualizar');
       }
 
       toast({
