@@ -43,7 +43,7 @@ export function CRMContatos() {
   } = useWorkspace();
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -182,7 +182,20 @@ export function CRMContatos() {
   // Filter contacts based on search and tag filter
   const filteredContacts = contacts.filter(contact => {
     const matchesSearch = !searchTerm || contact.name.toLowerCase().includes(searchTerm.toLowerCase()) || contact.phone.includes(searchTerm);
-    const matchesTag = !tagFilter || tagFilter === "todas" || contact.tags.some(tag => tag.name === tagFilter);
+    
+    // Se nenhuma tag está selecionada, mostra todos os contatos
+    if (selectedTagIds.length === 0) {
+      return matchesSearch;
+    }
+    
+    // Se tags estão selecionadas, o contato deve ter pelo menos uma das tags selecionadas
+    const contactTagIds = contact.tags.map(tag => {
+      const foundTag = tags.find(t => t.name === tag.name);
+      return foundTag?.id;
+    }).filter(Boolean);
+    
+    const matchesTag = selectedTagIds.some(selectedId => contactTagIds.includes(selectedId));
+    
     return matchesSearch && matchesTag;
   });
   const handleDeleteContact = async (contact: Contact, muteToast?: boolean) => {
@@ -492,22 +505,75 @@ export function CRMContatos() {
           </div>
           
           <div className="w-40">
-            <Select value={tagFilter} onValueChange={setTagFilter}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue placeholder="Filtro por Tags" />
-              </SelectTrigger>
-              <SelectContent className="z-50 bg-background border border-border">
-                <SelectItem value="todas">Todas as tags</SelectItem>
-                {tags.map(tag => <SelectItem key={tag.name} value={tag.name}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{
-                    backgroundColor: tag.color
-                  }} />
-                      <span className="text-xs">{tag.name}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal text-xs h-8"
+                >
+                  {selectedTagIds.length === 0 ? (
+                    <span className="text-muted-foreground">Filtrar por Tags</span>
+                  ) : (
+                    <span>{selectedTagIds.length} tag(s)</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-0" align="start">
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {tags.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground text-xs">
+                      Nenhuma tag encontrada
                     </div>
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
+                  ) : (
+                    <>
+                      {tags.map((tag) => (
+                        <div
+                          key={tag.id}
+                          className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
+                          onClick={() => {
+                            setSelectedTagIds(prev =>
+                              prev.includes(tag.id)
+                                ? prev.filter(id => id !== tag.id)
+                                : [...prev, tag.id]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={selectedTagIds.includes(tag.id)}
+                            onCheckedChange={() => {
+                              setSelectedTagIds(prev =>
+                                prev.includes(tag.id)
+                                  ? prev.filter(id => id !== tag.id)
+                                  : [...prev, tag.id]
+                              );
+                            }}
+                          />
+                          <div className="flex items-center space-x-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                            <span className="text-xs">{tag.name}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {selectedTagIds.length > 0 && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => setSelectedTagIds([])}
+                          >
+                            Limpar filtros
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         
