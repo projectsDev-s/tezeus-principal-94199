@@ -1004,7 +1004,7 @@ export function CRMNegocios({
               }).format(value);
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
-                    <div className="w-60 sm:w-68 flex-shrink-0">
+                    <div className="w-80 sm:w-96 flex-shrink-0">
                        <div className={cn("bg-card rounded-lg border border-t-4 h-[600px] max-h-[80vh] flex flex-col border-b-2 border-b-yellow-500", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color
                 }}>
