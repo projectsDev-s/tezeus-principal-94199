@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Loader2 } from "lucide-react";
+import { useConversationAssign } from "@/hooks/useConversationAssign";
 
 interface VincularResponsavelModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export function VincularResponsavelModal({
 }: VincularResponsavelModalProps) {
   const { toast } = useToast();
   const { selectedWorkspace } = useWorkspace();
+  const { assignConversation } = useConversationAssign();
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<WorkspaceUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -172,23 +174,17 @@ export function VincularResponsavelModal({
         }
       }
 
-      // Atualizar a conversa se houver conversation_id
+      // Usar edge function para atribuir conversa
       if (targetConversationId) {
-        const { error: convError } = await supabase
-          .from('conversations')
-          .update({ 
-            assigned_user_id: selectedUserId,
-            assigned_at: new Date().toISOString()
-          })
-          .eq('id', targetConversationId);
-
-        if (convError) {
-          console.error('❌ Erro ao atualizar conversa:', convError);
-          throw convError;
+        const result = await assignConversation(targetConversationId, selectedUserId);
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao atribuir conversa');
         }
-        console.log('✅ Conversa atualizada com assigned_user_id:', selectedUserId);
+        
+        console.log('✅ Conversa atribuída via edge function:', result.action);
       } else {
-        console.log('ℹ️ Nenhuma conversa para atualizar');
+        console.log('ℹ️ Nenhuma conversa para atribuir');
       }
 
       toast({
