@@ -737,6 +737,9 @@ export function WhatsAppChat({
       } = await supabase.functions.invoke('create-quick-conversation', {
         body: {
           phoneNumber: phoneNumber.format('E.164')
+        },
+        headers: {
+          'x-workspace-id': selectedWorkspace?.workspace_id
         }
       });
       if (error) {
