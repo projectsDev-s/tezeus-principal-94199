@@ -75,11 +75,11 @@ export function QuickItemsModal({
 
   const renderMessageItem = (message: any) => (
     <div key={message.id} className="flex items-center justify-between p-3 border-b border-border hover:bg-accent/50 transition-colors">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+      <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
           <MessageSquare className="w-4 h-4 text-muted-foreground" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <h4 className="font-medium text-sm truncate text-foreground">{message.title}</h4>
           <p className="text-xs text-muted-foreground truncate">{message.content}</p>
         </div>
@@ -88,7 +88,7 @@ export function QuickItemsModal({
         size="sm"
         variant="ghost"
         onClick={() => handleSendMessage(message)}
-        className="w-8 h-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
+        className="w-8 h-8 p-0 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
       >
         <Send className="w-4 h-4" />
       </Button>
@@ -97,11 +97,11 @@ export function QuickItemsModal({
 
   const renderAudioItem = (audio: any) => (
     <div key={audio.id} className="flex items-center justify-between p-3 border-b border-border hover:bg-accent/50 transition-colors">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+      <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
           <Music className="w-4 h-4 text-muted-foreground" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <h4 className="font-medium text-sm truncate text-foreground">{audio.title}</h4>
           <p className="text-xs text-muted-foreground">
             {audio.duration_seconds ? `${audio.duration_seconds}s` : 'Áudio'}
@@ -112,7 +112,7 @@ export function QuickItemsModal({
         size="sm"
         variant="ghost"
         onClick={() => handleSendAudio(audio)}
-        className="w-8 h-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
+        className="w-8 h-8 p-0 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
       >
         <Send className="w-4 h-4" />
       </Button>
@@ -121,11 +121,11 @@ export function QuickItemsModal({
 
   const renderMediaItem = (mediaItem: any) => (
     <div key={mediaItem.id} className="flex items-center justify-between p-3 border-b border-border hover:bg-accent/50 transition-colors">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+      <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
           <Image className="w-4 h-4 text-muted-foreground" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <h4 className="font-medium text-sm truncate text-foreground">{mediaItem.title}</h4>
           <p className="text-xs text-muted-foreground truncate">{mediaItem.file_type}</p>
         </div>
@@ -134,7 +134,7 @@ export function QuickItemsModal({
         size="sm"
         variant="ghost"
         onClick={() => handleSendMedia(mediaItem)}
-        className="w-8 h-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
+        className="w-8 h-8 p-0 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
       >
         <Send className="w-4 h-4" />
       </Button>
@@ -143,11 +143,11 @@ export function QuickItemsModal({
 
   const renderDocumentItem = (document: any) => (
     <div key={document.id} className="flex items-center justify-between p-3 border-b border-border hover:bg-accent/50 transition-colors">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+      <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-muted-foreground" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <h4 className="font-medium text-sm truncate text-foreground">{document.title}</h4>
           <p className="text-xs text-muted-foreground truncate">{document.file_type}</p>
         </div>
@@ -156,7 +156,7 @@ export function QuickItemsModal({
         size="sm"
         variant="ghost"
         onClick={() => handleSendDocument(document)}
-        className="w-8 h-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
+        className="w-8 h-8 p-0 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
       >
         <Send className="w-4 h-4" />
       </Button>
