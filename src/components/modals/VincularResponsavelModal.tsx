@@ -140,18 +140,6 @@ export function VincularResponsavelModal({
         currentResponsibleId
       });
 
-      // Atualizar o card do pipeline
-      const { error: cardError } = await supabase
-        .from('pipeline_cards')
-        .update({ responsible_user_id: selectedUserId })
-        .eq('id', cardId);
-
-      if (cardError) {
-        console.error('❌ Erro ao atualizar card:', cardError);
-        throw cardError;
-      }
-      console.log('✅ Card atualizado com responsible_user_id:', selectedUserId);
-
       // Buscar conversa do contato se não tiver conversationId mas tiver contactId
       let targetConversationId = conversationId;
       
@@ -175,7 +163,7 @@ export function VincularResponsavelModal({
         }
       }
 
-      // Usar edge function para atribuir conversa
+      // ✅ Usar edge function que gerencia tudo (conversa + card + log)
       if (targetConversationId) {
         const result = await assignConversation(targetConversationId, selectedUserId);
         
@@ -183,9 +171,20 @@ export function VincularResponsavelModal({
           throw new Error(result.error || 'Erro ao atribuir conversa');
         }
         
-        console.log('✅ Conversa atribuída via edge function:', result.action);
+        console.log('✅ Conversa e card atribuídos via edge function:', result.action);
       } else {
-        console.log('ℹ️ Nenhuma conversa para atribuir');
+        // Sem conversa - atualizar apenas o card diretamente
+        console.log('ℹ️ Sem conversa - atualizando apenas o card');
+        const { error: cardError } = await supabase
+          .from('pipeline_cards')
+          .update({ responsible_user_id: selectedUserId })
+          .eq('id', cardId);
+
+        if (cardError) {
+          console.error('❌ Erro ao atualizar card:', cardError);
+          throw cardError;
+        }
+        console.log('✅ Card atualizado diretamente com responsible_user_id:', selectedUserId);
       }
 
       toast({
