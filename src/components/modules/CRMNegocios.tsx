@@ -24,6 +24,7 @@ import { TransferirModal } from "@/components/modals/TransferirModal";
 import { SetValueModal } from "@/components/modals/SetValueModal";
 import { EditarContatoModal } from "@/components/modals/EditarContatoModal";
 import { VincularProdutoModal } from "@/components/modals/VincularProdutoModal";
+import { VincularResponsavelModal } from "@/components/modals/VincularResponsavelModal";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { usePipelineActiveUsers } from "@/hooks/usePipelineActiveUsers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -105,6 +106,7 @@ interface DraggableDealProps {
   onLinkProduct?: (cardId: string, currentValue: number) => void;
   onDeleteCard?: (cardId: string) => void;
   onOpenTransferModal?: (cardId: string) => void;
+  onVincularResponsavel?: (cardId: string, conversationId?: string, currentResponsibleId?: string) => void;
 }
 function DraggableDeal({
   deal,
@@ -119,7 +121,8 @@ function DraggableDeal({
   onEditContact,
   onLinkProduct,
   onDeleteCard,
-  onOpenTransferModal
+  onOpenTransferModal,
+  onVincularResponsavel
 }: DraggableDealProps) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
@@ -221,10 +224,14 @@ function DraggableDeal({
                 <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onOpenTransferModal?.(deal.id);
+                    onVincularResponsavel?.(
+                      deal.id, 
+                      deal.conversation?.id, 
+                      deal.responsible ? undefined : undefined
+                    );
                   }}
                 >
-                  Transferir Atendimento
+                  Vincular Responsável
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => {
@@ -557,6 +564,12 @@ export function CRMNegocios({
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isVincularProdutoModalOpen, setIsVincularProdutoModalOpen] = useState(false);
   const [selectedCardForProduct, setSelectedCardForProduct] = useState<{id: string, value: number} | null>(null);
+  const [isVincularResponsavelModalOpen, setIsVincularResponsavelModalOpen] = useState(false);
+  const [selectedCardForResponsavel, setSelectedCardForResponsavel] = useState<{
+    cardId: string;
+    conversationId?: string;
+    currentResponsibleId?: string;
+  } | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -696,6 +709,15 @@ export function CRMNegocios({
     setSelectedCardsForTransfer(new Set());
     refreshCurrentPipeline();
   }, [refreshCurrentPipeline]);
+
+  const handleVincularResponsavel = useCallback((cardId: string, conversationId?: string, currentResponsibleId?: string) => {
+    setSelectedCardForResponsavel({
+      cardId,
+      conversationId,
+      currentResponsibleId
+    });
+    setIsVincularResponsavelModalOpen(true);
+  }, []);
 
   const handleCreateBusiness = async (business: any) => {
     if (!selectedPipeline || !selectedWorkspace) {
@@ -1154,6 +1176,7 @@ export function CRMNegocios({
                             onClick={() => !isSelectionMode && openCardDetails(card)} 
                             columnColor={column.color}
                             onOpenTransferModal={handleOpenTransferModal}
+                            onVincularResponsavel={handleVincularResponsavel}
                             onChatClick={dealData => {
                               console.log('🎯 CRM: Abrindo chat para deal:', dealData);
                               console.log('🆔 CRM: Deal ID:', dealData.id);
@@ -1358,6 +1381,18 @@ export function CRMNegocios({
         cardId={selectedCardForProduct?.id || null}
         currentValue={selectedCardForProduct?.value || 0}
         onProductLinked={() => refreshCurrentPipeline()}
+      />
+
+      <VincularResponsavelModal
+        isOpen={isVincularResponsavelModalOpen}
+        onClose={() => {
+          setIsVincularResponsavelModalOpen(false);
+          setSelectedCardForResponsavel(null);
+        }}
+        cardId={selectedCardForResponsavel?.cardId || ""}
+        conversationId={selectedCardForResponsavel?.conversationId}
+        currentResponsibleId={selectedCardForResponsavel?.currentResponsibleId}
+        onSuccess={() => refreshCurrentPipeline()}
       />
     </DndContext>;
 }
