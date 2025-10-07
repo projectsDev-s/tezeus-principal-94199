@@ -278,17 +278,17 @@ function DraggableDeal({
             </div>
           </div>
           
-          {/* Nome + Produto/Valor - TERCEIRO */}
-          <div className="flex-1 min-w-0 space-y-1">
-            {/* Linha 1: Nome do cliente */}
-            <h3 className={cn("text-xs font-medium truncate", "text-foreground")}>
+          {/* Nome + Produto/Valor na MESMA LINHA */}
+          <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+            {/* Nome do cliente à esquerda */}
+            <h3 className={cn("text-xs font-medium truncate flex-1 min-w-0", "text-foreground")}>
               {deal.contact?.name || deal.name}
             </h3>
             
-            {/* Linha 2: Produto + Valor */}
-            <div className="flex items-center gap-1.5 text-xs">
+            {/* Produto + Valor à direita */}
+            <div className="flex items-center gap-1 text-xs flex-shrink-0">
               {deal.product_name && (
-                <span className="text-muted-foreground truncate max-w-[120px]">
+                <span className="text-muted-foreground truncate max-w-[80px]">
                   {deal.product_name}
                 </span>
               )}
