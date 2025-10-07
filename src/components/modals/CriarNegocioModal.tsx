@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,9 +44,13 @@ export function CriarNegocioModal({
   const [contacts, setContacts] = useState<any[]>([]);
   
   const { selectedWorkspace } = useWorkspace();
+  
+  // Estabilizar o array de filtros para evitar loop infinito
+  const profileFilters = useMemo<('user' | 'admin' | 'master')[]>(() => ['user', 'admin'], []);
+  
   const { users, loadUsers, isLoading: isLoadingUsers } = useWorkspaceUsers(
     selectedWorkspace?.workspace_id, 
-    ['user', 'admin']
+    profileFilters
   );
   const { products, isLoading: isLoadingProducts } = useProducts();
 
