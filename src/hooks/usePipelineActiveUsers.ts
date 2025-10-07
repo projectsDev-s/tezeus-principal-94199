@@ -20,107 +20,125 @@ export function usePipelineActiveUsers(pipelineId?: string) {
       setActiveUsers([]);
       return;
     }
-      setIsLoading(true);
-      try {
-        // Buscar lista de usuários via Edge Function para contornar RLS
-        const { data: usersResponse, error: usersError } = await supabase.functions.invoke('manage-system-user', {
-          body: {
-            action: 'list',
-            userData: {}
-          }
-        });
-
-        if (usersError) {
-          console.error('Error fetching users via Edge Function:', usersError);
-          return;
+    
+    console.log('🔍 Buscando usuários ativos para pipeline:', pipelineId);
+    setIsLoading(true);
+    
+    try {
+      // Buscar lista de usuários via Edge Function
+      const { data: usersResponse, error: usersError } = await supabase.functions.invoke('manage-system-user', {
+        body: {
+          action: 'list',
+          userData: {}
         }
+      });
 
-        const allUsers = usersResponse?.data || [];
-        const currentUser = allUsers.find((u: any) => u.email === user?.email);
+      if (usersError) {
+        console.error('Error fetching users via Edge Function:', usersError);
+        return;
+      }
 
-        if (!currentUser) {
-          console.error('Current user not found');
-          return;
-        }
+      const allUsers = usersResponse?.data || [];
+      const currentUser = allUsers.find((u: any) => u.email === user?.email);
 
-        // Construir query base - usar relacionamento através de assigned_user_id
-        let query = supabase
-          .from('pipeline_cards')
-          .select(`
+      if (!currentUser) {
+        console.error('Current user not found');
+        return;
+      }
+
+      // ✅ NOVA LÓGICA: Buscar cards com responsible_user_id OU com conversa atribuída
+      let query = supabase
+        .from('pipeline_cards')
+        .select(`
+          id,
+          title,
+          responsible_user_id,
+          conversation_id,
+          conversations(
             id,
-            title,
-            conversation_id,
-            conversations!inner(
-              id,
-              status,
-              assigned_user_id
-            )
-          `)
-          .eq('pipeline_id', pipelineId)
-          .not('conversation_id', 'is', null)
-          .eq('conversations.status', 'open');
+            status,
+            assigned_user_id
+          )
+        `)
+        .eq('pipeline_id', pipelineId);
 
-        // Aplicar filtro de permissão: usuário comum só vê seus próprios negócios
-        if (currentUser.profile === 'user') {
-          query = query.eq('conversations.assigned_user_id', currentUser.id);
+      // Aplicar filtro de permissão
+      if (currentUser.profile === 'user') {
+        // Usuário comum vê apenas seus próprios cards
+        query = query.eq('responsible_user_id', currentUser.id);
+      }
+
+      const { data: cards, error: cardsError } = await query;
+
+      if (cardsError) {
+        console.error('Error fetching cards:', cardsError);
+        return;
+      }
+
+      console.log('📊 Cards encontrados:', cards?.length);
+
+      // Coletar IDs de usuários responsáveis
+      const userIds = new Set<string>();
+      
+      cards?.forEach((card: any) => {
+        // Adicionar responsible_user_id se existir
+        if (card.responsible_user_id) {
+          userIds.add(card.responsible_user_id);
         }
-        // Admin e Master veem todos os negócios (sem filtro adicional)
-
-        const { data: cardsWithConversations, error: cardsError } = await query;
-
-        if (cardsError) {
-          console.error('Error fetching cards with conversations:', cardsError);
-          return;
+        // Adicionar assigned_user_id da conversa se existir
+        if (card.conversations?.assigned_user_id) {
+          userIds.add(card.conversations.assigned_user_id);
         }
+      });
 
-        // Buscar informações dos usuários pelos IDs encontrados
-        const userIds = Array.from(new Set(
-          cardsWithConversations?.map((card: any) => card.conversations?.assigned_user_id).filter(Boolean) || []
-        ));
+      console.log('👥 IDs de usuários únicos:', Array.from(userIds));
 
-        if (userIds.length === 0) {
-          setActiveUsers([]);
-          return;
-        }
+      if (userIds.size === 0) {
+        console.log('ℹ️ Nenhum usuário ativo encontrado');
+        setActiveUsers([]);
+        return;
+      }
 
-        // Filtrar usuários pelos IDs necessários
-        const users = allUsers.filter((user: any) => userIds.includes(user.id));
+      // Filtrar usuários pelos IDs necessários
+      const users = allUsers.filter((user: any) => userIds.has(user.id));
+      console.log('✅ Usuários filtrados:', users.map((u: any) => u.name));
 
-        // Agrupar por usuário
-        const userMap = new Map<string, ActiveUser>();
+      // Agrupar por usuário (contar quantos cards cada um tem)
+      const userMap = new Map<string, ActiveUser>();
+      
+      cards?.forEach((card: any) => {
+        // Priorizar responsible_user_id sobre assigned_user_id
+        const userId = card.responsible_user_id || card.conversations?.assigned_user_id;
         
-        cardsWithConversations?.forEach((card: any) => {
-          const conversation = card.conversations;
-          if (conversation?.assigned_user_id) {
-            const user = users?.find(u => u.id === conversation.assigned_user_id);
-            if (user) {
-              const userId = user.id;
-              const userName = user.name;
-              const userAvatar = user.avatar;
-              
-              if (userMap.has(userId)) {
-                const existingUser = userMap.get(userId)!;
-                existingUser.dealCount += 1;
-                existingUser.dealIds.push(card.id);
-              } else {
-                userMap.set(userId, {
-                  id: userId,
-                  name: userName,
-                  avatar: userAvatar,
-                  dealCount: 1,
-                  dealIds: [card.id]
-                });
-              }
+        if (userId) {
+          const user = users?.find(u => u.id === userId);
+          if (user) {
+            if (userMap.has(userId)) {
+              const existingUser = userMap.get(userId)!;
+              existingUser.dealCount += 1;
+              existingUser.dealIds.push(card.id);
+            } else {
+              userMap.set(userId, {
+                id: userId,
+                name: user.name,
+                avatar: user.avatar,
+                dealCount: 1,
+                dealIds: [card.id]
+              });
             }
           }
-        });
+        }
+      });
 
-        setActiveUsers(Array.from(userMap.values()));
-      } catch (error) {
-        console.error('Error fetching active users:', error);
-      } finally {
-        setIsLoading(false);
-      }
+      const activeUsersList = Array.from(userMap.values());
+      console.log('🎯 Usuários ativos finais:', activeUsersList.map(u => `${u.name} (${u.dealCount})`));
+      
+      setActiveUsers(activeUsersList);
+    } catch (error) {
+      console.error('Error fetching active users:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [pipelineId, user?.email]);
 
   useEffect(() => {
