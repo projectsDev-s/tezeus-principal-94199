@@ -51,6 +51,8 @@ interface Deal {
   tags: string[];
   priority: 'low' | 'medium' | 'high';
   product?: string;
+  product_name?: string;
+  product_id?: string;
   lastContact?: string;
   created_at?: string;
   contact?: {
@@ -199,9 +201,70 @@ function DraggableDeal({
           />
         </div>
       )}
-      {/* Header com avatar, nome, menu e valor */}
-      <div className="flex items-start gap-3 mb-3">
-          {/* Avatar do contato */}
+      {/* Header com menu, avatar, nome e produto/valor */}
+      <div className="flex items-start gap-2 mb-3">
+          {/* Menu de ações - PRIMEIRO */}
+          {!isSelectionMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground flex-shrink-0"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-popover z-50" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                  }}
+                >
+                  Transferir Atendimento
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                  }}
+                >
+                  Trocar Negócio
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (deal.contact?.id) {
+                      onEditContact?.(deal.contact.id);
+                    }
+                  }}
+                >
+                  Editar Contato
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLinkProduct?.(deal.id, deal.value);
+                  }}
+                >
+                  Vincular Produto
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteCard?.(deal.id);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          
+          {/* Avatar do contato - SEGUNDO */}
           <div className="flex-shrink-0">
             {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-10 h-10 rounded-full object-cover border border-primary/20" onError={e => {
             // Fallback para iniciais se a imagem falhar
@@ -215,87 +278,41 @@ function DraggableDeal({
             </div>
           </div>
           
-          {/* Nome, menu e valor */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-1">
-              <h3 className={cn("text-sm font-medium truncate pr-2 flex-1", "text-foreground")}>
-                {deal.contact?.name || deal.name}
-              </h3>
-              
-              {/* Menu de ações */}
-              {!isSelectionMode && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-6 w-6 text-muted-foreground hover:text-foreground flex-shrink-0"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick();
-                      }}
-                    >
-                      Transferir Atendimento
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick();
-                      }}
-                    >
-                      Trocar Negócio
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (deal.contact?.id) {
-                          onEditContact?.(deal.contact.id);
-                        }
-                      }}
-                    >
-                      Editar Contato
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onLinkProduct?.(deal.id, deal.value);
-                      }}
-                    >
-                      Vincular Produto
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteCard?.(deal.id);
-                      }}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          {/* Nome + Produto/Valor - TERCEIRO */}
+          <div className="flex-1 min-w-0 space-y-1">
+            {/* Linha 1: Nome do cliente */}
+            <h3 className={cn("text-xs font-medium truncate", "text-foreground")}>
+              {deal.contact?.name || deal.name}
+            </h3>
+            
+            {/* Linha 2: Produto + Valor */}
+            <div className="flex items-center gap-1.5 text-xs">
+              {deal.product_name && (
+                <span className="text-muted-foreground truncate max-w-[120px]">
+                  {deal.product_name}
+                </span>
               )}
-              
-              <div className="flex-shrink-0">
-                {deal.value > 0 ? <span className={cn("text-sm font-semibold cursor-pointer hover:bg-primary/10 px-2 py-1 rounded", "text-primary")} onClick={e => {
-                e.stopPropagation();
-                onValueClick?.(deal);
-              }}>
-                    {formatCurrency(deal.value)}
-                  </span> : <span className={cn("text-sm font-medium cursor-pointer hover:bg-primary/10 px-2 py-1 rounded text-muted-foreground")} onClick={e => {
-                e.stopPropagation();
-                onValueClick?.(deal);
-              }}>
-                    +valor
-                  </span>}
-              </div>
+              {deal.value > 0 ? (
+                <span 
+                  className={cn("font-medium cursor-pointer hover:underline", "text-primary")} 
+                  onClick={e => {
+                    e.stopPropagation();
+                    onValueClick?.(deal);
+                  }}
+                >
+                  {formatCurrency(deal.value)}
+                </span>
+              ) : (
+                <span 
+                  className={cn("font-medium cursor-pointer hover:underline text-muted-foreground")} 
+                  onClick={e => {
+                    e.stopPropagation();
+                    onValueClick?.(deal);
+                  }}
+                >
+                  +valor
+                </span>
+              )}
             </div>
           </div>
         </div>
