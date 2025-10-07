@@ -46,8 +46,8 @@ export function usePipelineActiveUsers(pipelineId?: string) {
         return;
       }
 
-      // ✅ NOVA LÓGICA: Buscar cards com responsible_user_id OU com conversa atribuída
-      let query = supabase
+      // ✅ Buscar todos os cards do pipeline (RLS já gerencia permissões)
+      const { data: cards, error: cardsError } = await supabase
         .from('pipeline_cards')
         .select(`
           id,
@@ -61,14 +61,6 @@ export function usePipelineActiveUsers(pipelineId?: string) {
           )
         `)
         .eq('pipeline_id', pipelineId);
-
-      // Aplicar filtro de permissão
-      if (currentUser.profile === 'user') {
-        // Usuário comum vê apenas seus próprios cards
-        query = query.eq('responsible_user_id', currentUser.id);
-      }
-
-      const { data: cards, error: cardsError } = await query;
 
       if (cardsError) {
         console.error('Error fetching cards:', cardsError);
