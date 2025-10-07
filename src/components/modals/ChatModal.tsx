@@ -11,6 +11,7 @@ import { MediaViewer } from '@/components/chat/MediaViewer';
 import { AddTagButton } from '@/components/chat/AddTagButton';
 import { ContactTags } from '@/components/chat/ContactTags';
 import { MediaUpload } from '@/components/chat/MediaUpload';
+import { QuickItemsModal } from '@/components/modals/QuickItemsModal';
 import { MessageStatusIndicator } from '@/components/ui/message-status-indicator';
 import { useConversationMessages } from '@/hooks/useConversationMessages';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +60,7 @@ export function ChatModal({
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [realContactId, setRealContactId] = useState<string | null>(contactId || null);
+  const [quickItemsModalOpen, setQuickItemsModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLElement | null>(null);
   const { toast } = useToast();
@@ -226,6 +228,141 @@ export function ChatModal({
       toast({
         title: "Erro",
         description: "Não foi possível enviar o áudio",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handlers para itens rápidos
+  const handleSendQuickMessage = async (content: string, type: 'text') => {
+    if (!conversationId) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-send-msg', {
+        body: {
+          conversation_id: conversationId,
+          content: content,
+          message_type: type,
+          sender_type: 'agent'
+        }
+      });
+
+      if (error) throw error;
+
+      loadInitial(conversationId);
+      setQuickItemsModalOpen(false);
+      
+      toast({
+        title: "Mensagem enviada",
+        description: "Sua mensagem rápida foi enviada com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao enviar mensagem rápida:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendQuickAudio = async (file: { name: string; url: string }, content: string) => {
+    if (!conversationId) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('test-send-msg', {
+        body: {
+          conversation_id: conversationId,
+          content: content || '[ÁUDIO]',
+          message_type: 'audio',
+          sender_type: 'agent',
+          file_url: file.url,
+          file_name: file.name
+        }
+      });
+
+      if (error) throw error;
+
+      loadInitial(conversationId);
+      setQuickItemsModalOpen(false);
+      
+      toast({
+        title: "Áudio enviado",
+        description: "Seu áudio foi enviado com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao enviar áudio:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar o áudio",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendQuickMedia = async (file: { name: string; url: string }, content: string, type: 'image' | 'video') => {
+    if (!conversationId) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('test-send-msg', {
+        body: {
+          conversation_id: conversationId,
+          content: content || `[${type.toUpperCase()}]`,
+          message_type: type,
+          sender_type: 'agent',
+          file_url: file.url,
+          file_name: file.name
+        }
+      });
+
+      if (error) throw error;
+
+      loadInitial(conversationId);
+      setQuickItemsModalOpen(false);
+      
+      toast({
+        title: "Mídia enviada",
+        description: "Sua mídia foi enviada com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao enviar mídia:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mídia",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendQuickDocument = async (file: { name: string; url: string }, content: string) => {
+    if (!conversationId) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('test-send-msg', {
+        body: {
+          conversation_id: conversationId,
+          content: content || '[DOCUMENTO]',
+          message_type: 'document',
+          sender_type: 'agent',
+          file_url: file.url,
+          file_name: file.name
+        }
+      });
+
+      if (error) throw error;
+
+      loadInitial(conversationId);
+      setQuickItemsModalOpen(false);
+      
+      toast({
+        title: "Documento enviado",
+        description: "Seu documento foi enviado com sucesso"
+      });
+    } catch (error) {
+      console.error('Erro ao enviar documento:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar o documento",
         variant: "destructive"
       });
     }
@@ -468,7 +605,12 @@ export function ChatModal({
               }} />
               
               {/* Botão mensagens rápidas */}
-              <Button variant="ghost" size="sm" title="Mensagens Rápidas">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                title="Mensagens Rápidas"
+                onClick={() => setQuickItemsModalOpen(true)}
+              >
                 <svg className="w-4 h-4" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
                   <circle cx="9" cy="9" r="4" />
                   <path d="M9 15c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm7.76-9.64l-1.68 1.69c.84 1.18.84 2.71 0 3.89l1.68 1.69c2.02-2.02 2.02-5.07 0-7.27zM20.07 2l-1.63 1.63c2.77 3.02 2.77 7.56 0 10.74L20.07 16c3.9-3.89 3.91-9.95 0-14z" />
@@ -513,6 +655,16 @@ export function ChatModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Modal de itens rápidos */}
+      <QuickItemsModal
+        open={quickItemsModalOpen}
+        onOpenChange={setQuickItemsModalOpen}
+        onSendMessage={handleSendQuickMessage}
+        onSendAudio={handleSendQuickAudio}
+        onSendMedia={handleSendQuickMedia}
+        onSendDocument={handleSendQuickDocument}
+      />
     </Dialog>
   );
 }
