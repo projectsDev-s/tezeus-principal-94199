@@ -88,14 +88,15 @@ export function VincularResponsavelModal({
         return;
       }
 
-      // Filtrar usuários que pertencem ao workspace atual
+      // Filtrar usuários que pertencem ao workspace atual (excluindo masters)
       const workspaceUsers = data.data
         .filter((user: any) => {
           const belongsToWorkspace = user.workspaces?.some(
             (ws: any) => ws.id === selectedWorkspace.workspace_id
           );
-          console.log(`User ${user.name} belongs to workspace:`, belongsToWorkspace);
-          return belongsToWorkspace;
+          const isNotMaster = user.profile !== 'master';
+          console.log(`User ${user.name} belongs to workspace:`, belongsToWorkspace, 'isNotMaster:', isNotMaster);
+          return belongsToWorkspace && isNotMaster;
         })
         .map((user: any) => ({
           id: user.id,
