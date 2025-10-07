@@ -156,8 +156,8 @@ export function WhatsAppChat({
         filtered = conversations.filter(c => c.status !== 'closed');
     }
 
-    // Filtrar por tag se selecionada
-    if (selectedTag) {
+    // Filtrar por tag se selecionada (ignorar "all" ou string vazia)
+    if (selectedTag && selectedTag !== "all") {
       console.log('🏷️ Filtro por tag ativo:', selectedTag);
       console.log('📋 Conversas antes do filtro:', filtered.length);
       console.log('🔍 Primeira conversa estrutura:', filtered[0]?.conversation_tags);
@@ -914,7 +914,7 @@ export function WhatsAppChat({
 
                   {/* Filtro por Tag */}
                   <div>
-                    <Select value={selectedTag} onValueChange={setSelectedTag}>
+                    <Select value={selectedTag || "all"} onValueChange={(value) => setSelectedTag(value === "all" ? "" : value)}>
                       <SelectTrigger className="w-full h-10">
                         <SelectValue placeholder="Filtre pela tag" />
                       </SelectTrigger>
@@ -941,8 +941,8 @@ export function WhatsAppChat({
                       variant="outline" 
                       size="sm" 
                       onClick={() => {
-                        setSelectedAgent("all");
-                        setSelectedTag("all");
+                        setSelectedAgent("");
+                        setSelectedTag("");
                       }}
                       className="w-full"
                     >
