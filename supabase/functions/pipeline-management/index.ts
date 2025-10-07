@@ -471,6 +471,54 @@ serve(async (req) => {
             );
           }
         }
+
+        if (method === 'DELETE') {
+          const cardId = url.searchParams.get('id');
+          if (!cardId) {
+            return new Response(
+              JSON.stringify({ error: 'Card ID required' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          console.log('🗑️ Deleting card:', cardId);
+
+          // Verificar se o card existe e pertence ao workspace
+          const { data: card, error: fetchError } = await supabaseClient
+            .from('pipeline_cards')
+            .select('pipeline_id, pipelines!inner(workspace_id)')
+            .eq('id', cardId)
+            .single();
+
+          if (fetchError || !card) {
+            return new Response(
+              JSON.stringify({ error: 'Card not found or access denied' }),
+              { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Verificar se o workspace do card é o mesmo do header
+          if (card.pipelines.workspace_id !== workspaceId) {
+            return new Response(
+              JSON.stringify({ error: 'Card does not belong to current workspace' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Deletar o card (CASCADE já está configurado no banco)
+          const { error } = await supabaseClient
+            .from('pipeline_cards')
+            .delete()
+            .eq('id', cardId);
+
+          if (error) throw error;
+
+          console.log('✅ Card deleted successfully:', cardId);
+          
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
         break;
 
       default:

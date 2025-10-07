@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 
 // Interface compatível com o componente existente
 interface Deal {
@@ -518,6 +519,7 @@ export function CRMNegocios({
     canManagePipelines,
     canManageColumns
   } = useWorkspaceRole();
+  const { getHeaders } = useWorkspaceHeaders();
   const {
     toast
   } = useToast();
@@ -1396,16 +1398,21 @@ export function CRMNegocios({
           if (!selectedCardForDeletion) return;
           
           try {
-            const { error } = await supabase
-              .from('pipeline_cards')
-              .delete()
-              .eq('id', selectedCardForDeletion.id);
+            const headers = getHeaders();
+            
+            const { data, error } = await supabase.functions.invoke(
+              `pipeline-management/cards?id=${selectedCardForDeletion.id}`,
+              { 
+                method: 'DELETE',
+                headers 
+              }
+            );
 
             if (error) throw error;
 
             toast({
               title: "Sucesso",
-              description: "Negócio excluído com sucesso"
+              description: "Negócio excluído permanentemente"
             });
 
             refreshCurrentPipeline();
@@ -1413,7 +1420,7 @@ export function CRMNegocios({
             console.error('Erro ao excluir negócio:', error);
             toast({
               title: "Erro",
-              description: "Erro ao excluir negócio",
+              description: error.message || "Erro ao excluir negócio",
               variant: "destructive"
             });
           } finally {
