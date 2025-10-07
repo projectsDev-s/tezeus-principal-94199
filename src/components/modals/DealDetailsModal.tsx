@@ -605,9 +605,9 @@ export function DealDetailsModal({
     }
   };
   return <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
+      <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0 flex flex-col", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
         {/* Header */}
-        <DialogHeader className={cn("px-6 py-4 border-b", isDarkMode ? "border-gray-600" : "border-gray-200")}>
+        <DialogHeader className={cn("px-6 py-4 border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
           <div className="flex items-center gap-4">
             <Button size="icon" variant="ghost" onClick={onClose} className={cn("h-8 w-8", isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600")}>
               <ArrowLeft className="w-4 h-4" />
@@ -671,7 +671,7 @@ export function DealDetailsModal({
 
 
         {/* Tabs */}
-        <div className={cn("flex border-b", isDarkMode ? "border-gray-600" : "border-gray-200")}>
+        <div className={cn("flex border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
           {tabs.map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-3 text-sm font-medium border-b-2 transition-colors", activeTab === tab.id ? "border-yellow-400 text-yellow-600" : "border-transparent", isDarkMode ? activeTab === tab.id ? "text-yellow-400" : "text-gray-400 hover:text-white" : activeTab === tab.id ? "text-yellow-600" : "text-gray-600 hover:text-gray-900")}>
               {tab.label}
             </button>)}
