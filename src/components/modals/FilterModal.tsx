@@ -167,20 +167,28 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                   selected={dateRange || (selectedDate ? { from: selectedDate, to: selectedDate } : undefined)}
                   onSelect={(range) => {
                     if (range) {
-                      if (range.from && range.to && range.from.getTime() !== range.to.getTime()) {
-                        // Período selecionado (range)
-                        setDateRange({ from: range.from, to: range.to });
-                        setSelectedDate(undefined);
+                      if (range.from && range.to) {
+                        // Período completo selecionado - fechar calendário
+                        if (range.from.getTime() !== range.to.getTime()) {
+                          setDateRange({ from: range.from, to: range.to });
+                          setSelectedDate(undefined);
+                        } else {
+                          // Mesma data selecionada duas vezes = data única
+                          setSelectedDate(range.from);
+                          setDateRange(undefined);
+                        }
+                        setShowCalendar(false);
                       } else if (range.from) {
-                        // Data única selecionada
-                        setSelectedDate(range.from);
-                        setDateRange(undefined);
+                        // Apenas primeira data selecionada - manter calendário aberto
+                        setDateRange({ from: range.from, to: range.from });
+                        setSelectedDate(undefined);
+                        // NÃO fechar o calendário aqui
                       }
                     } else {
                       setSelectedDate(undefined);
                       setDateRange(undefined);
+                      setShowCalendar(false);
                     }
-                    setShowCalendar(false);
                   }}
                   initialFocus
                   className="pointer-events-auto"
