@@ -63,26 +63,57 @@ export function VincularResponsavelModal({
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      console.log('🔍 Buscando usuários para workspace:', selectedWorkspace.workspace_id);
+      
+      // Buscar membros do workspace e seus dados de system_users
+      const { data: members, error: membersError } = await supabase
         .from('workspace_members')
-        .select(`
-          user_id,
-          system_users!inner(id, name, email)
-        `)
+        .select('user_id')
         .eq('workspace_id', selectedWorkspace.workspace_id);
 
-      if (error) throw error;
+      console.log('📊 Membros encontrados:', members);
+      
+      if (membersError) {
+        console.error('❌ Erro ao buscar membros:', membersError);
+        throw membersError;
+      }
 
-      const workspaceUsers = data?.map(member => ({
-        id: member.system_users.id,
-        name: member.system_users.name,
-        email: member.system_users.email
+      if (!members || members.length === 0) {
+        console.warn('⚠️ Nenhum membro encontrado na tabela workspace_members');
+        setUsers([]);
+        setFilteredUsers([]);
+        return;
+      }
+
+      // Buscar dados dos usuários
+      const userIds = members.map(m => m.user_id);
+      console.log('👥 IDs dos usuários:', userIds);
+      
+      const { data: usersData, error: usersError } = await supabase
+        .from('system_users')
+        .select('id, name, email')
+        .in('id', userIds)
+        .eq('status', 'active');
+
+      console.log('✅ Dados dos usuários:', usersData);
+
+      if (usersError) {
+        console.error('❌ Erro ao buscar usuários:', usersError);
+        throw usersError;
+      }
+
+      const workspaceUsers = usersData?.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email || ''
       })) || [];
+
+      console.log('🎯 Usuários processados:', workspaceUsers);
 
       setUsers(workspaceUsers);
       setFilteredUsers(workspaceUsers);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      console.error('❌ Erro geral ao carregar usuários:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar usuários do workspace",
@@ -168,7 +199,8 @@ export function VincularResponsavelModal({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => setIsDropdownOpen(true)}
-              className="border-warning focus:border-warning focus:ring-warning"
+              className="border-warning focus:border-warning focus:ring-warning cursor-pointer"
+              readOnly={!isDropdownOpen}
             />
 
             {isDropdownOpen && (
@@ -176,19 +208,25 @@ export function VincularResponsavelModal({
                 {/* Overlay para fechar o dropdown ao clicar fora */}
                 <div 
                   className="fixed inset-0 z-10" 
-                  onClick={() => setIsDropdownOpen(false)}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    setSearchTerm("");
+                  }}
                 />
                 
                 {/* Dropdown lista de usuários */}
-                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-20 max-h-[300px] overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-warning/50 rounded-lg shadow-lg z-20 max-h-[300px] overflow-y-auto">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
                   ) : filteredUsers.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-4">
-                      Nenhum usuário encontrado
-                    </p>
+                    <div className="text-center text-muted-foreground py-4">
+                      <p className="font-medium">Nenhum usuário encontrado</p>
+                      {users.length === 0 && (
+                        <p className="text-xs mt-1">Não há usuários cadastrados neste workspace</p>
+                      )}
+                    </div>
                   ) : (
                     <div className="py-1">
                       {filteredUsers.map((user) => (
@@ -201,7 +239,7 @@ export function VincularResponsavelModal({
                           }}
                           className={`px-3 py-2 cursor-pointer transition-colors ${
                             selectedUserId === user.id
-                              ? 'bg-warning/10 text-warning font-medium'
+                              ? 'bg-warning/20 text-warning font-medium border-l-2 border-warning'
                               : 'hover:bg-accent'
                           }`}
                         >
