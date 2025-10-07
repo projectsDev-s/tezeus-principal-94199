@@ -18,6 +18,7 @@ import { AddContactTagButton } from "@/components/chat/AddContactTagButton";
 import { CreateActivityModal } from "./CreateActivityModal";
 import { TimePickerModal } from "./TimePickerModal";
 import { MinutePickerModal } from "./MinutePickerModal";
+import { ImageModal } from "@/components/chat/ImageModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
@@ -36,6 +37,8 @@ interface Activity {
   scheduled_for: string;
   responsible_id: string;
   is_completed: boolean;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
   users?: {
     name: string;
   };
@@ -101,6 +104,7 @@ export function DealDetailsModal({
   const [isCreatingActivity, setIsCreatingActivity] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showMinutePicker, setShowMinutePicker] = useState(false);
+  const [selectedAttachment, setSelectedAttachment] = useState<{ url: string; name: string } | null>(null);
   
   // Hook otimizado para usuários com cache - filtrado por workspace e sem masters
   const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache(workspaceId, ['user', 'admin']);
@@ -398,7 +402,9 @@ export function DealDetailsModal({
           subject,
           scheduled_for,
           responsible_id,
-          is_completed
+          is_completed,
+          attachment_url,
+          attachment_name
         `).eq('contact_id', contactId).order('scheduled_for', {
         ascending: true
       });
@@ -883,6 +889,21 @@ export function DealDetailsModal({
                         locale: ptBR
                       })}
                             </p>
+                            
+                            {/* Imagens anexadas */}
+                            {activity.attachment_url && (
+                              <div className="mt-3">
+                                <img 
+                                  src={activity.attachment_url} 
+                                  alt={activity.attachment_name || "Anexo"}
+                                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                                  onClick={() => setSelectedAttachment({ 
+                                    url: activity.attachment_url!, 
+                                    name: activity.attachment_name || "Anexo" 
+                                  })}
+                                />
+                              </div>
+                            )}
                           </div>
                           <Button size="sm" variant="outline" onClick={() => handleCompleteActivity(activity.id)} className="ml-4">
                             <Check className="w-4 h-4 mr-1" />
@@ -1109,11 +1130,26 @@ export function DealDetailsModal({
                       <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
                         {activity.subject}
                       </h4>
-                      <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
                         {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
                   locale: ptBR
                 })}
                       </p>
+                      
+                      {/* Imagens anexadas */}
+                      {activity.attachment_url && (
+                        <div className="mt-3">
+                          <img 
+                            src={activity.attachment_url} 
+                            alt={activity.attachment_name || "Anexo"}
+                            className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                            onClick={() => setSelectedAttachment({ 
+                              url: activity.attachment_url!, 
+                              name: activity.attachment_name || "Anexo" 
+                            })}
+                          />
+                        </div>
+                      )}
                     </div>)}
                 </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                   <p>Nenhuma atividade concluída encontrada</p>
@@ -1224,6 +1260,16 @@ export function DealDetailsModal({
 
         {/* Modais */}
         <AddTagModal isOpen={showAddTagModal} onClose={() => setShowAddTagModal(false)} contactId={contactId} onTagAdded={handleTagAdded} isDarkMode={isDarkMode} />
+        
+        {/* Modal de Imagem */}
+        {selectedAttachment && (
+          <ImageModal
+            isOpen={!!selectedAttachment}
+            onClose={() => setSelectedAttachment(null)}
+            imageUrl={selectedAttachment.url}
+            fileName={selectedAttachment.name}
+          />
+        )}
 
         <CreateActivityModal isOpen={showCreateActivityModal} onClose={() => setShowCreateActivityModal(false)} contactId={contactId} onActivityCreated={handleActivityCreated} isDarkMode={isDarkMode} />
       </DialogContent>
