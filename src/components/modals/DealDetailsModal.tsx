@@ -875,22 +875,6 @@ export function DealDetailsModal({
                 )}
               </div>
 
-              {/* Cadência de Tarefas */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
-                    Cadência de tarefas
-                  </h3>
-                  <Button size="sm" className="bg-yellow-400 text-black hover:bg-yellow-500">
-                    <Plus className="w-4 h-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
-                
-                <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-                  <p>Nenhuma cadência de tarefas encontrada</p>
-                </div>
-              </div>
             </div>}
 
           {activeTab === "atividades" && <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
