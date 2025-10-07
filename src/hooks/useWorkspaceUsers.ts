@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface WorkspaceUser {
@@ -11,16 +11,7 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (workspaceId) {
-      console.log('🔄 useWorkspaceUsers: workspace mudou, carregando...', workspaceId);
-      loadUsers();
-    } else {
-      console.warn('⚠️ useWorkspaceUsers: sem workspace ID');
-    }
-  }, [workspaceId]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     if (!workspaceId) {
       console.warn('⚠️ Workspace ID não fornecido');
       return;
@@ -79,7 +70,17 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workspaceId, filterProfiles]);
+
+  useEffect(() => {
+    if (workspaceId) {
+      console.log('🔄 useWorkspaceUsers: workspace mudou, carregando...', workspaceId);
+      loadUsers();
+    } else {
+      console.warn('⚠️ useWorkspaceUsers: sem workspace ID');
+      setUsers([]);
+    }
+  }, [workspaceId, loadUsers]);
 
   return {
     users,
