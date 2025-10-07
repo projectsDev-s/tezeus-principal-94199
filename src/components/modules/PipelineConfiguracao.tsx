@@ -579,21 +579,20 @@ export default function PipelineConfiguracao({
           id: col.id,
           order_position: index
         }));
-        try {
-          for (const update of updates) {
-            await supabase.functions.invoke('pipeline-management/columns', {
-              method: 'PUT',
-              headers: {
-                'x-system-user-id': user?.id || '',
-                'x-system-user-email': user?.email || '',
-                'x-workspace-id': selectedWorkspace?.workspace_id || ''
-              },
-              body: {
-                id: update.id,
-                order_position: update.order_position
-              }
-            });
-          }
+      try {
+        for (const update of updates) {
+          await supabase.functions.invoke(`pipeline-management/columns?id=${update.id}`, {
+            method: 'PUT',
+            headers: {
+              'x-system-user-id': user?.id || '',
+              'x-system-user-email': user?.email || '',
+              'x-workspace-id': selectedWorkspace?.workspace_id || ''
+            },
+            body: {
+              order_position: update.order_position
+            }
+          });
+        }
           console.log('✅ Colunas reordenadas com sucesso');
 
           // Usar a função do contexto para sincronizar
