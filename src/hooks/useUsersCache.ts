@@ -116,13 +116,26 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedUsers = await fetchUsersFromDB(workspaceId);
+      setUsers(fetchedUsers);
+      return { data: fetchedUsers };
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+      return { error: 'Erro ao carregar usuários' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [workspaceId]);
+
   useEffect(() => {
-    // Carregar usuários quando o componente montar ou workspace mudar
-    if (workspaceId) {
+    // Carregar usuários apenas uma vez quando o workspace estiver disponível
+    if (workspaceId && users.length === 0 && !isLoading) {
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]);
+  }, [workspaceId, loadUsers, users.length, isLoading]);
 
   useEffect(() => {
     // Listener para cache global apenas se não tiver workspace específico
@@ -135,20 +148,6 @@ export const useUsersCache = (workspaceId?: string, filterProfiles?: ('user' | '
       return removeListener;
     }
   }, [workspaceId]);
-
-  const loadUsers = async () => {
-    setIsLoading(true);
-    try {
-      const fetchedUsers = await fetchUsersFromDB(workspaceId);
-      setUsers(fetchedUsers);
-      return { data: fetchedUsers };
-    } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
-      return { error: 'Erro ao carregar usuários' };
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const refreshUsers = async () => {
     // Força atualização ignorando cache

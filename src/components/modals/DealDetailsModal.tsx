@@ -567,10 +567,10 @@ export function DealDetailsModal({
 
   // Carregar usuários quando necessário usando cache otimizado
   useEffect(() => {
-    if (activeTab === "atividades" && users.length === 0) {
+    if (activeTab === "atividades" && users.length === 0 && workspaceId && !isLoadingUsers) {
       loadUsers();
     }
-  }, [activeTab, users.length, loadUsers]);
+  }, [activeTab, users.length, loadUsers, workspaceId, isLoadingUsers]);
   const handleCompleteActivity = async (activityId: string) => {
     try {
       const {
