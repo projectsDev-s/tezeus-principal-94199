@@ -163,28 +163,35 @@ export function VincularResponsavelModal({
         }
       }
 
-      // ✅ Usar edge function que gerencia tudo (conversa + card + log)
+      // ✅ Atualizar PRIMEIRO o card diretamente
+      console.log('📝 Atualizando card com responsible_user_id:', selectedUserId);
+      const { error: cardUpdateError } = await supabase
+        .from('pipeline_cards')
+        .update({ 
+          responsible_user_id: selectedUserId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cardId);
+
+      if (cardUpdateError) {
+        console.error('❌ Erro ao atualizar card:', cardUpdateError);
+        throw cardUpdateError;
+      }
+      console.log('✅ Card atualizado com sucesso');
+
+      // ✅ Se tiver conversa, atualizar também
       if (targetConversationId) {
+        console.log('🔄 Atualizando conversa também:', targetConversationId);
         const result = await assignConversation(targetConversationId, selectedUserId);
         
         if (!result.success) {
-          throw new Error(result.error || 'Erro ao atribuir conversa');
+          console.error('⚠️ Erro ao atribuir conversa (mas card foi atualizado):', result.error);
+          // Não falhar aqui - card já foi atualizado com sucesso
+        } else {
+          console.log('✅ Conversa atribuída:', result.action);
         }
-        
-        console.log('✅ Conversa e card atribuídos via edge function:', result.action);
       } else {
-        // Sem conversa - atualizar apenas o card diretamente
-        console.log('ℹ️ Sem conversa - atualizando apenas o card');
-        const { error: cardError } = await supabase
-          .from('pipeline_cards')
-          .update({ responsible_user_id: selectedUserId })
-          .eq('id', cardId);
-
-        if (cardError) {
-          console.error('❌ Erro ao atualizar card:', cardError);
-          throw cardError;
-        }
-        console.log('✅ Card atualizado diretamente com responsible_user_id:', selectedUserId);
+        console.log('ℹ️ Sem conversa para atualizar');
       }
 
       toast({
