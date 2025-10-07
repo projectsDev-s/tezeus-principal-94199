@@ -593,20 +593,25 @@ export default function PipelineConfiguracao({
             }
           });
         }
-          console.log('✅ Colunas reordenadas com sucesso');
+        console.log('✅ Colunas reordenadas com sucesso');
 
-          // Usar a função do contexto para sincronizar
-          if (reorderColumns) {
-            await reorderColumns(newColumns);
-          }
-
-          // Notificar o componente pai sobre a mudança
-          if (onColumnsReorder) {
-            onColumnsReorder(newColumns);
-          }
-        } catch (error) {
-          console.error('❌ Erro ao reordenar colunas:', error);
+        // Usar a função do contexto para sincronizar
+        if (reorderColumns) {
+          await reorderColumns(newColumns);
         }
+
+        // Notificar o componente pai sobre a mudança
+        if (onColumnsReorder) {
+          onColumnsReorder(newColumns);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao reordenar colunas:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível reordenar as colunas",
+          variant: "destructive",
+        });
+      }
       }
     }
   };
