@@ -102,8 +102,8 @@ export function DealDetailsModal({
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showMinutePicker, setShowMinutePicker] = useState(false);
   
-  // Hook otimizado para usuários com cache
-  const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache();
+  // Hook otimizado para usuários com cache - filtrado por workspace e sem masters
+  const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache(workspaceId, ['user', 'admin']);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>([]);
   const [contactPipelines, setContactPipelines] = useState<any[]>([]);
