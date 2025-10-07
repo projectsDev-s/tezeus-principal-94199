@@ -25,6 +25,7 @@ import { SetValueModal } from "@/components/modals/SetValueModal";
 import { EditarContatoModal } from "@/components/modals/EditarContatoModal";
 import { VincularProdutoModal } from "@/components/modals/VincularProdutoModal";
 import { VincularResponsavelModal } from "@/components/modals/VincularResponsavelModal";
+import { DeleteDealModal } from "@/components/modals/DeleteDealModal";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { usePipelineActiveUsers } from "@/hooks/usePipelineActiveUsers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -573,6 +574,8 @@ export function CRMNegocios({
     contactId?: string;
     currentResponsibleId?: string;
   } | null>(null);
+  const [isDeleteDealModalOpen, setIsDeleteDealModalOpen] = useState(false);
+  const [selectedCardForDeletion, setSelectedCardForDeletion] = useState<{ id: string; name: string } | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -1213,31 +1216,13 @@ export function CRMNegocios({
                               setSelectedCardForProduct({ id: cardId, value: currentValue });
                               setIsVincularProdutoModalOpen(true);
                             }}
-                            onDeleteCard={async (cardId) => {
-                              if (confirm('Tem certeza que deseja excluir este negócio?')) {
-                                try {
-                                  const { error } = await supabase
-                                    .from('pipeline_cards')
-                                    .delete()
-                                    .eq('id', cardId);
-
-                                  if (error) throw error;
-
-                                  toast({
-                                    title: "Sucesso",
-                                    description: "Negócio excluído com sucesso"
-                                  });
-
-                                  refreshCurrentPipeline();
-                                } catch (error) {
-                                  console.error('Erro ao excluir negócio:', error);
-                                  toast({
-                                    title: "Erro",
-                                    description: "Erro ao excluir negócio",
-                                    variant: "destructive"
-                                  });
-                                }
-                              }
+                            onDeleteCard={(cardId) => {
+                              const card = cards.find(c => c.id === cardId);
+                              setSelectedCardForDeletion({
+                                id: cardId,
+                                name: card?.title || 'este negócio'
+                              });
+                              setIsDeleteDealModalOpen(true);
                             }}
                           />;
                         })}
@@ -1399,6 +1384,44 @@ export function CRMNegocios({
         contactId={selectedCardForResponsavel?.contactId}
         currentResponsibleId={selectedCardForResponsavel?.currentResponsibleId}
         onSuccess={() => refreshCurrentPipeline()}
+      />
+
+      <DeleteDealModal
+        isOpen={isDeleteDealModalOpen}
+        onClose={() => {
+          setIsDeleteDealModalOpen(false);
+          setSelectedCardForDeletion(null);
+        }}
+        onConfirm={async () => {
+          if (!selectedCardForDeletion) return;
+          
+          try {
+            const { error } = await supabase
+              .from('pipeline_cards')
+              .delete()
+              .eq('id', selectedCardForDeletion.id);
+
+            if (error) throw error;
+
+            toast({
+              title: "Sucesso",
+              description: "Negócio excluído com sucesso"
+            });
+
+            refreshCurrentPipeline();
+          } catch (error) {
+            console.error('Erro ao excluir negócio:', error);
+            toast({
+              title: "Erro",
+              description: "Erro ao excluir negócio",
+              variant: "destructive"
+            });
+          } finally {
+            setIsDeleteDealModalOpen(false);
+            setSelectedCardForDeletion(null);
+          }
+        }}
+        dealName={selectedCardForDeletion?.name}
       />
     </DndContext>;
 }
