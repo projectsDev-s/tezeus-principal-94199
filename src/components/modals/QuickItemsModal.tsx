@@ -80,7 +80,7 @@ export function QuickItemsModal({
           <MessageSquare className="w-4 h-4 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0 overflow-hidden">
-          <h4 className="font-medium text-sm truncate text-foreground overflow-hidden">{message.title}</h4>
+          <h4 className="font-medium text-sm truncate text-foreground overflow-hidden whitespace-nowrap">{message.title}</h4>
           <p className="text-xs text-muted-foreground truncate overflow-hidden whitespace-nowrap">{message.content}</p>
         </div>
       </div>
