@@ -104,6 +104,7 @@ interface DraggableDealProps {
   onEditContact?: (contactId: string) => void;
   onLinkProduct?: (cardId: string, currentValue: number) => void;
   onDeleteCard?: (cardId: string) => void;
+  onOpenTransferModal?: (cardId: string) => void;
 }
 function DraggableDeal({
   deal,
@@ -117,7 +118,8 @@ function DraggableDeal({
   onToggleSelection,
   onEditContact,
   onLinkProduct,
-  onDeleteCard
+  onDeleteCard,
+  onOpenTransferModal
 }: DraggableDealProps) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
@@ -219,7 +221,7 @@ function DraggableDeal({
                 <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClick();
+                    onOpenTransferModal?.(deal.id);
                   }}
                 >
                   Transferir Atendimento
@@ -227,7 +229,7 @@ function DraggableDeal({
                 <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClick();
+                    onOpenTransferModal?.(deal.id);
                   }}
                 >
                   Trocar Negócio
@@ -685,6 +687,16 @@ export function CRMNegocios({
     }
   };
 
+  const handleOpenTransferModal = useCallback((cardId: string) => {
+    setSelectedCardsForTransfer(new Set([cardId]));
+    setIsTransferirModalOpen(true);
+  }, []);
+
+  const handleTransferComplete = useCallback(() => {
+    setSelectedCardsForTransfer(new Set());
+    refreshCurrentPipeline();
+  }, [refreshCurrentPipeline]);
+
   const handleCreateBusiness = async (business: any) => {
     if (!selectedPipeline || !selectedWorkspace) {
       toast({
@@ -1140,7 +1152,8 @@ export function CRMNegocios({
                             deal={deal} 
                             isDarkMode={isDarkMode} 
                             onClick={() => !isSelectionMode && openCardDetails(card)} 
-                            columnColor={column.color} 
+                            columnColor={column.color}
+                            onOpenTransferModal={handleOpenTransferModal}
                             onChatClick={dealData => {
                               console.log('🎯 CRM: Abrindo chat para deal:', dealData);
                               console.log('🆔 CRM: Deal ID:', dealData.id);
