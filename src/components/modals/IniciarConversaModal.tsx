@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, Phone, Plus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -25,7 +24,6 @@ export function IniciarConversaModal({ open, onOpenChange, onConversationCreated
   const { selectedWorkspace } = useWorkspace();
   const [searchContact, setSearchContact] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("+55");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,10 +64,19 @@ export function IniciarConversaModal({ open, onOpenChange, onConversationCreated
   };
 
   const createConversation = async () => {
+    if (!phoneNumber.trim() || phoneNumber.length < 10) {
+      toast({
+        title: 'Número inválido',
+        description: 'Por favor, insira um número válido com DDD (mínimo 10 dígitos)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       
-      const fullPhone = `${countryCode}${phoneNumber.replace(/\D/g, '')}`;
+      const fullPhone = `+55${phoneNumber.replace(/\D/g, '')}`;
       
       // Verificar se o contato já existe ou criar um novo
       let contactId = selectedContact?.id;
@@ -221,34 +228,28 @@ export function IniciarConversaModal({ open, onOpenChange, onConversationCreated
           {/* Campo de telefone */}
           <div className="space-y-2">
             <Label htmlFor="phone">Número do WhatsApp</Label>
-            <div className="flex gap-2">
-              <Select value={countryCode} onValueChange={setCountryCode}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="+55">🇧🇷 +55</SelectItem>
-                  <SelectItem value="+1">🇺🇸 +1</SelectItem>
-                  <SelectItem value="+54">🇦🇷 +54</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1">
-                <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  placeholder="11999999999"
-                  value={phoneNumber}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setPhoneNumber(value);
-                  }}
-                  className="pl-10"
-                  maxLength={11}
-                />
+            <div className="flex gap-0 border rounded-md overflow-hidden">
+              {/* Prefixo fixo +55 */}
+              <div className="flex items-center bg-muted px-3 border-r">
+                <span className="text-sm font-medium text-muted-foreground">+55</span>
               </div>
+              
+              {/* Input do número */}
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="21999999999"
+                value={phoneNumber}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setPhoneNumber(value);
+                }}
+                maxLength={11}
+                className="border-0 focus-visible:ring-0 flex-1"
+              />
             </div>
             <p className="text-xs text-muted-foreground">
-              Digite apenas números (DDD + telefone)
+              Digite apenas números (DDD + número)
             </p>
           </div>
         </div>
