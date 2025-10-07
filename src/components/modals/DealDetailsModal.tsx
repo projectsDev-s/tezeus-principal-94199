@@ -507,6 +507,38 @@ export function DealDetailsModal({
         throw new Error('Workspace não encontrado para este contato');
       }
 
+      // Upload do arquivo se houver
+      let attachmentUrl = null;
+      if (attachedFile) {
+        const fileExt = attachedFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${contactDataForActivity.workspace_id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('activity-attachments')
+          .upload(filePath, attachedFile, {
+            contentType: attachedFile.type,
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Erro ao fazer upload:', uploadError);
+          toast({
+            title: "Erro ao anexar arquivo",
+            description: "O arquivo não pôde ser enviado.",
+            variant: "destructive",
+          });
+        } else {
+          // Obter URL pública
+          const { data: { publicUrl } } = supabase.storage
+            .from('activity-attachments')
+            .getPublicUrl(filePath);
+          
+          attachmentUrl = publicUrl;
+        }
+      }
+
       const activityData = {
         contact_id: contactId,
         workspace_id: contactDataForActivity.workspace_id,
@@ -517,7 +549,7 @@ export function DealDetailsModal({
         scheduled_for: scheduledDateTime.toISOString(),
         duration_minutes: activityForm.durationMinutes,
         attachment_name: attachedFile?.name || null,
-        attachment_url: null,
+        attachment_url: attachmentUrl,
       };
 
       const { data: activity, error } = await supabase
@@ -529,7 +561,9 @@ export function DealDetailsModal({
           subject,
           scheduled_for,
           responsible_id,
-          is_completed
+          is_completed,
+          attachment_url,
+          attachment_name
         `)
         .single();
 
