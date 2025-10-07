@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -15,13 +15,11 @@ export function usePipelineActiveUsers(pipelineId?: string) {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchActiveUsers = useCallback(async () => {
     if (!pipelineId) {
       setActiveUsers([]);
       return;
     }
-
-    const fetchActiveUsers = async () => {
       setIsLoading(true);
       try {
         // Buscar lista de usuários via Edge Function para contornar RLS
@@ -123,10 +121,17 @@ export function usePipelineActiveUsers(pipelineId?: string) {
       } finally {
         setIsLoading(false);
       }
-    };
+  }, [pipelineId, user?.email]);
 
+  useEffect(() => {
     fetchActiveUsers();
-  }, [pipelineId]);
+  }, [fetchActiveUsers]);
 
-  return { activeUsers, isLoading };
+  // Função para forçar atualização manual
+  const refreshActiveUsers = useCallback(() => {
+    console.log('🔄 Forçando refresh de usuários ativos...');
+    fetchActiveUsers();
+  }, [fetchActiveUsers]);
+
+  return { activeUsers, isLoading, refreshActiveUsers };
 }

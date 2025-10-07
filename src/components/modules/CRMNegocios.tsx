@@ -541,7 +541,8 @@ export function CRMNegocios({
   } = usePipelinesContext();
   const {
     activeUsers,
-    isLoading: isLoadingActiveUsers
+    isLoading: isLoadingActiveUsers,
+    refreshActiveUsers
   } = usePipelineActiveUsers(selectedPipeline?.id);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCard, setSelectedCard] = useState<any>(null);
@@ -1286,7 +1287,16 @@ export function CRMNegocios({
 
       <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
 
-      <CriarNegocioModal isOpen={isCriarNegocioModalOpen} onClose={() => setIsCriarNegocioModalOpen(false)} onCreateBusiness={handleCreateBusiness} isDarkMode={isDarkMode} />
+      <CriarNegocioModal 
+        isOpen={isCriarNegocioModalOpen} 
+        onClose={() => setIsCriarNegocioModalOpen(false)} 
+        onCreateBusiness={handleCreateBusiness} 
+        isDarkMode={isDarkMode}
+        onResponsibleUpdated={() => {
+          console.log('🔄 Negócio criado com responsável, refreshing active users...');
+          refreshActiveUsers();
+        }}
+      />
 
       {selectedCard && (
         <DealDetailsModal 
@@ -1383,6 +1393,10 @@ export function CRMNegocios({
         contactId={selectedCardForResponsavel?.contactId}
         currentResponsibleId={selectedCardForResponsavel?.currentResponsibleId}
         onSuccess={() => refreshCurrentPipeline()}
+        onResponsibleUpdated={() => {
+          console.log('🔄 Responsável atualizado, refreshing active users...');
+          refreshActiveUsers();
+        }}
       />
 
       <DeleteDealModal

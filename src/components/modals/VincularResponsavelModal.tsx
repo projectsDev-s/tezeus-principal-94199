@@ -16,6 +16,7 @@ interface VincularResponsavelModalProps {
   contactId?: string;
   currentResponsibleId?: string;
   onSuccess?: () => void;
+  onResponsibleUpdated?: () => void;
 }
 
 interface WorkspaceUser {
@@ -24,14 +25,15 @@ interface WorkspaceUser {
   email: string;
 }
 
-export function VincularResponsavelModal({
-  isOpen,
-  onClose,
-  cardId,
-  conversationId,
+export function VincularResponsavelModal({ 
+  isOpen, 
+  onClose, 
+  cardId, 
+  conversationId, 
   contactId,
   currentResponsibleId,
-  onSuccess
+  onSuccess,
+  onResponsibleUpdated
 }: VincularResponsavelModalProps) {
   const { toast } = useToast();
   const { selectedWorkspace } = useWorkspace();
@@ -200,6 +202,7 @@ export function VincularResponsavelModal({
       });
 
       onSuccess?.();
+      onResponsibleUpdated?.();
       onClose();
     } catch (error) {
       console.error('❌ Erro geral ao vincular responsável:', error);

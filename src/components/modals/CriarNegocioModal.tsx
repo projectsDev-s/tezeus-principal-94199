@@ -19,6 +19,7 @@ interface CriarNegocioModalProps {
   isDarkMode?: boolean;
   preSelectedContactId?: string;
   preSelectedContactName?: string;
+  onResponsibleUpdated?: () => void;
 }
 
 export function CriarNegocioModal({ 
@@ -29,7 +30,8 @@ export function CriarNegocioModal({
   onCreateBusiness, 
   isDarkMode = false,
   preSelectedContactId,
-  preSelectedContactName
+  preSelectedContactName,
+  onResponsibleUpdated
 }: CriarNegocioModalProps) {
   const modalOpen = open ?? isOpen ?? false;
   const handleClose = () => {
@@ -113,6 +115,10 @@ export function CriarNegocioModal({
     
     if (onCreateBusiness) {
       onCreateBusiness(newBusiness);
+    }
+
+    if (onResponsibleUpdated) {
+      onResponsibleUpdated();
     }
     
     // Reset form
