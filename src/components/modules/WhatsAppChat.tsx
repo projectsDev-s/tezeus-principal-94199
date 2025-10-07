@@ -731,6 +731,16 @@ export function WhatsAppChat({
         formatted: phoneNumber.format('E.164'),
         national: phoneNumber.format('NATIONAL')
       });
+      
+      if (!selectedWorkspace?.workspace_id) {
+        toast({
+          title: "Erro",
+          description: "Nenhum workspace selecionado",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const {
         data,
         error
@@ -739,14 +749,19 @@ export function WhatsAppChat({
           phoneNumber: phoneNumber.format('E.164')
         },
         headers: {
-          'x-workspace-id': selectedWorkspace?.workspace_id
+          'x-workspace-id': selectedWorkspace.workspace_id
         }
       });
       if (error) {
-        console.error('Error calling create-quick-conversation:', error);
+        console.error('❌ Error calling create-quick-conversation:', {
+          error,
+          errorName: error.name,
+          errorMessage: error.message,
+          context: error.context
+        });
         toast({
           title: "Erro",
-          description: "Não foi possível criar conversa",
+          description: error.message || "Não foi possível criar conversa",
           variant: "destructive"
         });
         return;
@@ -776,7 +791,11 @@ export function WhatsAppChat({
         description: `Conversa iniciada com ${phoneNumber.format('INTERNATIONAL')}`
       });
     } catch (error) {
-      console.error('Error creating quick conversation:', error);
+      console.error('❌ Exception creating quick conversation:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       toast({
         title: "Erro",
         description: "Não foi possível criar conversa",
