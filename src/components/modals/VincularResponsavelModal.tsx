@@ -127,13 +127,24 @@ export function VincularResponsavelModal({
 
     setIsSaving(true);
     try {
+      console.log('🔄 Vinculando responsável:', {
+        cardId,
+        conversationId,
+        selectedUserId,
+        currentResponsibleId
+      });
+
       // Atualizar o card do pipeline
       const { error: cardError } = await supabase
         .from('pipeline_cards')
         .update({ responsible_user_id: selectedUserId })
         .eq('id', cardId);
 
-      if (cardError) throw cardError;
+      if (cardError) {
+        console.error('❌ Erro ao atualizar card:', cardError);
+        throw cardError;
+      }
+      console.log('✅ Card atualizado com responsible_user_id:', selectedUserId);
 
       // Atualizar a conversa se houver conversation_id
       if (conversationId) {
@@ -145,7 +156,11 @@ export function VincularResponsavelModal({
           })
           .eq('id', conversationId);
 
-        if (convError) throw convError;
+        if (convError) {
+          console.error('❌ Erro ao atualizar conversa:', convError);
+          throw convError;
+        }
+        console.log('✅ Conversa atualizada com assigned_user_id:', selectedUserId);
       }
 
       toast({
@@ -156,7 +171,7 @@ export function VincularResponsavelModal({
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error('Erro ao vincular responsável:', error);
+      console.error('❌ Erro geral ao vincular responsável:', error);
       toast({
         title: "Erro",
         description: "Erro ao vincular responsável",

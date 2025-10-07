@@ -49,6 +49,7 @@ interface Deal {
   value: number;
   stage: string;
   responsible: string;
+  responsible_user_id?: string;
   tags: string[];
   priority: 'low' | 'medium' | 'high';
   product?: string;
@@ -227,7 +228,7 @@ function DraggableDeal({
                     onVincularResponsavel?.(
                       deal.id, 
                       deal.conversation?.id, 
-                      deal.responsible ? undefined : undefined
+                      deal.responsible_user_id
                     );
                   }}
                 >
@@ -1161,6 +1162,7 @@ export function CRMNegocios({
                             value: card.value || 0,
                             stage: column.name,
                             responsible: card.responsible_user?.name || (card.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
+                            responsible_user_id: card.responsible_user_id,
                             tags: Array.isArray(card.tags) ? card.tags : [],
                             priority: 'medium',
                             created_at: card.created_at,
