@@ -677,10 +677,24 @@ export function WhatsAppChat({
   // Create quick conversation without saving contact
   const handleCreateQuickConversation = async () => {
     if (!quickPhoneNumber.trim() || isCreatingQuickConversation) return;
+    
+    // Validar mínimo de 10 dígitos (DDD + número)
+    if (quickPhoneNumber.length < 10) {
+      toast({
+        title: "Número inválido",
+        description: "Por favor, digite um número válido com DDD (mínimo 10 dígitos).",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsCreatingQuickConversation(true);
     try {
+      // Adicionar +55 ao número
+      const fullPhoneNumber = `+55${quickPhoneNumber}`;
+      
       // Parse and validate phone number
-      const phoneNumber = parsePhoneNumber(quickPhoneNumber, 'BR');
+      const phoneNumber = parsePhoneNumber(fullPhoneNumber, 'BR');
       if (!phoneNumber || !phoneNumber.isValid()) {
         toast({
           title: "Número inválido",
@@ -1070,11 +1084,27 @@ export function WhatsAppChat({
         {/* Campo para nova conversa */}
         <div className="p-4 border-t border-border">
           <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Input placeholder="Digite o número do telefone" value={quickPhoneNumber} onChange={e => setQuickPhoneNumber(e.target.value)} onKeyPress={handleQuickConversationKeyPress} className="pr-10" disabled={isCreatingQuickConversation} />
-              <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8" disabled={!quickPhoneNumber.trim() || isCreatingQuickConversation} onClick={handleCreateQuickConversation}>
-                {isCreatingQuickConversation ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <ArrowRight className="w-4 h-4" />}
-              </Button>
+            <div className="flex-1 flex gap-0 border rounded-md overflow-hidden">
+              {/* Prefixo fixo +55 */}
+              <div className="flex items-center bg-muted px-3 border-r">
+                <span className="text-sm font-medium text-muted-foreground">+55</span>
+              </div>
+              
+              {/* Input do número */}
+              <div className="relative flex-1">
+                <Input 
+                  placeholder="21999999999" 
+                  value={quickPhoneNumber} 
+                  onChange={e => setQuickPhoneNumber(e.target.value.replace(/\D/g, ''))} 
+                  onKeyPress={handleQuickConversationKeyPress} 
+                  className="border-0 focus-visible:ring-0 pr-10" 
+                  disabled={isCreatingQuickConversation}
+                  maxLength={11}
+                />
+                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8" disabled={!quickPhoneNumber.trim() || isCreatingQuickConversation} onClick={handleCreateQuickConversation}>
+                  {isCreatingQuickConversation ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <ArrowRight className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
