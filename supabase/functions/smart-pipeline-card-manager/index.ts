@@ -84,7 +84,8 @@ serve(async (req) => {
 
     console.log('📋 Pipeline alvo:', targetPipelineId);
 
-    // 4. Verificar se já existe card ABERTO para este contato neste pipeline
+    // 4. Permitir múltiplos cards por contato em pipelines diferentes
+    // Apenas verificar se já existe card ABERTO neste pipeline específico
     const { data: existingCards, error: searchError } = await supabase
       .from('pipeline_cards')
       .select('id, title, description, responsible_user_id, updated_at')
@@ -96,10 +97,10 @@ serve(async (req) => {
       console.error('❌ Erro ao buscar cards existentes:', searchError);
     }
 
-    // Se encontrou card existente, atualizar ao invés de criar
+    // Se encontrou card existente NO MESMO PIPELINE, atualizar
     if (existingCards && existingCards.length > 0) {
       const existingCard = existingCards[0];
-      console.log('✅ Card existente encontrado:', existingCard.id);
+      console.log('✅ Card existente encontrado no mesmo pipeline:', existingCard.id);
 
       // Buscar usuário responsável da conversa (se houver)
       let responsibleUserId = existingCard.responsible_user_id;
@@ -154,7 +155,8 @@ serve(async (req) => {
       );
     }
 
-    // 5. Se não existe card, criar um novo
+    // 5. Se não existe card neste pipeline, criar um novo
+    console.log('📝 Criando novo card para este pipeline...');
     console.log('📝 Criando novo card...');
 
     // Buscar primeira coluna do pipeline
