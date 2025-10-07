@@ -38,6 +38,7 @@ export function VincularResponsavelModal({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(currentResponsibleId || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && selectedWorkspace) {
@@ -147,6 +148,7 @@ export function VincularResponsavelModal({
   const handleClose = () => {
     setSearchTerm("");
     setSelectedUserId(currentResponsibleId || null);
+    setIsDropdownOpen(false);
     onClose();
   };
 
@@ -160,41 +162,59 @@ export function VincularResponsavelModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <Input
-            placeholder="Buscar por nome ou email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border-warning focus:border-warning focus:ring-warning"
-          />
+          <div className="relative">
+            <Input
+              placeholder="Buscar usuário"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setIsDropdownOpen(true)}
+              className="border-warning focus:border-warning focus:ring-warning"
+            />
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="max-h-[300px] overflow-y-auto space-y-2">
-              {filteredUsers.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  Nenhum usuário encontrado
-                </p>
-              ) : (
-                filteredUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    onClick={() => setSelectedUserId(user.id)}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedUserId === user.id
-                        ? 'bg-warning/10 border-2 border-warning'
-                        : 'hover:bg-accent border-2 border-transparent'
-                    }`}
-                  >
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+            {isDropdownOpen && (
+              <>
+                {/* Overlay para fechar o dropdown ao clicar fora */}
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setIsDropdownOpen(false)}
+                />
+                
+                {/* Dropdown lista de usuários */}
+                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-20 max-h-[300px] overflow-y-auto">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredUsers.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">
+                      Nenhum usuário encontrado
+                    </p>
+                  ) : (
+                    <div className="py-1">
+                      {filteredUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => {
+                            setSelectedUserId(user.id);
+                            setSearchTerm(user.name);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`px-3 py-2 cursor-pointer transition-colors ${
+                            selectedUserId === user.id
+                              ? 'bg-warning/10 text-warning font-medium'
+                              : 'hover:bg-accent'
+                          }`}
+                        >
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">
