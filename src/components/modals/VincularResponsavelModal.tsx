@@ -65,50 +65,41 @@ export function VincularResponsavelModal({
     try {
       console.log('🔍 Buscando usuários para workspace:', selectedWorkspace.workspace_id);
       
-      // Buscar membros do workspace e seus dados de system_users
-      const { data: members, error: membersError } = await supabase
-        .from('workspace_members')
-        .select('user_id')
-        .eq('workspace_id', selectedWorkspace.workspace_id);
+      // Usar a edge function que já funciona no sistema
+      const { data, error } = await supabase.functions.invoke('manage-system-user', {
+        body: { action: 'list', userData: {} }
+      });
 
-      console.log('📊 Membros encontrados:', members);
+      console.log('📊 Resposta da edge function:', data);
       
-      if (membersError) {
-        console.error('❌ Erro ao buscar membros:', membersError);
-        throw membersError;
+      if (error) {
+        console.error('❌ Erro ao buscar usuários:', error);
+        throw error;
       }
 
-      if (!members || members.length === 0) {
-        console.warn('⚠️ Nenhum membro encontrado na tabela workspace_members');
+      if (!data?.success || !data?.data) {
+        console.warn('⚠️ Resposta inválida da edge function');
         setUsers([]);
         setFilteredUsers([]);
         return;
       }
 
-      // Buscar dados dos usuários
-      const userIds = members.map(m => m.user_id);
-      console.log('👥 IDs dos usuários:', userIds);
-      
-      const { data: usersData, error: usersError } = await supabase
-        .from('system_users')
-        .select('id, name, email')
-        .in('id', userIds)
-        .eq('status', 'active');
+      // Filtrar usuários que pertencem ao workspace atual
+      const workspaceUsers = data.data
+        .filter((user: any) => {
+          const belongsToWorkspace = user.workspaces?.some(
+            (ws: any) => ws.id === selectedWorkspace.workspace_id
+          );
+          console.log(`User ${user.name} belongs to workspace:`, belongsToWorkspace);
+          return belongsToWorkspace;
+        })
+        .map((user: any) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email || ''
+        }));
 
-      console.log('✅ Dados dos usuários:', usersData);
-
-      if (usersError) {
-        console.error('❌ Erro ao buscar usuários:', usersError);
-        throw usersError;
-      }
-
-      const workspaceUsers = usersData?.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email || ''
-      })) || [];
-
-      console.log('🎯 Usuários processados:', workspaceUsers);
+      console.log('🎯 Usuários filtrados para o workspace:', workspaceUsers);
 
       setUsers(workspaceUsers);
       setFilteredUsers(workspaceUsers);
