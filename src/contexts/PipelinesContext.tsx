@@ -431,6 +431,68 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedPipeline?.id, fetchColumns, fetchCards]);
 
+  // Realtime subscription para pipeline_columns
+  useEffect(() => {
+    if (!selectedPipeline?.id) return;
+
+    console.log('🔴 Setting up realtime subscription for pipeline_columns');
+
+    const channel = supabase
+      .channel('pipeline-columns-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'pipeline_columns',
+          filter: `pipeline_id=eq.${selectedPipeline.id}`
+        },
+        (payload) => {
+          console.log('🔴 Realtime pipeline_columns change:', payload);
+          
+          // Refresh columns when any change occurs
+          fetchColumns(selectedPipeline.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔴 Cleaning up realtime subscription for pipeline_columns');
+      supabase.removeChannel(channel);
+    };
+  }, [selectedPipeline?.id, fetchColumns]);
+
+  // Realtime subscription para pipeline_cards
+  useEffect(() => {
+    if (!selectedPipeline?.id) return;
+
+    console.log('🔴 Setting up realtime subscription for pipeline_cards');
+
+    const channel = supabase
+      .channel('pipeline-cards-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pipeline_cards',
+          filter: `pipeline_id=eq.${selectedPipeline.id}`
+        },
+        (payload) => {
+          console.log('🔴 Realtime pipeline_cards change:', payload);
+          
+          // Refresh cards when any change occurs
+          fetchCards(selectedPipeline.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔴 Cleaning up realtime subscription for pipeline_cards');
+      supabase.removeChannel(channel);
+    };
+  }, [selectedPipeline?.id, fetchCards]);
+
   const value = useMemo(() => ({
     pipelines,
     selectedPipeline,

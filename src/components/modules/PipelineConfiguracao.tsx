@@ -461,6 +461,9 @@ export default function PipelineConfiguracao({
     try {
       console.log('🗑️ Deleting column:', columnId);
       
+      // Mostrar loading state
+      setIsLoadingColumns(true);
+      
       const { data, error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
         method: 'DELETE',
         headers: {
@@ -474,10 +477,13 @@ export default function PipelineConfiguracao({
 
       console.log('✅ Column deleted successfully');
       
-      // Refresh columns after deletion by reloading the current pipeline
-      if (selectedPipeline) {
-        selectPipeline(selectedPipeline);
-      }
+      toast({
+        title: "Sucesso",
+        description: "Coluna excluída com sucesso",
+      });
+
+      // O realtime já vai atualizar automaticamente, mas forçar refresh para garantir
+      await refreshCurrentPipeline();
       
     } catch (error: any) {
       console.error('❌ Error deleting column:', error);
@@ -496,6 +502,8 @@ export default function PipelineConfiguracao({
           variant: "destructive",
         });
       }
+    } finally {
+      setIsLoadingColumns(false);
     }
   };
   const addNewAction = () => {
