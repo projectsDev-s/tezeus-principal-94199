@@ -159,7 +159,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isImageFile || messageType === 'image') {
     return (
       <div className={className}>
-        <div className="relative group">
+        <div className="relative">
           {isLoading && !hasLoaded && (
             <div className="flex items-center justify-center max-w-[300px] max-h-[200px] rounded-lg bg-muted/20 border border-dashed border-muted-foreground/20">
               <div className="flex flex-col items-center gap-2 p-6">
@@ -208,17 +208,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
               <Download className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             </div>
           )}
-          
-          {hasLoaded && !imageError && (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleDownload}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          )}
         </div>
         
         <ImageModal
@@ -235,7 +224,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isVideoFile || messageType === 'video') {
     return (
       <div className={className}>
-        <div className="relative group max-w-[300px]">
+        <div className="relative max-w-[300px]">
           <video
             src={fileUrl}
             controls
@@ -245,17 +234,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           >
             Seu navegador não suporta o elemento de vídeo.
           </video>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDownload();
-            }}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
         </div>
         
         <VideoModal
