@@ -534,15 +534,28 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    // Melhor captura de erros para debugging
     console.error('❌ Pipeline Management Function Error:', {
-      message: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : 'Unknown'
+      error: error,
+      errorType: typeof error,
+      errorString: String(error),
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorKeys: error ? Object.keys(error) : [],
     });
+    
+    let errorMessage = 'Unknown error occurred';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      // Capturar erros do Supabase que não são instâncias de Error
+      errorMessage = (error as any).message || (error as any).error_description || JSON.stringify(error);
+    }
+    
     return new Response(
       JSON.stringify({ 
         error: errorMessage,
+        details: error instanceof Error ? error.stack : String(error),
         timestamp: new Date().toISOString(),
         action: 'pipeline-management'
       }),
