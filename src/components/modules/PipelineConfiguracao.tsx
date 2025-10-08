@@ -576,9 +576,21 @@ export default function PipelineConfiguracao({
   };
 
   const saveAction = async (action: Action) => {
-    if (!selectedPipeline?.id) return;
+    console.log('💾 saveAction chamado com:', action);
+    console.log('📊 Pipeline selecionado:', selectedPipeline);
+    
+    if (!selectedPipeline?.id) {
+      console.error('❌ Nenhum pipeline selecionado!');
+      return;
+    }
     
     if (!action.actionName || !action.nextPipeline || !action.targetColumn || !action.dealState) {
+      console.log('❌ Campos faltando:', {
+        actionName: action.actionName,
+        nextPipeline: action.nextPipeline,
+        targetColumn: action.targetColumn,
+        dealState: action.dealState
+      });
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos antes de salvar.",
@@ -596,6 +608,8 @@ export default function PipelineConfiguracao({
         deal_state: action.dealState,
         order_position: actions.indexOf(action)
       };
+      
+      console.log('📤 Dados que serão enviados:', actionData);
 
       if (action.id.startsWith('temp-')) {
         // Criar nova ação
