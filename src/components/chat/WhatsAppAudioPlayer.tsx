@@ -121,7 +121,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     // Desenha as barrinhas
     waveformBars.forEach((amplitude, index) => {
       const x = index * (barWidth + gap);
-      const barHeight = amplitude * height;
+      const barHeight = amplitude * height * 0.6; // Limita altura máxima a 60%
       const y = (height - barHeight) / 2;
       
       // Calcula se essa barra já foi tocada
@@ -302,10 +302,10 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
             <canvas
               ref={canvasRef}
               width={200}
-              height={28}
+              height={20}
               className="cursor-pointer"
               onClick={handleProgressClick}
-              style={{ width: '200px', height: '28px' }}
+              style={{ width: '200px', height: '20px' }}
             />
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
               <span>{isPlayerMode ? formatTime(currentTime) : formatTime(duration)}</span>
