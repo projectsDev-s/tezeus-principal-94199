@@ -32,6 +32,7 @@ interface CreateActivityModalProps {
   contactId: string;
   onActivityCreated: (activity: Activity) => void;
   isDarkMode?: boolean;
+  pipelineCardId?: string; // ID do negócio para vincular a atividade
 }
 
 export function CreateActivityModal({ 
@@ -39,7 +40,8 @@ export function CreateActivityModal({
   onClose, 
   contactId, 
   onActivityCreated, 
-  isDarkMode = false 
+  isDarkMode = false,
+  pipelineCardId 
 }: CreateActivityModalProps) {
   const [formData, setFormData] = useState({
     type: "Lembrete",
@@ -138,6 +140,7 @@ export function CreateActivityModal({
         duration_minutes: formData.durationMinutes,
         attachment_name: attachedFile?.name || null,
         attachment_url: null, // Implementar upload de arquivo se necessário
+        pipeline_card_id: pipelineCardId || null, // Vincular ao negócio se fornecido
       };
 
       const { data: activity, error } = await supabase

@@ -25,6 +25,7 @@ export type Database = {
           duration_minutes: number | null
           id: string
           is_completed: boolean | null
+          pipeline_card_id: string | null
           responsible_id: string | null
           scheduled_for: string
           subject: string
@@ -42,6 +43,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           is_completed?: boolean | null
+          pipeline_card_id?: string | null
           responsible_id?: string | null
           scheduled_for: string
           subject: string
@@ -59,6 +61,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           is_completed?: boolean | null
+          pipeline_card_id?: string | null
           responsible_id?: string | null
           scheduled_for?: string
           subject?: string
@@ -72,6 +75,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_pipeline_card_id_fkey"
+            columns: ["pipeline_card_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_cards"
             referencedColumns: ["id"]
           },
           {

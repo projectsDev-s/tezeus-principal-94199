@@ -441,12 +441,15 @@ export function DealDetailsModal({
           is_completed,
           attachment_url,
           attachment_name
-        `).eq('contact_id', contactId).order('scheduled_for', {
-        ascending: true
-      });
+        `)
+        .eq('contact_id', contactId)
+        .or(`pipeline_card_id.eq.${selectedCardId},pipeline_card_id.is.null`)
+        .order('scheduled_for', {
+          ascending: true
+        });
       if (error) throw error;
       
-      console.log(`✅ ${data?.length || 0} atividades carregadas para este contato`);
+      console.log(`✅ ${data?.length || 0} atividades carregadas (negócio + globais)`);
       setActivities(data || []);
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
@@ -588,6 +591,7 @@ export function DealDetailsModal({
         duration_minutes: activityForm.durationMinutes,
         attachment_name: attachedFile?.name || null,
         attachment_url: attachmentUrl,
+        pipeline_card_id: selectedCardId, // Vincular ao negócio atual
       };
 
       const { data: activity, error } = await supabase
@@ -1327,7 +1331,14 @@ export function DealDetailsModal({
           />
         )}
 
-        <CreateActivityModal isOpen={showCreateActivityModal} onClose={() => setShowCreateActivityModal(false)} contactId={contactId} onActivityCreated={handleActivityCreated} isDarkMode={isDarkMode} />
+        <CreateActivityModal 
+          isOpen={showCreateActivityModal} 
+          onClose={() => setShowCreateActivityModal(false)} 
+          contactId={contactId} 
+          onActivityCreated={handleActivityCreated} 
+          isDarkMode={isDarkMode}
+          pipelineCardId={selectedCardId} 
+        />
       </DialogContent>
 
       {/* Modais de seleção de hora e minuto */}
