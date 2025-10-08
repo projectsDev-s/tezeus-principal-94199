@@ -33,6 +33,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -80,76 +81,109 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     };
   }, []);
 
-  // Desenha a waveform com cores dinâmicas baseadas no progresso
+  // Função para desenhar a waveform (chamada pelo loop de animação)
+  const drawWaveform = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const barWidth = 3;
+    const gap = 2;
+    const barCount = waveformBars.length;
+    const progress = duration > 0 ? currentTime / duration : 0;
+
+    // Limpa o canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Desenha as barrinhas
+    waveformBars.forEach((amplitude, index) => {
+      const x = index * (barWidth + gap);
+      const barHeight = amplitude * height;
+      const y = (height - barHeight) / 2;
+      
+      // Calcula se essa barra já foi tocada
+      const barProgress = index / barCount;
+      const isPlayed = barProgress < progress;
+      
+      // Cor: PRETO se já tocou, CINZA CLARO se não tocou
+      if (isPlayed) {
+        ctx.fillStyle = '#000000';  // Preto total
+      } else {
+        ctx.fillStyle = '#D1D5DB';  // Cinza claro
+      }
+      
+      // Desenha a barra (retângulo com cantos arredondados)
+      const radius = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + barWidth - radius, y);
+      ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
+      ctx.lineTo(x + barWidth, y + barHeight - radius);
+      ctx.quadraticCurveTo(x + barWidth, y + barHeight, x + barWidth - radius, y + barHeight);
+      ctx.lineTo(x + radius, y + barHeight);
+      ctx.quadraticCurveTo(x, y + barHeight, x, y + barHeight - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // Desenha UM pontinho branco na posição atual
+    if (progress > 0 && progress < 1) {
+      const dotX = progress * width;
+      const dotY = height / 2;
+      
+      // Círculo branco com borda preta
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  };
+
+  // Loop de animação com requestAnimationFrame (60fps)
   useEffect(() => {
-    const drawWaveform = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const audio = audioRef.current;
+    if (!audio) return;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const width = canvas.width;
-      const height = canvas.height;
-      const barWidth = 3;
-      const gap = 2;
-      const barCount = waveformBars.length;
-      const progress = duration > 0 ? currentTime / duration : 0;
-
-      // Limpa o canvas
-      ctx.clearRect(0, 0, width, height);
-
-      // Desenha as barrinhas
-      waveformBars.forEach((amplitude, index) => {
-        const x = index * (barWidth + gap);
-        const barHeight = amplitude * height;
-        const y = (height - barHeight) / 2;
-        
-        // Calcula se essa barra já foi tocada
-        const barProgress = index / barCount;
-        const isPlayed = barProgress < progress;
-        
-        // Cor: PRETO se já tocou, CINZA CLARO se não tocou
-        if (isPlayed) {
-          ctx.fillStyle = '#000000';  // Preto total
-        } else {
-          ctx.fillStyle = '#D1D5DB';  // Cinza claro
-        }
-        
-        // Desenha a barra (retângulo com cantos arredondados)
-        const radius = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + barWidth - radius, y);
-        ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
-        ctx.lineTo(x + barWidth, y + barHeight - radius);
-        ctx.quadraticCurveTo(x + barWidth, y + barHeight, x + barWidth - radius, y + barHeight);
-        ctx.lineTo(x + radius, y + barHeight);
-        ctx.quadraticCurveTo(x, y + barHeight, x, y + barHeight - radius);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.closePath();
-        ctx.fill();
-      });
-
-      // Desenha UM pontinho branco na posição atual
-      if (progress > 0 && progress < 1) {
-        const dotX = progress * width;
-        const dotY = height / 2;
-        
-        // Círculo branco com borda preta
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fill();
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+    const animate = () => {
+      if (audio && !audio.paused && !audio.ended) {
+        setCurrentTime(audio.currentTime);
+        drawWaveform();
+        animationFrameRef.current = requestAnimationFrame(animate);
       }
     };
 
+    if (isPlaying) {
+      // Inicia o loop de animação
+      animationFrameRef.current = requestAnimationFrame(animate);
+    } else {
+      // Para o loop de animação
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    }
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [isPlaying, duration, waveformBars]);
+
+  // Desenha a waveform inicial
+  useEffect(() => {
     drawWaveform();
-  }, [currentTime, duration, waveformBars]);
+  }, [duration, waveformBars]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
