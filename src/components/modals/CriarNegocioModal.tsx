@@ -20,6 +20,7 @@ interface CriarNegocioModalProps {
   preSelectedContactId?: string;
   preSelectedContactName?: string;
   onResponsibleUpdated?: () => void;
+  columns?: Array<{ id: string; name: string }>;
 }
 
 export function CriarNegocioModal({ 
@@ -31,7 +32,8 @@ export function CriarNegocioModal({
   isDarkMode = false,
   preSelectedContactId,
   preSelectedContactName,
-  onResponsibleUpdated
+  onResponsibleUpdated,
+  columns = []
 }: CriarNegocioModalProps) {
   const modalOpen = open ?? isOpen ?? false;
   const handleClose = () => {
@@ -42,6 +44,7 @@ export function CriarNegocioModal({
   const [selectedLead, setSelectedLead] = useState(preSelectedContactId || "");
   const [selectedResponsible, setSelectedResponsible] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
+  const [selectedColumn, setSelectedColumn] = useState(columns[0]?.id || "");
   const [value, setValue] = useState("");
   const [contacts, setContacts] = useState<any[]>([]);
   
@@ -100,8 +103,15 @@ export function CriarNegocioModal({
     }
   }, [selectedProduct, products]);
 
+  // Atualizar coluna quando colunas mudarem
+  useEffect(() => {
+    if (columns.length > 0 && !selectedColumn) {
+      setSelectedColumn(columns[0].id);
+    }
+  }, [columns, selectedColumn]);
+
   // Validar se pode habilitar botão criar
-  const canCreate = selectedLead && selectedResponsible && value;
+  const canCreate = selectedLead && selectedResponsible && selectedColumn && value;
 
   const handleSubmit = async () => {
     if (!canCreate) return;
@@ -110,6 +120,7 @@ export function CriarNegocioModal({
       lead: selectedLead,
       responsible: selectedResponsible,
       product: selectedProduct || null,
+      column: selectedColumn,
       value: parseFloat(value)
     };
     
@@ -125,6 +136,7 @@ export function CriarNegocioModal({
     setSelectedLead(preSelectedContactId || "");
     setSelectedResponsible("");
     setSelectedProduct("");
+    setSelectedColumn(columns[0]?.id || "");
     setValue("");
     
     handleClose();
@@ -185,6 +197,22 @@ export function CriarNegocioModal({
                   ))}
                 </SelectContent>
               )}
+            </Select>
+          </div>
+
+          {/* Seleção de coluna */}
+          <div>
+            <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+              <SelectTrigger className="border-input">
+                <SelectValue placeholder="Selecione a coluna" />
+              </SelectTrigger>
+              <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                {columns.map((column) => (
+                  <SelectItem key={column.id} value={column.id}>
+                    {column.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
 

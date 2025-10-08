@@ -784,16 +784,16 @@ export function CRMNegocios({
         conversationId = conversationData?.conversationId;
       }
 
-      // 5. Pegar a primeira coluna do pipeline
-      const firstColumn = columns.sort((a, b) => a.order_position - b.order_position)[0];
+      // 5. Validar se a coluna selecionada existe
+      const targetColumn = columns.find(col => col.id === business.column);
       
-      if (!firstColumn) {
-        throw new Error('Nenhuma coluna encontrada no pipeline');
+      if (!targetColumn) {
+        throw new Error('Coluna selecionada não encontrada');
       }
 
-      // 6. Criar o card no pipeline
+      // 6. Criar o card no pipeline na coluna selecionada
       await createCard({
-        column_id: firstColumn.id,
+        column_id: business.column,
         contact_id: business.lead,
         conversation_id: conversationId,
         responsible_user_id: business.responsible,
@@ -1273,6 +1273,7 @@ export function CRMNegocios({
         onClose={() => setIsCriarNegocioModalOpen(false)} 
         onCreateBusiness={handleCreateBusiness} 
         isDarkMode={isDarkMode}
+        columns={columns}
         onResponsibleUpdated={() => {
           console.log('🔄 Negócio criado com responsável, refreshing active users...');
           refreshActiveUsers();
