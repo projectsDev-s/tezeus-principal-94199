@@ -1449,7 +1449,7 @@ export function WhatsAppChat({
             </ScrollArea>
 
             {/* Campo de entrada de mensagem */}
-            <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border relative">
               <div className="flex items-end gap-2">
             <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
               if (!selectedConversation) return;
@@ -1549,16 +1549,16 @@ export function WhatsAppChat({
   <Send className="w-4 h-4" />
             </Button>
               </div>
-            </div>
 
-            {/* Barra de seleção (modo de encaminhamento) */}
-            {selectionMode && (
-              <MessageSelectionBar
-                selectedCount={selectedMessages.size}
-                onCancel={cancelSelection}
-                onForward={() => setForwardModalOpen(true)}
-              />
-            )}
+              {/* Barra de seleção (modo de encaminhamento) */}
+              {selectionMode && (
+                <MessageSelectionBar
+                  selectedCount={selectedMessages.size}
+                  onCancel={cancelSelection}
+                  onForward={() => setForwardModalOpen(true)}
+                />
+              )}
+            </div>
           </> : <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
