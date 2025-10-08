@@ -564,10 +564,15 @@ export default function PipelineConfiguracao({
   };
 
   const updateAction = (id: string, field: keyof Action, value: string) => {
-    setActions(actions.map(action => action.id === id ? {
-      ...action,
-      [field]: value
-    } : action));
+    console.log('🔄 updateAction chamado:', { id, field, value });
+    setActions(prevActions => {
+      const newActions = prevActions.map(action => action.id === id ? {
+        ...action,
+        [field]: value
+      } : action);
+      console.log('✅ Novo estado actions:', newActions);
+      return newActions;
+    });
   };
 
   const saveAction = async (action: Action) => {
@@ -684,10 +689,17 @@ export default function PipelineConfiguracao({
 
   // Quando um pipeline for selecionado, buscar suas colunas
   const handlePipelineChange = async (actionId: string, pipelineId: string) => {
+    console.log('🎯 handlePipelineChange chamado:', { actionId, pipelineId });
+    console.log('📊 Estado actions antes:', actions);
+    
     updateAction(actionId, 'nextPipeline', pipelineId);
     updateAction(actionId, 'targetColumn', ''); // Reset coluna selecionada
     
+    console.log('📊 Estado actions depois updateAction:', actions);
+    
     const columns = await fetchPipelineColumns(pipelineId);
+    console.log('📋 Colunas carregadas:', columns);
+    
     setActionColumns(prev => ({
       ...prev,
       [actionId]: columns
