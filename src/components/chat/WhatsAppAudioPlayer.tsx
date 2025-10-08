@@ -275,7 +275,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
           </button>
 
           {/* Waveform do WhatsApp */}
-          <div className="flex-1 min-w-0 flex items-center gap-2">
+          <div className="flex-1 min-w-0 relative">
             <canvas
               ref={canvasRef}
               width={200}
@@ -284,9 +284,9 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
               onClick={handleProgressClick}
               style={{ width: '200px', height: '28px' }}
             />
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
+            <div className="absolute -bottom-4 left-0 text-xs text-muted-foreground">
+              <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+            </div>
           </div>
 
           {/* Speed Control */}
