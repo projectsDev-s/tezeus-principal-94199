@@ -665,15 +665,12 @@ export default function PipelineConfiguracao({
   // Buscar colunas do pipeline selecionado
   const fetchPipelineColumns = async (pipelineId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke(`pipeline-management/columns`, {
+      const { data, error } = await supabase.functions.invoke(`pipeline-management/columns?pipeline_id=${pipelineId}`, {
         method: 'GET',
         headers: {
           'x-system-user-id': user?.id || '',
           'x-system-user-email': user?.email || '',
           'x-workspace-id': selectedWorkspace?.workspace_id || ''
-        },
-        body: {
-          pipeline_id: pipelineId
         }
       });
       
