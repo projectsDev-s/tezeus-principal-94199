@@ -147,6 +147,40 @@ export function DealDetailsModal({
     id: "contato",
     label: "Contato"
   }];
+  // CRITICAL: Reset completo quando cardId mudar - cada card é independente
+  useEffect(() => {
+    if (cardId) {
+      console.log('🔄 RESET COMPLETO - Novo card selecionado:', cardId);
+      
+      // Reset de todos os estados para valores iniciais
+      setSelectedCardId(cardId);
+      setSelectedColumnId(currentColumnId);
+      setSelectedPipelineId(currentPipelineId);
+      setActiveTab("negocios");
+      setActivities([]);
+      setContactTags([]);
+      setPipelineSteps([]);
+      setContactPipelines([]);
+      setPipelineCardsCount(0);
+      setAvailableCards([]);
+      
+      // Resetar dados do contato se não vier de props
+      if (!initialContactData) {
+        setContactData(null);
+        setContactId("");
+        setWorkspaceId("");
+      } else {
+        setContactId(initialContactData.id);
+        setContactData({
+          name: initialContactData.name,
+          email: null,
+          phone: initialContactData.phone || contactNumber,
+          profile_image_url: initialContactData.profile_image_url || null
+        });
+      }
+    }
+  }, [cardId, currentColumnId, currentPipelineId]);
+
   // Carregar dados quando modal abrir - usando referência confiável do card
   useEffect(() => {
     if (isOpen && cardId) {
@@ -393,6 +427,8 @@ export function DealDetailsModal({
   };
   const fetchActivities = async (contactId: string) => {
     try {
+      console.log('📋 Buscando atividades para contact_id:', contactId, 'card_id:', selectedCardId);
+      
       const {
         data,
         error
@@ -409,6 +445,8 @@ export function DealDetailsModal({
         ascending: true
       });
       if (error) throw error;
+      
+      console.log(`✅ ${data?.length || 0} atividades carregadas para este contato`);
       setActivities(data || []);
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
