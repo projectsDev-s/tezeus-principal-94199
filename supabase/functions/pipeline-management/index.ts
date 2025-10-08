@@ -391,7 +391,18 @@ serve(async (req) => {
                 tags: body.tags || [],
                 responsible_user_id: body.responsible_user_id,
               })
-              .select()
+              .select(`
+                *,
+                contact:contacts(
+                  *,
+                  contact_tags(
+                    tag_id,
+                    tags!contact_tags_tag_id_fkey(id, name, color)
+                  )
+                ),
+                conversation:conversations(*),
+                responsible_user:system_users!responsible_user_id(id, name)
+              `)
               .single();
 
             if (error) {
