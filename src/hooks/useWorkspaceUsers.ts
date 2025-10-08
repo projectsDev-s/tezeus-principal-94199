@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getWorkspaceHeaders } from '@/lib/workspaceHeaders';
 
 interface WorkspaceUser {
   id: string;
@@ -19,41 +20,39 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
 
     setIsLoading(true);
     try {
-      console.log('🔄 Buscando usuários do workspace:', workspaceId);
+      console.log('🔄 Buscando usuários do workspace via edge function:', workspaceId);
       
-      // Buscar membros do workspace
-      const { data: members, error: membersError } = await supabase
-        .from('workspace_members')
-        .select('user_id, role')
-        .eq('workspace_id', workspaceId);
+      // Usar a edge function que já implementa autenticação correta
+      const { data, error } = await supabase.functions.invoke('manage-workspace-members', {
+        body: { 
+          action: 'list',
+          workspaceId,
+        },
+        headers: getWorkspaceHeaders()
+      });
 
-      if (membersError) {
-        console.error('❌ Erro ao buscar membros:', membersError);
-        throw membersError;
+      if (error) {
+        console.error('❌ Erro ao buscar membros:', error);
+        throw error;
       }
 
-      if (!members || members.length === 0) {
-        console.warn('⚠️ Nenhum membro encontrado no workspace');
-        setUsers([]);
-        return;
+      if (!data?.success) {
+        console.error('❌ Resposta sem sucesso:', data);
+        throw new Error(data?.error || 'Falha ao buscar membros');
       }
 
-      const memberIds = members.map(m => m.user_id);
-      console.log(`📋 Encontrados ${memberIds.length} membros`);
+      const members = data.members || [];
+      console.log(`📋 Encontrados ${members.length} membros do workspace`);
 
-      // Buscar dados dos usuários usando a view sem RLS
-      const { data: usersData, error: usersError } = await supabase
-        .from('system_users_view')
-        .select('id, name, profile')
-        .in('id', memberIds)
-        .eq('status', 'active');
+      // Extrair dados dos usuários
+      const allUsers: WorkspaceUser[] = members
+        .filter((member: any) => member.user)
+        .map((member: any) => ({
+          id: member.user.id,
+          name: member.user.name,
+          profile: member.user.profile
+        }));
 
-      if (usersError) {
-        console.error('❌ Erro ao buscar usuários:', usersError);
-        throw usersError;
-      }
-
-      const allUsers = usersData || [];
       console.log(`✅ ${allUsers.length} usuários carregados:`, allUsers.map(u => `${u.name} (${u.profile})`));
 
       // Filtrar por perfil se especificado
@@ -61,7 +60,7 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
         ? allUsers.filter(user => filterProfiles.includes(user.profile as 'user' | 'admin' | 'master'))
         : allUsers;
 
-      console.log(`🔍 Após filtro (${filterProfiles?.join(', ')}): ${filteredUsers.length} usuários`);
+      console.log(`🔍 Após filtro (${filterProfiles?.join(', ') || 'sem filtro'}): ${filteredUsers.length} usuários`);
       
       setUsers(filteredUsers);
     } catch (error) {
