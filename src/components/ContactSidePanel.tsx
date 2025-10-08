@@ -437,36 +437,26 @@ export function ContactSidePanel({
                     </Button>
                   </div>
 
-                  {/* Select de Pipeline com botão + */}
+                  {/* Lista de Negócios */}
                   {deals.length > 0 ? <div className="space-y-3">
-                      <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
-                      <div className="flex items-center gap-2">
-                        <Select value={selectedCardId} onValueChange={setSelectedCardId}>
-                          <SelectTrigger className="h-9 flex-1">
-                            <SelectValue placeholder="Selecionar pipeline" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {deals.map(deal => <SelectItem key={deal.id} value={deal.id}>
-                                {deal.pipeline}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <Button size="icon" variant="outline" className="h-9 w-9 flex-shrink-0" onClick={() => setIsCreateDealModalOpen(true)}>
-                          <Plus className="h-4 w-4" />
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Negócios</Label>
+                        <Button size="sm" variant="outline" onClick={() => setIsCreateDealModalOpen(true)}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Novo negócio
                         </Button>
                       </div>
 
-                      {/* Informações do negócio selecionado */}
-                      {(() => {
-                    const selectedDeal = deals.find(d => d.id === selectedCardId) || deals[0];
-                    if (!selectedDeal) return null;
-                    return <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                      {/* Lista de todos os negócios */}
+                      <div className="space-y-3">
+                        {deals.map(deal => (
+                          <div key={deal.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                             {/* Avatar do cliente */}
                             <Avatar className="h-10 w-10 flex-shrink-0">
                               <AvatarImage src={editingContact?.profile_image_url} alt={editingContact?.name} className="object-cover" />
                               <AvatarFallback className="text-white font-medium" style={{
-                          backgroundColor: getAvatarColor(editingContact?.name || '')
-                        }}>
+                                backgroundColor: getAvatarColor(editingContact?.name || '')
+                              }}>
                                 {getInitials(editingContact?.name || '')}
                               </AvatarFallback>
                             </Avatar>
@@ -474,17 +464,15 @@ export function ContactSidePanel({
                             {/* Informações do negócio */}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">
-                                {selectedDeal.pipeline} - {selectedDeal.column_name}
+                                {deal.pipeline} - {deal.column_name}
                               </p>
                               <p className="text-sm font-semibold text-primary">
-                                {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          }).format(selectedDeal.value)}
+                                {formatCurrency(deal.value)}
                               </p>
                             </div>
-                          </div>;
-                  })()}
+                          </div>
+                        ))}
+                      </div>
                     </div> : <div className="space-y-2">
                       <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
                       <div className="flex items-center gap-2">
