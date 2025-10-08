@@ -230,7 +230,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
   };
 
   return (
-    <div className="relative group">
+    <div className="relative">
       {/* Message Tail */}
       <div className={cn(
         "absolute top-0 w-2 h-3",
@@ -334,21 +334,6 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
           )}
         </div>
       </div>
-
-      {/* Download Button (on hover) */}
-      {onDownload && (
-        <Button
-          size="sm"
-          variant="secondary"
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDownload();
-          }}
-        >
-          <Download className="h-4 w-4" />
-        </Button>
-      )}
     </div>
   );
 };
