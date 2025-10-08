@@ -271,6 +271,12 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     if (!getHeaders || !selectedPipeline) throw new Error('Requirements not met');
 
     try {
+      console.log('🎯 Iniciando criação de card:', {
+        pipeline_id: selectedPipeline.id,
+        cardData,
+        hasHeaders: !!getHeaders
+      });
+
       const { data, error } = await supabase.functions.invoke('pipeline-management/cards', {
         method: 'POST',
         headers: getHeaders,
@@ -280,7 +286,12 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      if (error) throw error;
+      console.log('📥 Resposta da edge function:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro retornado pela edge function:', error);
+        throw error;
+      }
 
       setCards(prev => [...prev, data]);
       
@@ -291,7 +302,12 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       return data;
     } catch (error) {
-      console.error('Error creating card:', error);
+      console.error('❌ Error creating card (full details):', {
+        error,
+        errorType: typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
       toast({
         title: "Erro",
         description: "Erro ao criar card",

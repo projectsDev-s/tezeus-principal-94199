@@ -373,28 +373,40 @@ serve(async (req) => {
         }
 
         if (method === 'POST') {
-          const body = await req.json();
-          const { data: card, error } = await supabaseClient
-            .from('pipeline_cards')
-            .insert({
-              pipeline_id: body.pipeline_id,
-              column_id: body.column_id,
-              conversation_id: body.conversation_id,
-              contact_id: body.contact_id,
-              title: body.title,
-              description: body.description,
-              value: body.value || 0,
-              status: body.status || 'aberto',
-              tags: body.tags || [],
-              responsible_user_id: body.responsible_user_id,
-            })
-            .select()
-            .single();
+          try {
+            const body = await req.json();
+            console.log('📝 Creating card with data:', body);
+            
+            const { data: card, error } = await supabaseClient
+              .from('pipeline_cards')
+              .insert({
+                pipeline_id: body.pipeline_id,
+                column_id: body.column_id,
+                conversation_id: body.conversation_id,
+                contact_id: body.contact_id,
+                title: body.title,
+                description: body.description,
+                value: body.value || 0,
+                status: body.status || 'aberto',
+                tags: body.tags || [],
+                responsible_user_id: body.responsible_user_id,
+              })
+              .select()
+              .single();
 
-          if (error) throw error;
-          return new Response(JSON.stringify(card), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+            if (error) {
+              console.error('❌ Database error creating card:', error);
+              throw error;
+            }
+            
+            console.log('✅ Card created successfully:', card);
+            return new Response(JSON.stringify(card), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } catch (err) {
+            console.error('❌ Error in POST cards:', err);
+            throw err;
+          }
         }
 
         if (method === 'PUT') {
