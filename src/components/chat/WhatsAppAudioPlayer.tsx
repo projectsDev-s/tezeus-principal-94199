@@ -308,14 +308,10 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
               style={{ width: '200px', height: '28px' }}
             />
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-              <span>{formatTime(currentTime)}</span>
+              <span>{isPlayerMode ? formatTime(currentTime) : formatTime(duration)}</span>
               <span className="flex items-center gap-1">
-                {formatTime(duration)}
                 {timestamp && (
-                  <>
-                    <span className="mx-1">•</span>
-                    <span>{new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </>
+                  <span>{new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                 )}
                 {isOutgoing && messageStatus && (
                   <MessageStatusIndicator status={messageStatus} className="ml-1" />
