@@ -751,26 +751,7 @@ export function CRMNegocios({
         throw new Error('Contato não encontrado ou sem telefone');
       }
 
-      // 2. Verificar se já existe card ativo no pipeline para este contato
-      const { data: existingCards, error: cardsError } = await supabase
-        .from('pipeline_cards')
-        .select('id, status')
-        .eq('pipeline_id', selectedPipeline.id)
-        .eq('contact_id', business.lead)
-        .eq('status', 'aberto');
-
-      if (cardsError) {
-        console.error('Erro ao verificar cards existentes:', cardsError);
-      }
-
-      if (existingCards && existingCards.length > 0) {
-        toast({
-          title: "Card já existe",
-          description: "Este contato já possui um card ativo neste pipeline",
-          variant: "destructive"
-        });
-        return;
-      }
+      // 2. Permitir múltiplos cards para o mesmo contato no pipeline
 
       // 3. Verificar se já existe conversa ativa (para reusar se existir)
       const { data: existingConversations, error: convError } = await supabase
