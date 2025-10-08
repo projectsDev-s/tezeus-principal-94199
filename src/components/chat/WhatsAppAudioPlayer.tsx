@@ -81,8 +81,8 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     };
   }, []);
 
-  // Função para desenhar a waveform (chamada pelo loop de animação)
-  const drawWaveform = () => {
+  // Função para desenhar a waveform
+  const drawWaveform = React.useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -110,11 +110,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       const isPlayed = barProgress < progress;
       
       // Cor: PRETO se já tocou, CINZA CLARO se não tocou
-      if (isPlayed) {
-        ctx.fillStyle = '#000000';  // Preto total
-      } else {
-        ctx.fillStyle = '#D1D5DB';  // Cinza claro
-      }
+      ctx.fillStyle = isPlayed ? '#000000' : '#D1D5DB';
       
       // Desenha a barra (retângulo com cantos arredondados)
       const radius = 1.5;
@@ -146,7 +142,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  };
+  }, [currentTime, duration, waveformBars]);
 
   // Loop de animação com requestAnimationFrame (60fps)
   useEffect(() => {
@@ -156,7 +152,6 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     const animate = () => {
       if (audio && !audio.paused && !audio.ended) {
         setCurrentTime(audio.currentTime);
-        drawWaveform();
         animationFrameRef.current = requestAnimationFrame(animate);
       }
     };
@@ -178,12 +173,12 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
         animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, duration, waveformBars]);
+  }, [isPlaying]);
 
-  // Desenha a waveform inicial
+  // Redesenha a waveform quando currentTime, duration ou waveformBars mudam
   useEffect(() => {
     drawWaveform();
-  }, [duration, waveformBars]);
+  }, [drawWaveform]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
