@@ -26,6 +26,9 @@ import { EndConversationButton } from "@/components/chat/EndConversationButton";
 import { AddTagButton } from "@/components/chat/AddTagButton";
 import { ContactSidePanel } from "@/components/ContactSidePanel";
 import { ContactTags } from "@/components/chat/ContactTags";
+import { MessageContextMenu } from "@/components/chat/MessageContextMenu";
+import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
+import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -192,6 +195,11 @@ export function WhatsAppChat({
   const audioChunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [quickItemsModalOpen, setQuickItemsModalOpen] = useState(false);
+  
+  // Estados para modo de seleção e encaminhamento
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [forwardModalOpen, setForwardModalOpen] = useState(false);
 
   // Usar a função de filtro unificada
   const filteredConversations = getFilteredConversations();
@@ -460,6 +468,10 @@ export function WhatsAppChat({
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     setSelectedConversation(conversation);
+    
+    // Limpar modo de seleção ao trocar de conversa
+    setSelectionMode(false);
+    setSelectedMessages(new Set());
 
     // ✅ CRÍTICO: Carregar mensagens APENAS quando conversa é selecionada
     clearMessages(); // Limpar mensagens da conversa anterior
@@ -467,6 +479,76 @@ export function WhatsAppChat({
     if (conversation.unread_count > 0) {
       markAsRead(conversation.id);
     }
+  };
+
+  // Funções de seleção e encaminhamento
+  const handleMessageForward = (messageId: string) => {
+    setSelectionMode(true);
+    setSelectedMessages(new Set([messageId]));
+  };
+
+  const toggleMessageSelection = (messageId: string) => {
+    const newSelected = new Set(selectedMessages);
+    if (newSelected.has(messageId)) {
+      newSelected.delete(messageId);
+    } else {
+      newSelected.add(messageId);
+    }
+    setSelectedMessages(newSelected);
+    
+    // Sair do modo de seleção se não houver mensagens selecionadas
+    if (newSelected.size === 0) {
+      setSelectionMode(false);
+    }
+  };
+
+  const cancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedMessages(new Set());
+  };
+
+  const handleForwardMessages = async (contactIds: string[]) => {
+    if (!selectedConversation || selectedMessages.size === 0) return;
+
+    const messagesToForward = messages.filter(msg => selectedMessages.has(msg.id));
+    
+    for (const contactId of contactIds) {
+      // Buscar a conversa do contato
+      const targetConversation = conversations.find(conv => conv.contact.id === contactId);
+      
+      if (targetConversation) {
+        // Encaminhar cada mensagem selecionada
+        for (const msg of messagesToForward) {
+          try {
+            await supabase.functions.invoke('test-send-msg', {
+              body: {
+                conversation_id: targetConversation.id,
+                content: msg.content,
+                message_type: msg.message_type,
+                sender_id: user?.id,
+                sender_type: 'agent',
+                file_url: msg.file_url,
+                file_name: msg.file_name
+              },
+              headers: {
+                'x-system-user-id': user?.id || '',
+                'x-system-user-email': user?.email || '',
+                'x-workspace-id': selectedWorkspace?.workspace_id || ''
+              }
+            });
+          } catch (error) {
+            console.error('Erro ao encaminhar mensagem:', error);
+          }
+        }
+      }
+    }
+
+    toast({
+      title: "Mensagens encaminhadas",
+      description: `${messagesToForward.length} mensagem(ns) encaminhada(s) com sucesso`,
+    });
+
+    cancelSelection();
   };
 
   // Obter horário da última atividade
@@ -1301,7 +1383,16 @@ export function WhatsAppChat({
                 </div>}
               
               <div className="space-y-4">
-                {messages.map(message => <div key={message.id} className={cn("flex items-start gap-3 max-w-[80%]", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto")}>
+                {messages.map(message => <div 
+                    key={message.id} 
+                    className={cn(
+                      "flex items-start gap-3 max-w-[80%] relative",
+                      message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto",
+                      selectionMode && "cursor-pointer",
+                      selectedMessages.has(message.id) && "ring-2 ring-primary rounded-lg"
+                    )}
+                    onClick={() => selectionMode && toggleMessageSelection(message.id)}
+                  >
                     {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
                         <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact.name))}>
@@ -1309,7 +1400,25 @@ export function WhatsAppChat({
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
+                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
+                      {/* Menu de contexto */}
+                      {!selectionMode && (
+                        <MessageContextMenu
+                          onForward={() => handleMessageForward(message.id)}
+                          onReply={() => {/* TODO: implementar resposta */}}
+                          onDownload={message.file_url ? () => {
+                            const link = document.createElement('a');
+                            link.href = message.file_url!;
+                            link.download = message.file_name || 'download';
+                            link.target = '_blank';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          } : undefined}
+                          hasDownload={!!message.file_url}
+                        />
+                      )}
+                      
                       {/* Renderizar conteúdo baseado no tipo */}
                       {message.message_type !== 'text' && message.file_url ? <MediaViewer 
                         fileUrl={message.file_url} 
@@ -1441,6 +1550,15 @@ export function WhatsAppChat({
             </Button>
               </div>
             </div>
+
+            {/* Barra de seleção (modo de encaminhamento) */}
+            {selectionMode && (
+              <MessageSelectionBar
+                selectedCount={selectedMessages.size}
+                onCancel={cancelSelection}
+                onForward={() => setForwardModalOpen(true)}
+              />
+            )}
           </> : <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -1461,6 +1579,12 @@ export function WhatsAppChat({
       <ContactSidePanel isOpen={contactPanelOpen} onClose={() => setContactPanelOpen(false)} contact={selectedConversation?.contact || null} />
       
       <QuickItemsModal open={quickItemsModalOpen} onOpenChange={setQuickItemsModalOpen} onSendMessage={handleSendQuickMessage} onSendAudio={handleSendQuickAudio} onSendMedia={handleSendQuickMedia} onSendDocument={handleSendQuickDocument} />
+      
+      <ForwardMessageModal
+        isOpen={forwardModalOpen}
+        onClose={() => setForwardModalOpen(false)}
+        onForward={handleForwardMessages}
+      />
       </div>
 
     </div>;
