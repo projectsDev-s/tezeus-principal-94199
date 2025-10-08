@@ -429,10 +429,12 @@ export function DealDetailsModal({
     try {
       console.log('📋 Buscando atividades para contact_id:', contactId, 'card_id:', selectedCardId);
       
+      // Buscar atividades vinculadas AO CARD ESPECÍFICO ou sem vínculo (globais)
       const {
         data,
         error
-      } = await supabase.from('activities').select(`
+      } = await supabase.from('activities')
+        .select(`
           id,
           type,
           subject,
@@ -440,16 +442,22 @@ export function DealDetailsModal({
           responsible_id,
           is_completed,
           attachment_url,
-          attachment_name
+          attachment_name,
+          pipeline_card_id
         `)
         .eq('contact_id', contactId)
         .or(`pipeline_card_id.eq.${selectedCardId},pipeline_card_id.is.null`)
-        .order('scheduled_for', {
-          ascending: true
-        });
+        .order('scheduled_for', { ascending: true });
+        
       if (error) throw error;
       
-      console.log(`✅ ${data?.length || 0} atividades carregadas (negócio + globais)`);
+      console.log(`✅ ${data?.length || 0} atividades carregadas:`, {
+        total: data?.length,
+        doCard: data?.filter(a => a.pipeline_card_id === selectedCardId).length,
+        globais: data?.filter(a => !a.pipeline_card_id).length,
+        outrosCards: data?.filter(a => a.pipeline_card_id && a.pipeline_card_id !== selectedCardId).length
+      });
+      
       setActivities(data || []);
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
