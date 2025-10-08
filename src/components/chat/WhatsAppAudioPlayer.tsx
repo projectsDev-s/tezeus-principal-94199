@@ -38,17 +38,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   
-  // Use real waveform from metadata if available, otherwise generate random
-  const [waveformBars] = useState(() => {
-    if (metadata?.waveform) {
-      // Convert {0: 0, 1: 3, ...} to [0, 3, ...]
-      const waveformArray = Object.values(metadata.waveform);
-      // Normalize to 0-1 range
-      const maxValue = Math.max(...waveformArray, 1);
-      return waveformArray.map(v => (v / maxValue) * 0.7 + 0.3);
-    }
-    return Array.from({ length: 40 }, () => Math.random() * 0.7 + 0.3);
-  });
+  // Não precisa mais de waveformBars - usaremos barra de progresso simples
 
   const isOutgoing = senderType === 'agent';
 
@@ -80,41 +70,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    drawWaveform();
-  }, [currentTime, duration, waveformBars]);
-
-  const drawWaveform = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const barWidth = 3;
-    const gap = 2;
-    const barCount = waveformBars.length;
-    const progress = duration > 0 ? currentTime / duration : 0;
-
-    ctx.clearRect(0, 0, width, height);
-
-    waveformBars.forEach((amplitude, index) => {
-      const x = index * (barWidth + gap);
-      const barHeight = amplitude * height;
-      const y = (height - barHeight) / 2;
-      
-      const isPlayed = index / barCount <= progress;
-      
-      ctx.fillStyle = isPlayed 
-        ? 'hsl(var(--primary))' 
-        : 'hsl(var(--muted-foreground) / 0.3)';
-      
-      ctx.roundRect(x, y, barWidth, barHeight, 1.5);
-      ctx.fill();
-    });
-  };
+  // Não precisa mais desenhar waveform
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -138,14 +94,14 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     }
   };
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const progressBar = e.currentTarget;
     const audio = audioRef.current;
-    if (!canvas || !audio) return;
+    if (!progressBar || !audio) return;
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = progressBar.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const percentage = x / rect.width;
+    const percentage = Math.max(0, Math.min(1, x / rect.width));
     audio.currentTime = percentage * duration;
   };
 
@@ -210,17 +166,21 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
             )}
           </button>
 
-          {/* Waveform and Controls */}
+          {/* Progress Bar and Controls */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <canvas
-                ref={canvasRef}
-                width={200}
-                height={24}
-                className="cursor-pointer"
-                onClick={handleProgressClick}
-                style={{ width: '200px', height: '24px' }}
-              />
+            {/* Barra de progresso real */}
+            <div 
+              className="relative w-full h-1 bg-muted/30 rounded-full cursor-pointer mb-1 group/progress"
+              onClick={handleProgressClick}
+            >
+              {/* Progresso preenchido */}
+              <div 
+                className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
+                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+              >
+                {/* Pontinho no final da barra */}
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+              </div>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
