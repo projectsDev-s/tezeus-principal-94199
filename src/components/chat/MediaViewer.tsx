@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, AlertCircle, Loader2, Eye } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
+import { WhatsAppAudioPlayer } from './WhatsAppAudioPlayer';
 import { ImageModal } from './ImageModal';
 import { PdfModal } from './PdfModal';
 import { VideoModal } from './VideoModal';
@@ -11,13 +12,23 @@ interface MediaViewerProps {
   fileName?: string;
   messageType: string;
   className?: string;
+  senderType?: 'agent' | 'contact';
+  senderAvatar?: string;
+  senderName?: string;
+  messageStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  timestamp?: string;
 }
 
 export const MediaViewer: React.FC<MediaViewerProps> = ({
   fileUrl,
   fileName,
   messageType,
-  className = ''
+  className = '',
+  senderType = 'contact',
+  senderAvatar,
+  senderName,
+  messageStatus,
+  timestamp,
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -256,9 +267,14 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isAudioFile || messageType === 'audio') {
     return (
       <div className={className}>
-        <AudioPlayer
+        <WhatsAppAudioPlayer
           audioUrl={fileUrl}
           fileName={fileName}
+          senderType={senderType}
+          senderAvatar={senderAvatar}
+          senderName={senderName}
+          messageStatus={messageStatus}
+          timestamp={timestamp}
           onDownload={handleDownload}
         />
       </div>

@@ -1264,13 +1264,23 @@ export function WhatsAppChat({
                           {getInitials(selectedConversation.contact.name)}
                         </AvatarFallback>
                       </Avatar>}
-                    
-                     <div className={cn("rounded-lg max-w-full", message.sender_type === 'contact' ? "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
+                     
+                     <div className={cn("max-w-full", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
                       {/* Renderizar conteúdo baseado no tipo */}
-                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" /> : <p className="text-sm break-words">{message.content}</p>}
+                      {message.message_type !== 'text' && message.file_url ? <MediaViewer 
+                        fileUrl={message.file_url} 
+                        fileName={message.file_name} 
+                        messageType={message.message_type} 
+                        className="max-w-xs"
+                        senderType={message.sender_type}
+                        senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined}
+                        senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'}
+                        messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined}
+                        timestamp={message.created_at}
+                      /> : <p className="text-sm break-words">{message.content}</p>}
                       
-                      {/* Status e horário */}
-                      <div className={cn("flex items-center gap-1 mt-1 text-xs", message.sender_type === 'contact' ? "text-muted-foreground" : "text-primary-foreground/70")}>
+                      {/* Status e horário - APENAS para mensagens NÃO-ÁUDIO */}
+                      {message.message_type !== 'audio' && <div className={cn("flex items-center gap-1 mt-1 text-xs", message.sender_type === 'contact' ? "text-muted-foreground" : "text-primary-foreground/70")}>
                         <span>
                           {new Date(message.created_at).toLocaleTimeString('pt-BR', {
                       hour: '2-digit',
@@ -1278,7 +1288,7 @@ export function WhatsAppChat({
                     })}
                         </span>
                         {message.sender_type !== 'contact' && <MessageStatusIndicator status={mapEvolutionStatusToComponent(message.status)} className="ml-1" />}
-                      </div>
+                      </div>}
                     </div>
                   </div>)}
                 <div ref={messagesEndRef} />
