@@ -590,10 +590,54 @@ export function WhatsAppChat({
             };
             addMessage(optimisticMessage);
             setMessageText('');
-            toast({
-              title: 'Áudio enviado',
-              description: 'Seu áudio foi enviado com sucesso.'
-            });
+            
+            // ✅ Enviar áudio via test-send-msg
+            try {
+              const { data: sendResult, error: sendError } = await supabase.functions.invoke('test-send-msg', {
+                body: {
+                  conversation_id: selectedConversation.id,
+                  content: messageText.trim() || '[AUDIO]',
+                  message_type: 'audio',
+                  sender_id: user?.id,
+                  sender_type: 'agent',
+                  file_url: publicUrl,
+                  file_name: fileName
+                },
+                headers: {
+                  'x-system-user-id': user?.id || '',
+                  'x-workspace-id': selectedWorkspace?.workspace_id || '',
+                  'x-system-user-email': user?.email || ''
+                }
+              });
+
+              if (sendError) {
+                console.error('❌ Erro ao enviar áudio:', sendError);
+                updateMessage(optimisticMessage.id, { status: 'failed' });
+                toast({
+                  title: "Erro ao enviar áudio",
+                  description: sendError.message,
+                  variant: "destructive"
+                });
+              } else {
+                console.log('✅ Áudio enviado com sucesso:', sendResult);
+                updateMessage(optimisticMessage.id, {
+                  status: 'sent',
+                  external_id: sendResult.external_id
+                });
+                toast({
+                  title: 'Áudio enviado',
+                  description: 'Seu áudio foi enviado com sucesso.'
+                });
+              }
+            } catch (err) {
+              console.error('❌ Erro ao enviar áudio:', err);
+              updateMessage(optimisticMessage.id, { status: 'failed' });
+              toast({
+                title: "Erro ao enviar áudio",
+                description: "Erro de conexão",
+                variant: "destructive"
+              });
+            }
           }
           stream.getTracks().forEach(t => t.stop());
         } catch (err) {

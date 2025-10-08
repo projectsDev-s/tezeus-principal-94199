@@ -20,6 +20,13 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('📤 MediaUpload - Iniciando upload:', { 
+      mediaType, 
+      fileName: file.name, 
+      fileSize: file.size,
+      fileType: file.type 
+    });
+
     setUploading(true);
     try {
       // Upload diretamente para o bucket whatsapp-media/messages/
@@ -27,26 +34,38 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `messages/${fileName}`;
 
-      console.log('Uploading file to whatsapp-media bucket:', filePath);
+      console.log('📦 MediaUpload - Uploading to bucket:', filePath);
 
       const { error: uploadError } = await supabase.storage
         .from('whatsapp-media')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('❌ MediaUpload - Upload error:', uploadError);
+        throw uploadError;
+      }
 
       // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('whatsapp-media')
         .getPublicUrl(filePath);
 
-      console.log('File uploaded successfully:', publicUrl);
+      console.log('✅ MediaUpload - Upload concluído:', publicUrl);
 
+      // Chamar onFileSelect
+      console.log('🔔 MediaUpload - Chamando onFileSelect com:', { 
+        mediaType, 
+        publicUrl, 
+        fileName: file.name 
+      });
+      
       onFileSelect(file, mediaType, publicUrl);
       toast.success('Arquivo enviado com sucesso!');
       
+      console.log('✅ MediaUpload - onFileSelect executado com sucesso');
+      
     } catch (error) {
-      console.error('Erro ao fazer upload:', error);
+      console.error('❌ MediaUpload - Erro geral:', error);
       toast.error('Erro ao fazer upload do arquivo');
     } finally {
       setUploading(false);
