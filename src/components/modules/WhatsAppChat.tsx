@@ -1400,7 +1400,7 @@ export function WhatsAppChat({
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
+                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : (message.message_type === 'image' || message.message_type === 'video') ? "bg-transparent" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : (message.message_type === 'image' || message.message_type === 'video') ? "bg-transparent" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
                       {/* Menu de contexto */}
                       {!selectionMode && (
                         <MessageContextMenu
