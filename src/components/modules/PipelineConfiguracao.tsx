@@ -621,15 +621,13 @@ export default function PipelineConfiguracao({
 
         if (error) throw error;
 
-        // Atualizar ID da ação com o ID real do banco
-        setActions(prev => prev.map(a => 
-          a.id === action.id ? { ...a, id: data.id } : a
-        ));
-
         toast({
           title: "Ação salva",
           description: "A ação foi criada com sucesso.",
         });
+        
+        // Recarregar todas as ações do banco
+        await loadPipelineActions(selectedPipeline.id);
       } else {
         // Atualizar ação existente
         const { error } = await supabase
@@ -643,6 +641,9 @@ export default function PipelineConfiguracao({
           title: "Ação atualizada",
           description: "A ação foi atualizada com sucesso.",
         });
+        
+        // Recarregar todas as ações do banco
+        await loadPipelineActions(selectedPipeline.id);
       }
     } catch (error) {
       console.error('Error saving action:', error);
