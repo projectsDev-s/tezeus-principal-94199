@@ -43,7 +43,7 @@ interface Action {
 
 // Inicializar apenas com uma ação vazia
 const initialActions: Action[] = [{
-  id: "1",
+  id: `temp-${Date.now()}`,
   actionName: "",
   nextPipeline: "",
   targetColumn: "",
