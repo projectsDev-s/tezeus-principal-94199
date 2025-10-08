@@ -1432,8 +1432,8 @@ export function WhatsAppChat({
                         timestamp={message.created_at}
                       /> : <p className="text-sm break-words">{message.content}</p>}
                       
-                      {/* Status e horário - APENAS para mensagens NÃO-ÁUDIO e NÃO-IMAGEM */}
-                      {message.message_type !== 'audio' && message.message_type !== 'image' && <div className={cn("flex items-center gap-1 mt-1 text-xs", message.sender_type === 'contact' ? "text-muted-foreground" : "text-primary-foreground/70")}>
+                      {/* Status e horário - APENAS para mensagens de texto e áudio (outros tipos têm timestamp interno) */}
+                      {(message.message_type === 'text' || message.message_type === 'audio') && <div className={cn("flex items-center gap-1 mt-1 text-xs", message.sender_type === 'contact' ? "text-muted-foreground" : "text-primary-foreground/70")}>
                         <span>
                           {new Date(message.created_at).toLocaleTimeString('pt-BR', {
                       hour: '2-digit',

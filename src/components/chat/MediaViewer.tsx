@@ -112,13 +112,13 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     console.log('🔴 RENDERIZANDO PDF:', { fileName, fileUrl, messageType, extension: fileName?.split('.').pop()?.toLowerCase() });
     return (
       <div className={className}>
-        <div className="relative group">
+        <div className="relative inline-block">
           <div 
-            className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border-2 border-dashed border-red-300" 
+            className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
             onClick={() => setIsPdfModalOpen(true)}
           >
             <div className="relative">
-              <FileText className="h-12 w-12 text-red-600" />
+              <FileText className="h-10 w-10 text-red-600" />
               <div className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1 rounded font-medium">
                 PDF
               </div>
@@ -133,17 +133,15 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDownload();
-            }}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
+          {/* Timestamp sobreposto */}
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
         </div>
         <PdfModal
           isOpen={isPdfModalOpen}
@@ -235,16 +233,25 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isVideoFile || messageType === 'video') {
     return (
       <div className={className}>
-        <div className="relative max-w-[300px]">
+        <div className="relative inline-block max-w-[300px]">
           <video
             src={fileUrl}
             controls
-            className="w-full rounded-lg cursor-pointer"
+            className="w-full rounded-lg cursor-pointer border border-border"
             style={{ maxHeight: '200px' }}
             onClick={() => setIsVideoModalOpen(true)}
           >
             Seu navegador não suporta o elemento de vídeo.
           </video>
+          {/* Timestamp sobreposto */}
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded pointer-events-none">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
         </div>
         
         <VideoModal
@@ -280,23 +287,33 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isExcelFile) {
     return (
       <div className={className}>
-        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border-2 border-dashed border-green-300" 
-             onClick={handleDownload}>
-          <div className="relative">
-            <FileText className="h-12 w-12 text-green-600" />
-            <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs px-1 rounded font-medium">
-              XLS
+        <div className="relative inline-block">
+          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+               onClick={handleDownload}>
+            <div className="relative">
+              <FileText className="h-10 w-10 text-green-600" />
+              <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs px-1 rounded font-medium">
+                XLS
+              </div>
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {fileName || 'Planilha Excel'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique para baixar
+              </p>
+            </div>
+            <Download className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
-              {fileName || 'Planilha Excel'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Clique para baixar
-            </p>
-          </div>
-          <Download className="h-4 w-4 text-muted-foreground" />
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -305,23 +322,33 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isWordFile) {
     return (
       <div className={className}>
-        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border-2 border-dashed border-primary/30" 
-             onClick={handleDownload}>
-          <div className="relative">
-            <FileText className="h-12 w-12 text-primary" />
-            <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-1 rounded font-medium">
-              DOC
+        <div className="relative inline-block">
+          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+               onClick={handleDownload}>
+            <div className="relative">
+              <FileText className="h-10 w-10 text-primary" />
+              <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-1 rounded font-medium">
+                DOC
+              </div>
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {fileName || 'Documento Word'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique para baixar
+              </p>
+            </div>
+            <Download className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
-              {fileName || 'Documento Word'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Clique para baixar
-            </p>
-          </div>
-          <Download className="h-4 w-4 text-muted-foreground" />
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -330,23 +357,33 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isPowerPointFile) {
     return (
       <div className={className}>
-        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border-2 border-dashed border-orange-300" 
-             onClick={handleDownload}>
-          <div className="relative">
-            <FileText className="h-12 w-12 text-orange-600" />
-            <div className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs px-1 rounded font-medium">
-              PPT
+        <div className="relative inline-block">
+          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+               onClick={handleDownload}>
+            <div className="relative">
+              <FileText className="h-10 w-10 text-orange-600" />
+              <div className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs px-1 rounded font-medium">
+                PPT
+              </div>
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {fileName || 'Apresentação PowerPoint'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique para baixar
+              </p>
+            </div>
+            <Download className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
-              {fileName || 'Apresentação PowerPoint'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Clique para baixar
-            </p>
-          </div>
-          <Download className="h-4 w-4 text-muted-foreground" />
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -355,23 +392,33 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   // PADRÃO: ARQUIVO GENÉRICO
   return (
     <div className={className}>
-      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border-2 border-dashed border-gray-300" 
-           onClick={handleDownload}>
-        <div className="relative">
-          <FileText className="h-12 w-12 text-gray-600" />
-          <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1 rounded font-medium">
-            FILE
+      <div className="relative inline-block">
+        <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+             onClick={handleDownload}>
+          <div className="relative">
+            <FileText className="h-10 w-10 text-gray-600" />
+            <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1 rounded font-medium">
+              FILE
+            </div>
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">
+              {fileName || 'Arquivo'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Clique para baixar
+            </p>
+          </div>
+          <Download className="h-4 w-4 text-muted-foreground" />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">
-            {fileName || 'Arquivo'}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Clique para baixar
-          </p>
-        </div>
-        <Download className="h-4 w-4 text-muted-foreground" />
+        {timestamp && (
+          <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+            {new Date(timestamp).toLocaleTimeString('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
