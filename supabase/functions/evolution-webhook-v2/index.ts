@@ -462,18 +462,35 @@ serve(async (req) => {
               conversation_id: conversationId,
               workspace_id: workspaceId,
               content: messageContent,
-              message_type: messageData.message?.imageMessage ? 'image' : 
+              message_type: messageData.message?.audioMessage ? 'audio' :
+                           messageData.message?.imageMessage ? 'image' : 
                            messageData.message?.videoMessage ? 'video' :
                            messageData.message?.documentMessage ? 'document' : 'text',
               sender_type: 'contact',
               status: 'received',
               origem_resposta: 'automatica',
               external_id: evolutionMessageId,
+              file_url: messageData.message?.audioMessage?.url || 
+                       messageData.message?.imageMessage?.url ||
+                       messageData.message?.videoMessage?.url ||
+                       messageData.message?.documentMessage?.url || null,
+              mime_type: messageData.message?.audioMessage?.mimetype ||
+                        messageData.message?.imageMessage?.mimetype ||
+                        messageData.message?.videoMessage?.mimetype ||
+                        messageData.message?.documentMessage?.mimetype || null,
               metadata: {
                 source: 'evolution-webhook-v2',
                 evolution_data: messageData,
                 request_id: requestId,
-                message_flow: 'inbound_original'
+                message_flow: 'inbound_original',
+                duration_seconds: messageData.message?.audioMessage?.seconds || 
+                                 messageData.message?.videoMessage?.seconds,
+                waveform: messageData.message?.audioMessage?.waveform,
+                is_ptt: messageData.message?.audioMessage?.ptt,
+                file_size: messageData.message?.audioMessage?.fileLength ||
+                          messageData.message?.imageMessage?.fileLength ||
+                          messageData.message?.videoMessage?.fileLength ||
+                          messageData.message?.documentMessage?.fileLength
               }
             })
             .select('id')

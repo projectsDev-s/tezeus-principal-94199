@@ -14,6 +14,10 @@ interface WhatsAppAudioPlayerProps {
   messageStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   timestamp?: string;
   onDownload?: () => void;
+  metadata?: {
+    waveform?: Record<string, number>;
+    duration_seconds?: number;
+  };
 }
 
 export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
@@ -25,6 +29,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
   messageStatus = 'sent',
   timestamp,
   onDownload,
+  metadata,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,9 +37,18 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [waveformBars] = useState(() => 
-    Array.from({ length: 40 }, () => Math.random() * 0.7 + 0.3)
-  );
+  
+  // Use real waveform from metadata if available, otherwise generate random
+  const [waveformBars] = useState(() => {
+    if (metadata?.waveform) {
+      // Convert {0: 0, 1: 3, ...} to [0, 3, ...]
+      const waveformArray = Object.values(metadata.waveform);
+      // Normalize to 0-1 range
+      const maxValue = Math.max(...waveformArray, 1);
+      return waveformArray.map(v => (v / maxValue) * 0.7 + 0.3);
+    }
+    return Array.from({ length: 40 }, () => Math.random() * 0.7 + 0.3);
+  });
 
   const isOutgoing = senderType === 'agent';
 

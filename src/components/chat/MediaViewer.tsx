@@ -17,6 +17,10 @@ interface MediaViewerProps {
   senderName?: string;
   messageStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   timestamp?: string;
+  metadata?: {
+    waveform?: Record<string, number>;
+    duration_seconds?: number;
+  };
 }
 
 export const MediaViewer: React.FC<MediaViewerProps> = ({
@@ -29,6 +33,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   senderName,
   messageStatus,
   timestamp,
+  metadata,
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -276,6 +281,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           messageStatus={messageStatus}
           timestamp={timestamp}
           onDownload={handleDownload}
+          metadata={metadata}
         />
       </div>
     );
