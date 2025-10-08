@@ -109,26 +109,27 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       
       const isPlayed = index / barCount <= progress;
       
-      // Cor baseada no progresso: azul se já tocou, cinza se não tocou
+      // Cor: preto escuro se já tocou, cinza claro se não tocou
       ctx.fillStyle = isPlayed 
-        ? 'hsl(var(--primary))' 
-        : 'hsl(var(--muted-foreground) / 0.3)';
+        ? '#1f1f1f'  // Preto escuro
+        : 'rgba(156, 163, 175, 0.4)';  // Cinza claro
       
       ctx.roundRect(x, y, barWidth, barHeight, 1.5);
       ctx.fill();
     });
 
-    // Desenha o pontinho azul na posição atual
-    if (progress > 0) {
+    // Desenha UM pontinho só na posição atual do progresso
+    if (progress > 0 && duration > 0) {
       const dotX = progress * width;
       const dotY = height / 2;
       
+      // Círculo branco com borda
       ctx.beginPath();
-      ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
-      ctx.fillStyle = 'hsl(var(--primary))';
+      ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'white';
       ctx.fill();
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#1f1f1f';
+      ctx.lineWidth = 2;
       ctx.stroke();
     }
   };
