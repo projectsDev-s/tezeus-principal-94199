@@ -159,7 +159,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isImageFile || messageType === 'image') {
     return (
       <div className={className}>
-        <div className="relative">
+        <div className="relative inline-block">
           {isLoading && !hasLoaded && (
             <div className="flex items-center justify-center max-w-[300px] max-h-[200px] rounded-lg bg-muted/20 border border-dashed border-muted-foreground/20">
               <div className="flex flex-col items-center gap-2 p-6">
@@ -170,25 +170,36 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           )}
           
           {!imageError && (
-            <img
-              src={fileUrl}
-              alt={fileName || 'Imagem'}
-              className={`max-w-[300px] max-h-[200px] rounded-lg object-cover cursor-pointer transition-opacity duration-200 ${
-                isLoading && !hasLoaded ? 'opacity-0 absolute' : 'opacity-100'
-              }`}
-              onClick={() => setIsImageModalOpen(true)}
-              onError={handleImageError}
-              onLoad={() => {
-                setImageError(null);
-                setIsLoading(false);
-                setHasLoaded(true);
-              }}
-              onLoadStart={() => {
-                setIsLoading(true);
-                setHasLoaded(false);
-              }}
-              loading="lazy"
-            />
+            <>
+              <img
+                src={fileUrl}
+                alt={fileName || 'Imagem'}
+                className={`max-w-[300px] max-h-[200px] rounded-lg object-cover cursor-pointer transition-opacity duration-200 border border-border ${
+                  isLoading && !hasLoaded ? 'opacity-0 absolute' : 'opacity-100'
+                }`}
+                onClick={() => setIsImageModalOpen(true)}
+                onError={handleImageError}
+                onLoad={() => {
+                  setImageError(null);
+                  setIsLoading(false);
+                  setHasLoaded(true);
+                }}
+                onLoadStart={() => {
+                  setIsLoading(true);
+                  setHasLoaded(false);
+                }}
+                loading="lazy"
+              />
+              {/* Timestamp sobreposto na imagem */}
+              {timestamp && hasLoaded && !isLoading && (
+                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                  {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+            </>
           )}
           
           {imageError && (
