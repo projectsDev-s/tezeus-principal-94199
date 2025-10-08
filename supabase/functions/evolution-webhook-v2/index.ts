@@ -192,7 +192,25 @@ serve(async (req) => {
       // Extract message data from Evolution webhook
       const messageData = payload.data;
       const remoteJid = messageData.key?.remoteJid || '';
-      const phoneNumber = extractPhoneFromRemoteJid(remoteJid);
+      
+      // 🚫 FILTRAR MENSAGENS DE GRUPOS E BROADCASTS
+      if (remoteJid.endsWith('@g.us')) {
+        console.log(`🚫 [${requestId}] Ignoring GROUP message from: ${remoteJid}`);
+        processedData = {
+          skipped: true,
+          reason: 'group_message',
+          remoteJid: remoteJid
+        };
+      } else if (remoteJid.endsWith('@broadcast')) {
+        console.log(`🚫 [${requestId}] Ignoring BROADCAST message from: ${remoteJid}`);
+        processedData = {
+          skipped: true,
+          reason: 'broadcast_message',
+          remoteJid: remoteJid
+        };
+      } else {
+        // ✅ PROCESSAR APENAS MENSAGENS INDIVIDUAIS
+        const phoneNumber = extractPhoneFromRemoteJid(remoteJid);
       const evolutionMessageId = messageData.key?.id;
       
       console.log(`📱 [${requestId}] RemoteJid processing: ${remoteJid} -> ${phoneNumber}`);
@@ -521,6 +539,7 @@ serve(async (req) => {
           console.log(`✅ [${requestId}] Inbound message processed locally:`, processedData);
         }
       }
+      } // ✅ FIM DO BLOCO: PROCESSAR APENAS MENSAGENS INDIVIDUAIS
     } else if (workspaceId && payload.data?.key?.fromMe === true) {
       console.log(`📤 [${requestId}] Outbound message detected, skipping local processing (will be handled by N8N response)`);
     }
