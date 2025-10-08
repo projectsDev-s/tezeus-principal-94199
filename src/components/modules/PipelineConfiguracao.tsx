@@ -506,9 +506,55 @@ export default function PipelineConfiguracao({
       setIsLoadingColumns(false);
     }
   };
+  // Carregar ações salvas quando selecionar um pipeline
+  useEffect(() => {
+    if (selectedPipeline?.id) {
+      loadPipelineActions(selectedPipeline.id);
+    }
+  }, [selectedPipeline?.id]);
+
+  const loadPipelineActions = async (pipelineId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('pipeline_actions')
+        .select('*')
+        .eq('pipeline_id', pipelineId)
+        .order('order_position');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const formattedActions: Action[] = data.map(action => ({
+          id: action.id,
+          actionName: action.action_name,
+          nextPipeline: action.target_pipeline_id,
+          targetColumn: action.target_column_id,
+          dealState: action.deal_state
+        }));
+        setActions(formattedActions);
+
+        // Carregar colunas para cada ação que já tem pipeline selecionado
+        for (const action of formattedActions) {
+          if (action.nextPipeline) {
+            const columns = await fetchPipelineColumns(action.nextPipeline);
+            setActionColumns(prev => ({
+              ...prev,
+              [action.id]: columns
+            }));
+          }
+        }
+      } else {
+        setActions(initialActions);
+      }
+    } catch (error) {
+      console.error('Error loading pipeline actions:', error);
+      setActions(initialActions);
+    }
+  };
+
   const addNewAction = () => {
     const newAction: Action = {
-      id: Date.now().toString(),
+      id: `temp-${Date.now()}`,
       actionName: "",
       nextPipeline: "",
       targetColumn: "",
@@ -516,11 +562,104 @@ export default function PipelineConfiguracao({
     };
     setActions([...actions, newAction]);
   };
+
   const updateAction = (id: string, field: keyof Action, value: string) => {
     setActions(actions.map(action => action.id === id ? {
       ...action,
       [field]: value
     } : action));
+  };
+
+  const saveAction = async (action: Action) => {
+    if (!selectedPipeline?.id) return;
+    
+    if (!action.actionName || !action.nextPipeline || !action.targetColumn || !action.dealState) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos antes de salvar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const actionData = {
+        pipeline_id: selectedPipeline.id,
+        action_name: action.actionName,
+        target_pipeline_id: action.nextPipeline,
+        target_column_id: action.targetColumn,
+        deal_state: action.dealState,
+        order_position: actions.indexOf(action)
+      };
+
+      if (action.id.startsWith('temp-')) {
+        // Criar nova ação
+        const { data, error } = await supabase
+          .from('pipeline_actions')
+          .insert(actionData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Atualizar ID da ação com o ID real do banco
+        setActions(prev => prev.map(a => 
+          a.id === action.id ? { ...a, id: data.id } : a
+        ));
+
+        toast({
+          title: "Ação salva",
+          description: "A ação foi criada com sucesso.",
+        });
+      } else {
+        // Atualizar ação existente
+        const { error } = await supabase
+          .from('pipeline_actions')
+          .update(actionData)
+          .eq('id', action.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Ação atualizada",
+          description: "A ação foi atualizada com sucesso.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving action:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a ação.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteAction = async (actionId: string) => {
+    try {
+      if (!actionId.startsWith('temp-')) {
+        const { error } = await supabase
+          .from('pipeline_actions')
+          .delete()
+          .eq('id', actionId);
+
+        if (error) throw error;
+      }
+
+      setActions(prev => prev.filter(a => a.id !== actionId));
+      
+      toast({
+        title: "Ação removida",
+        description: "A ação foi removida com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error deleting action:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a ação.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Buscar colunas do pipeline selecionado
@@ -746,6 +885,9 @@ export default function PipelineConfiguracao({
                       <th className={cn("text-left p-2 text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                         Estado do Negócio
                       </th>
+                      <th className={cn("text-left p-2 text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                        Ações
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -793,9 +935,26 @@ export default function PipelineConfiguracao({
                             <SelectContent>
                               <SelectItem value="Ganho">Ganho</SelectItem>
                               <SelectItem value="Perda">Perda</SelectItem>
-                              <SelectItem value="Em andamento">Em andamento</SelectItem>
                             </SelectContent>
                           </Select>
+                        </td>
+                        <td className="p-2">
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => saveAction(action)}
+                              disabled={!action.actionName || !action.nextPipeline || !action.targetColumn || !action.dealState}
+                            >
+                              Salvar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => deleteAction(action.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>)}
                   </tbody>

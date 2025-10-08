@@ -116,6 +116,7 @@ export function DealDetailsModal({
   const [selectedCardId, setSelectedCardId] = useState<string>(cardId);
   const [selectedColumnId, setSelectedColumnId] = useState<string>(currentColumnId);
   const [availableCards, setAvailableCards] = useState<any[]>([]);
+  const [pipelineActions, setPipelineActions] = useState<any[]>([]);
   const [contactData, setContactData] = useState<{
     name: string;
     email: string | null;
@@ -219,6 +220,62 @@ export function DealDetailsModal({
       setPipelineSteps(steps);
     }
   }, [columns, selectedColumnId]);
+
+  // Carregar ações do pipeline quando mudar
+  useEffect(() => {
+    if (selectedPipelineId) {
+      fetchPipelineActions(selectedPipelineId);
+    }
+  }, [selectedPipelineId]);
+
+  const fetchPipelineActions = async (pipelineId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('pipeline_actions')
+        .select('*')
+        .eq('pipeline_id', pipelineId)
+        .order('order_position');
+
+      if (error) throw error;
+      setPipelineActions(data || []);
+    } catch (error) {
+      console.error('Error fetching pipeline actions:', error);
+      setPipelineActions([]);
+    }
+  };
+
+  const executeAction = async (action: any) => {
+    try {
+      console.log('🎬 Executando ação:', action);
+
+      // Atualizar o card para o pipeline/coluna de destino
+      const { error } = await supabase
+        .from('pipeline_cards')
+        .update({
+          pipeline_id: action.target_pipeline_id,
+          column_id: action.target_column_id,
+          status: action.deal_state === 'Ganho' ? 'ganho' : 'perda'
+        })
+        .eq('id', selectedCardId);
+
+      if (error) throw error;
+
+      toast({
+        title: `Negócio marcado como ${action.deal_state}`,
+        description: `O card foi movido com sucesso.`,
+      });
+
+      // Fechar o modal e atualizar a lista
+      onClose();
+    } catch (error) {
+      console.error('Error executing action:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível executar a ação.",
+        variant: "destructive",
+      });
+    }
+  };
   const fetchCardData = async () => {
     setIsLoadingData(true);
     try {
@@ -765,6 +822,21 @@ export function DealDetailsModal({
             </div>
             
             <div className="flex-1" />
+
+            {/* Botões de ações dinâmicas */}
+            <div className="flex gap-2">
+              {pipelineActions.map((action) => (
+                <Button
+                  key={action.id}
+                  size="sm"
+                  variant={action.deal_state === 'Ganho' ? 'default' : 'destructive'}
+                  onClick={() => executeAction(action)}
+                  className={action.deal_state === 'Ganho' ? 'bg-green-600 hover:bg-green-700' : ''}
+                >
+                  {action.action_name}
+                </Button>
+              ))}
+            </div>
           </div>
         </DialogHeader>
 

@@ -1145,6 +1145,64 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_actions: {
+        Row: {
+          action_name: string
+          created_at: string | null
+          deal_state: string
+          id: string
+          order_position: number | null
+          pipeline_id: string
+          target_column_id: string
+          target_pipeline_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_name: string
+          created_at?: string | null
+          deal_state: string
+          id?: string
+          order_position?: number | null
+          pipeline_id: string
+          target_column_id: string
+          target_pipeline_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_name?: string
+          created_at?: string | null
+          deal_state?: string
+          id?: string
+          order_position?: number | null
+          pipeline_id?: string
+          target_column_id?: string
+          target_pipeline_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_actions_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_actions_target_column_id_fkey"
+            columns: ["target_column_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_actions_target_pipeline_id_fkey"
+            columns: ["target_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_cards: {
         Row: {
           column_id: string
