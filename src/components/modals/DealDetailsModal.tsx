@@ -430,10 +430,9 @@ export function DealDetailsModal({
       console.log('📋 Buscando atividades para contact_id:', contactId, 'card_id:', selectedCardId);
       
       // Buscar atividades vinculadas AO CARD ESPECÍFICO ou sem vínculo (globais)
-      const {
-        data,
-        error
-      } = await supabase.from('activities')
+      // EXCLUINDO atividades de outros cards
+      const { data: allContactActivities, error } = await supabase
+        .from('activities')
         .select(`
           id,
           type,
@@ -446,8 +445,18 @@ export function DealDetailsModal({
           pipeline_card_id
         `)
         .eq('contact_id', contactId)
-        .or(`pipeline_card_id.eq.${selectedCardId},pipeline_card_id.is.null`)
         .order('scheduled_for', { ascending: true });
+        
+      if (error) throw error;
+      
+      // Filtrar no frontend para garantir isolamento correto
+      const data = allContactActivities?.filter(activity => {
+        // Incluir apenas atividades:
+        // 1. Vinculadas especificamente a este card
+        // 2. Globais (sem vínculo a nenhum card)
+        return activity.pipeline_card_id === selectedCardId || 
+               activity.pipeline_card_id === null;
+      }) || [];
         
       if (error) throw error;
       
