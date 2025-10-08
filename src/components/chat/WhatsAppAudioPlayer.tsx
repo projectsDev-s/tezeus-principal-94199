@@ -82,57 +82,74 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
 
   // Desenha a waveform com cores dinâmicas baseadas no progresso
   useEffect(() => {
+    const drawWaveform = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const barWidth = 3;
+      const gap = 2;
+      const barCount = waveformBars.length;
+      const progress = duration > 0 ? currentTime / duration : 0;
+
+      // Limpa o canvas
+      ctx.clearRect(0, 0, width, height);
+
+      // Desenha as barrinhas
+      waveformBars.forEach((amplitude, index) => {
+        const x = index * (barWidth + gap);
+        const barHeight = amplitude * height;
+        const y = (height - barHeight) / 2;
+        
+        // Calcula se essa barra já foi tocada
+        const barProgress = index / barCount;
+        const isPlayed = barProgress < progress;
+        
+        // Cor: PRETO se já tocou, CINZA CLARO se não tocou
+        if (isPlayed) {
+          ctx.fillStyle = '#000000';  // Preto total
+        } else {
+          ctx.fillStyle = '#D1D5DB';  // Cinza claro
+        }
+        
+        // Desenha a barra (retângulo com cantos arredondados)
+        const radius = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + barWidth - radius, y);
+        ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
+        ctx.lineTo(x + barWidth, y + barHeight - radius);
+        ctx.quadraticCurveTo(x + barWidth, y + barHeight, x + barWidth - radius, y + barHeight);
+        ctx.lineTo(x + radius, y + barHeight);
+        ctx.quadraticCurveTo(x, y + barHeight, x, y + barHeight - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Desenha UM pontinho branco na posição atual
+      if (progress > 0 && progress < 1) {
+        const dotX = progress * width;
+        const dotY = height / 2;
+        
+        // Círculo branco com borda preta
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    };
+
     drawWaveform();
   }, [currentTime, duration, waveformBars]);
-
-  const drawWaveform = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const barWidth = 3;
-    const gap = 2;
-    const barCount = waveformBars.length;
-    const progress = duration > 0 ? currentTime / duration : 0;
-
-    ctx.clearRect(0, 0, width, height);
-
-    // Desenha as barrinhas
-    waveformBars.forEach((amplitude, index) => {
-      const x = index * (barWidth + gap);
-      const barHeight = amplitude * height;
-      const y = (height - barHeight) / 2;
-      
-      const isPlayed = index / barCount <= progress;
-      
-      // Cor: preto escuro se já tocou, cinza claro se não tocou
-      ctx.fillStyle = isPlayed 
-        ? '#1f1f1f'  // Preto escuro
-        : 'rgba(156, 163, 175, 0.4)';  // Cinza claro
-      
-      ctx.roundRect(x, y, barWidth, barHeight, 1.5);
-      ctx.fill();
-    });
-
-    // Desenha UM pontinho só na posição atual do progresso
-    if (progress > 0 && duration > 0) {
-      const dotX = progress * width;
-      const dotY = height / 2;
-      
-      // Círculo branco com borda
-      ctx.beginPath();
-      ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'white';
-      ctx.fill();
-      ctx.strokeStyle = '#1f1f1f';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  };
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
