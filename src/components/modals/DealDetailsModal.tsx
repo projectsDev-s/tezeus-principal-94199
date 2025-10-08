@@ -764,7 +764,7 @@ export function DealDetailsModal({
       <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0 flex flex-col", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
         {/* Header */}
         <DialogHeader className={cn("px-6 py-4 border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             <Button size="icon" variant="ghost" onClick={onClose} className={cn("h-8 w-8", isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600")}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -821,21 +821,21 @@ export function DealDetailsModal({
               </div>
             </div>
             
-            <div className="flex-1" />
-
-            {/* Botões de ações dinâmicas */}
-            <div className="flex gap-2">
-              {pipelineActions.map((action) => (
-                <Button
-                  key={action.id}
-                  size="sm"
-                  variant={action.deal_state === 'Ganho' ? 'default' : 'destructive'}
-                  onClick={() => executeAction(action)}
-                  className={action.deal_state === 'Ganho' ? 'bg-green-600 hover:bg-green-700' : ''}
-                >
-                  {action.action_name}
-                </Button>
-              ))}
+            {/* Botões Ganho e Perda no canto direito */}
+            <div className="ml-auto flex gap-2">
+              {pipelineActions
+                .filter(action => action.deal_state === 'Ganho' || action.deal_state === 'Perda')
+                .map((action) => (
+                  <Button
+                    key={action.id}
+                    size="sm"
+                    variant={action.deal_state === 'Ganho' ? 'default' : 'destructive'}
+                    onClick={() => executeAction(action)}
+                    className={action.deal_state === 'Ganho' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+                  >
+                    {action.deal_state}
+                  </Button>
+                ))}
             </div>
           </div>
         </DialogHeader>
