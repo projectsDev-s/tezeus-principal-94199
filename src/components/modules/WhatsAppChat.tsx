@@ -1382,14 +1382,14 @@ export function WhatsAppChat({
                   </Button>
                 </div>}
               
-              <div className="space-y-4">
+                <div className="space-y-4">
                 {messages.map(message => <div 
                     key={message.id} 
                     className={cn(
                       "flex items-start gap-3 max-w-[80%] relative",
                       message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto",
                       selectionMode && "cursor-pointer",
-                      selectedMessages.has(message.id) && "ring-2 ring-primary rounded-lg"
+                      selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
                     )}
                     onClick={() => selectionMode && toggleMessageSelection(message.id)}
                   >
