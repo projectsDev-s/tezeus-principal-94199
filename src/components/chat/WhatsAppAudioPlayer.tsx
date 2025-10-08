@@ -33,11 +33,13 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isPlayerMode, setIsPlayerMode] = useState(false); // Controla se mostra avatar ou botão de velocidade
   
   // Waveform real do WhatsApp - usa metadata.waveform se disponível
   const [waveformBars] = useState(() => {
@@ -52,6 +54,23 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
   });
 
   const isOutgoing = senderType === 'agent';
+
+  // Detecta cliques fora do componente para voltar ao modo inicial
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsPlayerMode(false);
+      }
+    };
+
+    if (isPlayerMode) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isPlayerMode]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -188,6 +207,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       audio.pause();
     } else {
       audio.play();
+      setIsPlayerMode(true); // Ativa modo player quando apertar play
     }
     setIsPlaying(!isPlaying);
   };
@@ -248,12 +268,15 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       </div>
 
       {/* Main Container */}
-      <div className={cn(
-        "rounded-lg p-2 max-w-[340px] relative",
-        isOutgoing 
-          ? "bg-primary/10 ml-auto" 
-          : "bg-secondary"
-      )}>
+      <div 
+        ref={containerRef}
+        className={cn(
+          "rounded-lg p-2 max-w-[340px] relative",
+          isOutgoing 
+            ? "bg-primary/10 ml-auto" 
+            : "bg-secondary"
+        )}
+      >
         <audio ref={audioRef} src={audioUrl} preload="metadata" />
         
         <div className="flex items-center gap-2">
@@ -289,37 +312,41 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
             </div>
           </div>
 
-          {/* Speed Control */}
-          <button
-            onClick={cycleSpeed}
-            className={cn(
-              "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
-              isOutgoing
-                ? "bg-primary/20 text-primary-foreground hover:bg-primary/30"
-                : "bg-muted text-foreground hover:bg-muted/80"
-            )}
-          >
-            {playbackSpeed}×
-          </button>
+          {/* Speed Control (aparece só no modo player) */}
+          {isPlayerMode && (
+            <button
+              onClick={cycleSpeed}
+              className={cn(
+                "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
+                isOutgoing
+                  ? "bg-primary/20 text-primary-foreground hover:bg-primary/30"
+                  : "bg-muted text-foreground hover:bg-muted/80"
+              )}
+            >
+              {playbackSpeed}×
+            </button>
+          )}
 
-          {/* Avatar and PTT Badge */}
-          <div className="flex-shrink-0 relative">
-            <Avatar className="w-11 h-11">
-              <AvatarImage src={senderAvatar} alt={senderName} />
-              <AvatarFallback className="bg-muted text-xs">
-                {getInitials(senderName)}
-              </AvatarFallback>
-            </Avatar>
-            {/* PTT Badge */}
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-              <svg viewBox="0 0 19 26" height="14" width="10" className="text-primary-foreground">
-                <path 
-                  fill="currentColor"
-                  d="M9.367,15.668c1.527,0,2.765-1.238,2.765-2.765V5.265c0-1.527-1.238-2.765-2.765-2.765 S6.603,3.738,6.603,5.265v7.638C6.603,14.43,7.84,15.668,9.367,15.668z M14.655,12.91h-0.3c-0.33,0-0.614,0.269-0.631,0.598 c0,0,0,0-0.059,0.285c-0.41,1.997-2.182,3.505-4.298,3.505c-2.126,0-3.904-1.521-4.304-3.531C5.008,13.49,5.008,13.49,5.008,13.49 c-0.016-0.319-0.299-0.579-0.629-0.579h-0.3c-0.33,0-0.591,0.258-0.579,0.573c0,0,0,0,0.04,0.278 c0.378,2.599,2.464,4.643,5.076,4.978v3.562c0,0.33,0.27,0.6,0.6,0.6h0.3c0.33,0,0.6-0.27,0.6-0.6V18.73 c2.557-0.33,4.613-2.286,5.051-4.809c0.057-0.328,0.061-0.411,0.061-0.411C15.243,13.18,14.985,12.91,14.655,12.91z"
-                />
-              </svg>
+          {/* Avatar and PTT Badge (aparece só quando NÃO está no modo player) */}
+          {!isPlayerMode && (
+            <div className="flex-shrink-0 relative">
+              <Avatar className="w-11 h-11">
+                <AvatarImage src={senderAvatar} alt={senderName} />
+                <AvatarFallback className="bg-muted text-xs">
+                  {getInitials(senderName)}
+                </AvatarFallback>
+              </Avatar>
+              {/* PTT Badge */}
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <svg viewBox="0 0 19 26" height="14" width="10" className="text-primary-foreground">
+                  <path 
+                    fill="currentColor"
+                    d="M9.367,15.668c1.527,0,2.765-1.238,2.765-2.765V5.265c0-1.527-1.238-2.765-2.765-2.765 S6.603,3.738,6.603,5.265v7.638C6.603,14.43,7.84,15.668,9.367,15.668z M14.655,12.91h-0.3c-0.33,0-0.614,0.269-0.631,0.598 c0,0,0,0-0.059,0.285c-0.41,1.997-2.182,3.505-4.298,3.505c-2.126,0-3.904-1.521-4.304-3.531C5.008,13.49,5.008,13.49,5.008,13.49 c-0.016-0.319-0.299-0.579-0.629-0.579h-0.3c-0.33,0-0.591,0.258-0.579,0.573c0,0,0,0,0.04,0.278 c0.378,2.599,2.464,4.643,5.076,4.978v3.562c0,0.33,0.27,0.6,0.6,0.6h0.3c0.33,0,0.6-0.27,0.6-0.6V18.73 c2.557-0.33,4.613-2.286,5.051-4.809c0.057-0.328,0.061-0.411,0.061-0.411C15.243,13.18,14.985,12.91,14.655,12.91z"
+                  />
+                </svg>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer: Timestamp and Status */}
