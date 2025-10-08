@@ -21,12 +21,12 @@ export function MessageContextMenu({
         <Button
           variant="ghost"
           size="sm"
-          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1 h-6 w-6 p-0"
+          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1 h-6 w-6 p-0 z-[999]"
         >
           <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48 bg-popover">
+      <DropdownMenuContent align="end" className="w-48 bg-popover z-[999]">
         <DropdownMenuItem onClick={onForward} className="cursor-pointer">
           <Forward className="h-4 w-4 mr-2" />
           Encaminhar
