@@ -307,8 +307,20 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
               onClick={handleProgressClick}
               style={{ width: '200px', height: '28px' }}
             />
-            <div className="absolute -bottom-4 left-0 text-xs text-muted-foreground">
-              <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+            <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+              <span>{formatTime(currentTime)}</span>
+              <span className="flex items-center gap-1">
+                {formatTime(duration)}
+                {timestamp && (
+                  <>
+                    <span className="mx-1">•</span>
+                    <span>{new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </>
+                )}
+                {isOutgoing && messageStatus && (
+                  <MessageStatusIndicator status={messageStatus} className="ml-1" />
+                )}
+              </span>
             </div>
           </div>
 
@@ -329,8 +341,8 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
 
           {/* Avatar and PTT Badge (aparece só quando NÃO está no modo player) */}
           {!isPlayerMode && (
-            <div className="flex-shrink-0 relative">
-              <Avatar className="w-11 h-11">
+            <div className="flex-shrink-0 relative self-stretch flex items-center">
+              <Avatar className="w-12 h-12">
                 <AvatarImage src={senderAvatar} alt={senderName} />
                 <AvatarFallback className="bg-muted text-xs">
                   {getInitials(senderName)}
@@ -346,16 +358,6 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
                 </svg>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Footer: Timestamp and Status */}
-        <div className="flex items-center justify-end gap-1 mt-1 text-xs text-muted-foreground">
-          {timestamp && (
-            <span>{new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-          )}
-          {isOutgoing && messageStatus && (
-            <MessageStatusIndicator status={messageStatus} />
           )}
         </div>
       </div>
