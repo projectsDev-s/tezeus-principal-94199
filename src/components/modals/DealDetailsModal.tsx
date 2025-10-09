@@ -1010,9 +1010,9 @@ export function DealDetailsModal({
                         {/* Etapas */}
                         {pipelineSteps.map((step, index) => {
                           const currentStepIndex = pipelineSteps.findIndex(s => s.isActive);
-                          const isCompleted = currentStepIndex >= 0 && index < currentStepIndex;
                           const isActive = index === currentStepIndex;
                           const isFuture = currentStepIndex >= 0 && index > currentStepIndex;
+                          const isPast = currentStepIndex >= 0 && index < currentStepIndex;
                           
                           return (
                             <div 
@@ -1020,30 +1020,23 @@ export function DealDetailsModal({
                               className="flex flex-col items-center justify-start z-20"
                               style={{ flex: '1' }}
                             >
-                              {/* Círculo - centralizado na linha */}
                               <div 
                                 className={cn(
                                   "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all duration-300",
-                                  isCompleted && "bg-green-500 border-green-500 text-white",
                                   isActive && "bg-yellow-400 border-yellow-400 text-black",
-                                  isFuture && "bg-white border-gray-300 text-gray-500"
+                                  (isPast || isFuture) && "bg-white border-gray-300 text-gray-500",
+                                  isDarkMode && (isPast || isFuture) && "bg-gray-700 border-gray-600 text-gray-400"
                                 )}
                               >
-                                {isCompleted ? (
-                                  <Check className="w-5 h-5" />
-                                ) : (
-                                  <span className="font-bold">{index + 1}</span>
-                                )}
+                                <span className="font-bold">{index + 1}</span>
                               </div>
                               
-                              {/* Texto - centralizado abaixo do círculo */}
                               <div className="mt-3 text-center" style={{ maxWidth: '90px' }}>
                                 <p 
                                   className={cn(
                                     "text-xs font-medium leading-tight",
                                     isActive && "text-yellow-600 font-bold",
-                                    isCompleted && "text-green-600 font-semibold", 
-                                    isFuture && "text-gray-500"
+                                    (isPast || isFuture) && "text-gray-500"
                                   )}
                                 >
                                   {step.name}
