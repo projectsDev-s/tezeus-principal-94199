@@ -979,50 +979,6 @@ export function DealDetailsModal({
                 </div>
               </div>
 
-              {/* Timeline de Evolução do Negócio */}
-              {cardTimeline.length > 0 && (
-                <div className="space-y-3">
-                  <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                    Histórico de Evolução
-                  </label>
-                  <div className={cn(
-                    "space-y-3 p-4 rounded-lg border",
-                    isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-gray-50 border-gray-200"
-                  )}>
-                    {cardTimeline.map((event, index) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full mt-1.5 flex-shrink-0",
-                          index === cardTimeline.length - 1 
-                            ? "bg-yellow-400" 
-                            : isDarkMode ? "bg-gray-500" : "bg-gray-400"
-                        )} />
-                        <div className="flex-1">
-                          <p className={cn(
-                            "text-sm font-medium",
-                            isDarkMode ? "text-white" : "text-gray-900"
-                          )}>
-                            {event.action}
-                          </p>
-                          {event.column && (
-                            <p className={cn("text-xs mt-0.5", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              <span 
-                                className="inline-block w-2 h-2 rounded-full mr-1.5"
-                                style={{ backgroundColor: event.column.color }}
-                              />
-                              {event.column.name}
-                            </p>
-                          )}
-                          <p className={cn("text-xs mt-1", isDarkMode ? "text-gray-500" : "text-gray-500")}>
-                            {format(new Date(event.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Pipeline Timeline - Baseado na imagem de referência */}
               <div className="space-y-6">
                 {isLoadingColumns ? (
@@ -1057,7 +1013,7 @@ export function DealDetailsModal({
                     
                     {/* Informação da posição atual */}
                     {selectedColumnId && (
-                      <div className={cn("mb-4 p-3 rounded-lg border", 
+                      <div className={cn("mb-4 p-3 rounded-lg border",
                         isDarkMode 
                           ? "bg-yellow-900/30 border-yellow-700 text-yellow-300" 
                           : "bg-yellow-50 border-yellow-200 text-yellow-800"
