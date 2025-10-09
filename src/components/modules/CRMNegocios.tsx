@@ -792,10 +792,10 @@ export function CRMNegocios({
     }
 
     try {
-      // 1. Buscar o contato para obter o phone
+      // 1. Buscar dados completos do contato
       const { data: contact, error: contactError } = await supabase
         .from('contacts')
-        .select('phone')
+        .select('id, name, phone, profile_image_url')
         .eq('id', business.lead)
         .single();
 
@@ -803,9 +803,7 @@ export function CRMNegocios({
         throw new Error('Contato não encontrado ou sem telefone');
       }
 
-      // 2. Permitir múltiplos cards para o mesmo contato no pipeline
-
-      // 3. Verificar se já existe conversa ativa (para reusar se existir)
+      // 2. Verificar se já existe conversa ativa (para reusar se existir)
       const { data: existingConversations, error: convError } = await supabase
         .from('conversations')
         .select('id, status')
@@ -820,7 +818,7 @@ export function CRMNegocios({
       // Se existe conversa, reusar. Se não existe, criar nova
       let conversationId = existingConversations?.[0]?.id;
 
-      // 4. Criar conversa apenas se não existe
+      // 3. Criar conversa apenas se não existe
       if (!conversationId) {
         const { data: conversationData, error: conversationError } = await supabase.functions.invoke(
           'create-quick-conversation',
@@ -836,23 +834,29 @@ export function CRMNegocios({
         conversationId = conversationData?.conversationId;
       }
 
-      // 5. Validar se a coluna selecionada existe
+      // 4. Validar se a coluna selecionada existe
       const targetColumn = columns.find(col => col.id === business.column);
       
       if (!targetColumn) {
         throw new Error('Coluna selecionada não encontrada');
       }
 
-      // 6. Criar o card no pipeline na coluna selecionada
+      // 5. Criar o card no pipeline com dados do contato
       await createCard({
         column_id: business.column,
         contact_id: business.lead,
         conversation_id: conversationId,
         responsible_user_id: business.responsible,
         value: business.value,
-        title: `Novo negócio`,
-        description: 'Card criado através do formulário de negócios'
-      });
+        title: contact.name || 'Novo negócio',
+        description: 'Card criado através do formulário de negócios',
+        // Passar dados do contato para renderização otimista
+        contact: {
+          id: contact.id,
+          name: contact.name,
+          profile_image_url: contact.profile_image_url
+        }
+      } as any);
 
       toast({
         title: "Sucesso",

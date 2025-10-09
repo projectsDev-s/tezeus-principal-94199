@@ -271,30 +271,56 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   const createCard = useCallback(async (cardData: Partial<PipelineCard>) => {
     if (!getHeaders || !selectedPipeline) throw new Error('Requirements not met');
 
+    // Criar card otimista imediatamente no front-end
+    const tempCardId = crypto.randomUUID();
+    const optimisticCard: PipelineCard = {
+      id: tempCardId,
+      pipeline_id: selectedPipeline.id,
+      column_id: cardData.column_id!,
+      conversation_id: cardData.conversation_id || null,
+      contact_id: cardData.contact_id || null,
+      title: cardData.title || 'Novo card',
+      description: cardData.description || null,
+      value: cardData.value || 0,
+      status: 'aberto',
+      tags: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      responsible_user_id: cardData.responsible_user_id,
+      // Incluir dados do contato se fornecidos
+      contact: (cardData as any).contact || null
+    };
+
+    // Adicionar card otimista imediatamente
+    setCards(prev => [optimisticCard, ...prev]);
+
     try {
-      console.log('🎯 Iniciando criação de card:', {
+      console.log('🎯 Criando card no backend:', {
         pipeline_id: selectedPipeline.id,
-        cardData,
-        hasHeaders: !!getHeaders
+        cardData
       });
+
+      // Remover dados extras que não devem ir para o backend
+      const { contact, ...backendCardData } = cardData as any;
 
       const { data, error } = await supabase.functions.invoke('pipeline-management/cards', {
         method: 'POST',
         headers: getHeaders,
         body: {
           pipeline_id: selectedPipeline.id,
-          ...cardData
+          ...backendCardData
         }
       });
 
-      console.log('📥 Resposta da edge function:', { data, error });
-
       if (error) {
-        console.error('❌ Erro retornado pela edge function:', error);
+        console.error('❌ Erro ao criar card no backend:', error);
+        // Remover card otimista em caso de erro
+        setCards(prev => prev.filter(c => c.id !== tempCardId));
         throw error;
       }
 
-      setCards(prev => [...prev, data]);
+      // Substituir card temporário pelo real retornado do backend
+      setCards(prev => prev.map(c => c.id === tempCardId ? data : c));
       
       toast({
         title: "Sucesso",
@@ -303,12 +329,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       return data;
     } catch (error) {
-      console.error('❌ Error creating card (full details):', {
-        error,
-        errorType: typeof error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined,
-      });
+      console.error('❌ Error creating card:', error);
       toast({
         title: "Erro",
         description: "Erro ao criar card",
