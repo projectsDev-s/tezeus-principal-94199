@@ -140,6 +140,8 @@ serve(async (req) => {
             console.log(`📊 [${requestId}] Updated message data:`, updatedMessage);
           } else {
             console.log(`⚠️ [${requestId}] Message not found for ACK update: ${evolutionMessageId}`);
+            console.log(`🔍 [${requestId}] Searched for message with external_id: ${evolutionMessageId}`);
+            console.log(`💡 [${requestId}] This could happen if the message was just sent and external_id hasn't been updated yet`);
           }
         }
       }
