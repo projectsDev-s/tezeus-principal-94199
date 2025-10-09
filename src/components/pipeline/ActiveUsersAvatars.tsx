@@ -19,18 +19,13 @@ interface ActiveUsersAvatarsProps {
   className?: string;
 }
 
-export function ActiveUsersAvatars({ 
-  users, 
-  isLoading, 
-  maxVisible = 5,
-  className 
-}: ActiveUsersAvatarsProps) {
+export function ActiveUsersAvatars({ users, isLoading, maxVisible = 5, className }: ActiveUsersAvatarsProps) {
   // Generate initials from user name
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .substring(0, 2)
       .toUpperCase();
   };
@@ -38,14 +33,14 @@ export function ActiveUsersAvatars({
   // Different colors for different users
   const getAvatarColor = (index: number) => {
     const colors = [
-      'bg-blue-500 text-white',
-      'bg-green-500 text-white',
-      'bg-purple-500 text-white',
-      'bg-orange-500 text-white',
-      'bg-pink-500 text-white',
-      'bg-indigo-500 text-white',
-      'bg-red-500 text-white',
-      'bg-teal-500 text-white'
+      "bg-blue-500 text-white",
+      "bg-green-500 text-white",
+      "bg-purple-500 text-white",
+      "bg-orange-500 text-white",
+      "bg-pink-500 text-white",
+      "bg-indigo-500 text-white",
+      "bg-red-500 text-white",
+      "bg-teal-500 text-white",
     ];
     return colors[index % colors.length];
   };
@@ -74,10 +69,8 @@ export function ActiveUsersAvatars({
           <Tooltip key={user.id}>
             <TooltipTrigger asChild>
               <div className="relative">
-                <Avatar className="w-8 h-8 border-2 border-background hover:z-10 transition-transform hover:scale-110 cursor-pointer">
-                  {user.avatar ? (
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                  ) : null}
+                <Avatar className="w-10 h-10 border-2 border-background hover:z-10 transition-transform hover:scale-110 cursor-pointer">
+                  {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
                   <AvatarFallback className={cn("text-xs font-medium", getAvatarColor(index))}>
                     {getInitials(user.name)}
                   </AvatarFallback>
@@ -93,13 +86,13 @@ export function ActiveUsersAvatars({
               <div className="text-center">
                 <p className="font-medium">{user.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {user.dealCount} negócio{user.dealCount > 1 ? 's' : ''} ativo{user.dealCount > 1 ? 's' : ''}
+                  {user.dealCount} negócio{user.dealCount > 1 ? "s" : ""} ativo{user.dealCount > 1 ? "s" : ""}
                 </p>
               </div>
             </TooltipContent>
           </Tooltip>
         ))}
-        
+
         {remainingCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -111,7 +104,7 @@ export function ActiveUsersAvatars({
             </TooltipTrigger>
             <TooltipContent>
               <p className="text-xs">
-                Mais {remainingCount} usuário{remainingCount > 1 ? 's' : ''} com negócios ativos
+                Mais {remainingCount} usuário{remainingCount > 1 ? "s" : ""} com negócios ativos
               </p>
             </TooltipContent>
           </Tooltip>
