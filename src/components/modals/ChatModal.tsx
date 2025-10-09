@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Send, Paperclip, Mic, Plus, Bot, X, Square } from 'lucide-react';
+import { Send, Paperclip, Mic, Plus, Bot, X, Square, Check } from 'lucide-react';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { MediaViewer } from '@/components/chat/MediaViewer';
 import { AddTagButton } from '@/components/chat/AddTagButton';
@@ -69,7 +69,10 @@ export function ChatModal({
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const [realContactId, setRealContactId] = useState<string | null>(contactId || null);
   const [quickItemsModalOpen, setQuickItemsModalOpen] = useState(false);
   const [contactPanelOpen, setContactPanelOpen] = useState(false);
@@ -120,8 +123,21 @@ export function ChatModal({
       loadInitial(conversationId);
     } else if (isOpen) {
       console.warn('⚠️ ChatModal aberto mas conversationId inválido:', conversationId);
+    } else if (!isOpen) {
+      // Cleanup ao fechar modal
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      
+      if (isRecording && mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+        setRecordingTime(0);
+      }
     }
-  }, [isOpen, conversationId, loadInitial]);
+  }, [isOpen, conversationId, loadInitial, isRecording]);
 
   // Debug das mensagens carregadas
   useEffect(() => {
@@ -165,77 +181,109 @@ export function ChatModal({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: BlobPart[] = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-      recorder.ondataavailable = (e) => chunks.push(e.data);
-      recorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        const file = new File([blob], `audio-${Date.now()}.webm`, { type: 'audio/webm' });
-        await uploadAndSendAudio(file);
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
       };
 
-      recorder.start();
-      setMediaRecorder(recorder);
+      mediaRecorder.start();
       setIsRecording(true);
+      
+      // Iniciar timer
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     } catch (error) {
-      console.error('Erro ao iniciar gravação:', error);
+      console.error('Erro ao acessar microfone:', error);
       toast({
-        title: "Erro",
+        title: "Erro ao gravar áudio",
         description: "Não foi possível acessar o microfone",
         variant: "destructive"
       });
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
       setIsRecording(false);
-      setMediaRecorder(null);
+      setRecordingTime(0);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      
+      toast({
+        title: "Gravação cancelada",
+        description: "O áudio não foi enviado",
+      });
     }
   };
 
-  const uploadAndSendAudio = async (file: File) => {
-    try {
-      // Upload para storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `messages/${fileName}`;
+  const stopRecording = async () => {
+    if (!mediaRecorderRef.current || !isRecording) return;
 
-      const { error: uploadError } = await supabase.storage
-        .from('whatsapp-media')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('whatsapp-media')
-        .getPublicUrl(filePath);
-
-      // Enviar áudio via test-send-msg
-      const { data, error } = await supabase.functions.invoke('test-send-msg', {
-        body: {
-          conversation_id: conversationId,
-          content: '[ÁUDIO]',
-          message_type: 'audio',
-          sender_type: 'agent',
-          file_url: publicUrl,
-          file_name: file.name
+    return new Promise<void>((resolve) => {
+      mediaRecorderRef.current!.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        mediaRecorderRef.current!.stream.getTracks().forEach(track => track.stop());
+        
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
         }
-      });
+        
+        await sendAudioMessage(audioBlob);
+        
+        setIsRecording(false);
+        setRecordingTime(0);
+        audioChunksRef.current = [];
+        
+        resolve();
+      };
 
-      if (error) throw error;
+      mediaRecorderRef.current!.stop();
+    });
+  };
 
-      // Recarregar mensagens
-      loadInitial(conversationId);
+  const sendAudioMessage = async (audioBlob: Blob) => {
+    if (!conversationId) return;
+    
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = async () => {
+        const base64Audio = (reader.result as string).split(',')[1];
+
+        const { data, error } = await supabase.functions.invoke('test-send-msg', {
+          body: {
+            conversation_id: conversationId,
+            content: '[AUDIO]',
+            message_type: 'audio',
+            file_data: base64Audio,
+            file_name: `audio_${Date.now()}.webm`,
+          }
+        });
+
+        if (error) throw error;
+
+        loadInitial(conversationId);
+      };
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível enviar o áudio",
+        title: "Erro ao enviar áudio",
+        description: "Não foi possível enviar o áudio. Tente novamente.",
         variant: "destructive"
       });
     }
@@ -687,35 +735,73 @@ export function ChatModal({
 
           {/* Input area funcional */}
           <div className="p-4 border-t border-border">
-            <div className="flex items-end gap-2">
-              {/* Upload de mídia funcional */}
-              <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
-                if (!conversationId) return;
+            {isRecording ? (
+              <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Gravando...
+                  </span>
+                </div>
                 
-                try {
-                  const { data, error } = await supabase.functions.invoke('test-send-msg', {
-                    body: {
-                      conversation_id: conversationId,
-                      content: `[${mediaType.toUpperCase()}]`,
-                      message_type: mediaType,
-                      sender_type: 'agent',
-                      file_url: fileUrl,
-                      file_name: file.name
-                    }
-                  });
+                <div className="flex-1 text-center">
+                  <span className="text-lg font-mono font-semibold text-gray-900 dark:text-white">
+                    {String(Math.floor(recordingTime / 60)).padStart(2, '0')}:
+                    {String(recordingTime % 60).padStart(2, '0')}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={cancelRecording}
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                    title="Cancelar gravação"
+                  >
+                    <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </Button>
+                  
+                  <Button
+                    onClick={stopRecording}
+                    size="icon"
+                    className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600"
+                    title="Enviar áudio"
+                  >
+                    <Check className="w-5 h-5 text-white" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-end gap-2">
+                {/* Upload de mídia funcional */}
+                <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
+                  if (!conversationId) return;
+                  
+                  try {
+                    const { data, error } = await supabase.functions.invoke('test-send-msg', {
+                      body: {
+                        conversation_id: conversationId,
+                        content: `[${mediaType.toUpperCase()}]`,
+                        message_type: mediaType,
+                        sender_type: 'agent',
+                        file_url: fileUrl,
+                        file_name: file.name
+                      }
+                    });
 
-                  if (error) throw error;
+                    if (error) throw error;
 
-                  loadInitial(conversationId);
-                } catch (error) {
-                  console.error('Erro ao enviar arquivo:', error);
-                  toast({
-                    title: "Erro",
-                    description: "Não foi possível enviar o arquivo",
-                    variant: "destructive"
-                  });
-                }
-              }} />
+                    loadInitial(conversationId);
+                  } catch (error) {
+                    console.error('Erro ao enviar arquivo:', error);
+                    toast({
+                      title: "Erro",
+                      description: "Não foi possível enviar o arquivo",
+                      variant: "destructive"
+                    });
+                  }
+                }} />
               
               {/* Botão mensagens rápidas */}
               <Button 
@@ -746,14 +832,14 @@ export function ChatModal({
                 />
               </div>
               
-              {/* Botão gravação de áudio funcional */}
+              {/* Botão gravação de áudio */}
               <Button 
-                onClick={isRecording ? stopRecording : startRecording}
+                onClick={startRecording}
                 size="icon"
-                variant={isRecording ? 'destructive' : 'secondary'} 
-                title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+                variant="secondary" 
+                title="Gravar áudio"
               >
-                {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                <Mic className="w-4 h-4" />
               </Button>
               
               {/* Botão enviar */}
@@ -765,6 +851,7 @@ export function ChatModal({
                 <Send className="w-4 h-4" />
               </Button>
             </div>
+            )}
           </div>
         </div>
       </DialogContent>

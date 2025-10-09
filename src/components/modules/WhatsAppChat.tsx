@@ -29,7 +29,7 @@ import { ContactTags } from "@/components/chat/ContactTags";
 import { MessageContextMenu } from "@/components/chat/MessageContextMenu";
 import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
 import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -194,6 +194,8 @@ export function WhatsAppChat({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [quickItemsModalOpen, setQuickItemsModalOpen] = useState(false);
   
   // Estados para modo de seleção e encaminhamento
@@ -634,121 +636,159 @@ export function WhatsAppChat({
           audioChunksRef.current.push(e.data);
         }
       };
-      mediaRecorder.onstop = async () => {
-        try {
-          const audioBlob = new Blob(audioChunksRef.current, {
-            type: 'audio/webm'
-          });
-          const fileExt = 'webm';
-          const fileName = `audio_${Date.now()}.${fileExt}`;
-          const filePath = `messages/${fileName}`;
-          const {
-            error: uploadError
-          } = await supabase.storage.from('whatsapp-media').upload(filePath, audioBlob, {
-            contentType: 'audio/webm'
-          });
-          if (uploadError) {
-            throw uploadError;
-          }
-          const {
-            data: {
-              publicUrl
-            }
-          } = supabase.storage.from('whatsapp-media').getPublicUrl(filePath);
-          if (selectedConversation) {
-            // ✅ Enviar áudio usando nova estrutura
-            const optimisticMessage = {
-              id: `temp-audio-${Date.now()}`,
-              conversation_id: selectedConversation.id,
-              content: messageText.trim() || '[AUDIO]',
-              message_type: 'audio' as const,
-              sender_type: 'agent' as const,
-              sender_id: user?.id,
-              file_url: publicUrl,
-              file_name: fileName,
-              created_at: new Date().toISOString(),
-              status: 'sending' as const,
-              workspace_id: selectedWorkspace?.workspace_id || ''
-            };
-            addMessage(optimisticMessage);
-            setMessageText('');
-            
-            // ✅ Enviar áudio via test-send-msg
-            try {
-              const { data: sendResult, error: sendError } = await supabase.functions.invoke('test-send-msg', {
-                body: {
-                  conversation_id: selectedConversation.id,
-                  content: messageText.trim() || '[AUDIO]',
-                  message_type: 'audio',
-                  sender_id: user?.id,
-                  sender_type: 'agent',
-                  file_url: publicUrl,
-                  file_name: fileName
-                },
-                headers: {
-                  'x-system-user-id': user?.id || '',
-                  'x-workspace-id': selectedWorkspace?.workspace_id || '',
-                  'x-system-user-email': user?.email || ''
-                }
-              });
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      // Iniciar timer
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      toast({
+        title: "Erro ao gravar",
+        description: "Não foi possível acessar o microfone",
+        variant: "destructive"
+      });
+    }
+  };
 
-              if (sendError) {
-                console.error('❌ Erro ao enviar áudio:', sendError);
-                updateMessage(optimisticMessage.id, { status: 'failed' });
-                toast({
-                  title: "Erro ao enviar áudio",
-                  description: sendError.message,
-                  variant: "destructive"
-                });
-              } else {
-                console.log('✅ Áudio enviado com sucesso:', sendResult);
-                updateMessage(optimisticMessage.id, {
-                  status: 'sent',
-                  external_id: sendResult.external_id
-                });
-                toast({
-                  title: 'Áudio enviado',
-                  description: 'Seu áudio foi enviado com sucesso.'
-                });
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      setRecordingTime(0);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      
+      toast({
+        title: "Gravação cancelada",
+        description: "O áudio não foi enviado",
+      });
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!mediaRecorderRef.current || !isRecording) return;
+
+    mediaRecorderRef.current.onstop = async () => {
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: 'audio/webm'
+        });
+        
+        // Limpar stream
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Limpar intervalo do timer
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+        
+        const fileExt = 'webm';
+        const fileName = `audio_${Date.now()}.${fileExt}`;
+        const filePath = `messages/${fileName}`;
+        const {
+          error: uploadError
+        } = await supabase.storage.from('whatsapp-media').upload(filePath, audioBlob, {
+          contentType: 'audio/webm'
+        });
+        if (uploadError) {
+          throw uploadError;
+        }
+        const {
+          data: {
+            publicUrl
+          }
+        } = supabase.storage.from('whatsapp-media').getPublicUrl(filePath);
+        if (selectedConversation) {
+          const optimisticMessage = {
+            id: `temp-audio-${Date.now()}`,
+            conversation_id: selectedConversation.id,
+            content: messageText.trim() || '[AUDIO]',
+            message_type: 'audio' as const,
+            sender_type: 'agent' as const,
+            sender_id: user?.id,
+            file_url: publicUrl,
+            file_name: fileName,
+            created_at: new Date().toISOString(),
+            status: 'sending' as const,
+            workspace_id: selectedWorkspace?.workspace_id || ''
+          };
+          addMessage(optimisticMessage);
+          setMessageText('');
+          
+          try {
+            const { data: sendResult, error: sendError } = await supabase.functions.invoke('test-send-msg', {
+              body: {
+                conversation_id: selectedConversation.id,
+                content: messageText.trim() || '[AUDIO]',
+                message_type: 'audio',
+                sender_id: user?.id,
+                sender_type: 'agent',
+                file_url: publicUrl,
+                file_name: fileName
+              },
+              headers: {
+                'x-system-user-id': user?.id || '',
+                'x-workspace-id': selectedWorkspace?.workspace_id || '',
+                'x-system-user-email': user?.email || ''
               }
-            } catch (err) {
-              console.error('❌ Erro ao enviar áudio:', err);
+            });
+
+            if (sendError) {
+              console.error('❌ Erro ao enviar áudio:', sendError);
               updateMessage(optimisticMessage.id, { status: 'failed' });
               toast({
                 title: "Erro ao enviar áudio",
-                description: "Erro de conexão",
+                description: sendError.message,
                 variant: "destructive"
               });
+            } else {
+              console.log('✅ Áudio enviado com sucesso');
+              updateMessage(optimisticMessage.id, { 
+                status: 'sent',
+                id: sendResult?.message?.id || optimisticMessage.id
+              });
             }
+          } catch (err) {
+            console.error('Erro ao enviar áudio:', err);
+            updateMessage(optimisticMessage.id, { status: 'failed' });
+            toast({
+              title: "Erro ao enviar áudio",
+              description: "Erro de conexão",
+              variant: "destructive"
+            });
           }
-          stream.getTracks().forEach(t => t.stop());
-        } catch (err) {
-          console.error('Erro ao processar envio de áudio:', err);
-          toast({
-            title: 'Erro',
-            description: 'Não foi possível enviar o áudio.',
-            variant: 'destructive'
-          });
         }
-      };
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error('Erro ao iniciar gravação de áudio:', err);
-      toast({
-        title: 'Permissão necessária',
-        description: 'Autorize o acesso ao microfone para gravar áudio.',
-        variant: 'destructive'
-      });
-      setIsRecording(false);
-    }
-  };
-  const stopRecording = () => {
-    const mr = mediaRecorderRef.current;
-    if (mr && isRecording) {
-      mr.stop();
-      setIsRecording(false);
-    }
+        
+        setIsRecording(false);
+        setRecordingTime(0);
+        audioChunksRef.current = [];
+      } catch (error) {
+        console.error('Erro ao enviar áudio:', error);
+        toast({
+          title: "Erro ao enviar áudio",
+          description: "Tente novamente",
+          variant: "destructive"
+        });
+        setIsRecording(false);
+        setRecordingTime(0);
+      }
+    };
+
+    mediaRecorderRef.current.stop();
   };
 
   // Batch update profile images
@@ -1450,105 +1490,139 @@ export function WhatsAppChat({
 
             {/* Campo de entrada de mensagem */}
             <div className="p-4 border-t border-border relative">
-              <div className="flex items-end gap-2">
-            <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
-              if (!selectedConversation) return;
-              const caption = messageText.trim();
-
-              // ✅ Criar mensagem de mídia usando nova estrutura
-              const optimisticMessage = {
-                id: `temp-media-${Date.now()}`,
-                conversation_id: selectedConversation.id,
-                content: caption || `[${mediaType.toUpperCase()}]`,
-                message_type: mediaType as any,
-                sender_type: 'agent' as const,
-                sender_id: user?.id,
-                file_url: fileUrl,
-                file_name: file.name,
-                created_at: new Date().toISOString(),
-                status: 'sending' as const,
-                workspace_id: selectedWorkspace?.workspace_id || ''
-              };
-              addMessage(optimisticMessage);
-              if (caption) setMessageText('');
-
-              // 🚀 CRÍTICO: Enviar mídia para N8N via test-send-msg
-              try {
-                const {
-                  data: sendResult,
-                  error
-                } = await supabase.functions.invoke('test-send-msg', {
-                  body: {
-                    conversation_id: selectedConversation.id,
-                    content: caption || `[${mediaType.toUpperCase()}]`,
-                    message_type: mediaType,
-                    sender_id: user?.id,
-                    sender_type: 'agent',
-                    file_url: fileUrl,
-                    file_name: file.name
-                  },
-                  headers: {
-                    'x-system-user-id': user?.id || '',
-                    'x-workspace-id': selectedWorkspace?.workspace_id || '',
-                    'x-system-user-email': user?.email || ''
-                  }
-                });
-                if (error) {
-                  console.error('Erro ao enviar mídia:', error);
-                  toast({
-                    title: "Erro ao enviar mídia",
-                    description: error.message || "Erro desconhecido",
-                    variant: "destructive"
-                  });
-                  // Atualizar mensagem para erro
-                  updateMessage(optimisticMessage.id, {
-                    status: 'failed',
-                    content: `❌ ${optimisticMessage.content}`
-                  });
-                } else {
-                  console.log('✅ Mídia enviada com sucesso:', sendResult);
-                  // Atualizar mensagem para enviada
-                  updateMessage(optimisticMessage.id, {
-                    status: 'sent',
-                    external_id: sendResult.external_id
-                  });
-                }
-              } catch (err) {
-                console.error('Erro ao enviar mídia:', err);
-                toast({
-                  title: "Erro ao enviar mídia",
-                  description: "Erro de conexão",
-                  variant: "destructive"
-                });
-                updateMessage(optimisticMessage.id, {
-                  status: 'failed',
-                  content: `❌ ${optimisticMessage.content}`
-                });
-              }
-            }} />
-            
-            {/* Botão com ícone personalizado */}
-            <Button variant="ghost" size="sm" title="Mensagens Rápidas" onClick={() => setQuickItemsModalOpen(true)}>
-              <svg className="w-4 h-4" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                <circle cx="9" cy="9" r="4"></circle>
-                <path d="M9 15c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm7.76-9.64l-1.68 1.69c.84 1.18.84 2.71 0 3.89l1.68 1.69c2.02-2.02 2.02-5.07 0-7.27zM20.07 2l-1.63 1.63c2.77 3.02 2.77 7.56 0 10.74L20.07 16c3.9-3.89 3.91-9.95 0-14z"></path>
-              </svg>
-            </Button>
-                <div className="flex-1">
-                  <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyPress={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }} className="resize-none" />
+              {isRecording ? (
+                <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Gravando...
+                    </span>
+                  </div>
+                  
+                  <div className="flex-1 text-center">
+                    <span className="text-lg font-mono font-semibold text-gray-900 dark:text-white">
+                      {String(Math.floor(recordingTime / 60)).padStart(2, '0')}:
+                      {String(recordingTime % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={cancelRecording}
+                      size="icon"
+                      variant="ghost"
+                      className="h-10 w-10 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                      title="Cancelar gravação"
+                    >
+                      <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    </Button>
+                    
+                    <Button
+                      onClick={stopRecording}
+                      size="icon"
+                      className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600"
+                      title="Enviar áudio"
+                    >
+                      <Check className="w-5 h-5 text-white" />
+                    </Button>
+                  </div>
                 </div>
-            <Button onClick={isRecording ? stopRecording : startRecording} size="icon" variant={isRecording ? 'destructive' : 'secondary'} title={isRecording ? 'Parar gravação' : 'Gravar áudio'}>
-  {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </Button>
-            <Button onClick={handleSendMessage} disabled={!messageText.trim()} size="icon">
-  <Send className="w-4 h-4" />
-            </Button>
-              </div>
+              ) : (
+                <div className="flex items-end gap-2">
+                  <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
+                    if (!selectedConversation) return;
+                    const caption = messageText.trim();
+
+                    const optimisticMessage = {
+                      id: `temp-media-${Date.now()}`,
+                      conversation_id: selectedConversation.id,
+                      content: caption || `[${mediaType.toUpperCase()}]`,
+                      message_type: mediaType as any,
+                      sender_type: 'agent' as const,
+                      sender_id: user?.id,
+                      file_url: fileUrl,
+                      file_name: file.name,
+                      created_at: new Date().toISOString(),
+                      status: 'sending' as const,
+                      workspace_id: selectedWorkspace?.workspace_id || ''
+                    };
+                    addMessage(optimisticMessage);
+                    if (caption) setMessageText('');
+
+                    try {
+                      const {
+                        data: sendResult,
+                        error
+                      } = await supabase.functions.invoke('test-send-msg', {
+                        body: {
+                          conversation_id: selectedConversation.id,
+                          content: caption || `[${mediaType.toUpperCase()}]`,
+                          message_type: mediaType,
+                          sender_id: user?.id,
+                          sender_type: 'agent',
+                          file_url: fileUrl,
+                          file_name: file.name
+                        },
+                        headers: {
+                          'x-system-user-id': user?.id || '',
+                          'x-workspace-id': selectedWorkspace?.workspace_id || '',
+                          'x-system-user-email': user?.email || ''
+                        }
+                      });
+                      if (error) {
+                        console.error('Erro ao enviar mídia:', error);
+                        toast({
+                          title: "Erro ao enviar mídia",
+                          description: error.message || "Erro desconhecido",
+                          variant: "destructive"
+                        });
+                        updateMessage(optimisticMessage.id, {
+                          status: 'failed',
+                          content: `❌ ${optimisticMessage.content}`
+                        });
+                      } else {
+                        console.log('✅ Mídia enviada com sucesso:', sendResult);
+                        updateMessage(optimisticMessage.id, {
+                          status: 'sent',
+                          external_id: sendResult.external_id
+                        });
+                      }
+                    } catch (err) {
+                      console.error('Erro ao enviar mídia:', err);
+                      toast({
+                        title: "Erro ao enviar mídia",
+                        description: "Erro de conexão",
+                        variant: "destructive"
+                      });
+                      updateMessage(optimisticMessage.id, {
+                        status: 'failed',
+                        content: `❌ ${optimisticMessage.content}`
+                      });
+                    }
+                  }} />
+                  
+                  <Button variant="ghost" size="sm" title="Mensagens Rápidas" onClick={() => setQuickItemsModalOpen(true)}>
+                    <svg className="w-4 h-4" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                      <circle cx="9" cy="9" r="4"></circle>
+                      <path d="M9 15c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm7.76-9.64l-1.68 1.69c.84 1.18.84 2.71 0 3.89l1.68 1.69c2.02-2.02 2.02-5.07 0-7.27zM20.07 2l-1.63 1.63c2.77 3.02 2.77 7.56 0 10.74L20.07 16c3.9-3.89 3.91-9.95 0-14z"></path>
+                    </svg>
+                  </Button>
+                  <div className="flex-1">
+                    <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyPress={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }} className="resize-none" />
+                  </div>
+                  <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio">
+                    <Mic className="w-4 h-4" />
+                  </Button>
+                  <Button onClick={handleSendMessage} disabled={!messageText.trim()} size="icon">
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
 
               {/* Barra de seleção (modo de encaminhamento) */}
               {selectionMode && (
