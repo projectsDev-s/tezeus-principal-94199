@@ -342,22 +342,31 @@ export function Sidebar({
       {/* User Info */}
       <div className={cn("flex-shrink-0 rounded-t-lg bg-muted border-t", isCollapsed ? "p-3" : "p-4")}>
         <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3")}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+          {isCollapsed ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-8 h-8 bg-muted rounded-full flex items-center justify-center hover:bg-accent transition-colors">
                   <User className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">
-                  <p>{user?.name}</p>
-                  <p className="text-xs">{user?.email}</p>
-                  <p className="text-xs font-medium capitalize">{userRole}</p>
-                </TooltipContent>}
-            </Tooltip>
-          </TooltipProvider>
-          
-          {!isCollapsed && <>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="z-50 bg-background" side="right" align="end">
+                {hasRole(['master']) && (
+                  <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Personificar empresa
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={logout} className="text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-muted-foreground" />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-foreground truncate">{user?.name}</div>
                 <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
@@ -370,17 +379,20 @@ export function Sidebar({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="z-50 bg-background" align="end">
-                  {hasRole(['master']) && <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
+                  {hasRole(['master']) && (
+                    <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
                       <Building2 className="w-4 h-4 mr-2" />
                       Personificar empresa
-                    </DropdownMenuItem>}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={logout} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>}
+            </>
+          )}
         </div>
       </div>
       
