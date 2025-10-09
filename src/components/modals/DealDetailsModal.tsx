@@ -129,7 +129,7 @@ export function DealDetailsModal({
     profile_image_url: initialContactData.profile_image_url || null
   } : null);
   const { toast } = useToast();
-  const { selectedPipeline } = usePipelinesContext();
+  const { selectedPipeline, refreshCurrentPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   
   // Hook para informações adicionais do contato
@@ -247,31 +247,83 @@ export function DealDetailsModal({
   const executeAction = async (action: any) => {
     try {
       console.log('🎬 Executando ação:', action);
+      console.log('📍 Dados do card antes da ação:', {
+        cardId: selectedCardId,
+        pipelineOrigem: selectedPipelineId,
+        colunaOrigem: selectedColumnId,
+        pipelineDestino: action.target_pipeline_id,
+        colunaDestino: action.target_column_id
+      });
+
+      // Buscar informações do pipeline e coluna de destino para confirmação
+      const { data: targetPipeline } = await supabase
+        .from('pipelines')
+        .select('name')
+        .eq('id', action.target_pipeline_id)
+        .single();
+
+      const { data: targetColumn } = await supabase
+        .from('pipeline_columns')
+        .select('name')
+        .eq('id', action.target_column_id)
+        .single();
+
+      // Confirmação visual antes de mover
+      const confirmed = window.confirm(
+        `Confirmar ação de ${action.deal_state}?\n\n` +
+        `Este card será movido para:\n` +
+        `Pipeline: ${targetPipeline?.name || 'Desconhecido'}\n` +
+        `Coluna: ${targetColumn?.name || 'Desconhecida'}\n\n` +
+        `Deseja continuar?`
+      );
+
+      if (!confirmed) {
+        console.log('⚠️ Ação cancelada pelo usuário');
+        return;
+      }
+
+      console.log('✅ Ação confirmada, atualizando card...');
 
       // Atualizar o card para o pipeline/coluna de destino
-      const { error } = await supabase
+      const { data: updatedCard, error } = await supabase
         .from('pipeline_cards')
         .update({
           pipeline_id: action.target_pipeline_id,
           column_id: action.target_column_id,
           status: action.deal_state === 'Ganho' ? 'ganho' : 'perda'
         })
-        .eq('id', selectedCardId);
+        .eq('id', selectedCardId)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao atualizar card:', error);
+        throw error;
+      }
 
+      console.log('✅ Card atualizado com sucesso:', updatedCard);
+
+      // Mostrar toast de sucesso IMEDIATAMENTE
       toast({
         title: `Negócio marcado como ${action.deal_state}`,
-        description: `O card foi movido com sucesso.`,
+        description: `Movido para ${targetPipeline?.name} - ${targetColumn?.name}`,
       });
 
-      // Fechar o modal e atualizar a lista
-      onClose();
-    } catch (error) {
-      console.error('Error executing action:', error);
+      // Forçar refresh do pipeline atual para remover o card da visualização
+      console.log('🔄 Forçando refresh do pipeline atual...');
+      await refreshCurrentPipeline();
+
+      // Pequeno delay para usuário ver o feedback antes do modal fechar
+      setTimeout(() => {
+        console.log('✅ Fechando modal após ação bem-sucedida');
+        onClose();
+      }, 500);
+
+    } catch (error: any) {
+      console.error('❌ Error executing action:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível executar a ação.",
+        title: "Erro ao executar ação",
+        description: error.message || "Não foi possível executar a ação.",
         variant: "destructive",
       });
     }

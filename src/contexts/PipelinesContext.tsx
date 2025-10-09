@@ -478,14 +478,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     };
   }, [selectedPipeline?.id, fetchColumns]);
 
-  // Realtime subscription para pipeline_cards
+  // Realtime subscription para pipeline_cards - MELHORADO para capturar saídas
   useEffect(() => {
     if (!selectedPipeline?.id) return;
 
     console.log('🔴 Setting up realtime subscription for pipeline_cards');
 
-    const channel = supabase
-      .channel('pipeline-cards-changes')
+    // Canal principal: cards que pertencem ao pipeline
+    const mainChannel = supabase
+      .channel('pipeline-cards-main')
       .on(
         'postgres_changes',
         {
@@ -495,7 +496,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
           filter: `pipeline_id=eq.${selectedPipeline.id}`
         },
         (payload) => {
-          console.log('🔴 Realtime pipeline_cards change:', payload);
+          const newRecord = payload.new as any;
+          const oldRecord = payload.old as any;
+          
+          console.log('🔴 Realtime pipeline_cards change (main):', {
+            eventType: payload.eventType,
+            cardId: newRecord?.id || oldRecord?.id,
+            pipelineId: newRecord?.pipeline_id || oldRecord?.pipeline_id,
+            timestamp: new Date().toISOString()
+          });
           
           // Refresh cards when any change occurs
           fetchCards(selectedPipeline.id);
@@ -503,9 +512,43 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
+    // Canal secundário: detectar quando cards SAEM do pipeline
+    // (captura UPDATEs onde pipeline_id mudou SAINDO deste pipeline)
+    const exitChannel = supabase
+      .channel('pipeline-cards-exit')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pipeline_cards'
+        },
+        (payload) => {
+          const oldRecord = payload.old as any;
+          const newRecord = payload.new as any;
+          const oldPipelineId = oldRecord?.pipeline_id;
+          const newPipelineId = newRecord?.pipeline_id;
+          
+          // Se o card SAIU do pipeline atual
+          if (oldPipelineId === selectedPipeline.id && newPipelineId !== selectedPipeline.id) {
+            console.log('🚪 Card SAIU do pipeline atual:', {
+              cardId: newRecord?.id,
+              de: oldPipelineId,
+              para: newPipelineId,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Refresh para remover o card
+            fetchCards(selectedPipeline.id);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      console.log('🔴 Cleaning up realtime subscription for pipeline_cards');
-      supabase.removeChannel(channel);
+      console.log('🔴 Cleaning up realtime subscriptions for pipeline_cards');
+      supabase.removeChannel(mainChannel);
+      supabase.removeChannel(exitChannel);
     };
   }, [selectedPipeline?.id, fetchCards]);
 
