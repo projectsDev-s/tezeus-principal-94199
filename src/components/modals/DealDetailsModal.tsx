@@ -119,6 +119,7 @@ export function DealDetailsModal({
   const [selectedCardId, setSelectedCardId] = useState<string>(cardId);
   const [selectedColumnId, setSelectedColumnId] = useState<string>(currentColumnId);
   const [availableCards, setAvailableCards] = useState<any[]>([]);
+  const [cardTimeline, setCardTimeline] = useState<any[]>([]);
   const [pipelineActions, setPipelineActions] = useState<any[]>([]);
   const [contactData, setContactData] = useState<{
     name: string;
@@ -421,6 +422,9 @@ export function DealDetailsModal({
         }
       }
       
+      // Buscar timeline de evolução do card atual
+      await fetchCardTimeline(cardId);
+      
     } catch (error) {
       console.error('❌ Erro ao buscar dados do card:', error);
       toast({
@@ -527,6 +531,47 @@ export function DealDetailsModal({
       ]);
     }
   };
+  const fetchCardTimeline = async (cardId: string) => {
+    try {
+      // Buscar histórico do card através da tabela updated_at
+      // Por enquanto, vamos buscar os dados do card e criar um timeline simples
+      const { data: card } = await supabase
+        .from('pipeline_cards')
+        .select(`
+          id,
+          created_at,
+          updated_at,
+          column_id,
+          pipeline_columns (
+            id,
+            name,
+            color
+          )
+        `)
+        .eq('id', cardId)
+        .single();
+
+      if (card) {
+        // Timeline simples: criação e posição atual
+        const timeline = [
+          {
+            date: card.created_at,
+            action: 'Negócio criado',
+            column: null
+          },
+          {
+            date: card.updated_at,
+            action: 'Posição atual',
+            column: card.pipeline_columns
+          }
+        ];
+        setCardTimeline(timeline);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar timeline:', error);
+    }
+  };
+
   const fetchContactTags = async (contactId: string) => {
     try {
       const {
@@ -919,35 +964,64 @@ export function DealDetailsModal({
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
           {activeTab === "negocios" && <div className="space-y-6">
-              {/* Pipeline Selection */}
+              {/* Pipeline Atual - Nome do Pipeline ao invés de select */}
               <div className="space-y-2">
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                  Negócios do Contato
+                  Pipeline do Negócio
                 </label>
-                <div className="flex items-center gap-3">
-                  <span className={cn("text-sm font-semibold", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                    {isLoadingData ? 'Carregando...' : `${availableCards.length} ${availableCards.length === 1 ? 'Negócio' : 'Negócios'}`}
-                  </span>
-                  
-                  {contactPipelines.length > 0 && (
-                    <Select 
-                      value={selectedPipelineId} 
-                      onValueChange={handlePipelineChange}
-                    >
-                      <SelectTrigger className={cn("flex-1", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
-                        <SelectValue placeholder="Selecione um negócio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contactPipelines.map((pipeline) => (
-                          <SelectItem key={pipeline.id} value={pipeline.id}>
-                            {pipeline.name} ({pipeline.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                <div className={cn(
+                  "px-4 py-3 rounded-lg border font-medium",
+                  isDarkMode 
+                    ? "bg-[#2d2d2d] border-gray-600 text-white" 
+                    : "bg-gray-50 border-gray-200 text-gray-900"
+                )}>
+                  {isLoadingData ? 'Carregando...' : (selectedPipeline?.name || 'Pipeline não identificado')}
                 </div>
               </div>
+
+              {/* Timeline de Evolução do Negócio */}
+              {cardTimeline.length > 0 && (
+                <div className="space-y-3">
+                  <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                    Histórico de Evolução
+                  </label>
+                  <div className={cn(
+                    "space-y-3 p-4 rounded-lg border",
+                    isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-gray-50 border-gray-200"
+                  )}>
+                    {cardTimeline.map((event, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className={cn(
+                          "w-2 h-2 rounded-full mt-1.5 flex-shrink-0",
+                          index === cardTimeline.length - 1 
+                            ? "bg-yellow-400" 
+                            : isDarkMode ? "bg-gray-500" : "bg-gray-400"
+                        )} />
+                        <div className="flex-1">
+                          <p className={cn(
+                            "text-sm font-medium",
+                            isDarkMode ? "text-white" : "text-gray-900"
+                          )}>
+                            {event.action}
+                          </p>
+                          {event.column && (
+                            <p className={cn("text-xs mt-0.5", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              <span 
+                                className="inline-block w-2 h-2 rounded-full mr-1.5"
+                                style={{ backgroundColor: event.column.color }}
+                              />
+                              {event.column.name}
+                            </p>
+                          )}
+                          <p className={cn("text-xs mt-1", isDarkMode ? "text-gray-500" : "text-gray-500")}>
+                            {format(new Date(event.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Pipeline Timeline - Baseado na imagem de referência */}
               <div className="space-y-6">
