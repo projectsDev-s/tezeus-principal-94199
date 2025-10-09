@@ -15,9 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Upload, RotateCcw, Palette } from "lucide-react";
 
 export function AdministracaoConfiguracoes() {
-  const [connectionLimit, setConnectionLimit] = useState("1");
   const [loading, setLoading] = useState(false);
-  const { selectedWorkspace } = useWorkspace();
   const { hasRole } = useAuth();
   const { 
     customization, 
@@ -29,51 +27,6 @@ export function AdministracaoConfiguracoes() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [activeColorField, setActiveColorField] = useState<'primary' | 'background' | 'header' | 'sidebar' | null>(null);
-
-  // Load current settings for selected workspace
-  useEffect(() => {
-    const loadData = async () => {
-      if (!selectedWorkspace?.workspace_id) return;
-      
-      try {
-        // Loading workspace limits
-        
-        // Use edge function to get workspace limits to avoid RLS issues
-        const userData = localStorage.getItem('currentUser');
-        const currentUserData = userData ? JSON.parse(userData) : null;
-        
-        if (!currentUserData?.id) {
-          console.error('❌ User not authenticated');
-          return;
-        }
-
-        const headers = {
-          'x-system-user-id': currentUserData.id,
-          'x-system-user-email': currentUserData.email || '',
-          'x-workspace-id': selectedWorkspace.workspace_id
-        };
-
-        const { data, error } = await supabase.functions.invoke('get-workspace-limits', {
-          body: { workspaceId: selectedWorkspace.workspace_id },
-          headers
-        });
-
-        if (error) {
-          console.error('❌ Error getting workspace limits:', error);
-          throw error;
-        }
-
-        if (data?.connection_limit) {
-          setConnectionLimit(data.connection_limit.toString());
-          // Connection limit loaded
-        }
-      } catch (error) {
-        console.error('❌ Error loading settings:', error);
-      }
-    };
-    
-    loadData();
-  }, [selectedWorkspace?.workspace_id]);
 
   // Handle logo file selection
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,9 +135,8 @@ export function AdministracaoConfiguracoes() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-        <WorkspaceSelector />
       </div>
       
       <div className="bg-card rounded-lg shadow-sm border border-border">

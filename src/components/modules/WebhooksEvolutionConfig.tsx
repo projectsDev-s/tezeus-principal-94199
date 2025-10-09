@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useWorkspaceWebhooks } from "@/hooks/useWorkspaceWebhooks";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { WorkspaceSelector } from "@/components/WorkspaceSelector";
 import { WebhookLog } from "@/types/webhook";
 import { 
   Eye, 
@@ -165,12 +166,15 @@ export function WebhooksEvolutionConfig() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Webhooks Evolution</h1>
-        <p className="text-muted-foreground">Configure webhooks centralizados para todas as instâncias do workspace</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Workspace: {selectedWorkspace?.name} | ID: {workspaceId}
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Webhooks Evolution</h1>
+          <p className="text-muted-foreground">Configure webhooks centralizados para todas as instâncias do workspace</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Workspace: {selectedWorkspace?.name} | ID: {workspaceId}
+          </p>
+        </div>
+        <WorkspaceSelector />
       </div>
 
       <Tabs defaultValue="config" className="w-full">
