@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -87,6 +88,8 @@ export function DealDetailsModal({
   const [activities, setActivities] = useState<Activity[]>([]);
   const [showAddTagModal, setShowAddTagModal] = useState(false);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
+  const [confirmLossAction, setConfirmLossAction] = useState<any>(null);
+  const [isExecutingAction, setIsExecutingAction] = useState(false);
   
   // Estados para o formulário de atividade integrado
   const [activityForm, setActivityForm] = useState({
@@ -245,7 +248,19 @@ export function DealDetailsModal({
   };
 
   const executeAction = async (action: any) => {
+    // Se for ação de "Perda", mostrar modal de confirmação
+    if (action.deal_state === 'Perda') {
+      setConfirmLossAction(action);
+      return;
+    }
+
+    // Se for "Ganho", executar direto
+    await processActionExecution(action);
+  };
+
+  const processActionExecution = async (action: any) => {
     try {
+      setIsExecutingAction(true);
       console.log('🎬 Executando ação:', action);
       console.log('📍 Dados do card antes da ação:', {
         cardId: selectedCardId,
@@ -255,7 +270,7 @@ export function DealDetailsModal({
         colunaDestino: action.target_column_id
       });
 
-      // Buscar informações do pipeline e coluna de destino para confirmação
+      // Buscar informações do pipeline e coluna de destino
       const { data: targetPipeline } = await supabase
         .from('pipelines')
         .select('name')
@@ -268,21 +283,7 @@ export function DealDetailsModal({
         .eq('id', action.target_column_id)
         .single();
 
-      // Confirmação visual antes de mover
-      const confirmed = window.confirm(
-        `Confirmar ação de ${action.deal_state}?\n\n` +
-        `Este card será movido para:\n` +
-        `Pipeline: ${targetPipeline?.name || 'Desconhecido'}\n` +
-        `Coluna: ${targetColumn?.name || 'Desconhecida'}\n\n` +
-        `Deseja continuar?`
-      );
-
-      if (!confirmed) {
-        console.log('⚠️ Ação cancelada pelo usuário');
-        return;
-      }
-
-      console.log('✅ Ação confirmada, atualizando card...');
+      console.log('✅ Executando transferência...');
 
       // Atualizar o card para o pipeline/coluna de destino
       const { data: updatedCard, error } = await supabase
@@ -326,6 +327,8 @@ export function DealDetailsModal({
         description: error.message || "Não foi possível executar a ação.",
         variant: "destructive",
       });
+    } finally {
+      setIsExecutingAction(false);
     }
   };
   const fetchCardData = async () => {
@@ -812,7 +815,9 @@ export function DealDetailsModal({
       setSelectedColumnId(cardInPipeline.column_id);
     }
   };
-  return <Dialog open={isOpen} onOpenChange={onClose}>
+  return (
+    <>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0 flex flex-col", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
         {/* Header */}
         <DialogHeader className={cn("px-6 py-4 border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
@@ -883,9 +888,10 @@ export function DealDetailsModal({
                     size="sm"
                     variant={action.deal_state === 'Ganho' ? 'default' : 'destructive'}
                     onClick={() => executeAction(action)}
+                    disabled={isExecutingAction}
                     className={action.deal_state === 'Ganho' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
                   >
-                    {action.deal_state}
+                    {isExecutingAction ? 'Processando...' : action.deal_state}
                   </Button>
                 ))}
             </div>
@@ -1496,5 +1502,29 @@ export function DealDetailsModal({
         onMinuteSelect={handleMinuteSelect}
         isDarkMode={isDarkMode}
       />
-    </Dialog>;
+    </Dialog>
+    
+    {/* Modal de confirmação para ação de Perda */}
+    <AlertDialog open={!!confirmLossAction} onOpenChange={() => setConfirmLossAction(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Deseja mesmo transferir?</AlertDialogTitle>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              if (confirmLossAction) {
+                await processActionExecution(confirmLossAction);
+                setConfirmLossAction(null);
+              }
+            }}
+          >
+            Confirmar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
+  );
 }
