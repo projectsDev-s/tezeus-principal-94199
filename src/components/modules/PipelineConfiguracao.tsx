@@ -932,16 +932,18 @@ export default function PipelineConfiguracao({
                                 onChange={e => updateAction(action.id, 'actionName', e.target.value)} 
                                 placeholder=" "
                                 id={`action-name-${action.id}`}
-                                className={cn("text-sm peer pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")} 
+                                className={cn("text-sm peer", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")} 
                               />
                               <label 
                                 htmlFor={`action-name-${action.id}`}
                                 className={cn(
                                   "absolute left-3 transition-all duration-200 pointer-events-none",
-                                  "peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm",
-                                  "peer-focus:top-1.5 peer-focus:text-xs",
-                                  "top-1.5 text-xs",
-                                  isDarkMode ? "text-gray-400 peer-focus:text-gray-300" : "text-gray-500 peer-focus:text-gray-700"
+                                  "peer-placeholder-shown:top-2.5 peer-placeholder-shown:text-sm peer-placeholder-shown:bg-transparent",
+                                  "peer-focus:-top-2.5 peer-focus:text-xs peer-focus:px-1",
+                                  action.actionName ? "-top-2.5 text-xs px-1" : "top-2.5 text-sm",
+                                  isDarkMode 
+                                    ? "text-gray-400 peer-focus:text-gray-300 peer-focus:bg-[#3a3a3a] bg-[#3a3a3a]" 
+                                    : "text-gray-500 peer-focus:text-gray-700 peer-focus:bg-white bg-white"
                                 )}
                               >
                                 Nome da Ação
@@ -952,7 +954,7 @@ export default function PipelineConfiguracao({
                         <td className="p-2">
                           <div className="relative">
                             <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
-                              <SelectTrigger className={cn("text-sm pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
                                 <SelectValue placeholder=" " />
                               </SelectTrigger>
                               <SelectContent>
@@ -965,8 +967,8 @@ export default function PipelineConfiguracao({
                             </Select>
                             <label 
                               className={cn(
-                                "absolute left-3 top-1.5 text-xs transition-all duration-200 pointer-events-none",
-                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                                "absolute left-3 -top-2.5 text-xs px-1 transition-all duration-200 pointer-events-none",
+                                isDarkMode ? "text-gray-400 bg-[#3a3a3a]" : "text-gray-500 bg-white"
                               )}
                             >
                               Próximo Pipeline
@@ -980,7 +982,7 @@ export default function PipelineConfiguracao({
                               onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
                               disabled={!action.nextPipeline}
                             >
-                              <SelectTrigger className={cn("text-sm pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
                                 <SelectValue placeholder=" " />
                               </SelectTrigger>
                               <SelectContent>
@@ -993,8 +995,8 @@ export default function PipelineConfiguracao({
                             </Select>
                             <label 
                               className={cn(
-                                "absolute left-3 top-1.5 text-xs transition-all duration-200 pointer-events-none",
-                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                                "absolute left-3 -top-2.5 text-xs px-1 transition-all duration-200 pointer-events-none",
+                                isDarkMode ? "text-gray-400 bg-[#3a3a3a]" : "text-gray-500 bg-white"
                               )}
                             >
                               Coluna de Destino
@@ -1004,7 +1006,7 @@ export default function PipelineConfiguracao({
                         <td className="p-2">
                           <div className="relative">
                             <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
-                              <SelectTrigger className={cn("text-sm pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
                                 <SelectValue placeholder=" " />
                               </SelectTrigger>
                               <SelectContent>
@@ -1014,8 +1016,8 @@ export default function PipelineConfiguracao({
                             </Select>
                             <label 
                               className={cn(
-                                "absolute left-3 top-1.5 text-xs transition-all duration-200 pointer-events-none",
-                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                                "absolute left-3 -top-2.5 text-xs px-1 transition-all duration-200 pointer-events-none",
+                                isDarkMode ? "text-gray-400 bg-[#3a3a3a]" : "text-gray-500 bg-white"
                               )}
                             >
                               Estado do Negócio
