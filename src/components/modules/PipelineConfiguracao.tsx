@@ -39,6 +39,7 @@ interface Action {
   nextPipeline: string;
   targetColumn: string;
   dealState: string;
+  buttonColor?: string;
 }
 
 // Inicializar apenas com uma ação vazia
@@ -917,50 +918,109 @@ export default function PipelineConfiguracao({
                   <tbody>
                     {actions.map(action => <tr key={action.id} className={cn("border-b", isDarkMode ? "border-gray-700" : "border-gray-100")}>
                         <td className="p-2">
-                          <Input value={action.actionName} onChange={e => updateAction(action.id, 'actionName', e.target.value)} placeholder="Nome da ação" className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")} />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={action.buttonColor || '#3b82f6'}
+                              onChange={(e) => updateAction(action.id, 'buttonColor', e.target.value)}
+                              className="w-10 h-10 rounded border border-border cursor-pointer"
+                              title="Escolher cor do botão"
+                            />
+                            <div className="relative flex-1">
+                              <Input 
+                                value={action.actionName} 
+                                onChange={e => updateAction(action.id, 'actionName', e.target.value)} 
+                                placeholder=" "
+                                id={`action-name-${action.id}`}
+                                className={cn("text-sm peer pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")} 
+                              />
+                              <label 
+                                htmlFor={`action-name-${action.id}`}
+                                className={cn(
+                                  "absolute left-3 transition-all duration-200 pointer-events-none",
+                                  "peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm",
+                                  "peer-focus:top-1.5 peer-focus:text-xs",
+                                  "top-1.5 text-xs",
+                                  isDarkMode ? "text-gray-400 peer-focus:text-gray-300" : "text-gray-500 peer-focus:text-gray-700"
+                                )}
+                              >
+                                Nome da Ação
+                              </label>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-2">
-                          <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
-                              <SelectValue placeholder="Selecione o pipeline" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {pipelines?.map(pipeline => (
-                                <SelectItem key={pipeline.id} value={pipeline.id}>
-                                  {pipeline.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="relative">
+                            <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
+                              <SelectTrigger className={cn("text-sm pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                                <SelectValue placeholder=" " />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {pipelines?.map(pipeline => (
+                                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                                    {pipeline.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <label 
+                              className={cn(
+                                "absolute left-3 top-1.5 text-xs transition-all duration-200 pointer-events-none",
+                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                              )}
+                            >
+                              Próximo Pipeline
+                            </label>
+                          </div>
                         </td>
                         <td className="p-2">
-                          <Select 
-                            value={action.targetColumn} 
-                            onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
-                            disabled={!action.nextPipeline}
-                          >
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
-                              <SelectValue placeholder="Selecione a coluna" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(actionColumns[action.id] || []).map((column: any) => (
-                                <SelectItem key={column.id} value={column.id}>
-                                  {column.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="relative">
+                            <Select 
+                              value={action.targetColumn} 
+                              onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
+                              disabled={!action.nextPipeline}
+                            >
+                              <SelectTrigger className={cn("text-sm pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                                <SelectValue placeholder=" " />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(actionColumns[action.id] || []).map((column: any) => (
+                                  <SelectItem key={column.id} value={column.id}>
+                                    {column.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <label 
+                              className={cn(
+                                "absolute left-3 top-1.5 text-xs transition-all duration-200 pointer-events-none",
+                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                              )}
+                            >
+                              Coluna de Destino
+                            </label>
+                          </div>
                         </td>
                         <td className="p-2">
-                          <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
-                              <SelectValue placeholder="Estado" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Ganho">Ganho</SelectItem>
-                              <SelectItem value="Perda">Perda</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="relative">
+                            <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
+                              <SelectTrigger className={cn("text-sm pt-6 pb-2", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                                <SelectValue placeholder=" " />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Ganho">Ganho</SelectItem>
+                                <SelectItem value="Perda">Perda</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <label 
+                              className={cn(
+                                "absolute left-3 top-1.5 text-xs transition-all duration-200 pointer-events-none",
+                                isDarkMode ? "text-gray-400" : "text-gray-500"
+                              )}
+                            >
+                              Estado do Negócio
+                            </label>
+                          </div>
                         </td>
                         <td className="p-2">
                           <div className="flex gap-2">
