@@ -954,7 +954,7 @@ export default function PipelineConfiguracao({
                         <td className="p-2">
                           <div className="relative">
                             <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
-                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                              <SelectTrigger id={`pipeline-${action.id}`} className={cn("text-sm peer", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
                                 <SelectValue placeholder=" " />
                               </SelectTrigger>
                               <SelectContent>
@@ -966,9 +966,13 @@ export default function PipelineConfiguracao({
                               </SelectContent>
                             </Select>
                             <label 
+                              htmlFor={`pipeline-${action.id}`}
                               className={cn(
-                                "absolute left-3 -top-2.5 text-xs px-1 transition-all duration-200 pointer-events-none",
-                                isDarkMode ? "text-gray-400 bg-[#3a3a3a]" : "text-gray-500 bg-white"
+                                "absolute left-3 transition-all duration-200 pointer-events-none",
+                                action.nextPipeline ? "-top-2.5 text-xs px-1" : "top-2.5 text-sm",
+                                isDarkMode 
+                                  ? "text-gray-400 bg-[#3a3a3a]" 
+                                  : "text-gray-500 bg-white"
                               )}
                             >
                               Próximo Pipeline
@@ -982,7 +986,7 @@ export default function PipelineConfiguracao({
                               onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
                               disabled={!action.nextPipeline}
                             >
-                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                              <SelectTrigger id={`column-${action.id}`} className={cn("text-sm peer", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
                                 <SelectValue placeholder=" " />
                               </SelectTrigger>
                               <SelectContent>
@@ -994,9 +998,13 @@ export default function PipelineConfiguracao({
                               </SelectContent>
                             </Select>
                             <label 
+                              htmlFor={`column-${action.id}`}
                               className={cn(
-                                "absolute left-3 -top-2.5 text-xs px-1 transition-all duration-200 pointer-events-none",
-                                isDarkMode ? "text-gray-400 bg-[#3a3a3a]" : "text-gray-500 bg-white"
+                                "absolute left-3 transition-all duration-200 pointer-events-none",
+                                action.targetColumn ? "-top-2.5 text-xs px-1" : "top-2.5 text-sm",
+                                isDarkMode 
+                                  ? "text-gray-400 bg-[#3a3a3a]" 
+                                  : "text-gray-500 bg-white"
                               )}
                             >
                               Coluna de Destino
@@ -1006,7 +1014,7 @@ export default function PipelineConfiguracao({
                         <td className="p-2">
                           <div className="relative">
                             <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
-                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                              <SelectTrigger id={`state-${action.id}`} className={cn("text-sm peer", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
                                 <SelectValue placeholder=" " />
                               </SelectTrigger>
                               <SelectContent>
@@ -1015,9 +1023,13 @@ export default function PipelineConfiguracao({
                               </SelectContent>
                             </Select>
                             <label 
+                              htmlFor={`state-${action.id}`}
                               className={cn(
-                                "absolute left-3 -top-2.5 text-xs px-1 transition-all duration-200 pointer-events-none",
-                                isDarkMode ? "text-gray-400 bg-[#3a3a3a]" : "text-gray-500 bg-white"
+                                "absolute left-3 transition-all duration-200 pointer-events-none",
+                                action.dealState ? "-top-2.5 text-xs px-1" : "top-2.5 text-sm",
+                                isDarkMode 
+                                  ? "text-gray-400 bg-[#3a3a3a]" 
+                                  : "text-gray-500 bg-white"
                               )}
                             >
                               Estado do Negócio
