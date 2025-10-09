@@ -260,25 +260,39 @@ export function ChatModal({
     if (!conversationId) return;
     
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
+      // Upload para storage primeiro
+      const fileExt = 'webm';
+      const fileName = `audio_${Date.now()}.${fileExt}`;
+      const filePath = `messages/${fileName}`;
 
-        const { data, error } = await supabase.functions.invoke('test-send-msg', {
-          body: {
-            conversation_id: conversationId,
-            content: '[AUDIO]',
-            message_type: 'audio',
-            file_data: base64Audio,
-            file_name: `audio_${Date.now()}.webm`,
-          }
+      const { error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(filePath, audioBlob, {
+          contentType: 'audio/webm'
         });
 
-        if (error) throw error;
+      if (uploadError) throw uploadError;
 
-        loadInitial(conversationId);
-      };
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(filePath);
+
+      // Enviar áudio via test-send-msg com URL
+      const { data, error } = await supabase.functions.invoke('test-send-msg', {
+        body: {
+          conversation_id: conversationId,
+          content: '[AUDIO]',
+          message_type: 'audio',
+          sender_type: 'agent',
+          file_url: publicUrl,
+          file_name: fileName
+        }
+      });
+
+      if (error) throw error;
+
+      loadInitial(conversationId);
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
       toast({
