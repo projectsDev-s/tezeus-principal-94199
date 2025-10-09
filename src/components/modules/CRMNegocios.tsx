@@ -279,14 +279,14 @@ function DraggableDeal({
           
           {/* Avatar do contato - SEGUNDO */}
           <div className="flex-shrink-0">
-            {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-10 h-10 rounded-full object-cover border border-primary/20" onError={e => {
+            {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-8 h-8 rounded-full object-cover border border-primary/20" onError={e => {
             // Fallback para iniciais se a imagem falhar
             const target = e.currentTarget as HTMLImageElement;
             target.style.display = 'none';
             const fallback = target.nextElementSibling as HTMLElement;
             if (fallback) fallback.style.display = 'flex';
           }} /> : null}
-            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
+            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
               {getInitials(deal.contact?.name || deal.name)}
             </div>
           </div>
