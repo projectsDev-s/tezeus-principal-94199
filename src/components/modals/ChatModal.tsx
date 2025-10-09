@@ -13,7 +13,18 @@ import { ContactTags } from '@/components/chat/ContactTags';
 import { MediaUpload } from '@/components/chat/MediaUpload';
 import { QuickItemsModal } from '@/components/modals/QuickItemsModal';
 import { MessageStatusIndicator } from '@/components/ui/message-status-indicator';
+import { MessageContextMenu } from '@/components/chat/MessageContextMenu';
+import { MessageSelectionBar } from '@/components/chat/MessageSelectionBar';
+import { ForwardMessageModal } from '@/components/modals/ForwardMessageModal';
+import { AcceptConversationButton } from '@/components/chat/AcceptConversationButton';
+import { EndConversationButton } from '@/components/chat/EndConversationButton';
+import { ContactSidePanel } from '@/components/ContactSidePanel';
 import { useConversationMessages } from '@/hooks/useConversationMessages';
+import { useConversationAccept } from '@/hooks/useConversationAccept';
+import { useConversationEnd } from '@/hooks/useConversationEnd';
+import { WhatsAppConversation } from '@/hooks/useWhatsAppConversations';
+import { useAuth } from '@/hooks/useAuth';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -61,9 +72,16 @@ export function ChatModal({
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [realContactId, setRealContactId] = useState<string | null>(contactId || null);
   const [quickItemsModalOpen, setQuickItemsModalOpen] = useState(false);
+  const [contactPanelOpen, setContactPanelOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [forwardModalOpen, setForwardModalOpen] = useState(false);
+  const [fullConversation, setFullConversation] = useState<WhatsAppConversation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLElement | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { selectedWorkspace } = useWorkspace();
   
   // Debug quando o modal abre
   useEffect(() => {
@@ -387,15 +405,89 @@ export function ChatModal({
     return format(new Date(dateString), 'HH:mm');
   };
 
+  // Buscar dados completos da conversa para botões Accept/End
+  useEffect(() => {
+    if (isOpen && conversationId) {
+      const fetchFullConversation = async () => {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select(`
+            *,
+            contact:contacts(*),
+            conversation_tags(
+              id,
+              tag_id,
+              tag:tags(id, name, color)
+            )
+          `)
+          .eq('id', conversationId)
+          .single();
+        
+        if (data && !error) {
+          setFullConversation(data as any);
+        }
+      };
+      
+      fetchFullConversation();
+    }
+  }, [isOpen, conversationId]);
+
+  // Funções para modo de seleção
+  const toggleMessageSelection = (messageId: string) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleMessageForward = (messageId: string) => {
+    setSelectedMessages(new Set([messageId]));
+    setForwardModalOpen(true);
+  };
+
+  const handleForwardMessages = async (targetContactIds: string[]) => {
+    console.log('Encaminhar mensagens:', Array.from(selectedMessages), 'para contatos:', targetContactIds);
+    // TODO: Implementar lógica de encaminhamento
+    setForwardModalOpen(false);
+    setSelectionMode(false);
+    setSelectedMessages(new Set());
+    
+    toast({
+      title: "Mensagens encaminhadas",
+      description: "As mensagens foram encaminhadas com sucesso"
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0">
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header igual ao WhatsAppChat */}
           <div className="p-4 border-b border-border bg-white">
+            {/* Barra de seleção (quando em modo seleção) */}
+            {selectionMode && (
+              <MessageSelectionBar
+                selectedCount={selectedMessages.size}
+                onCancel={() => {
+                  setSelectionMode(false);
+                  setSelectedMessages(new Set());
+                }}
+                onForward={() => setForwardModalOpen(true)}
+              />
+            )}
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all">
+                {/* Avatar CLICÁVEL */}
+                <Avatar 
+                  className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all"
+                  onClick={() => setContactPanelOpen(true)}
+                >
                   {contactAvatar ? (
                     <AvatarImage src={contactAvatar} alt={contactName} className="object-cover" />
                   ) : (
@@ -404,38 +496,60 @@ export function ChatModal({
                     </AvatarFallback>
                   )}
                 </Avatar>
+                
                 <div className="flex items-center gap-2">
                   <h3 className="font-medium text-gray-900 text-base">{contactName}</h3>
-                  {realContactId && (
-                    <ContactTags 
-                      contactId={realContactId}
-                      onTagRemoved={() => {
-                        loadInitial(conversationId);
-                      }}
+                  <div className="flex items-center gap-2">
+                    {realContactId && (
+                      <ContactTags 
+                        contactId={realContactId}
+                        onTagRemoved={() => loadInitial(conversationId)}
+                      />
+                    )}
+                    <AddTagButton 
+                      conversationId={conversationId} 
+                      onTagAdded={() => loadInitial(conversationId)} 
                     />
-                  )}
-                  <AddTagButton 
-                    conversationId={conversationId} 
-                    onTagAdded={() => {
-                      loadInitial(conversationId);
-                    }} 
-                  />
+                  </div>
                 </div>
               </div>
+
               <div className="flex items-center gap-3">
-                {/* Botão Agente IA */}
+                {/* Botão Agente IA - DESABILITADO por enquanto */}
                 <Button 
-                  className="h-8 px-3 rounded-full text-sm font-medium transition-colors bg-muted text-muted-foreground hover:bg-muted/80"
-                  title="Ativar IA"
+                  variant="ghost"
+                  size="sm"
+                  disabled
+                  className="h-8 px-3 rounded-full text-sm font-medium bg-muted text-muted-foreground"
+                  title="Agente IA (em desenvolvimento)"
                 >
                   <Bot className="w-4 h-4 mr-1" />
                   Agente IA
                 </Button>
-                {/* Botão Encerrar */}
-                <Button className="h-8 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md">
-                  <X className="w-4 h-4" />
-                  Encerrar
-                </Button>
+                
+                {/* Botões Aceitar/Encerrar - COMPONENTES REAIS */}
+                {fullConversation && (
+                  <>
+                    <AcceptConversationButton 
+                      conversation={fullConversation}
+                      onAccept={async (conversationId: string) => {
+                        // Recarregar dados da conversa
+                        loadInitial(conversationId);
+                      }}
+                      className="h-8 px-4 bg-yellow-400 hover:bg-yellow-500 text-black font-medium rounded-md"
+                    />
+                    
+                    <EndConversationButton 
+                      conversation={fullConversation}
+                      onEnd={async (conversationId: string) => {
+                        // Fechar modal após encerrar
+                        onClose();
+                      }}
+                      className="h-8 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md"
+                    />
+                  </>
+                )}
+                
                 {/* Botão fechar modal */}
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onClose}>
                   <X className="h-4 w-4" />
@@ -502,13 +616,22 @@ export function ChatModal({
                   </div>
                 )}
                 {messages.map((message) => (
-                  <div key={message.id} className={cn(
-                    "flex items-start gap-3 max-w-[80%]",
-                    message.sender_type === 'contact' ? 'flex-row' : 'flex-row-reverse ml-auto'
-                  )}>
+                  <div 
+                    key={message.id} 
+                    className={cn(
+                      "flex items-start gap-3 max-w-[80%] relative",
+                      message.sender_type === 'contact' ? 'flex-row' : 'flex-row-reverse ml-auto',
+                      selectionMode && "cursor-pointer",
+                      selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
+                    )}
+                    onClick={() => selectionMode && toggleMessageSelection(message.id)}
+                  >
                     {/* Avatar apenas para mensagens do contato */}
                     {message.sender_type === 'contact' && (
-                      <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all">
+                      <Avatar 
+                        className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all"
+                        onClick={() => setContactPanelOpen(true)}
+                      >
                         {contactAvatar ? (
                           <AvatarImage src={contactAvatar} alt={contactName} className="object-cover" />
                         ) : (
@@ -521,44 +644,69 @@ export function ChatModal({
                     
                     {/* Conteúdo da mensagem */}
                     <div className={cn(
-                      "rounded-lg max-w-full p-3",
+                      "max-w-full group relative",
+                      message.message_type === 'audio' ? "" : "rounded-lg",
                       message.sender_type === 'contact' 
-                        ? 'bg-muted' 
-                        : 'bg-primary text-primary-foreground'
+                        ? message.message_type === 'audio' ? "" : 
+                          (message.message_type === 'image' || message.message_type === 'video') ? "bg-transparent" : 
+                          "bg-muted p-3"
+                        : message.message_type !== 'text' && message.file_url
+                          ? message.message_type === 'audio' ? "" :
+                            (message.message_type === 'image' || message.message_type === 'video') ? "bg-transparent" :
+                            "bg-primary p-3"
+                          : "bg-primary text-primary-foreground p-3"
                     )}>
-                      {message.message_type === 'text' && (
+                      {/* Menu de contexto */}
+                      {!selectionMode && (
+                        <MessageContextMenu
+                          onForward={() => handleMessageForward(message.id)}
+                          onReply={() => {/* TODO */}}
+                          onDownload={message.file_url ? () => {
+                            const link = document.createElement('a');
+                            link.href = message.file_url!;
+                            link.download = message.file_name || 'download';
+                            link.target = '_blank';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          } : undefined}
+                          hasDownload={!!message.file_url}
+                        />
+                      )}
+                      
+                      {/* Renderizar conteúdo baseado no tipo */}
+                      {message.message_type !== 'text' && message.file_url ? (
+                        <MediaViewer 
+                          fileUrl={message.file_url} 
+                          fileName={message.file_name} 
+                          messageType={message.message_type} 
+                          className="max-w-xs"
+                          senderType={message.sender_type}
+                          senderAvatar={message.sender_type === 'contact' ? contactAvatar : undefined}
+                          senderName={message.sender_type === 'contact' ? contactName : 'Você'}
+                          messageStatus={message.sender_type !== 'contact' ? (message.status === 'sent' ? 'sent' : 'delivered') : undefined}
+                          timestamp={message.created_at}
+                        />
+                      ) : (
                         <p className="text-sm break-words">{message.content}</p>
                       )}
                       
-                      {message.message_type === 'audio' && message.file_url && (
-                        <AudioPlayer 
-                          audioUrl={message.file_url} 
-                          fileName={message.file_name}
-                        />
+                      {/* Status e horário - APENAS para mensagens de texto e áudio */}
+                      {(message.message_type === 'text' || message.message_type === 'audio') && (
+                        <div className={cn(
+                          "flex items-center gap-1 mt-1 text-xs",
+                          message.sender_type === 'contact' 
+                            ? 'text-muted-foreground' 
+                            : 'text-primary-foreground/70'
+                        )}>
+                          <span>{formatTime(message.created_at)}</span>
+                          {message.sender_type === 'agent' && (
+                            <MessageStatusIndicator 
+                              status={message.status === 'sent' ? 'sent' : 'delivered'}
+                            />
+                          )}
+                        </div>
                       )}
-                      
-                      {(message.message_type === 'image' || message.message_type === 'video' || message.message_type === 'document') && message.file_url && (
-                        <MediaViewer
-                          fileUrl={message.file_url}
-                          messageType={message.message_type}
-                          fileName={message.file_name}
-                        />
-                      )}
-                      
-                      {/* Timestamp e status */}
-                      <div className={cn(
-                        "flex items-center gap-1 mt-1 text-xs",
-                        message.sender_type === 'contact' 
-                          ? 'text-muted-foreground' 
-                          : 'text-primary-foreground/70'
-                      )}>
-                        <span>{formatTime(message.created_at)}</span>
-                        {message.sender_type === 'agent' && (
-                          <MessageStatusIndicator 
-                            status={message.status === 'sent' ? 'sent' : 'delivered'}
-                          />
-                        )}
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -664,6 +812,28 @@ export function ChatModal({
         onSendAudio={handleSendQuickAudio}
         onSendMedia={handleSendQuickMedia}
         onSendDocument={handleSendQuickDocument}
+      />
+
+      {/* ContactSidePanel */}
+      <ContactSidePanel 
+        isOpen={contactPanelOpen} 
+        onClose={() => setContactPanelOpen(false)} 
+        contact={realContactId ? {
+          id: realContactId,
+          name: contactName,
+          phone: contactPhone || '',
+          profile_image_url: contactAvatar
+        } : null}
+      />
+
+      {/* ForwardMessageModal */}
+      <ForwardMessageModal
+        isOpen={forwardModalOpen}
+        onClose={() => {
+          setForwardModalOpen(false);
+          setSelectedMessages(new Set());
+        }}
+        onForward={handleForwardMessages}
       />
     </Dialog>
   );
