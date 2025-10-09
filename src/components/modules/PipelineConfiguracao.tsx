@@ -952,47 +952,62 @@ export default function PipelineConfiguracao({
                           </div>
                         </td>
                         <td className="p-2">
-                          <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
-                              <SelectValue placeholder="Próximo Pipeline" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {pipelines?.map(pipeline => (
-                                <SelectItem key={pipeline.id} value={pipeline.id}>
-                                  {pipeline.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-1">
+                            <label className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              Próximo Pipeline
+                            </label>
+                            <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
+                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {pipelines?.map(pipeline => (
+                                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                                    {pipeline.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </td>
                         <td className="p-2">
-                          <Select 
-                            value={action.targetColumn} 
-                            onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
-                            disabled={!action.nextPipeline}
-                          >
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
-                              <SelectValue placeholder="Coluna de Destino" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(actionColumns[action.id] || []).map((column: any) => (
-                                <SelectItem key={column.id} value={column.id}>
-                                  {column.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-1">
+                            <label className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              Coluna de Destino
+                            </label>
+                            <Select 
+                              value={action.targetColumn} 
+                              onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
+                              disabled={!action.nextPipeline}
+                            >
+                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(actionColumns[action.id] || []).map((column: any) => (
+                                  <SelectItem key={column.id} value={column.id}>
+                                    {column.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </td>
                         <td className="p-2">
-                          <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
-                              <SelectValue placeholder="Estado do Negócio" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Ganho">Ganho</SelectItem>
-                              <SelectItem value="Perda">Perda</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-1">
+                            <label className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              Estado do Negócio
+                            </label>
+                            <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
+                              <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Ganho">Ganho</SelectItem>
+                                <SelectItem value="Perda">Perda</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </td>
                         <td className="p-2">
                           <div className="flex gap-2">
