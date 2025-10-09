@@ -61,6 +61,7 @@ interface PipelinesContextType {
   createCard: (cardData: Partial<PipelineCard>) => Promise<PipelineCard>;
   updateCard: (cardId: string, updates: Partial<PipelineCard>) => Promise<void>;
   moveCard: (cardId: string, newColumnId: string) => Promise<void>;
+  moveCardOptimistic: (cardId: string, newColumnId: string) => Promise<void>;
   getCardsByColumn: (columnId: string) => PipelineCard[];
   reorderColumns: (newColumns: PipelineColumn[]) => Promise<void>;
 }
@@ -349,6 +350,67 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     await updateCard(cardId, { column_id: newColumnId });
   }, [updateCard]);
 
+  const moveCardOptimistic = useCallback(async (cardId: string, newColumnId: string) => {
+    // 1. GUARDAR estado anterior para rollback
+    const previousCards = [...cards];
+    const cardToMove = cards.find(c => c.id === cardId);
+    
+    if (!cardToMove) return;
+
+    console.log('🚀 [Optimistic] Movendo card instantaneamente:', {
+      cardId,
+      fromColumn: cardToMove.column_id,
+      toColumn: newColumnId,
+      timestamp: new Date().toISOString()
+    });
+
+    // 2. ATUALIZAR UI IMEDIATAMENTE (otimista)
+    setCards(prev => prev.map(card => 
+      card.id === cardId 
+        ? { ...card, column_id: newColumnId, updated_at: new Date().toISOString() }
+        : card
+    ));
+
+    // 3. SINCRONIZAR com backend em background (silencioso)
+    try {
+      if (!getHeaders) throw new Error('Headers not available');
+
+      const { data, error } = await supabase.functions.invoke(`pipeline-management/cards?id=${cardId}`, {
+        method: 'PUT',
+        headers: getHeaders,
+        body: { column_id: newColumnId }
+      });
+
+      if (error) throw error;
+
+      console.log('✅ [Optimistic] Sincronização concluída com sucesso:', {
+        cardId,
+        newColumn: newColumnId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Atualizar com dados reais do servidor (se houver diferenças)
+      if (data) {
+        setCards(prev => prev.map(card => 
+          card.id === cardId ? { ...card, ...data } : card
+        ));
+      }
+
+    } catch (error) {
+      console.error('❌ [Optimistic] Erro na sincronização - revertendo:', error);
+      
+      // 4. ROLLBACK: Reverter para estado anterior
+      setCards(previousCards);
+      
+      // 5. MOSTRAR toast de erro
+      toast({
+        title: "Erro ao mover card",
+        description: "O card foi retornado à posição original",
+        variant: "destructive",
+      });
+    }
+  }, [cards, getHeaders, toast]);
+
   const getCardsByColumn = useCallback((columnId: string) => {
     if (!selectedPipeline) return [];
     
@@ -567,6 +629,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     createCard,
     updateCard,
     moveCard,
+    moveCardOptimistic,
     getCardsByColumn,
     reorderColumns: async (newColumns: PipelineColumn[]) => {
       try {
@@ -631,6 +694,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     createCard,
     updateCard,
     moveCard,
+    moveCardOptimistic,
     getCardsByColumn,
     isLoadingColumns
   ]);

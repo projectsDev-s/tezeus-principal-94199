@@ -535,6 +535,7 @@ export function CRMNegocios({
     createColumn,
     createCard,
     moveCard,
+    moveCardOptimistic,
     getCardsByColumn,
     updateCard,
     refreshCurrentPipeline
@@ -639,13 +640,23 @@ export function CRMNegocios({
       active,
       over
     } = event;
-    if (!over) return;
+    
+    if (!over) {
+      setActiveId(null);
+      setDragOverColumn(null);
+      return;
+    }
+
     const activeId = active.id as string;
     const overId = over.id as string;
 
     // Encontrar o card que está sendo movido
     const activeCard = cards.find(card => `card-${card.id}` === activeId);
-    if (!activeCard) return;
+    if (!activeCard) {
+      setActiveId(null);
+      setDragOverColumn(null);
+      return;
+    }
 
     // Determinar a nova coluna baseado no over
     let newColumnId = overId;
@@ -662,13 +673,22 @@ export function CRMNegocios({
       newColumnId = overId.replace('column-', '');
     }
 
-    // Mover o card se a coluna mudou
+    // 🚀 USAR OPTIMISTIC UPDATE para movimento instantâneo
     if (activeCard.column_id !== newColumnId) {
-      await moveCard(activeCard.id, newColumnId);
+      console.log('🎯 Iniciando drag fluido:', {
+        cardId: activeCard.id,
+        from: activeCard.column_id,
+        to: newColumnId
+      });
+      
+      // Não precisa await - deixar executar em background
+      moveCardOptimistic(activeCard.id, newColumnId);
     }
+
+    // Limpar estados do drag imediatamente
     setActiveId(null);
     setDragOverColumn(null);
-  }, [cards, moveCard]);
+  }, [cards, moveCardOptimistic]);
   const openCardDetails = (card: any) => {
     console.log('🔍 Abrindo detalhes do card:', card);
     console.log('📋 Card completo:', {
