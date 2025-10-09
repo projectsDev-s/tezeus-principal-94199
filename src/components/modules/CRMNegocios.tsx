@@ -560,6 +560,8 @@ export function CRMNegocios({
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [appliedFilters, setAppliedFilters] = useState<{
     tags: string[];
+    selectedDate?: Date;
+    dateRange?: { from: Date; to: Date };
   } | null>(null);
   const [isTransferirModalOpen, setIsTransferirModalOpen] = useState(false);
   const [selectedColumnForAction, setSelectedColumnForAction] = useState<string | null>(null);
@@ -620,6 +622,36 @@ export function CRMNegocios({
         return hasCardTag || hasContactTag;
       });
     }
+
+    // Filtrar por data
+    if (appliedFilters?.selectedDate || appliedFilters?.dateRange) {
+      columnCards = columnCards.filter(card => {
+        if (!card.created_at) return false;
+        
+        const cardDate = new Date(card.created_at);
+        cardDate.setHours(0, 0, 0, 0); // Normalizar para início do dia
+        
+        if (appliedFilters.selectedDate) {
+          // Filtro por data única
+          const filterDate = new Date(appliedFilters.selectedDate);
+          filterDate.setHours(0, 0, 0, 0);
+          return cardDate.getTime() === filterDate.getTime();
+        }
+        
+        if (appliedFilters.dateRange?.from && appliedFilters.dateRange?.to) {
+          // Filtro por período
+          const fromDate = new Date(appliedFilters.dateRange.from);
+          fromDate.setHours(0, 0, 0, 0);
+          const toDate = new Date(appliedFilters.dateRange.to);
+          toDate.setHours(23, 59, 59, 999); // Até o fim do dia
+          
+          return cardDate >= fromDate && cardDate <= toDate;
+        }
+        
+        return true;
+      });
+    }
+    
     return columnCards;
   };
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -906,7 +938,12 @@ export function CRMNegocios({
               <div className="min-w-[200px] mr-2 flex-shrink-0">
                 {isLoading ? <Skeleton className="h-10 w-full" /> : <Select value={selectedPipeline?.id || ""} onValueChange={value => {
                 const pipeline = pipelines.find(p => p.id === value);
-                if (pipeline) selectPipeline(pipeline);
+                if (pipeline) {
+                  selectPipeline(pipeline);
+                  // Limpar filtros ao mudar de pipeline
+                  setAppliedFilters(null);
+                  setSearchTerm("");
+                }
               }}>
                     <SelectTrigger className={cn("h-10 border-gray-300 focus:border-primary focus:ring-primary", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
                       <SelectValue placeholder="Selecione um pipeline" />
@@ -926,12 +963,26 @@ export function CRMNegocios({
 
               {/* Filtrar Button */}
               <div className="relative flex-shrink-0">
-                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 ? "bg-orange-500 text-white hover:bg-orange-600" : isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
+                <Button 
+                  size="sm" 
+                  className={cn(
+                    "font-medium relative", 
+                    (appliedFilters?.tags && appliedFilters.tags.length > 0) || appliedFilters?.selectedDate || appliedFilters?.dateRange
+                      ? "bg-orange-500 text-white hover:bg-orange-600" 
+                      : isDarkMode 
+                        ? "bg-yellow-500 text-black hover:bg-yellow-600" 
+                        : "bg-yellow-400 text-black hover:bg-yellow-500"
+                  )} 
+                  onClick={() => setIsFilterModalOpen(true)} 
+                  disabled={!selectedPipeline}
+                >
                   <Filter className="w-4 h-4 mr-2" />
                   Filtrar
-                  {appliedFilters?.tags && appliedFilters.tags.length > 0 && <Badge className="ml-2 bg-white text-orange-500 text-xs px-1 py-0 h-auto">
-                      {appliedFilters.tags.length}
-                    </Badge>}
+                  {((appliedFilters?.tags && appliedFilters.tags.length > 0) || appliedFilters?.selectedDate || appliedFilters?.dateRange) && (
+                    <Badge className="ml-2 bg-white text-orange-500 text-xs px-1 py-0 h-auto">
+                      {(appliedFilters?.tags?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                    </Badge>
+                  )}
                 </Button>
               </div>
               
@@ -1280,11 +1331,17 @@ export function CRMNegocios({
       // Implementar reordenação se necessário
     }} />
 
-      <FilterModal open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen} onApplyFilters={filters => {
-      setAppliedFilters({
-        tags: filters.tags
-      });
-    }} />
+      <FilterModal 
+        open={isFilterModalOpen} 
+        onOpenChange={setIsFilterModalOpen} 
+        onApplyFilters={filters => {
+          setAppliedFilters({
+            tags: filters.tags,
+            selectedDate: filters.selectedDate,
+            dateRange: filters.dateRange
+          });
+        }} 
+      />
 
       <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
 
