@@ -205,7 +205,7 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
     
     // Ícone com tamanho dinâmico
     const iconElement = React.cloneElement(item.icon as React.ReactElement, {
-      className: cn("transition-all duration-300", isCollapsed ? "w-6 h-6" : "w-5 h-5")
+      className: cn("transition-all duration-300", isCollapsed ? "w-5 h-5" : "w-5 h-5")
     });
     
     const menuButton = (
@@ -247,14 +247,8 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
   const renderGroup = (groupName: string, label: string, items: (MenuItem & { group?: string })[]) => {
     const isExpanded = expandedGroups.includes(groupName);
     
-    // No modo colapsado, mostrar apenas ícone do grupo
+    // No modo colapsado, mostrar nome + setinha
     if (isCollapsed) {
-      const firstItem = items[0]; // Pegar primeiro item para usar o ícone
-      
-      const groupIcon = React.cloneElement(firstItem.icon as React.ReactElement, {
-        className: "w-6 h-6 transition-all duration-300"
-      });
-      
       return (
         <TooltipProvider key={groupName}>
           <Tooltip>
@@ -266,9 +260,15 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
                     prev.includes(groupName) ? prev : [...prev, groupName]
                   ); // Expandir grupo
                 }}
-                className="w-full flex items-center justify-center p-3 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+                className="w-full flex flex-col items-center p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
               >
-                {groupIcon}
+                {/* Setinha */}
+                <ChevronRight className="w-4 h-4 mb-1" />
+                
+                {/* Nome do grupo em texto pequeno */}
+                <span className="text-[10px] font-medium text-center leading-tight">
+                  {label}
+                </span>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="ml-2">
@@ -337,8 +337,8 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
     <div 
       data-sidebar
       className={cn(
-        "rounded-lg shadow-md m-2 flex flex-col max-h-[calc(100vh-1rem)] transition-all duration-300 relative bg-sidebar border border-sidebar-border",
-        isCollapsed ? "w-24" : "w-64"
+        "rounded-lg shadow-md m-2 flex flex-col max-h-[calc(100vh-1rem)] transition-all duration-300 ease-in-out relative bg-sidebar border border-sidebar-border",
+        isCollapsed ? "w-28" : "w-64"
       )}
     >
       {/* Logo */}
@@ -405,7 +405,7 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
                   <PopoverTrigger asChild>
                     <TooltipTrigger asChild>
                       <button className="p-2 hover:bg-accent rounded-md relative">
-                  <Bell className={cn(isCollapsed ? "w-6 h-6" : "w-5 h-5", "text-muted-foreground")} />
+              <Bell className={cn(isCollapsed ? "w-5 h-5" : "w-5 h-5", "text-muted-foreground")} />
                         <Badge 
                           variant="destructive" 
                           className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0"
@@ -447,7 +447,7 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
             <Tooltip>
               <TooltipTrigger asChild>
                 <button className="p-2 hover:bg-accent rounded-md">
-                  <MessageCircle className={cn(isCollapsed ? "w-6 h-6" : "w-5 h-5", "text-muted-foreground")} />
+                  <MessageCircle className={cn(isCollapsed ? "w-5 h-5" : "w-5 h-5", "text-muted-foreground")} />
                 </button>
               </TooltipTrigger>
               {isCollapsed && (
