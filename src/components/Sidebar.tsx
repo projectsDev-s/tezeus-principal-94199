@@ -345,8 +345,8 @@ export function Sidebar({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium text-primary">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                  <User className="w-5 h-5 text-muted-foreground" />
                 </div>
               </TooltipTrigger>
               {isCollapsed && <TooltipContent side="right">
