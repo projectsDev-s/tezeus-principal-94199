@@ -72,7 +72,8 @@ export function usePipelineCards(pipelineId: string | null) {
 
       if (error) throw error;
 
-      setCards(prev => [data, ...prev]);
+      // Recarregar todos os cards para obter dados completos
+      await fetchCards();
       
       toast({
         title: "Sucesso",
