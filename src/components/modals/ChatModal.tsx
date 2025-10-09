@@ -149,11 +149,6 @@ export function ChatModal({
       
       // Recarregar mensagens para mostrar a nova mensagem
       loadInitial(conversationId);
-      
-      toast({
-        title: "Mensagem enviada",
-        description: "Sua mensagem foi enviada com sucesso"
-      });
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
@@ -236,11 +231,6 @@ export function ChatModal({
 
       // Recarregar mensagens
       loadInitial(conversationId);
-
-      toast({
-        title: "Áudio enviado",
-        description: "Sua mensagem de áudio foi enviada com sucesso"
-      });
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
       toast({
@@ -269,11 +259,6 @@ export function ChatModal({
 
       loadInitial(conversationId);
       setQuickItemsModalOpen(false);
-      
-      toast({
-        title: "Mensagem enviada",
-        description: "Sua mensagem rápida foi enviada com sucesso"
-      });
     } catch (error) {
       console.error('Erro ao enviar mensagem rápida:', error);
       toast({
@@ -303,11 +288,6 @@ export function ChatModal({
 
       loadInitial(conversationId);
       setQuickItemsModalOpen(false);
-      
-      toast({
-        title: "Áudio enviado",
-        description: "Seu áudio foi enviado com sucesso"
-      });
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
       toast({
@@ -337,11 +317,6 @@ export function ChatModal({
 
       loadInitial(conversationId);
       setQuickItemsModalOpen(false);
-      
-      toast({
-        title: "Mídia enviada",
-        description: "Sua mídia foi enviada com sucesso"
-      });
     } catch (error) {
       console.error('Erro ao enviar mídia:', error);
       toast({
@@ -371,11 +346,6 @@ export function ChatModal({
 
       loadInitial(conversationId);
       setQuickItemsModalOpen(false);
-      
-      toast({
-        title: "Documento enviado",
-        description: "Seu documento foi enviado com sucesso"
-      });
     } catch (error) {
       console.error('Erro ao enviar documento:', error);
       toast({
@@ -737,11 +707,6 @@ export function ChatModal({
                   if (error) throw error;
 
                   loadInitial(conversationId);
-                  
-                  toast({
-                    title: "Arquivo enviado",
-                    description: "Seu arquivo foi enviado com sucesso"
-                  });
                 } catch (error) {
                   console.error('Erro ao enviar arquivo:', error);
                   toast({
