@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ImpersonateWorkspaceModal } from "@/components/modals/ImpersonateWorkspaceModal";
+import { useSystemCustomizationContext } from "@/contexts/SystemCustomizationContext";
 import { 
   LayoutDashboard, 
   MessageCircle, 
@@ -77,6 +78,7 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
   const { user, userRole, hasRole, logout } = useAuth();
   const { workspaces, isLoading } = useWorkspaces();
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace();
+  const { customization } = useSystemCustomizationContext();
 
   // Auto-select first workspace for master users
   useEffect(() => {
@@ -317,14 +319,26 @@ export function Sidebar({ activeModule, onModuleChange, isDarkMode, onToggleDark
           isCollapsed ? "p-3" : "p-6"
         )}
       >
-        <h1 
-          className={cn(
-            "font-bold transition-all duration-300 text-sidebar-foreground",
-            isCollapsed ? "text-lg" : "text-2xl"
-          )}
-        >
-          {isCollapsed ? "T" : "TEZEUS"}
-        </h1>
+        {/* Logo ou Texto */}
+        {customization.logo_url ? (
+          <img 
+            src={customization.logo_url} 
+            alt="Logo do Sistema" 
+            className={cn(
+              "object-contain transition-all duration-300",
+              isCollapsed ? "h-8" : "h-10"
+            )}
+          />
+        ) : (
+          <h1 
+            className={cn(
+              "font-bold transition-all duration-300 text-sidebar-foreground",
+              isCollapsed ? "text-lg" : "text-2xl"
+            )}
+          >
+            {isCollapsed ? "T" : "TEZEUS"}
+          </h1>
+        )}
         
         {/* Botão de colapso */}
         <button

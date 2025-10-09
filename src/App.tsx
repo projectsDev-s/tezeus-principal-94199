@@ -12,6 +12,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import { Login } from "./pages/Login";
 import { RealtimeNotificationProvider } from "./components/RealtimeNotificationProvider";
+import { SystemCustomizationProvider } from "./contexts/SystemCustomizationContext";
 
 const queryClient = new QueryClient();
 
@@ -21,10 +22,11 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <WorkspaceProvider>
-          <PipelinesProvider>
-            <RealtimeNotificationProvider>
-              <BrowserRouter>
+        <SystemCustomizationProvider>
+          <WorkspaceProvider>
+            <PipelinesProvider>
+              <RealtimeNotificationProvider>
+                <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -56,10 +58,11 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-              </BrowserRouter>
-            </RealtimeNotificationProvider>
-          </PipelinesProvider>
-        </WorkspaceProvider>
+                </BrowserRouter>
+              </RealtimeNotificationProvider>
+            </PipelinesProvider>
+          </WorkspaceProvider>
+        </SystemCustomizationProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
