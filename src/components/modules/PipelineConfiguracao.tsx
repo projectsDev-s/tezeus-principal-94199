@@ -516,13 +516,20 @@ export default function PipelineConfiguracao({
 
   const loadPipelineActions = async (pipelineId: string) => {
     try {
+      console.log('📥 Carregando ações para pipeline:', pipelineId);
+      
       const { data, error } = await supabase
         .from('pipeline_actions')
         .select('*')
         .eq('pipeline_id', pipelineId)
         .order('order_position');
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao carregar ações:', error);
+        throw error;
+      }
+
+      console.log('📦 Ações carregadas do banco:', data);
 
       if (data && data.length > 0) {
         const formattedActions: Action[] = data.map(action => ({
@@ -532,6 +539,8 @@ export default function PipelineConfiguracao({
           targetColumn: action.target_column_id,
           dealState: action.deal_state
         }));
+        
+        console.log('✅ Ações formatadas:', formattedActions);
         setActions(formattedActions);
 
         // Carregar colunas para cada ação que já tem pipeline selecionado
@@ -545,10 +554,16 @@ export default function PipelineConfiguracao({
           }
         }
       } else {
+        console.log('⚠️ Nenhuma ação encontrada, usando ações iniciais');
         setActions(initialActions);
       }
     } catch (error) {
-      console.error('Error loading pipeline actions:', error);
+      console.error('❌ Error loading pipeline actions:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as ações do pipeline.",
+        variant: "destructive",
+      });
       setActions(initialActions);
     }
   };
@@ -579,9 +594,31 @@ export default function PipelineConfiguracao({
   const saveAction = async (action: Action) => {
     console.log('💾 saveAction chamado com:', action);
     console.log('📊 Pipeline selecionado:', selectedPipeline);
+    console.log('👤 Usuário:', { id: user?.id, email: user?.email });
+    console.log('🏢 Workspace:', selectedWorkspace?.workspace_id);
     
     if (!selectedPipeline?.id) {
       console.error('❌ Nenhum pipeline selecionado!');
+      return;
+    }
+
+    if (!user?.id || !user?.email) {
+      console.error('❌ Usuário não autenticado!');
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar autenticado para salvar ações.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedWorkspace?.workspace_id) {
+      console.error('❌ Nenhum workspace selecionado!');
+      toast({
+        title: "Erro",
+        description: "Nenhum workspace selecionado.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -601,6 +638,19 @@ export default function PipelineConfiguracao({
     }
 
     try {
+      // Configurar contexto do usuário primeiro
+      const { error: contextError } = await supabase.rpc('set_current_user_context', {
+        user_id: user.id,
+        user_email: user.email
+      });
+
+      if (contextError) {
+        console.error('❌ Erro ao configurar contexto:', contextError);
+        throw new Error('Falha ao configurar contexto do usuário');
+      }
+
+      console.log('✅ Contexto do usuário configurado');
+
       const actionData = {
         pipeline_id: selectedPipeline.id,
         action_name: action.actionName,
@@ -620,7 +670,12 @@ export default function PipelineConfiguracao({
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro ao criar ação:', error);
+          throw error;
+        }
+
+        console.log('✅ Ação criada com sucesso:', data);
 
         toast({
           title: "Ação salva",
@@ -636,7 +691,12 @@ export default function PipelineConfiguracao({
           .update(actionData)
           .eq('id', action.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro ao atualizar ação:', error);
+          throw error;
+        }
+
+        console.log('✅ Ação atualizada com sucesso');
 
         toast({
           title: "Ação atualizada",
@@ -646,11 +706,11 @@ export default function PipelineConfiguracao({
         // Recarregar todas as ações do banco
         await loadPipelineActions(selectedPipeline.id);
       }
-    } catch (error) {
-      console.error('Error saving action:', error);
+    } catch (error: any) {
+      console.error('❌ Error saving action:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar a ação.",
+        title: "Erro ao salvar ação",
+        description: error.message || "Não foi possível salvar a ação. Verifique suas permissões.",
         variant: "destructive",
       });
     }
