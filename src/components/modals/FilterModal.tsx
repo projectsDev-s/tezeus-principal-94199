@@ -168,7 +168,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                   onSelect={(range) => {
                     if (range) {
                       if (range.from && range.to) {
-                        // Período completo selecionado - fechar calendário
+                        // Período completo selecionado
                         if (range.from.getTime() !== range.to.getTime()) {
                           setDateRange({ from: range.from, to: range.to });
                           setSelectedDate(undefined);
@@ -177,17 +177,15 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                           setSelectedDate(range.from);
                           setDateRange(undefined);
                         }
-                        setShowCalendar(false);
+                        // Não fecha mais automaticamente - só ao clicar fora
                       } else if (range.from) {
                         // Apenas primeira data selecionada - manter calendário aberto
                         setDateRange({ from: range.from, to: range.from });
                         setSelectedDate(undefined);
-                        // NÃO fechar o calendário aqui
                       }
                     } else {
                       setSelectedDate(undefined);
                       setDateRange(undefined);
-                      setShowCalendar(false);
                     }
                   }}
                   initialFocus
