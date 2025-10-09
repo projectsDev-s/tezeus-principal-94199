@@ -167,6 +167,7 @@ export function DealDetailsModal({
       setContactPipelines([]);
       setPipelineCardsCount(0);
       setAvailableCards([]);
+      setPipelineActions([]); // CRÍTICO: Limpar ações ao trocar de card
       
       // Resetar dados do contato se não vier de props
       if (!initialContactData) {
@@ -227,9 +228,18 @@ export function DealDetailsModal({
   // Carregar ações do pipeline quando mudar
   useEffect(() => {
     if (selectedPipelineId) {
+      // CRÍTICO: Limpar ações antes de buscar novas para evitar mistura entre pipelines
+      setPipelineActions([]);
       fetchPipelineActions(selectedPipelineId);
     }
   }, [selectedPipelineId]);
+
+  // CRÍTICO: Limpar ações quando o modal fechar
+  useEffect(() => {
+    if (!isOpen) {
+      setPipelineActions([]);
+    }
+  }, [isOpen]);
 
   const fetchPipelineActions = async (pipelineId: string) => {
     try {
@@ -916,7 +926,7 @@ export function DealDetailsModal({
                 </label>
                 <div className="flex items-center gap-3">
                   <span className={cn("text-sm font-semibold", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                    {isLoadingData ? 'Carregando...' : `${pipelineCardsCount} ${pipelineCardsCount === 1 ? 'Negócio' : 'Negócios'}`}
+                    {isLoadingData ? 'Carregando...' : `${availableCards.length} ${availableCards.length === 1 ? 'Negócio' : 'Negócios'}`}
                   </span>
                   
                   {contactPipelines.length > 0 && (
