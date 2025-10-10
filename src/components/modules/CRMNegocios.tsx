@@ -488,7 +488,7 @@ function DraggableDeal({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{deal.responsible || 'Sem responsável'}</p>
+                  <p>{deal.responsible?.split(' ')[0] || 'Sem responsável'}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

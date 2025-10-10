@@ -1490,7 +1490,7 @@ export function WhatsAppChat({
                             </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{conversation.assigned_user_name || 'Não atribuído'}</p>
+                          <p>{conversation.assigned_user_name?.split(' ')[0] || 'Não atribuído'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
