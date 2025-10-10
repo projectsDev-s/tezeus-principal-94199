@@ -593,27 +593,20 @@ serve(async (req) => {
             resolvedConnectionId = connectionData.id;
           }
 
-          // Find existing conversation for this contact and workspace (any connection)
+          // Find existing conversation for this contact, workspace AND connection
           let conversationId: string;
           const { data: existingConversation } = await supabase
             .from('conversations')
             .select('id, connection_id')
             .eq('contact_id', contactId)
             .eq('workspace_id', workspaceId)
+            .eq('connection_id', resolvedConnectionId)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
 
           if (existingConversation) {
             conversationId = existingConversation.id;
-            
-            // Update connection_id if it's different (link conversation to current connection)
-            if (resolvedConnectionId && existingConversation.connection_id !== resolvedConnectionId) {
-              await supabase
-                .from('conversations')
-                .update({ connection_id: resolvedConnectionId })
-                .eq('id', conversationId);
-            }
           } else {
             // Create new conversation only if none exists for this contact
             const { data: newConversation } = await supabase
