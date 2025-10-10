@@ -31,7 +31,8 @@ import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
 import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, Menu, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -108,6 +109,8 @@ export function WhatsAppChat({
   const [selectedTag, setSelectedTag] = useState<string>("");
   const [selectedConnection, setSelectedConnection] = useState<string>("");
   const [isUpdatingProfileImages, setIsUpdatingProfileImages] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [customFiltersOpen, setCustomFiltersOpen] = useState(false);
 
   // Estados para as abas baseadas no papel
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -1066,12 +1069,257 @@ export function WhatsAppChat({
         </div>
       </div>;
   }
-  return <div className="flex h-full bg-white overflow-hidden">
+  return <div className="flex h-full bg-white overflow-hidden w-full">
+      {/* Sidebar de Filtros */}
+      <div className={cn(
+        "border-r border-border flex flex-col transition-all duration-300 bg-background",
+        sidebarCollapsed ? "w-14" : "w-56"
+      )}>
+        {/* Header da sidebar */}
+        <div className="p-3 border-b border-border flex items-center justify-between">
+          {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="h-8 w-8"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Select de Canais */}
+        {!sidebarCollapsed && (
+          <div className="p-3 border-b border-border">
+            <Select value={selectedConnection || "all"} onValueChange={(value) => setSelectedConnection(value === "all" ? "" : value)}>
+              <SelectTrigger className="w-full h-9 text-xs">
+                <SelectValue placeholder="Todas as conexões" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as conexões</SelectItem>
+                {connectionsLoading ? (
+                  <SelectItem value="__loading__" disabled>Carregando...</SelectItem>
+                ) : workspaceConnections.length === 0 ? (
+                  <SelectItem value="__empty__" disabled>Nenhuma conexão</SelectItem>
+                ) : (
+                  workspaceConnections.map(connection => (
+                    <SelectItem key={connection.id} value={connection.id}>
+                      {connection.instance_name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Categorias de Navegação */}
+        <nav className="flex-1 p-2">
+          <div className="space-y-1">
+            {/* Todos */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setActiveTab('all')}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      activeTab === 'all' 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Circle className={cn("h-4 w-4", activeTab === 'all' && "fill-yellow-500 text-yellow-500")} />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 text-left">Todos</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                          {conversations.filter(c => c.status !== 'closed').length}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {sidebarCollapsed && <TooltipContent side="right">Todos</TooltipContent>}
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Minhas Conversas */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setActiveTab('mine')}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      activeTab === 'mine' 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <UserCircle className="h-4 w-4" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 text-left">Minhas conversas</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                          {conversations.filter(c => c.assigned_user_id === user?.id && c.status !== 'closed').length}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {sidebarCollapsed && <TooltipContent side="right">Minhas conversas</TooltipContent>}
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Não atribuídas */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setActiveTab('unassigned')}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      activeTab === 'unassigned' 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <UserX className="h-4 w-4" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 text-left">Não atribuídas</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                          {conversations.filter(c => !c.assigned_user_id && c.status !== 'closed').length}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {sidebarCollapsed && <TooltipContent side="right">Não atribuídas</TooltipContent>}
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Grupos */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setActiveTab('groups')}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      activeTab === 'groups' 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <UsersRound className="h-4 w-4" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 text-left">Grupos</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                          0
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {sidebarCollapsed && <TooltipContent side="right">Grupos</TooltipContent>}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </nav>
+
+        {/* Seção Customizado */}
+        {!sidebarCollapsed && (
+          <div className="border-t border-border p-2">
+            <Collapsible open={customFiltersOpen} onOpenChange={setCustomFiltersOpen}>
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-between h-9 px-3 text-sm font-medium"
+                >
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    <span>Customizado</span>
+                  </div>
+                  <Plus className={cn("h-4 w-4 transition-transform", customFiltersOpen && "rotate-45")} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1 mt-1">
+                {/* Filtro por Tag */}
+                <div className="px-2">
+                  <Select value={selectedTag || "all"} onValueChange={(value) => setSelectedTag(value === "all" ? "" : value)}>
+                    <SelectTrigger className="w-full h-8 text-xs">
+                      <SelectValue placeholder="Filtrar por tag" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as tags</SelectItem>
+                      {tags.map(tag => (
+                        <SelectItem key={tag.id} value={tag.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: tag.color || '#808080' }}
+                            />
+                            <span className="text-xs">{tag.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por Agente */}
+                <div className="px-2">
+                  <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                    <SelectTrigger className="w-full h-8 text-xs">
+                      <SelectValue placeholder="Filtrar por agente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os agentes</SelectItem>
+                      {queuesLoading ? (
+                        <SelectItem value="__loading__" disabled>Carregando...</SelectItem>
+                      ) : queues.length === 0 ? (
+                        <SelectItem value="__empty__" disabled>Nenhum agente</SelectItem>
+                      ) : (
+                        queues.filter(queue => queue.ai_agent_id && queue.ai_agent).map(queue => (
+                          <SelectItem key={queue.ai_agent!.id} value={queue.ai_agent!.id}>
+                            {queue.ai_agent!.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Botão Limpar */}
+                {(selectedTag || selectedAgent) && (
+                  <div className="px-2 pt-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedAgent("");
+                        setSelectedTag("");
+                      }}
+                      className="w-full h-7 text-xs"
+                    >
+                      Limpar filtros
+                    </Button>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+      </div>
+
       {/* Sidebar com lista de conversas */}
       <div className="w-80 min-w-80 border-r border-border flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border">
-          {/* Search bar with filter */}
+          {/* Search bar */}
           <div className="flex items-center w-full">
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -1081,114 +1329,6 @@ export function WhatsAppChat({
                 onChange={e => setSearchTerm(e.target.value)} 
                 className="pl-10 pr-3 border-0 shadow-none bg-muted/30 focus:bg-muted/50" 
               />
-            </div>
-            <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="ml-2 h-10 w-10 p-0">
-                  <svg className="w-5 h-5" focusable="false" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" fill="currentColor"></path>
-                  </svg>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-4" align="end">
-                <div className="space-y-3">
-                  {/* Filtro por Agente */}
-                  <div>
-                    <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                      <SelectTrigger className="w-full h-10">
-                        <SelectValue placeholder="Filtre pelo agente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os agentes</SelectItem>
-                        {queuesLoading ? (
-                          <SelectItem value="__loading__" disabled>Carregando agentes...</SelectItem>
-                        ) : queues.length === 0 ? (
-                          <SelectItem value="__empty__" disabled>Nenhum agente encontrado</SelectItem>
-                        ) : (
-                          queues.filter(queue => queue.ai_agent_id && queue.ai_agent).map(queue => (
-                            <SelectItem key={queue.ai_agent!.id} value={queue.ai_agent!.id}>
-                              {queue.ai_agent!.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Filtro por Conexão */}
-                  <div>
-                    <Select value={selectedConnection || "all"} onValueChange={(value) => setSelectedConnection(value === "all" ? "" : value)}>
-                      <SelectTrigger className="w-full h-10">
-                        <SelectValue placeholder="Filtre pela conexão" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as conexões</SelectItem>
-                        {connectionsLoading ? (
-                          <SelectItem value="__loading__" disabled>Carregando conexões...</SelectItem>
-                        ) : workspaceConnections.length === 0 ? (
-                          <SelectItem value="__empty__" disabled>Nenhuma conexão encontrada</SelectItem>
-                        ) : (
-                          workspaceConnections.map(connection => (
-                            <SelectItem key={connection.id} value={connection.id}>
-                              {connection.instance_name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Filtro por Tag */}
-                  <div>
-                    <Select value={selectedTag || "all"} onValueChange={(value) => setSelectedTag(value === "all" ? "" : value)}>
-                      <SelectTrigger className="w-full h-10">
-                        <SelectValue placeholder="Filtre pela tag" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as tags</SelectItem>
-                        {tags.map(tag => (
-                          <SelectItem key={tag.id} value={tag.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: tag.color || '#808080' }}
-                              />
-                              {tag.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Botão Limpar */}
-                  <div className="pt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedAgent("");
-                        setSelectedTag("");
-                      }}
-                      className="w-full"
-                    >
-                      Limpar
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          {/* Abas baseadas no papel do usuário */}
-          <div className="border-b border-border">
-            <div className="flex">
-              {tabs.map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
-                  {tab.label}
-                  {tab.count > 0 && <span className={cn("ml-2 px-2 py-1 text-xs rounded-full", activeTab === tab.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                      {tab.count}
-                    </span>}
-                </button>)}
             </div>
           </div>
         </div>
