@@ -87,15 +87,41 @@ serve(async (req) => {
     console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: ${payload.event}`);
     
     // Debug: verificar evento recebido
-    console.log(`🔍 [${requestId}] Event check: payload.event="${payload.event}", uppercase="${payload.event?.toUpperCase()}", has_ack=${payload.data?.ack !== undefined}`);
+    console.log(`🔍 [${requestId}] Event check: payload.event="${payload.event}", uppercase="${payload.event?.toUpperCase()}", has_ack=${payload.data?.ack !== undefined}, has_status=${payload.data?.status !== undefined}, status="${payload.data?.status}"`);
     
     // HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - Evolution API v2 (case-insensitive)
-    if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE' && payload.data?.ack !== undefined) {
-      console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}`);
+    if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE' && (payload.data?.ack !== undefined || payload.data?.status)) {
+      console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}, status=${payload.data.status}`);
       
       const messageKey = payload.data.key;
-      const ackLevel = payload.data.ack;
       const evolutionMessageId = messageKey?.id;
+      
+      // Obter ack level do campo ack (numérico) ou mapear do campo status (string)
+      let ackLevel = payload.data.ack;
+      
+      if (ackLevel === undefined && payload.data.status) {
+        console.log(`🔄 [${requestId}] Mapping status "${payload.data.status}" to ack level`);
+        
+        switch (payload.data.status) {
+          case 'PENDING':
+            ackLevel = 0;
+            break;
+          case 'SERVER_ACK':
+            ackLevel = 1;
+            break;
+          case 'DELIVERY_ACK':
+            ackLevel = 2;
+            break;
+          case 'READ':
+            ackLevel = 3;
+            break;
+          case 'PLAYED':
+            ackLevel = 4;
+            break;
+          default:
+            console.warn(`⚠️ [${requestId}] Unknown status: ${payload.data.status}`);
+        }
+      }
       
       // Get workspace_id from instance
       let workspaceId = null;
