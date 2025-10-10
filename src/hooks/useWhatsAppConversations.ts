@@ -36,6 +36,12 @@ export interface WhatsAppConversation {
   assigned_user_name?: string | null;
   assigned_at?: string | null;
   connection_id?: string;
+  connection?: {
+    id: string;
+    instance_name: string;
+    phone_number?: string;
+    status: string;
+  };
   workspace_id?: string;
   conversation_tags?: Array<{
     id: string;
@@ -150,6 +156,7 @@ export const useWhatsAppConversations = () => {
         last_message: conv.last_message,
         conversation_tags: conv.conversation_tags || [],
         connection_id: connectionMap.get(conv.id) || conv.connection_id,
+        connection: conv.connection || null,
         workspace_id: conv.workspace_id,
         messages: []
       }));

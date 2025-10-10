@@ -1288,7 +1288,10 @@ export function WhatsAppChat({
                         }}>
                           {conversation.contact?.name || conversation.contact?.phone}
                         </span>
-                        <ConnectionBadge connectionId={conversation.connection_id} />
+                          <ConnectionBadge 
+                            connectionId={conversation.connection_id}
+                            connectionInfo={conversation.connection}
+                          />
                       </div>
                       
                         {/* ✅ Última mensagem da conversa */}

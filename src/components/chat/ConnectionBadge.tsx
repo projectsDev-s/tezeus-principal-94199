@@ -12,16 +12,26 @@ interface ConnectionInfo {
 
 interface ConnectionBadgeProps {
   connectionId?: string;
+  connectionInfo?: {
+    instance_name: string;
+    phone_number?: string;
+    status: string;
+  };
 }
 
-export function ConnectionBadge({ connectionId }: ConnectionBadgeProps) {
-  const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
+export function ConnectionBadge({ connectionId, connectionInfo: propConnectionInfo }: ConnectionBadgeProps) {
+  const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(propConnectionInfo || null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log('🔍 ConnectionBadge - connectionId:', connectionId);
+    // Se já tem dados via props, não busca nada
+    if (propConnectionInfo) {
+      setConnectionInfo(propConnectionInfo);
+      return;
+    }
+
+    // Fallback: busca apenas se não tiver dados
     if (!connectionId) {
-      console.log('⚠️ ConnectionBadge - sem connectionId, não renderizando');
       return;
     }
 
@@ -44,9 +54,9 @@ export function ConnectionBadge({ connectionId }: ConnectionBadgeProps) {
     };
 
     fetchConnectionInfo();
-  }, [connectionId]);
+  }, [connectionId, propConnectionInfo]);
 
-  if (!connectionId || loading) {
+  if (!connectionInfo || loading) {
     return null;
   }
 

@@ -129,6 +129,12 @@ serve(async (req) => {
           phone,
           profile_image_url
         ),
+        connections!inner(
+          id,
+          instance_name,
+          phone_number,
+          status
+        ),
         conversation_tags (
           id,
           tag_id,
@@ -221,6 +227,7 @@ serve(async (req) => {
         return {
           ...conv,
           connection_id: conv.connection_id,
+          connection: conv.connections || null,
           last_message: lastMessage || [],
           assigned_user_name: assignedUserName,
           conversation_tags: conv.conversation_tags || []
