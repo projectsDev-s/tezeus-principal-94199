@@ -677,7 +677,7 @@ serve(async (req) => {
           request_id: requestId,
           
           // Event type identification for N8N processing
-          event_type: isMessageUpdate ? 'update' : 'upsert',
+          event_type: 'upsert', // MESSAGES_UPDATE já retorna antes, então aqui sempre é upsert
           processed_locally: !!processedData,
           
           // Computed fields for convenience (but original data is preserved above)
@@ -691,7 +691,7 @@ serve(async (req) => {
             message_keys: payload.data?.message ? Object.keys(payload.data.message) : [],
             fromMe_value: payload.data?.key?.fromMe,
             calculated_direction: payload.data?.key?.fromMe === true ? 'outbound' : 'inbound',
-            is_message_update: isMessageUpdate
+            is_message_update: false // MESSAGES_UPDATE já retorna antes, então aqui sempre é false
           }
         };
 
