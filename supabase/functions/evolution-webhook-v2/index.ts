@@ -679,8 +679,8 @@ serve(async (req) => {
           timestamp: new Date().toISOString(),
           request_id: requestId,
           
-          // Event type identification for N8N processing
-          event_type: 'upsert', // MESSAGES_UPDATE já retorna antes, então aqui sempre é upsert
+          // Event type identification for N8N processing (based on original event)
+          event_type: payload.event?.toLowerCase().endsWith('update') ? 'update' : 'upsert',
           processed_locally: !!processedData,
           
           // Computed fields for convenience (but original data is preserved above)
