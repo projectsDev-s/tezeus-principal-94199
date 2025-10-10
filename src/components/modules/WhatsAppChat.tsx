@@ -150,7 +150,7 @@ export function WhatsAppChat({
   // Filtrar conversas baseado na aba ativa e filtros
   const getFilteredConversations = () => {
     let filtered = [];
-    
+
     // Filtrar por aba
     switch (activeTab) {
       case 'all':
@@ -171,7 +171,6 @@ export function WhatsAppChat({
       console.log('🏷️ Filtro por tag ativo:', selectedTag);
       console.log('📋 Conversas antes do filtro:', filtered.length);
       console.log('🔍 Primeira conversa estrutura:', filtered[0]?.conversation_tags);
-      
       filtered = filtered.filter(conv => {
         const hasTag = conv.conversation_tags?.some((ct: any) => ct.tag_id === selectedTag);
         if (hasTag) {
@@ -179,7 +178,6 @@ export function WhatsAppChat({
         }
         return hasTag || false;
       });
-      
       console.log('📋 Conversas após filtro:', filtered.length);
     }
 
@@ -190,12 +188,8 @@ export function WhatsAppChat({
 
     // Filtrar por termo de busca
     if (searchTerm) {
-      filtered = filtered.filter(conv => 
-        conv.contact.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (conv.contact.phone && conv.contact.phone.includes(searchTerm))
-      );
+      filtered = filtered.filter(conv => conv.contact.name.toLowerCase().includes(searchTerm.toLowerCase()) || conv.contact.phone && conv.contact.phone.includes(searchTerm));
     }
-
     return filtered;
   };
   const [peekModalOpen, setPeekModalOpen] = useState(false);
@@ -209,7 +203,7 @@ export function WhatsAppChat({
   const [recordingTime, setRecordingTime] = useState(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [quickItemsModalOpen, setQuickItemsModalOpen] = useState(false);
-  
+
   // Estados para modo de seleção e encaminhamento
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
@@ -482,27 +476,18 @@ export function WhatsAppChat({
   // ✅ Realtime subscription para atualização de status das mensagens
   useEffect(() => {
     if (!selectedConversation?.id) return;
-    
-    const channel = supabase
-      .channel('messages-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${selectedConversation.id}`
-        },
-        (payload) => {
-          console.log('📨 Message updated via realtime:', payload);
-          // Atualizar mensagem específica
-          if (payload.new && payload.new.id) {
-            updateMessage(payload.new.id, payload.new);
-          }
-        }
-      )
-      .subscribe();
-      
+    const channel = supabase.channel('messages-realtime').on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'messages',
+      filter: `conversation_id=eq.${selectedConversation.id}`
+    }, payload => {
+      console.log('📨 Message updated via realtime:', payload);
+      // Atualizar mensagem específica
+      if (payload.new && payload.new.id) {
+        updateMessage(payload.new.id, payload.new);
+      }
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
@@ -511,7 +496,7 @@ export function WhatsAppChat({
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     setSelectedConversation(conversation);
-    
+
     // Limpar modo de seleção ao trocar de conversa
     setSelectionMode(false);
     setSelectedMessages(new Set());
@@ -529,7 +514,6 @@ export function WhatsAppChat({
     setSelectionMode(true);
     setSelectedMessages(new Set([messageId]));
   };
-
   const toggleMessageSelection = (messageId: string) => {
     const newSelected = new Set(selectedMessages);
     if (newSelected.has(messageId)) {
@@ -538,27 +522,22 @@ export function WhatsAppChat({
       newSelected.add(messageId);
     }
     setSelectedMessages(newSelected);
-    
+
     // Sair do modo de seleção se não houver mensagens selecionadas
     if (newSelected.size === 0) {
       setSelectionMode(false);
     }
   };
-
   const cancelSelection = () => {
     setSelectionMode(false);
     setSelectedMessages(new Set());
   };
-
   const handleForwardMessages = async (contactIds: string[]) => {
     if (!selectedConversation || selectedMessages.size === 0) return;
-
     const messagesToForward = messages.filter(msg => selectedMessages.has(msg.id));
-    
     for (const contactId of contactIds) {
       // Buscar a conversa do contato
       const targetConversation = conversations.find(conv => conv.contact.id === contactId);
-      
       if (targetConversation) {
         // Encaminhar cada mensagem selecionada
         for (const msg of messagesToForward) {
@@ -585,12 +564,10 @@ export function WhatsAppChat({
         }
       }
     }
-
     toast({
       title: "Mensagens encaminhadas",
-      description: `${messagesToForward.length} mensagem(ns) encaminhada(s) com sucesso`,
+      description: `${messagesToForward.length} mensagem(ns) encaminhada(s) com sucesso`
     });
-
     cancelSelection();
   };
 
@@ -599,7 +576,6 @@ export function WhatsAppChat({
     const now = new Date();
     const messageTime = new Date(conv.last_activity_at);
     const diffInHours = (now.getTime() - messageTime.getTime()) / (1000 * 60 * 60);
-    
     if (diffInHours < 24) {
       // Menos de 24h: mostrar horário
       return messageTime.toLocaleTimeString('pt-BR', {
@@ -689,10 +665,9 @@ export function WhatsAppChat({
           audioChunksRef.current.push(e.data);
         }
       };
-      
       mediaRecorder.start();
       setIsRecording(true);
-      
+
       // Iniciar timer
       setRecordingTime(0);
       recordingIntervalRef.current = setInterval(() => {
@@ -707,7 +682,6 @@ export function WhatsAppChat({
       });
     }
   };
-
   const cancelRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -716,39 +690,34 @@ export function WhatsAppChat({
       audioChunksRef.current = [];
       setIsRecording(false);
       setRecordingTime(0);
-      
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
         recordingIntervalRef.current = null;
       }
-      
       toast({
         title: "Gravação cancelada",
-        description: "O áudio não foi enviado",
+        description: "O áudio não foi enviado"
       });
     }
   };
-
   const stopRecording = async () => {
     if (!mediaRecorderRef.current || !isRecording) return;
-
     mediaRecorderRef.current.onstop = async () => {
       try {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: 'audio/webm'
         });
-        
+
         // Limpar stream
         if (mediaRecorderRef.current) {
           mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
         }
-        
+
         // Limpar intervalo do timer
         if (recordingIntervalRef.current) {
           clearInterval(recordingIntervalRef.current);
           recordingIntervalRef.current = null;
         }
-        
         const fileExt = 'webm';
         const fileName = `audio_${Date.now()}.${fileExt}`;
         const filePath = `messages/${fileName}`;
@@ -781,9 +750,11 @@ export function WhatsAppChat({
           };
           addMessage(optimisticMessage);
           setMessageText('');
-          
           try {
-            const { data: sendResult, error: sendError } = await supabase.functions.invoke('test-send-msg', {
+            const {
+              data: sendResult,
+              error: sendError
+            } = await supabase.functions.invoke('test-send-msg', {
               body: {
                 conversation_id: selectedConversation.id,
                 content: messageText.trim() || '[AUDIO]',
@@ -799,10 +770,11 @@ export function WhatsAppChat({
                 'x-system-user-email': user?.email || ''
               }
             });
-
             if (sendError) {
               console.error('❌ Erro ao enviar áudio:', sendError);
-              updateMessage(optimisticMessage.id, { status: 'failed' });
+              updateMessage(optimisticMessage.id, {
+                status: 'failed'
+              });
               toast({
                 title: "Erro ao enviar áudio",
                 description: sendError.message,
@@ -810,14 +782,16 @@ export function WhatsAppChat({
               });
             } else {
               console.log('✅ Áudio enviado com sucesso');
-              updateMessage(optimisticMessage.id, { 
+              updateMessage(optimisticMessage.id, {
                 status: 'sent',
                 id: sendResult?.message?.id || optimisticMessage.id
               });
             }
           } catch (err) {
             console.error('Erro ao enviar áudio:', err);
-            updateMessage(optimisticMessage.id, { status: 'failed' });
+            updateMessage(optimisticMessage.id, {
+              status: 'failed'
+            });
             toast({
               title: "Erro ao enviar áudio",
               description: "Erro de conexão",
@@ -825,7 +799,6 @@ export function WhatsAppChat({
             });
           }
         }
-        
         setIsRecording(false);
         setRecordingTime(0);
         audioChunksRef.current = [];
@@ -840,7 +813,6 @@ export function WhatsAppChat({
         setRecordingTime(0);
       }
     };
-
     mediaRecorderRef.current.stop();
   };
 
@@ -896,7 +868,7 @@ export function WhatsAppChat({
   // Create quick conversation without saving contact
   const handleCreateQuickConversation = async () => {
     if (!quickPhoneNumber.trim() || isCreatingQuickConversation) return;
-    
+
     // Validar mínimo de 10 dígitos (DDD + número)
     if (quickPhoneNumber.length < 10) {
       toast({
@@ -906,12 +878,11 @@ export function WhatsAppChat({
       });
       return;
     }
-    
     setIsCreatingQuickConversation(true);
     try {
       // Adicionar +55 ao número
       const fullPhoneNumber = `+55${quickPhoneNumber}`;
-      
+
       // Parse and validate phone number
       const phoneNumber = parsePhoneNumber(fullPhoneNumber, 'BR');
       if (!phoneNumber || !phoneNumber.isValid()) {
@@ -950,7 +921,6 @@ export function WhatsAppChat({
         formatted: phoneNumber.format('E.164'),
         national: phoneNumber.format('NATIONAL')
       });
-      
       if (!selectedWorkspace?.workspace_id) {
         toast({
           title: "Erro",
@@ -959,7 +929,6 @@ export function WhatsAppChat({
         });
         return;
       }
-      
       const {
         data,
         error
@@ -1084,73 +1053,45 @@ export function WhatsAppChat({
   }
   return <div className="flex h-full bg-white overflow-hidden w-full">
       {/* Sidebar de Filtros */}
-      <div className={cn(
-        "border-r border-border flex flex-col transition-all duration-300 bg-background",
-        sidebarCollapsed ? "w-14" : "w-56"
-      )}>
+      <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-56")}>
         {/* Header da sidebar */}
         <div className="p-3 border-b border-border flex items-center justify-between">
           {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="h-8 w-8">
             <PanelLeft className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Select de Canais */}
-        {!sidebarCollapsed && (
-          <div className="p-3 border-b border-border">
-            <Select value={selectedConnection || "all"} onValueChange={(value) => setSelectedConnection(value === "all" ? "" : value)}>
+        {!sidebarCollapsed && <div className="p-3 border-b border-border">
+            <Select value={selectedConnection || "all"} onValueChange={value => setSelectedConnection(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full h-9 text-xs">
                 <SelectValue placeholder="Todas as conexões" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as conexões</SelectItem>
-                {connectionsLoading ? (
-                  <SelectItem value="__loading__" disabled>Carregando...</SelectItem>
-                ) : workspaceConnections.length === 0 ? (
-                  <SelectItem value="__empty__" disabled>Nenhuma conexão</SelectItem>
-                ) : (
-                  workspaceConnections.map(connection => (
-                    <SelectItem key={connection.id} value={connection.id}>
+                {connectionsLoading ? <SelectItem value="__loading__" disabled>Carregando...</SelectItem> : workspaceConnections.length === 0 ? <SelectItem value="__empty__" disabled>Nenhuma conexão</SelectItem> : workspaceConnections.map(connection => <SelectItem key={connection.id} value={connection.id}>
                       {connection.instance_name}
-                    </SelectItem>
-                  ))
-                )}
+                    </SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          </div>}
 
         {/* Categorias de Navegação */}
-        <nav className="flex-1 pr-2 pt-2 pb-2 pl-1">
+        <nav className="flex-1 pr-2 pt-2 pb-2 pl-1 bg-white">
           <div className="space-y-1">
             {/* Todos */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setActiveTab('all')}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
-                      activeTab === 'all' 
-                        ? "text-primary font-medium border border-primary/20" 
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
+                  <button onClick={() => setActiveTab('all')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'all' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
                     <Circle className={cn("h-4 w-4", activeTab === 'all' && "fill-yellow-500 text-yellow-500")} />
-                    {!sidebarCollapsed && (
-                      <>
+                    {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Todos</span>
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
                           {conversations.filter(c => c.status !== 'closed').length}
                         </span>
-                      </>
-                    )}
+                      </>}
                   </button>
                 </TooltipTrigger>
                 {sidebarCollapsed && <TooltipContent side="right">Todos</TooltipContent>}
@@ -1161,24 +1102,14 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setActiveTab('mine')}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
-                      activeTab === 'mine' 
-                        ? "text-primary font-medium border border-primary/20" 
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
+                  <button onClick={() => setActiveTab('mine')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'mine' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
                     <UserCircle className="h-4 w-4" />
-                    {!sidebarCollapsed && (
-                      <>
+                    {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Minhas conversas</span>
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
                           {conversations.filter(c => c.assigned_user_id === user?.id && c.status !== 'closed').length}
                         </span>
-                      </>
-                    )}
+                      </>}
                   </button>
                 </TooltipTrigger>
                 {sidebarCollapsed && <TooltipContent side="right">Minhas conversas</TooltipContent>}
@@ -1189,24 +1120,14 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setActiveTab('unassigned')}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
-                      activeTab === 'unassigned' 
-                        ? "text-primary font-medium border border-primary/20" 
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
+                  <button onClick={() => setActiveTab('unassigned')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'unassigned' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
                     <UserX className="h-4 w-4" />
-                    {!sidebarCollapsed && (
-                      <>
+                    {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Não atribuídas</span>
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
                           {conversations.filter(c => !c.assigned_user_id && c.status !== 'closed').length}
                         </span>
-                      </>
-                    )}
+                      </>}
                   </button>
                 </TooltipTrigger>
                 {sidebarCollapsed && <TooltipContent side="right">Não atribuídas</TooltipContent>}
@@ -1217,24 +1138,14 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setActiveTab('groups')}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
-                      activeTab === 'groups' 
-                        ? "text-primary font-medium border border-primary/20" 
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
+                  <button onClick={() => setActiveTab('groups')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'groups' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
                     <UsersRound className="h-4 w-4" />
-                    {!sidebarCollapsed && (
-                      <>
+                    {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Grupos</span>
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
                           0
                         </span>
-                      </>
-                    )}
+                      </>}
                   </button>
                 </TooltipTrigger>
                 {sidebarCollapsed && <TooltipContent side="right">Grupos</TooltipContent>}
@@ -1244,14 +1155,10 @@ export function WhatsAppChat({
             </nav>
 
             {/* Seção Customizado */}
-        {!sidebarCollapsed && (
-          <div className="border-t border-border p-2">
+        {!sidebarCollapsed && <div className="border-t border-border p-2">
             <Collapsible open={customFiltersOpen} onOpenChange={setCustomFiltersOpen}>
               <CollapsibleTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-between h-9 px-3 text-sm font-medium"
-                >
+                <Button variant="ghost" className="w-full justify-between h-9 px-3 text-sm font-medium">
                   <div className="flex items-center gap-2">
                     <Tag className="h-4 w-4" />
                     <span>Customizado</span>
@@ -1262,23 +1169,20 @@ export function WhatsAppChat({
               <CollapsibleContent className="space-y-1 mt-1">
                 {/* Filtro por Tag */}
                 <div className="px-2">
-                  <Select value={selectedTag || "all"} onValueChange={(value) => setSelectedTag(value === "all" ? "" : value)}>
+                  <Select value={selectedTag || "all"} onValueChange={value => setSelectedTag(value === "all" ? "" : value)}>
                     <SelectTrigger className="w-full h-8 text-xs">
                       <SelectValue placeholder="Filtrar por tag" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as tags</SelectItem>
-                      {tags.map(tag => (
-                        <SelectItem key={tag.id} value={tag.id}>
+                      {tags.map(tag => <SelectItem key={tag.id} value={tag.id}>
                           <div className="flex items-center gap-2">
-                            <div 
-                              className="w-2 h-2 rounded-full" 
-                              style={{ backgroundColor: tag.color || '#808080' }}
-                            />
+                            <div className="w-2 h-2 rounded-full" style={{
+                        backgroundColor: tag.color || '#808080'
+                      }} />
                             <span className="text-xs">{tag.name}</span>
                           </div>
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1291,41 +1195,25 @@ export function WhatsAppChat({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os agentes</SelectItem>
-                      {queuesLoading ? (
-                        <SelectItem value="__loading__" disabled>Carregando...</SelectItem>
-                      ) : queues.length === 0 ? (
-                        <SelectItem value="__empty__" disabled>Nenhum agente</SelectItem>
-                      ) : (
-                        queues.filter(queue => queue.ai_agent_id && queue.ai_agent).map(queue => (
-                          <SelectItem key={queue.ai_agent!.id} value={queue.ai_agent!.id}>
+                      {queuesLoading ? <SelectItem value="__loading__" disabled>Carregando...</SelectItem> : queues.length === 0 ? <SelectItem value="__empty__" disabled>Nenhum agente</SelectItem> : queues.filter(queue => queue.ai_agent_id && queue.ai_agent).map(queue => <SelectItem key={queue.ai_agent!.id} value={queue.ai_agent!.id}>
                             {queue.ai_agent!.name}
-                          </SelectItem>
-                        ))
-                      )}
+                          </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Botão Limpar */}
-                {(selectedTag || selectedAgent) && (
-                  <div className="px-2 pt-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedAgent("");
-                        setSelectedTag("");
-                      }}
-                      className="w-full h-7 text-xs"
-                    >
+                {(selectedTag || selectedAgent) && <div className="px-2 pt-1">
+                    <Button variant="outline" size="sm" onClick={() => {
+                setSelectedAgent("");
+                setSelectedTag("");
+              }} className="w-full h-7 text-xs">
                       Limpar filtros
                     </Button>
-                  </div>
-                )}
+                  </div>}
               </CollapsibleContent>
             </Collapsible>
-          </div>
-        )}
+          </div>}
       </div>
 
       {/* Sidebar com lista de conversas */}
@@ -1336,12 +1224,7 @@ export function WhatsAppChat({
           <div className="flex items-center w-full">
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <Input 
-                placeholder="Buscar" 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-                className="pl-10 pr-3 border-0 shadow-none bg-muted/30 focus:bg-muted/50" 
-              />
+              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-muted/30 focus:bg-muted/50" />
             </div>
           </div>
         </div>
@@ -1371,8 +1254,8 @@ export function WhatsAppChat({
                       <div className={cn("relative flex items-center px-4 py-2 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50", selectedConversation?.id === conversation.id && "bg-muted")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
                     {/* Status indicator bar */}
                     <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
-                  backgroundColor: conversation.agente_ativo ? 'rgb(83, 0, 235)' : 'rgb(76, 175, 80)'
-                }} title={conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO'} />
+                      backgroundColor: conversation.agente_ativo ? 'rgb(83, 0, 235)' : 'rgb(76, 175, 80)'
+                    }} title={conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO'} />
                     
                     {/* Avatar container */}
                     <div className="flex-shrink-0 mr-3 ml-2">
@@ -1381,8 +1264,8 @@ export function WhatsAppChat({
                           <Avatar className="h-10 w-10">
                             {conversation.contact?.profile_image_url && <AvatarImage src={conversation.contact.profile_image_url} alt={conversation.contact?.name || conversation.contact?.phone} className="object-cover" />}
                             <AvatarFallback className="text-white font-medium text-sm" style={{
-                          backgroundColor: avatarColor
-                        }}>
+                              backgroundColor: avatarColor
+                            }}>
                               {initials}
                             </AvatarFallback>
                           </Avatar>
@@ -1399,10 +1282,10 @@ export function WhatsAppChat({
                        {/* First line: Name with connection badge */}
                        <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="text-xs font-normal text-foreground tracking-tight truncate" style={{
-                      fontWeight: 400,
-                      letterSpacing: '-0.2px',
-                      fontSize: '12px'
-                    }}>
+                          fontWeight: 400,
+                          letterSpacing: '-0.2px',
+                          fontSize: '12px'
+                        }}>
                           {conversation.contact?.name || conversation.contact?.phone}
                         </span>
                         <ConnectionBadge connectionId={conversation.connection_id} />
@@ -1411,10 +1294,10 @@ export function WhatsAppChat({
                         {/* ✅ Última mensagem da conversa */}
                       <div className="flex items-center">
                         <span className="text-foreground/87 truncate" style={{
-                      fontSize: '11px',
-                      fontWeight: 400,
-                      letterSpacing: '0px'
-                    }}>
+                          fontSize: '11px',
+                          fontWeight: 400,
+                          letterSpacing: '0px'
+                        }}>
                           {conversation.last_message?.[0] ? <>
                               {conversation.last_message[0].sender_type === 'contact' ? '' : 'Você: '}
                               {conversation.last_message[0].message_type === 'text' ? conversation.last_message[0].content : `${conversation.last_message[0].message_type === 'image' ? '📷' : conversation.last_message[0].message_type === 'video' ? '🎥' : conversation.last_message[0].message_type === 'audio' ? '🎵' : '📄'} ${conversation.last_message[0].message_type.charAt(0).toUpperCase() + conversation.last_message[0].message_type.slice(1)}`}
@@ -1435,47 +1318,33 @@ export function WhatsAppChat({
                   {/* Tag/Label system + Avatar */}
                   <div className="flex items-center gap-2">
                     {/* Tags */}
-                    {conversation.tags && conversation.tags.length > 0 && (
-                      <TooltipProvider>
+                    {conversation.tags && conversation.tags.length > 0 && <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="flex items-center gap-1">
-                              {conversation.tags.slice(0, 2).map((tag: any) => (
-                                <Badge 
-                                  key={tag.id} 
-                                  variant="outline" 
-                                  className="text-[10px] px-1 py-0 h-4"
-                                  style={{ 
-                                    borderColor: tag.color || '#8B5CF6',
-                                    color: tag.color || '#8B5CF6'
-                                  }}
-                                >
+                              {conversation.tags.slice(0, 2).map((tag: any) => <Badge key={tag.id} variant="outline" className="text-[10px] px-1 py-0 h-4" style={{
+                                  borderColor: tag.color || '#8B5CF6',
+                                  color: tag.color || '#8B5CF6'
+                                }}>
                                   {tag.name}
-                                </Badge>
-                              ))}
-                              {conversation.tags.length > 2 && (
-                                <span className="text-[10px] text-muted-foreground">
+                                </Badge>)}
+                              {conversation.tags.length > 2 && <span className="text-[10px] text-muted-foreground">
                                   +{conversation.tags.length - 2}
-                                </span>
-                              )}
+                                </span>}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="space-y-1">
-                              {conversation.tags.map((tag: any) => (
-                                <div key={tag.id} className="flex items-center gap-2">
-                                  <div 
-                                    className="w-3 h-3 rounded-full" 
-                                    style={{ backgroundColor: tag.color || '#8B5CF6' }}
-                                  />
+                              {conversation.tags.map((tag: any) => <div key={tag.id} className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full" style={{
+                                    backgroundColor: tag.color || '#8B5CF6'
+                                  }} />
                                   <span>{tag.name}</span>
-                                </div>
-                              ))}
+                                </div>)}
                             </div>
                           </TooltipContent>
                         </Tooltip>
-                      </TooltipProvider>
-                    )}
+                      </TooltipProvider>}
                     
                     {/* Avatar do usuário atribuído */}
                     <TooltipProvider>
@@ -1483,9 +1352,7 @@ export function WhatsAppChat({
                         <TooltipTrigger asChild>
                             <Avatar className="w-6 h-6 rounded-full">
                               <AvatarFallback className="bg-gray-200 text-gray-600 text-[10px] font-medium">
-                                {conversation.assigned_user_name 
-                                  ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
-                                  : '?'}
+                                {conversation.assigned_user_name ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '?'}
                               </AvatarFallback>
                             </Avatar>
                         </TooltipTrigger>
@@ -1499,11 +1366,11 @@ export function WhatsAppChat({
                   </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
-                      <ContextMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        setPeekConversationId(conversation.id);
-                        setPeekModalOpen(true);
-                      }}>
+                      <ContextMenuItem onClick={e => {
+                    e.stopPropagation();
+                    setPeekConversationId(conversation.id);
+                    setPeekModalOpen(true);
+                  }}>
                         <Eye className="h-4 w-4 mr-2" />
                         Espiar
                       </ContextMenuItem>
@@ -1525,15 +1392,7 @@ export function WhatsAppChat({
               
               {/* Input do número */}
               <div className="relative flex-1">
-                <Input 
-                  placeholder="21999999999" 
-                  value={quickPhoneNumber} 
-                  onChange={e => setQuickPhoneNumber(e.target.value.replace(/\D/g, ''))} 
-                  onKeyPress={handleQuickConversationKeyPress} 
-                  className="border-0 focus-visible:ring-0 pr-10" 
-                  disabled={isCreatingQuickConversation}
-                  maxLength={11}
-                />
+                <Input placeholder="21999999999" value={quickPhoneNumber} onChange={e => setQuickPhoneNumber(e.target.value.replace(/\D/g, ''))} onKeyPress={handleQuickConversationKeyPress} className="border-0 focus-visible:ring-0 pr-10" disabled={isCreatingQuickConversation} maxLength={11} />
                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8" disabled={!quickPhoneNumber.trim() || isCreatingQuickConversation} onClick={handleCreateQuickConversation}>
                   {isCreatingQuickConversation ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <ArrowRight className="w-4 h-4" />}
                 </Button>
@@ -1623,14 +1482,14 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-            <ScrollArea className="flex-1 p-4" ref={(node) => {
-              if (node) {
-                const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
-                if (scrollContainer && !messagesScrollRef.current) {
-                  messagesScrollRef.current = scrollContainer as HTMLElement;
-                }
-              }
-            }}>
+            <ScrollArea className="flex-1 p-4" ref={node => {
+          if (node) {
+            const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
+            if (scrollContainer && !messagesScrollRef.current) {
+              messagesScrollRef.current = scrollContainer as HTMLElement;
+            }
+          }
+        }}>
               {/* ✅ Loading inicial das mensagens */}
               {messagesLoading && messages.length === 0 && <div className="flex justify-center p-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -1638,46 +1497,31 @@ export function WhatsAppChat({
               
               {/* ✅ Botão Load More no TOPO (scroll infinito) */}
               {hasMore && messages.length > 0 && <div className="flex justify-center p-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={async () => {
-                      // Guardar altura do scroll antes de carregar
-                      if (messagesScrollRef.current) {
-                        const scrollContainer = messagesScrollRef.current;
-                        const scrollHeightBefore = scrollContainer.scrollHeight;
-                        
-                        await loadMoreMessages();
-                        
-                        // Após carregar, ajustar scroll para manter posição
-                        setTimeout(() => {
-                          if (scrollContainer) {
-                            const scrollHeightAfter = scrollContainer.scrollHeight;
-                            const heightDifference = scrollHeightAfter - scrollHeightBefore;
-                            scrollContainer.scrollTop = heightDifference;
-                          }
-                        }, 50);
-                      } else {
-                        await loadMoreMessages();
-                      }
-                    }}
-                    disabled={loadingMore}
-                  >
+                  <Button variant="ghost" size="sm" onClick={async () => {
+              // Guardar altura do scroll antes de carregar
+              if (messagesScrollRef.current) {
+                const scrollContainer = messagesScrollRef.current;
+                const scrollHeightBefore = scrollContainer.scrollHeight;
+                await loadMoreMessages();
+
+                // Após carregar, ajustar scroll para manter posição
+                setTimeout(() => {
+                  if (scrollContainer) {
+                    const scrollHeightAfter = scrollContainer.scrollHeight;
+                    const heightDifference = scrollHeightAfter - scrollHeightBefore;
+                    scrollContainer.scrollTop = heightDifference;
+                  }
+                }, 50);
+              } else {
+                await loadMoreMessages();
+              }
+            }} disabled={loadingMore}>
                     {loadingMore ? 'Carregando...' : 'Carregar mensagens anteriores'}
                   </Button>
                 </div>}
               
                 <div className="space-y-4">
-                {messages.map(message => <div 
-                    key={message.id} 
-                    className={cn(
-                      "flex items-start gap-3 max-w-[80%] relative",
-                      message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto",
-                      selectionMode && "cursor-pointer",
-                      selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
-                    )}
-                    onClick={() => selectionMode && toggleMessageSelection(message.id)}
-                  >
+                {messages.map(message => <div key={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
                     {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
                         <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact.name))}>
@@ -1685,37 +1529,20 @@ export function WhatsAppChat({
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : (message.message_type === 'image' || message.message_type === 'video') ? "bg-transparent" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : (message.message_type === 'image' || message.message_type === 'video') ? "bg-transparent" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
+                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
                       {/* Menu de contexto */}
-                      {!selectionMode && (
-                        <MessageContextMenu
-                          onForward={() => handleMessageForward(message.id)}
-                          onReply={() => {/* TODO: implementar resposta */}}
-                          onDownload={message.file_url ? () => {
-                            const link = document.createElement('a');
-                            link.href = message.file_url!;
-                            link.download = message.file_name || 'download';
-                            link.target = '_blank';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          } : undefined}
-                          hasDownload={!!message.file_url}
-                        />
-                      )}
+                      {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => {/* TODO: implementar resposta */}} onDownload={message.file_url ? () => {
+                  const link = document.createElement('a');
+                  link.href = message.file_url!;
+                  link.download = message.file_name || 'download';
+                  link.target = '_blank';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } : undefined} hasDownload={!!message.file_url} />}
                       
                       {/* Renderizar conteúdo baseado no tipo */}
-                      {message.message_type !== 'text' && message.file_url ? <MediaViewer 
-                        fileUrl={message.file_url} 
-                        fileName={message.file_name} 
-                        messageType={message.message_type} 
-                        className="max-w-xs"
-                        senderType={message.sender_type}
-                        senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined}
-                        senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'}
-                        messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined}
-                        timestamp={message.created_at}
-                      /> : <p className="text-sm break-words">{message.content}</p>}
+                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <p className="text-sm break-words">{message.content}</p>}
                       
                       {/* Status e horário - APENAS para mensagens de texto e áudio (outros tipos têm timestamp interno) */}
                       {(message.message_type === 'text' || message.message_type === 'audio') && <div className={cn("flex items-center gap-1 mt-1 text-xs", message.sender_type === 'contact' ? "text-muted-foreground" : "text-primary-foreground/70")}>
@@ -1735,8 +1562,7 @@ export function WhatsAppChat({
 
             {/* Campo de entrada de mensagem */}
             <div className="p-4 border-t border-border relative">
-              {isRecording ? (
-                <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+              {isRecording ? <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1752,99 +1578,84 @@ export function WhatsAppChat({
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Button
-                      onClick={cancelRecording}
-                      size="icon"
-                      variant="ghost"
-                      className="h-10 w-10 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
-                      title="Cancelar gravação"
-                    >
+                    <Button onClick={cancelRecording} size="icon" variant="ghost" className="h-10 w-10 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50" title="Cancelar gravação">
                       <X className="w-5 h-5 text-red-600 dark:text-red-400" />
                     </Button>
                     
-                    <Button
-                      onClick={stopRecording}
-                      size="icon"
-                      className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600"
-                      title="Enviar áudio"
-                    >
+                    <Button onClick={stopRecording} size="icon" className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600" title="Enviar áudio">
                       <Check className="w-5 h-5 text-white" />
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-end gap-2">
+                </div> : <div className="flex items-end gap-2">
                   <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
-                    if (!selectedConversation) return;
-                    const caption = messageText.trim();
-
-                    const optimisticMessage = {
-                      id: `temp-media-${Date.now()}`,
-                      conversation_id: selectedConversation.id,
-                      content: caption || `[${mediaType.toUpperCase()}]`,
-                      message_type: mediaType as any,
-                      sender_type: 'agent' as const,
-                      sender_id: user?.id,
-                      file_url: fileUrl,
-                      file_name: file.name,
-                      created_at: new Date().toISOString(),
-                      status: 'sending' as const,
-                      workspace_id: selectedWorkspace?.workspace_id || ''
-                    };
-                    addMessage(optimisticMessage);
-                    if (caption) setMessageText('');
-
-                    try {
-                      const {
-                        data: sendResult,
-                        error
-                      } = await supabase.functions.invoke('test-send-msg', {
-                        body: {
-                          conversation_id: selectedConversation.id,
-                          content: caption || `[${mediaType.toUpperCase()}]`,
-                          message_type: mediaType,
-                          sender_id: user?.id,
-                          sender_type: 'agent',
-                          file_url: fileUrl,
-                          file_name: file.name
-                        },
-                        headers: {
-                          'x-system-user-id': user?.id || '',
-                          'x-workspace-id': selectedWorkspace?.workspace_id || '',
-                          'x-system-user-email': user?.email || ''
-                        }
-                      });
-                      if (error) {
-                        console.error('Erro ao enviar mídia:', error);
-                        toast({
-                          title: "Erro ao enviar mídia",
-                          description: error.message || "Erro desconhecido",
-                          variant: "destructive"
-                        });
-                        updateMessage(optimisticMessage.id, {
-                          status: 'failed',
-                          content: `❌ ${optimisticMessage.content}`
-                        });
-                      } else {
-                        console.log('✅ Mídia enviada com sucesso:', sendResult);
-                        updateMessage(optimisticMessage.id, {
-                          status: 'sent',
-                          external_id: sendResult.external_id
-                        });
-                      }
-                    } catch (err) {
-                      console.error('Erro ao enviar mídia:', err);
-                      toast({
-                        title: "Erro ao enviar mídia",
-                        description: "Erro de conexão",
-                        variant: "destructive"
-                      });
-                      updateMessage(optimisticMessage.id, {
-                        status: 'failed',
-                        content: `❌ ${optimisticMessage.content}`
-                      });
-                    }
-                  }} />
+              if (!selectedConversation) return;
+              const caption = messageText.trim();
+              const optimisticMessage = {
+                id: `temp-media-${Date.now()}`,
+                conversation_id: selectedConversation.id,
+                content: caption || `[${mediaType.toUpperCase()}]`,
+                message_type: mediaType as any,
+                sender_type: 'agent' as const,
+                sender_id: user?.id,
+                file_url: fileUrl,
+                file_name: file.name,
+                created_at: new Date().toISOString(),
+                status: 'sending' as const,
+                workspace_id: selectedWorkspace?.workspace_id || ''
+              };
+              addMessage(optimisticMessage);
+              if (caption) setMessageText('');
+              try {
+                const {
+                  data: sendResult,
+                  error
+                } = await supabase.functions.invoke('test-send-msg', {
+                  body: {
+                    conversation_id: selectedConversation.id,
+                    content: caption || `[${mediaType.toUpperCase()}]`,
+                    message_type: mediaType,
+                    sender_id: user?.id,
+                    sender_type: 'agent',
+                    file_url: fileUrl,
+                    file_name: file.name
+                  },
+                  headers: {
+                    'x-system-user-id': user?.id || '',
+                    'x-workspace-id': selectedWorkspace?.workspace_id || '',
+                    'x-system-user-email': user?.email || ''
+                  }
+                });
+                if (error) {
+                  console.error('Erro ao enviar mídia:', error);
+                  toast({
+                    title: "Erro ao enviar mídia",
+                    description: error.message || "Erro desconhecido",
+                    variant: "destructive"
+                  });
+                  updateMessage(optimisticMessage.id, {
+                    status: 'failed',
+                    content: `❌ ${optimisticMessage.content}`
+                  });
+                } else {
+                  console.log('✅ Mídia enviada com sucesso:', sendResult);
+                  updateMessage(optimisticMessage.id, {
+                    status: 'sent',
+                    external_id: sendResult.external_id
+                  });
+                }
+              } catch (err) {
+                console.error('Erro ao enviar mídia:', err);
+                toast({
+                  title: "Erro ao enviar mídia",
+                  description: "Erro de conexão",
+                  variant: "destructive"
+                });
+                updateMessage(optimisticMessage.id, {
+                  status: 'failed',
+                  content: `❌ ${optimisticMessage.content}`
+                });
+              }
+            }} />
                   
                   <Button variant="ghost" size="sm" title="Mensagens Rápidas" onClick={() => setQuickItemsModalOpen(true)}>
                     <svg className="w-4 h-4" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -1854,11 +1665,11 @@ export function WhatsAppChat({
                   </Button>
                   <div className="flex-1">
                     <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyPress={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }} className="resize-none" />
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }} className="resize-none" />
                   </div>
                   <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio">
                     <Mic className="w-4 h-4" />
@@ -1866,17 +1677,10 @@ export function WhatsAppChat({
                   <Button onClick={handleSendMessage} disabled={!messageText.trim()} size="icon">
                     <Send className="w-4 h-4" />
                   </Button>
-                </div>
-              )}
+                </div>}
 
               {/* Barra de seleção (modo de encaminhamento) */}
-              {selectionMode && (
-                <MessageSelectionBar
-                  selectedCount={selectedMessages.size}
-                  onCancel={cancelSelection}
-                  onForward={() => setForwardModalOpen(true)}
-                />
-              )}
+              {selectionMode && <MessageSelectionBar selectedCount={selectedMessages.size} onCancel={cancelSelection} onForward={() => setForwardModalOpen(true)} />}
             </div>
           </> : <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
@@ -1899,11 +1703,7 @@ export function WhatsAppChat({
       
       <QuickItemsModal open={quickItemsModalOpen} onOpenChange={setQuickItemsModalOpen} onSendMessage={handleSendQuickMessage} onSendAudio={handleSendQuickAudio} onSendMedia={handleSendQuickMedia} onSendDocument={handleSendQuickDocument} />
       
-      <ForwardMessageModal
-        isOpen={forwardModalOpen}
-        onClose={() => setForwardModalOpen(false)}
-        onForward={handleForwardMessages}
-      />
+      <ForwardMessageModal isOpen={forwardModalOpen} onClose={() => setForwardModalOpen(false)} onForward={handleForwardMessages} />
       </div>
 
     </div>;
