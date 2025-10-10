@@ -307,8 +307,13 @@ serve(async (req) => {
     console.log(`✅ [${messageId}] N8N webhook executado com sucesso`);
 
     // 🔄 UPDATE external_id with Evolution API message ID if available
-    if (responseData?.key?.id && messageId) {
-      const evolutionMessageId = responseData.key.id;
+    // Tentar múltiplos caminhos para encontrar o Evolution message ID
+    const evolutionMessageId = 
+      responseData?.key?.id ||           // Formato direto
+      responseData?.data?.key?.id ||     // Formato com "data"
+      responseData?.[0]?.data?.key?.id;  // Formato array
+
+    if (evolutionMessageId && messageId) {
       console.log(`🔄 [${messageId}] Updating external_id to Evolution message ID: ${evolutionMessageId}`);
       
       const { error: updateError } = await supabase
@@ -322,7 +327,8 @@ serve(async (req) => {
         console.log(`✅ [${messageId}] external_id updated successfully to ${evolutionMessageId}`);
       }
     } else {
-      console.log(`⚠️ [${messageId}] No Evolution message ID in response to update external_id`);
+      console.log(`⚠️ [${messageId}] No Evolution message ID found in response`);
+      console.log(`📋 [${messageId}] Response structure:`, JSON.stringify(responseData, null, 2));
     }
 
     return new Response(JSON.stringify({
