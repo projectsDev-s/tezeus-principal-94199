@@ -33,13 +33,12 @@ import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, Menu, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import panelIcon from "@/assets/panel-icon.png";
 interface WhatsAppChatProps {
   isDarkMode?: boolean;
   selectedConversationId?: string | null;
@@ -1098,7 +1097,7 @@ export function WhatsAppChat({
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="h-8 w-8"
           >
-            <img src={panelIcon} alt="Menu" className="h-4 w-4" />
+            <PanelLeft className="h-4 w-4" />
           </Button>
         </div>
 
@@ -1137,9 +1136,9 @@ export function WhatsAppChat({
                   <button
                     onClick={() => setActiveTab('all')}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
                       activeTab === 'all' 
-                        ? "bg-white text-primary font-medium border border-primary/20" 
+                        ? "text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1165,9 +1164,9 @@ export function WhatsAppChat({
                   <button
                     onClick={() => setActiveTab('mine')}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
                       activeTab === 'mine' 
-                        ? "bg-white text-primary font-medium border border-primary/20" 
+                        ? "text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1193,9 +1192,9 @@ export function WhatsAppChat({
                   <button
                     onClick={() => setActiveTab('unassigned')}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
                       activeTab === 'unassigned' 
-                        ? "bg-white text-primary font-medium border border-primary/20" 
+                        ? "text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1221,9 +1220,9 @@ export function WhatsAppChat({
                   <button
                     onClick={() => setActiveTab('groups')}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white",
                       activeTab === 'groups' 
-                        ? "bg-white text-primary font-medium border border-primary/20" 
+                        ? "text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1243,9 +1242,6 @@ export function WhatsAppChat({
             </TooltipProvider>
           </div>
             </nav>
-
-            {/* Linha divisória */}
-            <div className="border-t-2 border-black/80" />
 
             {/* Seção Customizado */}
         {!sidebarCollapsed && (
