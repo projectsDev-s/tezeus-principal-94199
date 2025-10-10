@@ -1481,13 +1481,13 @@ export function WhatsAppChat({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Avatar className="w-4 h-4 rounded-full">
-                            <AvatarFallback className="bg-primary/10 text-primary text-[8px]">
-                              {conversation.assigned_user_name 
-                                ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
-                                : '?'}
-                            </AvatarFallback>
-                          </Avatar>
+                            <Avatar className="w-6 h-6 rounded-full">
+                              <AvatarFallback className="bg-gray-200 text-gray-600 text-[10px] font-medium">
+                                {conversation.assigned_user_name 
+                                  ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                                  : '?'}
+                              </AvatarFallback>
+                            </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{conversation.assigned_user_name || 'Não atribuído'}</p>
