@@ -248,9 +248,71 @@ serve(async (req) => {
         }
       }
       
-      // NÃO ENCERRAR O FLUXO - continuar para processar UPSERT também
-      // Isso permite que o N8N receba AMBOS os eventos: update (ACK) e upsert (mensagem)
-      console.log(`✅ [${requestId}] ACK processed, continuing to UPSERT processing to send both events to N8N...`);
+      // 🔄 PROCESSAR MESSAGES.UPDATE (ACKs) LOCALMENTE
+      console.log(`🔄 [${requestId}] Processing messages.update event`);
+      
+      const updateData = payload.data;
+      const messageKeyId = updateData.keyId; // 40 chars
+      const messageId = updateData.messageId;
+      const status = updateData.status;
+      
+      console.log(`🔑 [${requestId}] Update event IDs:`);
+      console.log(`   - keyId (40 chars): "${messageKeyId}"`);
+      console.log(`   - messageId: "${messageId}"`);
+      console.log(`   - status: "${status}"`);
+      
+      if (messageKeyId && status) {
+        console.log(`🔍 [${requestId}] Starting intelligent message lookup`);
+        
+        // ESTRATÉGIA 1: evolution_key_id
+        let { data: msg, error } = await supabase
+          .from('messages')
+          .select('id, external_id, evolution_key_id, status')
+          .eq('evolution_key_id', messageKeyId)
+          .limit(1)
+          .single();
+        
+        let searchStrategy = 'evolution_key_id';
+        
+        // ESTRATÉGIA 2: external_id direto
+        if (error || !msg) {
+          const result = await supabase
+            .from('messages')
+            .select('id, external_id, evolution_key_id, status')
+            .eq('external_id', messageKeyId)
+            .limit(1)
+            .single();
+          
+          msg = result.data;
+          error = result.error;
+          searchStrategy = 'external_id_exact';
+        }
+        
+        if (msg) {
+          console.log(`✅ [${requestId}] Found message via ${searchStrategy}`);
+          
+          const newStatus = status === 'READ' ? 'read' : 
+                           status === 'DELIVERY_ACK' ? 'delivered' : 'sent';
+          
+          const updateFields: any = { status: newStatus };
+          
+          if (!msg.evolution_key_id) {
+            updateFields.evolution_key_id = messageKeyId;
+          }
+          
+          if (status === 'DELIVERY_ACK') updateFields.delivered_at = new Date().toISOString();
+          if (status === 'READ') updateFields.read_at = new Date().toISOString();
+          
+          await supabase.from('messages').update(updateFields).eq('id', msg.id);
+          
+          console.log(`✅ [${requestId}] Message updated: ${msg.status} → ${newStatus}`);
+        } else {
+          console.log(`❌ [${requestId}] Message NOT found: ${messageKeyId}`);
+        }
+      }
+      
+      // Continuar para enviar ao N8N
+      console.log(`✅ [${requestId}] ACK processed, continuing to N8N forward...`);
     }
     
     // Get workspace_id and webhook details from database
@@ -314,13 +376,16 @@ serve(async (req) => {
           remoteJid: remoteJid
         };
       } else {
-        // ✅ PROCESSAR APENAS MENSAGENS INDIVIDUAIS
+      // ✅ PROCESSAR APENAS MENSAGENS INDIVIDUAIS
         const phoneNumber = extractPhoneFromRemoteJid(remoteJid);
-      const evolutionMessageId = messageData.key?.id;
+      const evolutionMessageId = messageData.key?.id; // 22 chars
+      const evolutionKeyId = messageData.keyId; // 40 chars (if available)
       
-      // 🔍 DEBUG: Log message ID details
-      console.log(`🔑 [${requestId}] Message ID details: key.id="${messageData.key?.id}", keyId="${messageData.keyId}", messageId="${messageData.messageId}"`);
-      console.log(`🔑 [${requestId}] Using external_id (FULL key.id): "${evolutionMessageId}"`);
+      // 🔍 DEBUG: Log ALL message ID details
+      console.log(`🔑 [${requestId}] Message IDs captured:`);
+      console.log(`   - key.id (22 chars): "${evolutionMessageId}"`);
+      console.log(`   - keyId (40 chars): "${evolutionKeyId}"`);
+      console.log(`   - messageId: "${messageData.messageId}"`);
       
       console.log(`📱 [${requestId}] RemoteJid processing: ${remoteJid} -> ${phoneNumber}`);
       
@@ -578,8 +643,9 @@ serve(async (req) => {
               sender_type: 'contact',
               status: 'received',
               origem_resposta: 'automatica',
-              external_id: evolutionMessageId,
-              file_url: messageData.message?.audioMessage?.url || 
+              external_id: evolutionMessageId, // 22 chars
+              evolution_key_id: evolutionKeyId, // 40 chars (nullable)
+              file_url: messageData.message?.audioMessage?.url ||
                        messageData.message?.imageMessage?.url ||
                        messageData.message?.videoMessage?.url ||
                        messageData.message?.documentMessage?.url || null,
