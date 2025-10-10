@@ -164,14 +164,17 @@ serve(async (req) => {
       const webhookConfig = {
         webhook: fixedWebhookUrl,
         webhook_by_events: true,
-        webhook_base64: false,
+        webhook_base64: true,
         webhook_headers: {
           "X-Secret": fixedWebhookSecret,
           "Content-Type": "application/json"
         },
         events: [
           'MESSAGES_UPSERT',
-          'QRCODE_UPDATED'
+          'MESSAGES_UPDATE',
+          'QRCODE_UPDATED',
+          'QRCODE_UPDATE',
+          'CONNECTION_UPDATE'
         ]
       };
 
