@@ -174,7 +174,7 @@ serve(async (req) => {
             .from('messages')
             .update(updateData)
             .eq('evolution_key_id', evolutionMessageId)
-            .select('id, conversation_id, workspace_id')
+            .select('id, conversation_id, workspace_id, external_id')
             .maybeSingle();
             
           if (updateError) {
@@ -218,7 +218,8 @@ serve(async (req) => {
           workspace_id: workspaceId,
           conversation_id: updatedMessage?.conversation_id,
           request_id: requestId,
-          external_id: evolutionMessageId,
+          external_id: updatedMessage?.external_id,
+          evolution_key_id: evolutionMessageId,
           ack_level: ackLevel,
           status: ackLevel === 1 ? 'sent' : ackLevel === 2 ? 'delivered' : ackLevel === 3 ? 'read' : 'unknown',
           delivered_at: ackLevel === 2 ? new Date().toISOString() : null,
