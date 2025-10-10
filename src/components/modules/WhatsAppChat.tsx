@@ -1224,7 +1224,7 @@ export function WhatsAppChat({
           <div className="flex items-center w-full">
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-muted/30 focus:bg-muted/50" />
+              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-[#d1d1d1]/30" />
             </div>
           </div>
         </div>
