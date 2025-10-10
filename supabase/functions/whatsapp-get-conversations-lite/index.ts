@@ -129,7 +129,7 @@ serve(async (req) => {
           phone,
           profile_image_url
         ),
-        connections!inner(
+        connections!conversations_connection_id_fkey(
           id,
           instance_name,
           phone_number,
