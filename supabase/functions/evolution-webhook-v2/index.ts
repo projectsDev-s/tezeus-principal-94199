@@ -779,7 +779,7 @@ serve(async (req) => {
 
         // For MESSAGES_UPDATE events, fetch message UUID from database
         let dbMessageId = null;
-        if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE') {
+        if (payload.event?.toLowerCase() === 'messages.update') {
           const evolutionKeyId = payload.data?.keyId || payload.data?.key?.id;
           const evolutionMessageId = payload.data?.messageId;
           
