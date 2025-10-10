@@ -86,8 +86,11 @@ serve(async (req) => {
     const instanceName = payload.instance || payload.instanceName;
     console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: ${payload.event}`);
     
-    // HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - Evolution API v2
-    if (payload.event === 'MESSAGES_UPDATE' && payload.data?.ack !== undefined) {
+    // Debug: verificar evento recebido
+    console.log(`🔍 [${requestId}] Event check: payload.event="${payload.event}", uppercase="${payload.event?.toUpperCase()}", has_ack=${payload.data?.ack !== undefined}`);
+    
+    // HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - Evolution API v2 (case-insensitive)
+    if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE' && payload.data?.ack !== undefined) {
       console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}`);
       
       const messageKey = payload.data.key;
