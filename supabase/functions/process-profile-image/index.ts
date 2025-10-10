@@ -6,16 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing required environment variables');
-}
-
-const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-async function downloadAndSaveProfileImage(imageUrl: string, phone: string): Promise<string | null> {
+async function downloadAndSaveProfileImage(supabase: any, imageUrl: string, phone: string): Promise<string | null> {
   try {
     console.log(`📥 Downloading profile image for ${phone}: ${imageUrl}`);
     
@@ -88,6 +79,23 @@ serve(async (req) => {
   }
 
   try {
+    // Inicializar Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    
     const { phone, profileImageUrl, contactId, workspaceId, instanceName } = await req.json();
     
     console.log(`🖼️ Processing profile image request:`, { 
@@ -110,12 +118,23 @@ serve(async (req) => {
     }
 
     // Check if contact already has recent profile image
-    const { data: contact } = await supabase
+    const { data: contact, error: contactError } = await supabase
       .from('contacts')
       .select('id, profile_image_url, profile_image_updated_at')
       .eq('phone', phone)
       .eq('workspace_id', workspaceId)
-      .single();
+      .maybeSingle();
+
+    if (contactError) {
+      console.error('❌ Error fetching contact:', contactError);
+      return new Response(
+        JSON.stringify({ error: 'Database error', details: contactError.message }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
     if (!contact) {
       console.log(`❌ Contact not found: ${phone}`);
@@ -146,7 +165,7 @@ serve(async (req) => {
     }
     
     // Download and save the profile image
-    const savedImageUrl = await downloadAndSaveProfileImage(profileImageUrl, phone);
+    const savedImageUrl = await downloadAndSaveProfileImage(supabase, profileImageUrl, phone);
     
     if (!savedImageUrl) {
       console.log(`❌ Failed to save profile image for ${phone}`);
