@@ -777,6 +777,24 @@ serve(async (req) => {
           messageKeys: payload.data?.message ? Object.keys(payload.data.message) : []
         });
 
+        // For MESSAGES_UPDATE events, fetch external_id from database
+        let dbExternalId = null;
+        if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE') {
+          const evolutionMessageId = payload.data?.keyId || payload.data?.key?.id;
+          if (evolutionMessageId) {
+            const { data: msgData } = await supabase
+              .from('messages')
+              .select('external_id')
+              .eq('evolution_key_id', evolutionMessageId)
+              .maybeSingle();
+            
+            if (msgData) {
+              dbExternalId = msgData.external_id;
+              console.log(`🔑 [${requestId}] Found external_id from DB: ${dbExternalId}`);
+            }
+          }
+        }
+
         // Prepare N8N payload with ORIGINAL Evolution data structure + context
         const n8nPayload = {
           // Original Evolution API payload (preserving ALL data from Evolution)
@@ -787,6 +805,9 @@ serve(async (req) => {
           processed_data: processedData,
           timestamp: new Date().toISOString(),
           request_id: requestId,
+          
+          // Include external_id UUID from database if available
+          ...(dbExternalId && { external_id: dbExternalId }),
           
           // Event type identification for N8N processing (based on original event)
           event_type: (() => {
