@@ -89,11 +89,11 @@ export function ConnectionBadge({ connectionId }: ConnectionBadgeProps) {
         <TooltipTrigger asChild>
           <Badge 
             variant="outline" 
-            className="flex items-center gap-1 h-5 px-1.5 cursor-help hover:bg-muted transition-colors"
+            className="flex items-center gap-1 h-5 px-1.5 cursor-pointer hover:bg-muted transition-colors"
           >
             <Smartphone className="w-3 h-3" />
             <span className="text-[10px] font-medium">
-              {connectionInfo?.instance_name?.slice(0, 8) || 'WA'}
+              {connectionInfo?.instance_name?.slice(0, 8)}
             </span>
           </Badge>
         </TooltipTrigger>
