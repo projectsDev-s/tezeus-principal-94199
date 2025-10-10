@@ -110,10 +110,27 @@ export const useWhatsAppConversations = () => {
         throw functionError;
       }
 
-      // ✅ Conversas SEM mensagens, mas COM connection_id
+      // ✅ Conversas SEM mensagens
       const conversationsOnly = response.items || [];
       
-      // ✅ Mapear para formato compatível (SEM array de mensagens)
+      // 🔥 Buscar connection_id diretamente da tabela conversations
+      const conversationIds = conversationsOnly.map(conv => conv.id);
+      
+      const { data: enrichedData, error: enrichError } = await supabase
+        .from('conversations')
+        .select('id, connection_id')
+        .in('id', conversationIds);
+
+      if (enrichError) {
+        console.warn('⚠️ Erro ao buscar connection_id:', enrichError);
+      }
+
+      // Criar mapa de connection_id por conversa
+      const connectionMap = new Map(
+        enrichedData?.map(item => [item.id, item.connection_id]) || []
+      );
+      
+      // ✅ Mapear para formato compatível com connection_id da tabela
       const formattedConversations = conversationsOnly.map(conv => ({
         id: conv.id,
         contact: {
@@ -122,7 +139,7 @@ export const useWhatsAppConversations = () => {
           phone: conv.contacts.phone,
           profile_image_url: conv.contacts.profile_image_url
         },
-        agente_ativo: false, // Será carregado sob demanda se necessário
+        agente_ativo: false,
         status: conv.status,
         unread_count: conv.unread_count || 0,
         last_activity_at: conv.last_activity_at,
@@ -130,11 +147,11 @@ export const useWhatsAppConversations = () => {
         assigned_user_id: conv.assigned_user_id,
         assigned_user_name: conv.assigned_user_name,
         priority: conv.priority,
-        last_message: conv.last_message, // ✅ Adicionado para exibir última mensagem
-        conversation_tags: conv.conversation_tags || [], // ✅ Incluir tags da conversa
-        connection_id: conv.connection_id, // ✅ CRÍTICO: ID da conexão para distinguir diferentes WhatsApps
+        last_message: conv.last_message,
+        conversation_tags: conv.conversation_tags || [],
+        connection_id: connectionMap.get(conv.id) || conv.connection_id,
         workspace_id: conv.workspace_id,
-        messages: [] // ✅ VAZIO - mensagens carregadas sob demanda
+        messages: []
       }));
       
       setConversations(formattedConversations);
