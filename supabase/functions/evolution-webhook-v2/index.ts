@@ -777,20 +777,32 @@ serve(async (req) => {
           messageKeys: payload.data?.message ? Object.keys(payload.data.message) : []
         });
 
-        // For MESSAGES_UPDATE events, fetch external_id from database
-        let dbExternalId = null;
+        // For MESSAGES_UPDATE events, fetch message UUID from database
+        let dbMessageId = null;
         if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE') {
-          const evolutionMessageId = payload.data?.keyId || payload.data?.key?.id;
-          if (evolutionMessageId) {
-            const { data: msgData } = await supabase
+          const evolutionKeyId = payload.data?.keyId || payload.data?.key?.id;
+          const evolutionMessageId = payload.data?.messageId;
+          
+          if (evolutionKeyId || evolutionMessageId) {
+            // Try to find message by evolution_key_id first, then by external_id
+            let query = supabase
               .from('messages')
-              .select('external_id')
-              .eq('evolution_key_id', evolutionMessageId)
-              .maybeSingle();
+              .select('id, conversation_id')
+              .limit(1);
+            
+            if (evolutionKeyId) {
+              query = query.eq('evolution_key_id', evolutionKeyId);
+            } else if (evolutionMessageId) {
+              query = query.eq('external_id', evolutionMessageId);
+            }
+            
+            const { data: msgData } = await query.maybeSingle();
             
             if (msgData) {
-              dbExternalId = msgData.external_id;
-              console.log(`🔑 [${requestId}] Found external_id from DB: ${dbExternalId}`);
+              dbMessageId = msgData.id;
+              console.log(`🔑 [${requestId}] Found message UUID from DB: ${dbMessageId} (conversation: ${msgData.conversation_id})`);
+            } else {
+              console.log(`⚠️ [${requestId}] Message not found in DB - keyId: ${evolutionKeyId}, messageId: ${evolutionMessageId}`);
             }
           }
         }
@@ -806,8 +818,8 @@ serve(async (req) => {
           timestamp: new Date().toISOString(),
           request_id: requestId,
           
-          // Include external_id UUID from database if available
-          ...(dbExternalId && { external_id: dbExternalId }),
+          // Include message UUID from database if available (for N8N to anchor updates)
+          ...(dbMessageId && { message_id: dbMessageId }),
           
           // Event type identification for N8N processing (based on original event)
           event_type: (() => {
