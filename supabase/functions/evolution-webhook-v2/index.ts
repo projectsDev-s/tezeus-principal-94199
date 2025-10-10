@@ -94,7 +94,11 @@ serve(async (req) => {
       console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}, status=${payload.data.status}`);
       
       const messageKey = payload.data.key;
-      const evolutionMessageId = messageKey?.id;
+      // Para messages.update, o ID vem em payload.data.messageId
+      // Para messages.upsert, o ID vem em payload.data.key.id
+      const evolutionMessageId = payload.data.messageId || messageKey?.id;
+      
+      console.log(`🔍 [${requestId}] Message ID detection: messageId=${payload.data.messageId}, key.id=${messageKey?.id}, final=${evolutionMessageId}`);
       
       // Obter ack level do campo ack (numérico) ou mapear do campo status (string)
       let ackLevel = payload.data.ack;
