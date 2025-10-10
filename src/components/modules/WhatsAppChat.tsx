@@ -29,6 +29,7 @@ import { ContactTags } from "@/components/chat/ContactTags";
 import { MessageContextMenu } from "@/components/chat/MessageContextMenu";
 import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
 import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
+import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1208,10 +1209,10 @@ export function WhatsAppChat({
                       </div>
                     </div>
                     
-                    {/* Main content */}
+                     {/* Main content */}
                     <div className="flex-1 min-w-0">
-                      {/* First line: Name with eye icon */}
-                       <div className="flex items-center mb-0.5">
+                      {/* First line: Name with connection badge and eye icon */}
+                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="text-xs font-normal text-foreground tracking-tight truncate" style={{
                       fontWeight: 400,
                       letterSpacing: '-0.2px',
@@ -1219,6 +1220,7 @@ export function WhatsAppChat({
                     }}>
                           {conversation.contact?.name || conversation.contact?.phone}
                         </span>
+                        <ConnectionBadge connectionId={conversation.connection_id} />
         <svg className="ml-2 w-3 h-3 text-primary cursor-pointer" viewBox="0 0 24 24" fill="currentColor" style={{
                       fontSize: '12px'
                     }} onClick={e => {
