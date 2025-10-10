@@ -87,14 +87,26 @@ serve(async (req) => {
     console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: ${payload.event}`);
     
     // HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - Evolution API v2
-    let isMessageUpdate = false;
     if (payload.event === 'MESSAGES_UPDATE' && payload.data?.ack !== undefined) {
       console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}`);
-      isMessageUpdate = true;
       
       const messageKey = payload.data.key;
       const ackLevel = payload.data.ack;
       const evolutionMessageId = messageKey?.id;
+      
+      // Get workspace_id from instance
+      let workspaceId = null;
+      if (instanceName) {
+        const { data: connection } = await supabase
+          .from('connections')
+          .select('workspace_id')
+          .eq('instance_name', instanceName)
+          .single();
+        
+        if (connection) {
+          workspaceId = connection.workspace_id;
+        }
+      }
       
       if (evolutionMessageId) {
         // Map Evolution ACK levels to our message status
@@ -115,7 +127,6 @@ serve(async (req) => {
             break;
           default:
             console.log(`⚠️ [${requestId}] Unknown ACK level: ${ackLevel}`);
-            // Even for unknown ACK levels, continue to forward to N8N
             break;
         }
         
@@ -140,14 +151,82 @@ serve(async (req) => {
             console.log(`📊 [${requestId}] Updated message data:`, updatedMessage);
           } else {
             console.log(`⚠️ [${requestId}] Message not found for ACK update: ${evolutionMessageId}`);
-            console.log(`🔍 [${requestId}] Searched for message with external_id: ${evolutionMessageId}`);
-            console.log(`💡 [${requestId}] This could happen if the message was just sent and external_id hasn't been updated yet`);
           }
         }
       }
       
-      // Continue processing to forward UPDATE events to N8N as well
-      console.log(`🚀 [${requestId}] Continuing to forward MESSAGES_UPDATE to N8N`);
+      // Get webhook URL for N8N
+      let webhookUrl = null;
+      let webhookSecret = null;
+      
+      if (workspaceId) {
+        const { data: webhookSettings } = await supabase
+          .from('workspace_webhook_settings')
+          .select('webhook_url, webhook_secret')
+          .eq('workspace_id', workspaceId)
+          .single();
+
+        if (webhookSettings) {
+          webhookUrl = webhookSettings.webhook_url;
+          webhookSecret = webhookSettings.webhook_secret;
+        }
+      }
+      
+      // Fallback to environment variables if no workspace webhook configured
+      if (!webhookUrl) {
+        webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
+      }
+      
+      // Send LEAN payload to N8N for status update
+      if (webhookUrl) {
+        const updatePayload = {
+          event: "MESSAGES_UPDATE",
+          event_type: "update",
+          workspace_id: workspaceId,
+          request_id: requestId,
+          external_id: evolutionMessageId,
+          ack_level: ackLevel,
+          status: ackLevel === 1 ? 'sent' : ackLevel === 2 ? 'delivered' : ackLevel === 3 ? 'read' : 'unknown',
+          delivered_at: ackLevel === 2 ? new Date().toISOString() : null,
+          read_at: ackLevel === 3 ? new Date().toISOString() : null,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log(`🚀 [${requestId}] Sending LEAN update payload to N8N:`, updatePayload);
+        
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (webhookSecret) {
+          headers['Authorization'] = `Bearer ${webhookSecret}`;
+        }
+        
+        try {
+          const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(updatePayload)
+          });
+          
+          console.log(`✅ [${requestId}] N8N update webhook called successfully, status: ${response.status}`);
+        } catch (error) {
+          console.error(`❌ [${requestId}] Error calling N8N update webhook:`, error);
+        }
+      }
+      
+      // ENCERRAR O FLUXO - não continuar para processamento de UPSERT
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Message status update processed and forwarded to N8N',
+          request_id: requestId 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     // Get workspace_id and webhook details from database
