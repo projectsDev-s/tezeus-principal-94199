@@ -117,6 +117,7 @@ serve(async (req) => {
       .select(`
         id,
         contact_id,
+        connection_id,
         last_activity_at,
         unread_count,
         priority,
@@ -219,6 +220,7 @@ serve(async (req) => {
 
         return {
           ...conv,
+          connection_id: conv.connection_id,
           last_message: lastMessage || [],
           assigned_user_name: assignedUserName,
           conversation_tags: conv.conversation_tags || []

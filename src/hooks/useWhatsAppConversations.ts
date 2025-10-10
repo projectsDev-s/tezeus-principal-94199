@@ -100,9 +100,9 @@ export const useWhatsAppConversations = () => {
         return;
       }
 
-      // ✅ CRÍTICO: Use whatsapp-get-conversations (COM connection_id)
+      // ✅ CRÍTICO: Use whatsapp-get-conversations-lite (SEM mensagens, COM connection_id)
       const { data: response, error: functionError } = await supabase.functions.invoke(
-        'whatsapp-get-conversations', {
+        'whatsapp-get-conversations-lite', {
         headers
       });
 
@@ -110,8 +110,8 @@ export const useWhatsAppConversations = () => {
         throw functionError;
       }
 
-      // ✅ Conversas COM connection_id
-      const conversationsOnly = response.data || [];
+      // ✅ Conversas SEM mensagens, mas COM connection_id
+      const conversationsOnly = response.items || [];
       
       // ✅ Mapear para formato compatível (SEM array de mensagens)
       const formattedConversations = conversationsOnly.map(conv => ({
