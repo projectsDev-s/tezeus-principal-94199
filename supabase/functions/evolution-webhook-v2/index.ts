@@ -218,18 +218,9 @@ serve(async (req) => {
         }
       }
       
-      // ENCERRAR O FLUXO - não continuar para processamento de UPSERT
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Message status update processed and forwarded to N8N',
-          request_id: requestId 
-        }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      // NÃO ENCERRAR O FLUXO - continuar para processar UPSERT também
+      // Isso permite que o N8N receba AMBOS os eventos: update (ACK) e upsert (mensagem)
+      console.log(`✅ [${requestId}] ACK processed, continuing to UPSERT processing to send both events to N8N...`);
     }
     
     // Get workspace_id and webhook details from database
