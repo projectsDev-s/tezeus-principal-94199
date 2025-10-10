@@ -216,6 +216,7 @@ serve(async (req) => {
           event: "MESSAGES_UPDATE",
           event_type: "update",
           workspace_id: workspaceId,
+          conversation_id: updatedMessage?.conversation_id,
           request_id: requestId,
           external_id: evolutionMessageId,
           ack_level: ackLevel,
