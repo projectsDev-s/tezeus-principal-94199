@@ -1063,7 +1063,7 @@ export function WhatsAppChat({
         </div>
 
         {/* Select de Canais */}
-        {!sidebarCollapsed && <div className="p-3 border-b border-border">
+        {!sidebarCollapsed && <div className="p-3 border-b border-border bg-white">
             <Select value={selectedConnection || "all"} onValueChange={value => setSelectedConnection(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full h-9 text-xs">
                 <SelectValue placeholder="Todas as conexões" />
