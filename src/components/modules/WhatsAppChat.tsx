@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { MessageStatusIndicator } from "@/components/ui/message-status-indicator";
 import { useWhatsAppConversations, WhatsAppConversation } from "@/hooks/useWhatsAppConversations";
 import { useConversationMessages } from "@/hooks/useConversationMessages";
@@ -594,12 +595,24 @@ export function WhatsAppChat({
   };
 
   // Obter horário da última atividade
-  const getActivityTime = (conv: WhatsAppConversation) => {
-    const time = new Date(conv.last_activity_at);
-    return time.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getActivityDisplay = (conv: WhatsAppConversation) => {
+    const now = new Date();
+    const messageTime = new Date(conv.last_activity_at);
+    const diffInHours = (now.getTime() - messageTime.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      // Menos de 24h: mostrar horário
+      return messageTime.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } else {
+      // Mais de 24h: mostrar data
+      return messageTime.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit'
+      });
+    }
   };
 
   // ✅ Última mensagem não existe mais no array (lazy loading)
@@ -1349,7 +1362,7 @@ export function WhatsAppChat({
             </div> : <div className="space-y-0">
             {getFilteredConversations().map(conversation => {
             // ✅ Removido lastMessage (lazy loading)
-            const lastActivity = getActivityTime(conversation);
+            const lastActivity = getActivityDisplay(conversation);
             const initials = getInitials(conversation.contact?.name || conversation.contact?.phone || 'U');
             const avatarColor = getAvatarColor(conversation.contact?.name || conversation.contact?.phone || 'U');
             return <li key={conversation.id} className="list-none">
@@ -1410,53 +1423,79 @@ export function WhatsAppChat({
                       </div>
                     </div>
                     
-                    {/* Secondary actions */}
-                    <div className="flex items-center gap-2 ml-2">
-                      {/* Tag/Label system */}
-                      <div className="flex items-center gap-2">
-                        {conversation.tags && conversation.tags.length > 0 && <TooltipProvider>
+                {/* Secondary actions */}
+                <div className="flex flex-col items-end gap-1 ml-2">
+                  {/* Timestamp - ACIMA */}
+                  <div className="text-right">
+                    <span className="text-xs text-muted-foreground">
+                      {lastActivity}
+                    </span>
+                  </div>
+                  
+                  {/* Tag/Label system + Avatar */}
+                  <div className="flex items-center gap-2">
+                    {/* Tags */}
+                    {conversation.tags && conversation.tags.length > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <div className="flex items-center gap-1">
-                              {conversation.tags.map(tag => <Tooltip key={tag.id}>
-                                  <TooltipTrigger asChild>
-                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill={tag.color} style={{
-                              stroke: 'white',
-                              strokeWidth: 1
-                            }}>
-                                      <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
-                                    </svg>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <span className="text-xs">{tag.name}</span>
-                                  </TooltipContent>
-                                </Tooltip>)}
+                              {conversation.tags.slice(0, 2).map((tag: any) => (
+                                <Badge 
+                                  key={tag.id} 
+                                  variant="outline" 
+                                  className="text-[10px] px-1 py-0 h-4"
+                                  style={{ 
+                                    borderColor: tag.color || '#8B5CF6',
+                                    color: tag.color || '#8B5CF6'
+                                  }}
+                                >
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                              {conversation.tags.length > 2 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{conversation.tags.length - 2}
+                                </span>
+                              )}
                             </div>
-                          </TooltipProvider>}
-                        
-                        {/* Small avatar with tooltip */}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Avatar className="w-4 h-4 rounded-full">
-                                <AvatarImage src="https://i.pinimg.com/236x/a8/da/22/a8da222be70a71e7858bf752065d5cc3.jpg" alt={conversation.contact?.name || conversation.contact?.phone} />
-                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                              </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {conversation.assigned_user_name ? `Responsável: ${conversation.assigned_user_name}` : "Não atribuída"}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      
-                      {/* Timestamp */}
-                      <div className="text-right">
-                        <span className="text-xs text-muted-foreground">
-                          {lastActivity}
-                        </span>
-                      </div>
-                    </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="space-y-1">
+                              {conversation.tags.map((tag: any) => (
+                                <div key={tag.id} className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: tag.color || '#8B5CF6' }}
+                                  />
+                                  <span>{tag.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    
+                    {/* Avatar do usuário atribuído */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="w-4 h-4 rounded-full">
+                            <AvatarFallback className="bg-primary/10 text-primary text-[8px]">
+                              {conversation.assigned_user_name 
+                                ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                                : '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{conversation.assigned_user_name || 'Não atribuído'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
                   </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
