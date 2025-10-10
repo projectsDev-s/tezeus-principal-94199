@@ -39,6 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import panelIcon from "@/assets/panel-icon.png";
 interface WhatsAppChatProps {
   isDarkMode?: boolean;
   selectedConversationId?: string | null;
@@ -1097,7 +1098,7 @@ export function WhatsAppChat({
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="h-8 w-8"
           >
-            <Menu className="h-4 w-4" />
+            <img src={panelIcon} alt="Menu" className="h-4 w-4" />
           </Button>
         </div>
 
@@ -1127,7 +1128,7 @@ export function WhatsAppChat({
         )}
 
         {/* Categorias de Navegação */}
-        <nav className="flex-1 p-2">
+        <nav className="flex-1 pr-2 pt-2 pb-2 pl-1">
           <div className="space-y-1">
             {/* Todos */}
             <TooltipProvider>
@@ -1138,7 +1139,7 @@ export function WhatsAppChat({
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
                       activeTab === 'all' 
-                        ? "bg-primary/10 text-primary font-medium" 
+                        ? "bg-white text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1166,7 +1167,7 @@ export function WhatsAppChat({
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
                       activeTab === 'mine' 
-                        ? "bg-primary/10 text-primary font-medium" 
+                        ? "bg-white text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1194,7 +1195,7 @@ export function WhatsAppChat({
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
                       activeTab === 'unassigned' 
-                        ? "bg-primary/10 text-primary font-medium" 
+                        ? "bg-white text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1222,7 +1223,7 @@ export function WhatsAppChat({
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
                       activeTab === 'groups' 
-                        ? "bg-primary/10 text-primary font-medium" 
+                        ? "bg-white text-primary font-medium border border-primary/20" 
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
@@ -1241,9 +1242,12 @@ export function WhatsAppChat({
               </Tooltip>
             </TooltipProvider>
           </div>
-        </nav>
+            </nav>
 
-        {/* Seção Customizado */}
+            {/* Linha divisória */}
+            <div className="border-t-2 border-black/80" />
+
+            {/* Seção Customizado */}
         {!sidebarCollapsed && (
           <div className="border-t border-border p-2">
             <Collapsible open={customFiltersOpen} onOpenChange={setCustomFiltersOpen}>
