@@ -1055,7 +1055,7 @@ export function WhatsAppChat({
       {/* Sidebar de Filtros */}
       <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-56")}>
         {/* Header da sidebar */}
-        <div className="p-3 border-b border-border flex items-center justify-between">
+        <div className="p-3 border-b border-border flex items-center justify-between bg-white">
           {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
           <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="h-8 w-8">
             <PanelLeft className="h-4 w-4" />
