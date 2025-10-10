@@ -377,9 +377,9 @@ serve(async (req) => {
         };
       } else {
       // ✅ PROCESSAR APENAS MENSAGENS INDIVIDUAIS
-        const phoneNumber = extractPhoneFromRemoteJid(remoteJid);
+      const phoneNumber = extractPhoneFromRemoteJid(remoteJid);
       const evolutionMessageId = messageData.key?.id; // 22 chars
-      const evolutionKeyId = messageData.keyId; // 40 chars (if available)
+      const evolutionKeyId = payload.data?.keyId || messageData.keyId; // 40 chars (if available)
       
       // 🔍 DEBUG: Log ALL message ID details
       console.log(`🔑 [${requestId}] Message IDs captured:`);
