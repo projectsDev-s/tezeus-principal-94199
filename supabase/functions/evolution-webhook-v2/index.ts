@@ -733,7 +733,23 @@ serve(async (req) => {
       }
       } // ✅ FIM DO BLOCO: PROCESSAR APENAS MENSAGENS INDIVIDUAIS
     } else if (workspaceId && payload.data?.key?.fromMe === true) {
-      console.log(`📤 [${requestId}] Outbound message detected, skipping local processing (will be handled by N8N response)`);
+      console.log(`📤 [${requestId}] Outbound message detected, capturing IDs for N8N`);
+      
+      // Capturar IDs para mensagens enviadas pelo sistema
+      const evolutionMessageId = payload.data?.key?.id; // 22 chars
+      const evolutionKeyId = payload.data?.keyId; // 40 chars
+      
+      processedData = {
+        message_sent: true,
+        external_id: evolutionMessageId,
+        evolution_key_id: evolutionKeyId,
+        phone_number: payload.data?.key?.remoteJid ? extractPhoneFromRemoteJid(payload.data.key.remoteJid) : null
+      };
+      
+      console.log(`🔑 [${requestId}] Outbound message IDs:`, {
+        external_id: evolutionMessageId,
+        evolution_key_id: evolutionKeyId
+      });
     }
 
     // Forward to N8N with processed data
