@@ -173,7 +173,7 @@ serve(async (req) => {
           const { data: updatedMessage, error: updateError } = await supabase
             .from('messages')
             .update(updateData)
-            .eq('external_id', evolutionMessageId)
+            .eq('evolution_key_id', evolutionMessageId)
             .select('id, conversation_id, workspace_id')
             .maybeSingle();
             
