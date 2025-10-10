@@ -318,6 +318,10 @@ serve(async (req) => {
         const phoneNumber = extractPhoneFromRemoteJid(remoteJid);
       const evolutionMessageId = messageData.key?.id;
       
+      // 🔍 DEBUG: Log message ID details
+      console.log(`🔑 [${requestId}] Message ID details: key.id="${messageData.key?.id}", keyId="${messageData.keyId}", messageId="${messageData.messageId}"`);
+      console.log(`🔑 [${requestId}] Using external_id (FULL key.id): "${evolutionMessageId}"`);
+      
       console.log(`📱 [${requestId}] RemoteJid processing: ${remoteJid} -> ${phoneNumber}`);
       
       // Check if payload includes profilePictureUrl directly in various possible locations
