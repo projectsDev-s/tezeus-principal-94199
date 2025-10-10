@@ -15,6 +15,23 @@ serve(async (req) => {
     const payload = await req.json();
     console.log('N8N Media Processor - Payload recebido:', payload);
     
+    // 🔍 VALIDAÇÃO CRÍTICA: Verificar se é um evento de mensagem
+    const eventType = payload?.event || payload?.body?.event;
+    
+    // Se não for evento de mensagem (ex: contacts.update), retornar sucesso sem processar
+    if (eventType && !eventType.includes('messages')) {
+      console.log(`⏭️ Evento ${eventType} ignorado - n8n-media-processor processa apenas eventos de mensagens`);
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: `Evento ${eventType} não requer processamento de mídia`,
+        event: eventType
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Mapear campos do N8N para os campos esperados pela função
     const {
       // Campos diretos (se vier da API)
