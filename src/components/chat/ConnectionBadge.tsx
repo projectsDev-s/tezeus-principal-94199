@@ -19,7 +19,11 @@ export function ConnectionBadge({ connectionId }: ConnectionBadgeProps) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!connectionId) return;
+    console.log('🔍 ConnectionBadge - connectionId:', connectionId);
+    if (!connectionId) {
+      console.log('⚠️ ConnectionBadge - sem connectionId, não renderizando');
+      return;
+    }
 
     const fetchConnectionInfo = async () => {
       setLoading(true);

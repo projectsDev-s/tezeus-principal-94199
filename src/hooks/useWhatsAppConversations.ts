@@ -100,9 +100,9 @@ export const useWhatsAppConversations = () => {
         return;
       }
 
-      // ✅ CRÍTICO: Use whatsapp-get-conversations-lite (SEM mensagens)
+      // ✅ CRÍTICO: Use whatsapp-get-conversations (COM connection_id)
       const { data: response, error: functionError } = await supabase.functions.invoke(
-        'whatsapp-get-conversations-lite', {
+        'whatsapp-get-conversations', {
         headers
       });
 
@@ -110,8 +110,8 @@ export const useWhatsAppConversations = () => {
         throw functionError;
       }
 
-      // ✅ Conversas SEM mensagens (apenas metadados)
-      const conversationsOnly = response.items || [];
+      // ✅ Conversas COM connection_id
+      const conversationsOnly = response.data || [];
       
       // ✅ Mapear para formato compatível (SEM array de mensagens)
       const formattedConversations = conversationsOnly.map(conv => ({
@@ -132,6 +132,8 @@ export const useWhatsAppConversations = () => {
         priority: conv.priority,
         last_message: conv.last_message, // ✅ Adicionado para exibir última mensagem
         conversation_tags: conv.conversation_tags || [], // ✅ Incluir tags da conversa
+        connection_id: conv.connection_id, // ✅ CRÍTICO: ID da conexão para distinguir diferentes WhatsApps
+        workspace_id: conv.workspace_id,
         messages: [] // ✅ VAZIO - mensagens carregadas sob demanda
       }));
       
