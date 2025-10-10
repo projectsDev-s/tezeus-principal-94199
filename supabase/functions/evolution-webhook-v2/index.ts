@@ -680,7 +680,12 @@ serve(async (req) => {
           request_id: requestId,
           
           // Event type identification for N8N processing (based on original event)
-          event_type: payload.event?.toLowerCase().endsWith('update') ? 'update' : 'upsert',
+          event_type: (() => {
+            const eventLower = payload.event?.toLowerCase() || '';
+            const isUpdate = eventLower.endsWith('update');
+            console.log(`🔍 [${requestId}] Event type determination: event="${payload.event}", lower="${eventLower}", endsWithUpdate=${isUpdate}, result="${isUpdate ? 'update' : 'upsert'}"`);
+            return isUpdate ? 'update' : 'upsert';
+          })(),
           processed_locally: !!processedData,
           
           // Computed fields for convenience (but original data is preserved above)
