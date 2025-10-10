@@ -106,6 +106,7 @@ export function WhatsAppChat({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
+  const [selectedConnection, setSelectedConnection] = useState<string>("");
   const [isUpdatingProfileImages, setIsUpdatingProfileImages] = useState(false);
 
   // Estados para as abas baseadas no papel
@@ -176,6 +177,11 @@ export function WhatsAppChat({
       });
       
       console.log('📋 Conversas após filtro:', filtered.length);
+    }
+
+    // Filtrar por conexão se selecionada
+    if (selectedConnection && selectedConnection !== "all") {
+      filtered = filtered.filter(conv => conv.connection_id === selectedConnection);
     }
 
     // Filtrar por termo de busca
@@ -1102,6 +1108,29 @@ export function WhatsAppChat({
                           queues.filter(queue => queue.ai_agent_id && queue.ai_agent).map(queue => (
                             <SelectItem key={queue.ai_agent!.id} value={queue.ai_agent!.id}>
                               {queue.ai_agent!.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro por Conexão */}
+                  <div>
+                    <Select value={selectedConnection || "all"} onValueChange={(value) => setSelectedConnection(value === "all" ? "" : value)}>
+                      <SelectTrigger className="w-full h-10">
+                        <SelectValue placeholder="Filtre pela conexão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as conexões</SelectItem>
+                        {connectionsLoading ? (
+                          <SelectItem value="__loading__" disabled>Carregando conexões...</SelectItem>
+                        ) : workspaceConnections.length === 0 ? (
+                          <SelectItem value="__empty__" disabled>Nenhuma conexão encontrada</SelectItem>
+                        ) : (
+                          workspaceConnections.map(connection => (
+                            <SelectItem key={connection.id} value={connection.id}>
+                              {connection.instance_name}
                             </SelectItem>
                           ))
                         )}
