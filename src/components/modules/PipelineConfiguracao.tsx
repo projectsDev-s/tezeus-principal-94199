@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DeletarColunaModal } from "@/components/modals/DeletarColunaModal";
+import { DeletarPipelineModal } from "@/components/modals/DeletarPipelineModal";
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
 import { SortableContext, useSortable, horizontalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -324,6 +325,8 @@ export default function PipelineConfiguracao({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isLoadingColumns, setIsLoadingColumns] = useState(false);
+  const [isDeletePipelineModalOpen, setIsDeletePipelineModalOpen] = useState(false);
+  const [isDeletingPipeline, setIsDeletingPipeline] = useState(false);
   const {
     columns,
     selectedPipeline,
@@ -331,7 +334,8 @@ export default function PipelineConfiguracao({
     pipelines,
     isLoadingColumns: contextIsLoadingColumns,
     selectPipeline,
-    refreshCurrentPipeline
+    refreshCurrentPipeline,
+    deletePipeline
   } = usePipelinesContext();
   const {
     user
@@ -455,6 +459,32 @@ export default function PipelineConfiguracao({
       });
     } finally {
       setIsLoadingColumns(false);
+    }
+  };
+
+  const handleDeletePipeline = async () => {
+    if (!selectedPipeline) return;
+    
+    setIsDeletingPipeline(true);
+    
+    try {
+      await deletePipeline(selectedPipeline.id);
+      setIsDeletePipelineModalOpen(false);
+      
+      toast({
+        title: "Pipeline excluído",
+        description: "O pipeline foi excluído com sucesso.",
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao deletar pipeline:', error);
+      toast({
+        title: "Erro ao excluir pipeline",
+        description: error.message || "Ocorreu um erro ao tentar excluir o pipeline.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingPipeline(false);
     }
   };
 
@@ -878,7 +908,27 @@ export default function PipelineConfiguracao({
                   </SelectContent>
                 </Select>
               </div>
-              
+            </CardContent>
+          </Card>
+
+          {/* Seção de Exclusão - Zona de Perigo */}
+          <Card className="border-red-200">
+            <CardContent className="bg-red-50 rounded-lg p-6 mt-6">
+              <h3 className="text-sm font-semibold text-red-900 mb-2">
+                Zona de Perigo
+              </h3>
+              <p className="text-xs text-red-700 mb-4">
+                Excluir este pipeline removerá permanentemente todas as colunas e negócios associados.
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsDeletePipelineModalOpen(true)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Pipeline
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1146,6 +1196,15 @@ export default function PipelineConfiguracao({
         }}
         columnName={columnToDelete?.name || ''}
         isDarkMode={isDarkMode}
+      />
+
+      {/* Modal de confirmação para deletar pipeline */}
+      <DeletarPipelineModal
+        isOpen={isDeletePipelineModalOpen}
+        onClose={() => setIsDeletePipelineModalOpen(false)}
+        onConfirm={handleDeletePipeline}
+        pipelineName={selectedPipeline?.name || ""}
+        isDeleting={isDeletingPipeline}
       />
     </div>;
 }

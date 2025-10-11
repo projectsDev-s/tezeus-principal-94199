@@ -198,6 +198,65 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+
+        if (method === 'DELETE') {
+          const pipelineId = url.searchParams.get('id');
+          
+          if (!pipelineId) {
+            return new Response(
+              JSON.stringify({ error: 'Pipeline ID required' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          console.log('🗑️ Deleting pipeline:', pipelineId);
+
+          // Verificar se o pipeline tem cards
+          const { count: cardsCount } = await supabaseClient
+            .from('pipeline_cards')
+            .select('*', { count: 'exact', head: true })
+            .eq('pipeline_id', pipelineId);
+
+          if (cardsCount && cardsCount > 0) {
+            return new Response(
+              JSON.stringify({ 
+                error: 'Não é possível excluir um pipeline com negócios ativos',
+                cardsCount 
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Deletar colunas primeiro
+          const { error: columnsError } = await supabaseClient
+            .from('pipeline_columns')
+            .delete()
+            .eq('pipeline_id', pipelineId);
+
+          if (columnsError) {
+            console.error('❌ Error deleting columns:', columnsError);
+            throw columnsError;
+          }
+
+          // Deletar o pipeline
+          const { error: pipelineError } = await supabaseClient
+            .from('pipelines')
+            .delete()
+            .eq('id', pipelineId)
+            .eq('workspace_id', workspaceId);
+
+          if (pipelineError) {
+            console.error('❌ Error deleting pipeline:', pipelineError);
+            throw pipelineError;
+          }
+
+          console.log('✅ Pipeline deleted successfully');
+
+          return new Response(
+            JSON.stringify({ success: true }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         break;
 
       case 'columns':

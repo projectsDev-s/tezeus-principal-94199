@@ -55,6 +55,7 @@ interface PipelinesContextType {
   isLoadingColumns: boolean;
   fetchPipelines: () => Promise<void>;
   createPipeline: (name: string, type: string) => Promise<Pipeline>;
+  deletePipeline: (pipelineId: string) => Promise<void>;
   selectPipeline: (pipeline: Pipeline) => void;
   refreshCurrentPipeline: () => Promise<void>;
   createColumn: (name: string, color: string) => Promise<PipelineColumn>;
@@ -215,6 +216,40 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   }, [getHeaders, toast]);
+
+  const deletePipeline = useCallback(async (pipelineId: string) => {
+    if (!getHeaders) throw new Error('Headers não disponíveis');
+
+    const { data, error } = await supabase.functions.invoke(
+      `pipeline-management/pipelines?id=${pipelineId}`,
+      {
+        method: 'DELETE',
+        headers: getHeaders
+      }
+    );
+
+    if (error) {
+      console.error('❌ Erro ao deletar pipeline:', error);
+      throw error;
+    }
+
+    console.log('✅ Pipeline deletado com sucesso');
+    
+    // Atualizar lista de pipelines
+    await fetchPipelines();
+    
+    // Se era o pipeline selecionado, limpar seleção
+    if (selectedPipeline?.id === pipelineId) {
+      setSelectedPipeline(null);
+      setColumns([]);
+      setCards([]);
+    }
+
+    toast({
+      title: "Pipeline excluído",
+      description: "O pipeline foi excluído com sucesso.",
+    });
+  }, [getHeaders, toast, fetchPipelines, selectedPipeline]);
 
   const selectPipeline = useCallback((pipeline: Pipeline) => {
     setSelectedPipeline(pipeline);
@@ -638,6 +673,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     isLoadingColumns,
     fetchPipelines,
     createPipeline,
+    deletePipeline,
     selectPipeline,
     refreshCurrentPipeline,
     createColumn,
@@ -700,9 +736,10 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     columns,
     cards,
     isLoading,
+    isLoadingColumns,
     fetchPipelines,
     createPipeline,
-    createPipeline,
+    deletePipeline,
     selectPipeline,
     refreshCurrentPipeline,
     createColumn,
@@ -711,7 +748,8 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     moveCard,
     moveCardOptimistic,
     getCardsByColumn,
-    isLoadingColumns
+    getHeaders,
+    toast
   ]);
 
   return (
