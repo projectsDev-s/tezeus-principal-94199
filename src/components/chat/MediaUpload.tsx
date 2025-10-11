@@ -95,7 +95,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
   const handleConfirmSend = () => {
     if (!pendingMedia) return;
     
-    onFileSelect(pendingMedia.file, pendingMedia.type, pendingMedia.url, caption);
+    onFileSelect(pendingMedia.file, pendingMedia.type, pendingMedia.url, caption.trim() || undefined);
     
     // Limpar preview
     URL.revokeObjectURL(pendingMedia.previewUrl);
