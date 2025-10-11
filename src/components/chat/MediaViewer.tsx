@@ -158,15 +158,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     return (
       <div className={className}>
         <div className="relative inline-block">
-          {isLoading && !hasLoaded && (
-            <div className="flex items-center justify-center max-w-[300px] max-h-[200px] rounded-lg bg-muted/20 border border-dashed border-muted-foreground/20">
-              <div className="flex flex-col items-center gap-2 p-6">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">Carregando imagem...</p>
-              </div>
-            </div>
-          )}
-          
           {!imageError && (
             <>
               <img
