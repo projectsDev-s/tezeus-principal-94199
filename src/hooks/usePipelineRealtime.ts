@@ -27,9 +27,15 @@ export function usePipelineRealtime({
 
     console.log('🔌 [Realtime] Conectando ao pipeline:', pipelineId);
 
+    // IMPORTANTE: Usar um nome de canal único por cliente/sessão
+    // Isso evita conflitos de subscrição entre múltiplos usuários
+    const channelName = `pipeline-updates-${pipelineId}-${Math.random().toString(36).substring(7)}`;
+    
+    console.log('📡 [Realtime] Nome do canal:', channelName);
+
     // Canal único para este pipeline
     const channel: RealtimeChannel = supabase
-      .channel(`pipeline-${pipelineId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -116,8 +122,20 @@ export function usePipelineRealtime({
           onColumnDelete?.(payload.old.id);
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log(`📡 [Realtime] Status da conexão: ${status}`);
+        if (err) {
+          console.error('❌ [Realtime] Erro na subscrição:', err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime] Canal subscrito com sucesso!');
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime] Erro no canal');
+        }
+        if (status === 'TIMED_OUT') {
+          console.error('⏱️ [Realtime] Timeout na conexão');
+        }
       });
 
     // Cleanup: desconectar ao desmontar
