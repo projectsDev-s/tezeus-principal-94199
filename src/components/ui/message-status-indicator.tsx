@@ -10,15 +10,15 @@ export const MessageStatusIndicator = ({ status, className }: MessageStatusIndic
   const getStatusIcon = () => {
     switch (status) {
       case 'sending':
-        return <Clock className="w-4 h-4 text-muted-foreground animate-spin" />;
+        return <Clock className="w-3.5 h-3.5 text-white/70 animate-spin" />;
       case 'sent':
-        return <Check className="w-4 h-4 text-muted-foreground" />;
+        return <Check className="w-3.5 h-3.5 text-white/70" />;
       case 'delivered':
-        return <CheckCheck className="w-4 h-4 text-muted-foreground" />;
+        return <CheckCheck className="w-3.5 h-3.5 text-white/70" />;
       case 'read':
-        return <CheckCheck className="w-4 h-4 text-blue-500" />;
+        return <CheckCheck className="w-3.5 h-3.5 text-blue-400" />;
       case 'failed':
-        return <X className="w-4 h-4 text-destructive" />;
+        return <X className="w-3.5 h-3.5 text-destructive" />;
       default:
         return null;
     }

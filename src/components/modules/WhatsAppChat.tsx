@@ -1549,7 +1549,7 @@ export function WhatsAppChat({
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted p-3" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary p-3" : "bg-primary text-primary-foreground p-3")}>
+                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-[#005C4B] px-2 py-1.5" : "bg-[#005C4B] text-white px-2 py-1.5")}>
                       {/* Menu de contexto */}
                       {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => {/* TODO: implementar resposta */}} onDownload={message.file_url ? () => {
                   const link = document.createElement('a');
@@ -1562,18 +1562,27 @@ export function WhatsAppChat({
                 } : undefined} hasDownload={!!message.file_url} />}
                       
                       {/* Renderizar conteúdo baseado no tipo */}
-                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <p className="text-sm break-words">{message.content}</p>}
-                      
-                      {/* Status e horário - APENAS para mensagens de texto e áudio (outros tipos têm timestamp interno) */}
-                      {(message.message_type === 'text' || message.message_type === 'audio') && <div className={cn("flex items-center gap-1 mt-1 text-xs", message.sender_type === 'contact' ? "text-muted-foreground" : "text-primary-foreground/70")}>
-                        <span>
-                          {new Date(message.created_at).toLocaleTimeString('pt-BR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                        </span>
-                        {message.sender_type !== 'contact' && <MessageStatusIndicator status={mapEvolutionStatusToComponent(message.status)} className="ml-1" />}
-                      </div>}
+                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
+                    <p className="text-sm break-words flex-1">{message.content}</p>
+                    
+                    <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
+                      <span className={cn(
+                        message.sender_type === 'contact' 
+                          ? "text-muted-foreground" 
+                          : "text-white/70"
+                      )}>
+                        {new Date(message.created_at).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                      {message.sender_type !== 'contact' && (
+                        <MessageStatusIndicator 
+                          status={mapEvolutionStatusToComponent(message.status)} 
+                        />
+                      )}
+                    </div>
+                  </div>}
                     </div>
                   </div>)}
                 <div ref={messagesEndRef} />
