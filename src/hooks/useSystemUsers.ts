@@ -11,6 +11,7 @@ export interface SystemUser {
   avatar?: string;
   cargo_id?: string;
   cargo_ids?: string[];
+  cargo_names?: string[];
   default_channel?: string;
   created_at: string;
   updated_at: string;

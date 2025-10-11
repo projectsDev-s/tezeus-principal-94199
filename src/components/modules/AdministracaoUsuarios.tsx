@@ -123,6 +123,7 @@ export function AdministracaoUsuarios() {
               <TableHead className="text-foreground font-medium text-center">Nome</TableHead>
               <TableHead className="text-foreground font-medium">Email</TableHead>
               <TableHead className="text-foreground font-medium">Perfil</TableHead>
+              <TableHead className="text-foreground font-medium">Cargo</TableHead>
               <TableHead className="text-foreground font-medium">Empresa</TableHead>
               <TableHead className="text-foreground font-medium">Status</TableHead>
               <TableHead className="text-foreground font-medium text-center">Ações</TableHead>
@@ -142,6 +143,23 @@ export function AdministracaoUsuarios() {
                  <span className="text-foreground capitalize">
                     {user.profile}
                   </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {user.cargo_names && user.cargo_names.length > 0 ? (
+                      user.cargo_names.map((cargoName, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {cargoName}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </div>
                 </TableCell>
                <TableCell>
                 <span className="text-foreground">
