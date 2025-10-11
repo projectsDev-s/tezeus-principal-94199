@@ -206,8 +206,8 @@ export function ContactSidePanel({
       // 1️⃣ Salvar dados básicos do contato
       const updateData = {
         name: editingContact.name?.trim() || '',
-        phone: editingContact.phone?.trim() || '',
         email: editingContact.email?.trim() || ''
+        // phone removido - não pode ser alterado para preservar histórico
       };
       console.log('📤 Salvando dados básicos:', updateData);
       const {
@@ -424,10 +424,17 @@ export function ContactSidePanel({
                     
                     <div>
                       <Label htmlFor="phone">Telefone</Label>
-                      <Input id="phone" value={editingContact?.phone || ''} onChange={e => setEditingContact(prev => prev ? {
-                      ...prev,
-                      phone: e.target.value
-                    } : null)} />
+                      <Input 
+                        id="phone" 
+                        value={editingContact?.phone || ''} 
+                        readOnly
+                        disabled
+                        className="bg-muted cursor-not-allowed"
+                        title="O telefone não pode ser alterado após a criação do contato"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ⚠️ O número não pode ser alterado para preservar o histórico de conversas
+                      </p>
                     </div>
                     
                     <div>

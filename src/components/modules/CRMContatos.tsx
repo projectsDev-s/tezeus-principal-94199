@@ -410,9 +410,9 @@ export function CRMContatos() {
           error
         } = await supabase.from('contacts').update({
           name: editingContact.name.trim(),
-          phone: editingContact.phone.trim() || null,
           email: editingContact.email.trim() || null,
           updated_at: new Date().toISOString()
+          // phone removido - não pode ser alterado para preservar histórico
         }).eq('id', editingContact.id);
         if (error) throw error;
 
@@ -757,11 +757,18 @@ export function CRMContatos() {
                     <SelectItem value="BR">BR +55</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input value={editingContact?.phone || ""} onChange={e => setEditingContact(prev => prev ? {
-                ...prev,
-                phone: e.target.value
-              } : null)} placeholder="(55) 2 1981-5490" />
+                <Input 
+                  value={editingContact?.phone || ""} 
+                  readOnly
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                  title="O telefone não pode ser alterado após a criação do contato"
+                  placeholder="(55) 2 1981-5490" 
+                />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                ⚠️ O número não pode ser alterado para preservar o histórico de conversas
+              </p>
             </div>
             
             <div>

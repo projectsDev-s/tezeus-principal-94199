@@ -73,8 +73,8 @@ export function EditarContatoModal({
         .from('contacts')
         .update({
           name: formData.name,
-          email: formData.email || null,
-          phone: formData.phone
+          email: formData.email || null
+          // phone removido - não pode ser alterado para preservar histórico
         })
         .eq('id', contactId);
 
@@ -123,10 +123,15 @@ export function EditarContatoModal({
             <Input
               id="phone"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              readOnly
+              disabled
+              className="bg-muted cursor-not-allowed"
+              title="O telefone não pode ser alterado após a criação do contato"
               placeholder="(00) 00000-0000"
-              required
             />
+            <p className="text-xs text-muted-foreground">
+              ⚠️ O número não pode ser alterado para preservar o histórico de conversas
+            </p>
           </div>
 
           <div className="space-y-2">
