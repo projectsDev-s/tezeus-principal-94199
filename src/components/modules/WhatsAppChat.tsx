@@ -1054,7 +1054,7 @@ export function WhatsAppChat({
   }
   return <div className="flex h-full bg-white overflow-hidden w-full">
       {/* Sidebar de Filtros */}
-      <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-48 lg:w-56")}>
+      <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-40 lg:w-48")}>
         {/* Header da sidebar */}
         <div className="p-3 border-b border-border flex items-center justify-between bg-white">
           {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
@@ -1218,7 +1218,7 @@ export function WhatsAppChat({
       </div>
 
       {/* Sidebar com lista de conversas */}
-      <div className="w-full md:w-96 lg:w-[420px] md:min-w-96 lg:min-w-[420px] border-r border-border flex flex-col">
+      <div className="w-full md:w-80 lg:w-80 md:min-w-80 lg:min-w-80 border-r border-border flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border">
           {/* Search bar */}
