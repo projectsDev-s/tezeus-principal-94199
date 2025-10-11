@@ -453,9 +453,8 @@ export function ContactSidePanel({
                           className="flex-1 font-medium bg-muted text-sm"
                         />
                         <Input 
-                          placeholder="Preencher depois..." 
-                          className="flex-1 text-muted-foreground text-sm"
-                          disabled
+                          placeholder="Preencher valor..." 
+                          className="flex-1 text-sm"
                         />
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removePinnedField(index)}>
                           <Trash2 className="h-4 w-4" />

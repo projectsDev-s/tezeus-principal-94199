@@ -787,9 +787,8 @@ export function CRMContatos() {
                       placeholder="Nome do campo"
                     />
                     <Input 
-                      placeholder="Preencher depois..." 
-                      className="flex-1 text-muted-foreground"
-                      disabled
+                      placeholder="Preencher valor..." 
+                      className="flex-1"
                     />
                     <Button variant="ghost" size="icon" onClick={() => removePinnedField(index)}>
                       <Trash2 className="h-4 w-4" />
