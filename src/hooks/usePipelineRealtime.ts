@@ -1,0 +1,129 @@
+import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { RealtimeChannel } from '@supabase/supabase-js';
+import { PipelineCard, PipelineColumn } from '@/contexts/PipelinesContext';
+
+interface UsePipelineRealtimeProps {
+  pipelineId: string | null;
+  onCardInsert?: (card: PipelineCard) => void;
+  onCardUpdate?: (card: PipelineCard) => void;
+  onCardDelete?: (cardId: string) => void;
+  onColumnInsert?: (column: PipelineColumn) => void;
+  onColumnUpdate?: (column: PipelineColumn) => void;
+  onColumnDelete?: (columnId: string) => void;
+}
+
+export function usePipelineRealtime({
+  pipelineId,
+  onCardInsert,
+  onCardUpdate,
+  onCardDelete,
+  onColumnInsert,
+  onColumnUpdate,
+  onColumnDelete,
+}: UsePipelineRealtimeProps) {
+  useEffect(() => {
+    if (!pipelineId) return;
+
+    console.log('🔌 [Realtime] Conectando ao pipeline:', pipelineId);
+
+    // Canal único para este pipeline
+    const channel: RealtimeChannel = supabase
+      .channel(`pipeline-${pipelineId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'pipeline_cards',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        (payload) => {
+          console.log('🆕 [Realtime] Card inserido:', payload.new);
+          onCardInsert?.(payload.new as PipelineCard);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pipeline_cards',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        (payload) => {
+          console.log('🔄 [Realtime] Card atualizado:', payload.new);
+          onCardUpdate?.(payload.new as PipelineCard);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'pipeline_cards',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        (payload) => {
+          console.log('🗑️ [Realtime] Card deletado:', payload.old.id);
+          onCardDelete?.(payload.old.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'pipeline_columns',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        (payload) => {
+          console.log('🆕 [Realtime] Coluna inserida:', payload.new);
+          onColumnInsert?.(payload.new as PipelineColumn);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pipeline_columns',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        (payload) => {
+          console.log('🔄 [Realtime] Coluna atualizada:', payload.new);
+          onColumnUpdate?.(payload.new as PipelineColumn);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'pipeline_columns',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        (payload) => {
+          console.log('🗑️ [Realtime] Coluna deletada:', payload.old.id);
+          onColumnDelete?.(payload.old.id);
+        }
+      )
+      .subscribe((status) => {
+        console.log(`📡 [Realtime] Status da conexão: ${status}`);
+      });
+
+    // Cleanup: desconectar ao desmontar
+    return () => {
+      console.log('🔌 [Realtime] Desconectando do pipeline:', pipelineId);
+      supabase.removeChannel(channel);
+    };
+  }, [
+    pipelineId,
+    onCardInsert,
+    onCardUpdate,
+    onCardDelete,
+    onColumnInsert,
+    onColumnUpdate,
+    onColumnDelete,
+  ]);
+}

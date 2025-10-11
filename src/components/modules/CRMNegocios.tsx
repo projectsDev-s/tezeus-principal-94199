@@ -986,6 +986,28 @@ export function CRMNegocios({
                   <Plus className="w-5 h-5" />
                 </Button>}
 
+              {/* Indicador de Realtime */}
+              {selectedPipeline && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-700">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                          Tempo Real
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">Conectado em tempo real</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Mudanças aparecerão instantaneamente para todos
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
               {/* Filtrar Button */}
               <div className="relative flex-shrink-0">
                 <Button 

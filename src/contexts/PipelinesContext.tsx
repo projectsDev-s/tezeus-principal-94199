@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePipelineRealtime } from '@/hooks/usePipelineRealtime';
 
 export interface Pipeline {
   id: string;
@@ -439,18 +440,13 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      console.log('✅ [Optimistic] Sincronização concluída com sucesso:', {
+      console.log('✅ [Optimistic] Sincronização concluída:', {
         cardId,
-        newColumn: newColumnId,
-        timestamp: new Date().toISOString()
+        newColumn: newColumnId
       });
 
-      // Atualizar com dados reais do servidor (se houver diferenças)
-      if (data) {
-        setCards(prev => prev.map(card => 
-          card.id === cardId ? { ...card, ...data } : card
-        ));
-      }
+      // NÃO atualizar estado aqui - deixar o realtime fazer isso
+      // Isso evita conflitos e garante que todos veem a mesma versão
 
     } catch (error) {
       console.error('❌ [Optimistic] Erro na sincronização - revertendo:', error);
@@ -528,6 +524,90 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
     return deduplicatedCards;
   }, [cards, userRole, selectedPipeline]);
+
+  // Handlers para eventos realtime
+  const handleCardInsert = useCallback((newCard: PipelineCard) => {
+    console.log('✨ [Realtime Handler] Novo card recebido:', newCard);
+    
+    // Verificar se o card já existe (evitar duplicatas)
+    setCards(prev => {
+      const exists = prev.some(c => c.id === newCard.id);
+      if (exists) {
+        console.log('⚠️ [Realtime] Card já existe, ignorando INSERT');
+        return prev;
+      }
+      
+      // Adicionar novo card ao início da lista
+      return [newCard, ...prev];
+    });
+  }, []);
+
+  const handleCardUpdate = useCallback((updatedCard: PipelineCard) => {
+    console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
+    
+    setCards(prev => {
+      // Encontrar e atualizar o card
+      const index = prev.findIndex(c => c.id === updatedCard.id);
+      
+      if (index === -1) {
+        // Card não existe localmente, adicionar (pode ter sido filtrado por permissões antes)
+        console.log('ℹ️ [Realtime] Card não encontrado localmente, adicionando');
+        return [updatedCard, ...prev];
+      }
+      
+      // Atualizar card existente
+      const newCards = [...prev];
+      newCards[index] = { ...newCards[index], ...updatedCard };
+      return newCards;
+    });
+  }, []);
+
+  const handleCardDelete = useCallback((cardId: string) => {
+    console.log('🗑️ [Realtime Handler] Card deletado:', cardId);
+    
+    setCards(prev => prev.filter(c => c.id !== cardId));
+  }, []);
+
+  const handleColumnInsert = useCallback((newColumn: PipelineColumn) => {
+    console.log('✨ [Realtime Handler] Nova coluna recebida:', newColumn);
+    
+    setColumns(prev => {
+      const exists = prev.some(c => c.id === newColumn.id);
+      if (exists) return prev;
+      
+      return [...prev, newColumn].sort((a, b) => a.order_position - b.order_position);
+    });
+  }, []);
+
+  const handleColumnUpdate = useCallback((updatedColumn: PipelineColumn) => {
+    console.log('♻️ [Realtime Handler] Coluna atualizada:', updatedColumn);
+    
+    setColumns(prev => 
+      prev.map(col => 
+        col.id === updatedColumn.id ? { ...col, ...updatedColumn } : col
+      ).sort((a, b) => a.order_position - b.order_position)
+    );
+  }, []);
+
+  const handleColumnDelete = useCallback((columnId: string) => {
+    console.log('🗑️ [Realtime Handler] Coluna deletada:', columnId);
+    
+    setColumns(prev => prev.filter(c => c.id !== columnId));
+    
+    // Remover cards da coluna deletada
+    setCards(prev => prev.filter(c => c.column_id !== columnId));
+  }, []);
+
+  // Ativar realtime quando um pipeline é selecionado
+  usePipelineRealtime({
+    pipelineId: selectedPipeline?.id || null,
+    onCardInsert: handleCardInsert,
+    onCardUpdate: handleCardUpdate,
+    onCardDelete: handleCardDelete,
+    onColumnInsert: handleColumnInsert,
+    onColumnUpdate: handleColumnUpdate,
+    onColumnDelete: handleColumnDelete,
+  });
 
   // Função reorderColumns como useCallback para evitar problemas com dependências
   const reorderColumns = useCallback(async (newColumns: PipelineColumn[]) => {
