@@ -17,10 +17,9 @@ interface ConnectionBadgeProps {
     phone_number?: string;
     status: string;
   };
-  iconOnly?: boolean;
 }
 
-export function ConnectionBadge({ connectionId, connectionInfo: propConnectionInfo, iconOnly = false }: ConnectionBadgeProps) {
+export function ConnectionBadge({ connectionId, connectionInfo: propConnectionInfo }: ConnectionBadgeProps) {
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(propConnectionInfo || null);
   const [loading, setLoading] = useState(false);
 
@@ -103,11 +102,9 @@ export function ConnectionBadge({ connectionId, connectionInfo: propConnectionIn
             className="flex items-center gap-1 h-5 px-1.5 cursor-pointer hover:bg-muted transition-colors"
           >
             <Smartphone className="w-3 h-3" />
-            {!iconOnly && (
-              <span className="text-[10px] font-medium">
-                {connectionInfo?.instance_name?.slice(0, 8)}
-              </span>
-            )}
+            <span className="text-[10px] font-medium">
+              {connectionInfo?.instance_name?.slice(0, 8)}
+            </span>
           </Badge>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
