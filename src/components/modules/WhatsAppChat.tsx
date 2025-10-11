@@ -34,7 +34,7 @@ import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -113,8 +113,6 @@ export function WhatsAppChat({
   const [isUpdatingProfileImages, setIsUpdatingProfileImages] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customFiltersOpen, setCustomFiltersOpen] = useState(false);
-  const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
-  const [isHoveringConversations, setIsHoveringConversations] = useState(false);
 
   // Estados para as abas baseadas no papel
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -499,7 +497,6 @@ export function WhatsAppChat({
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     setSelectedConversation(conversation);
-    setIsConversationListCollapsed(true); // ✅ Colapsa ao selecionar
 
     // Limpar modo de seleção ao trocar de conversa
     setSelectionMode(false);
@@ -1062,7 +1059,7 @@ export function WhatsAppChat({
         <div className="p-3 border-b border-border flex items-center justify-between bg-white">
           {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
           <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="h-8 w-8">
-            <PanelLeft className="h-4 w-4" />
+            <Filter className="h-4 w-4" />
           </Button>
         </div>
 
@@ -1221,36 +1218,11 @@ export function WhatsAppChat({
       </div>
 
       {/* Sidebar com lista de conversas */}
-      <div 
-        className={cn(
-          "w-full border-r border-border flex flex-col",
-          "transition-all duration-300 ease-in-out",
-          isConversationListCollapsed && isHoveringConversations
-            ? "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
-            : isConversationListCollapsed 
-              ? "md:w-48 lg:w-48 md:min-w-48 lg:min-w-48"
-              : "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
-        )}
-        onMouseEnter={() => setIsHoveringConversations(true)}
-        onMouseLeave={() => setIsHoveringConversations(false)}
-      >
+      <div className="w-full md:w-96 lg:w-96 md:min-w-96 lg:min-w-96 border-r border-border flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border">
-          {/* Toggle e Search bar */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsConversationListCollapsed(!isConversationListCollapsed)}
-              className="h-8 w-8 flex-shrink-0"
-              title={isConversationListCollapsed ? "Expandir lista" : "Colapsar lista"}
-            >
-              <PanelLeft className={cn(
-                "h-4 w-4 transition-transform duration-300",
-                isConversationListCollapsed && "rotate-180"
-              )} />
-            </Button>
-            
+          {/* Search bar */}
+          <div className="flex items-center">
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-[#d1d1d1]/30" />
