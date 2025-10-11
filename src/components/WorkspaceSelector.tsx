@@ -8,17 +8,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
-import { useNavigate } from "react-router-dom";
 
 export function WorkspaceSelector() {
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace();
   const { workspaces, isLoading } = useWorkspaces();
-  const navigate = useNavigate();
 
   const handleWorkspaceChange = (workspace: typeof workspaces[0]) => {
     setSelectedWorkspace(workspace);
-    // Redireciona para o dashboard quando trocar de empresa
-    navigate('/dashboard');
+    // Força refresh completo da página e vai para o dashboard
+    window.location.href = '/dashboard';
   };
 
 
