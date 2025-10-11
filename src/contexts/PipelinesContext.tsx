@@ -529,6 +529,60 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     return deduplicatedCards;
   }, [cards, userRole, selectedPipeline]);
 
+  // Função reorderColumns como useCallback para evitar problemas com dependências
+  const reorderColumns = useCallback(async (newColumns: PipelineColumn[]) => {
+    try {
+      console.log('🔄 Reordering columns from context');
+      
+      // Atualizar estado local primeiro  
+      setColumns(newColumns);
+      
+      // Atualizar no backend
+      const updates = newColumns.map((col, index) => ({
+        id: col.id,
+        order_position: index
+      }));
+
+      if (!getHeaders) {
+        throw new Error('Headers not available');
+      }
+
+      for (const update of updates) {
+        await supabase.functions.invoke('pipeline-management/columns', {
+          method: 'PUT',
+          headers: getHeaders,
+          body: {
+            id: update.id,
+            order_position: update.order_position
+          }
+        });
+      }
+
+      // Re-fetch para garantir sincronização
+      if (selectedPipeline?.id) {
+        await fetchColumns(selectedPipeline.id);
+        await fetchCards(selectedPipeline.id);
+      }
+      
+      console.log('✅ Colunas reordenadas com sucesso');
+      toast({
+        title: "Sucesso",
+        description: "Ordem das colunas atualizada",
+      });
+    } catch (error) {
+      console.error('❌ Erro ao reordenar colunas:', error);
+      toast({
+        title: "Erro", 
+        description: "Erro ao reordenar colunas",
+        variant: "destructive",
+      });
+      // Reverter para o estado anterior em caso de erro
+      if (selectedPipeline?.id) {
+        await fetchColumns(selectedPipeline.id);
+      }
+    }
+  }, [getHeaders, selectedPipeline, fetchColumns, fetchCards, toast]);
+
   // Buscar pipelines quando o workspace mudar
   useEffect(() => {
     if (selectedWorkspace?.workspace_id && getHeaders) {
@@ -682,54 +736,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     moveCard,
     moveCardOptimistic,
     getCardsByColumn,
-    reorderColumns: async (newColumns: PipelineColumn[]) => {
-      try {
-        console.log('🔄 Reordering columns from context');
-        
-        // Atualizar estado local primeiro  
-        setColumns(newColumns);
-        
-        // Atualizar no backend
-        const updates = newColumns.map((col, index) => ({
-          id: col.id,
-          order_position: index
-        }));
-
-        for (const update of updates) {
-          await supabase.functions.invoke('pipeline-management/columns', {
-            method: 'PUT',
-            headers: getHeaders,
-            body: {
-              id: update.id,
-              order_position: update.order_position
-            }
-          });
-        }
-
-        // Re-fetch para garantir sincronização
-        if (selectedPipeline?.id) {
-          await fetchColumns(selectedPipeline.id);
-          await fetchCards(selectedPipeline.id);
-        }
-        
-        console.log('✅ Colunas reordenadas com sucesso');
-        toast({
-          title: "Sucesso",
-          description: "Ordem das colunas atualizada",
-        });
-      } catch (error) {
-        console.error('❌ Erro ao reordenar colunas:', error);
-        toast({
-          title: "Erro", 
-          description: "Erro ao reordenar colunas",
-          variant: "destructive",
-        });
-        // Reverter para o estado anterior em caso de erro
-        if (selectedPipeline?.id) {
-          await fetchColumns(selectedPipeline.id);
-        }
-      }
-    },
+    reorderColumns,
   }), [
     pipelines,
     selectedPipeline,
@@ -748,8 +755,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     moveCard,
     moveCardOptimistic,
     getCardsByColumn,
-    getHeaders,
-    toast
+    reorderColumns,
   ]);
 
   return (
