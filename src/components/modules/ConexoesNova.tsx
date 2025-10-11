@@ -263,6 +263,21 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         setSelectedConnection(connection);
         setIsQRModalOpen(true);
         startPolling(connection.id);
+        
+        // Show sync notification if history recovery is enabled
+        if (historyRecovery !== 'none') {
+          const historyLabels = {
+            'week': '1 semana',
+            'month': '1 mês',
+            'quarter': '3 meses'
+          };
+          
+          toast({
+            title: 'Sincronização Habilitada',
+            description: `Após conectar, o histórico de ${historyLabels[historyRecovery as keyof typeof historyLabels]} será sincronizado automaticamente.`,
+            duration: 5000,
+          });
+        }
       } else {
         // Try to get QR code immediately after creation
         console.log('No QR code in response, trying to get one...');

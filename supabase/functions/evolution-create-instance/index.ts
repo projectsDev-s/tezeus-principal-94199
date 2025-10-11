@@ -299,13 +299,36 @@ serve(async (req) => {
     
     console.log('✅ API key found, proceeding with instance creation');
     
+    // Map historyRecovery to days for Evolution API
+    const historyDaysMap = {
+      'none': 0,
+      'week': 7,
+      'month': 30,
+      'quarter': 90
+    };
+    
+    const historyDays = historyDaysMap[historyRecovery as keyof typeof historyDaysMap] || 0;
+    console.log(`📅 History recovery setting: ${historyRecovery} → ${historyDays} days`);
+    
     const evolutionPayload = {
       instanceName: instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
+      
+      // Settings for history synchronization
+      settings: {
+        syncFullHistory: historyDays > 0,
+        historyLength: historyDays,
+        alwaysOnline: true,
+        readMessages: false,
+        readStatus: false,
+        groupsIgnore: false
+      },
+      
       webhook: {
         url: webhookUrl,
         base64: true,
+        byEvents: true,
         headers: {
           "apikey": token,
           "Content-Type": "application/json"
@@ -314,7 +337,11 @@ serve(async (req) => {
           "QRCODE_UPDATED",
           "CONNECTION_UPDATE",
           "MESSAGES_UPSERT",
-          "CONTACTS_UPSERT"
+          "MESSAGES_UPDATE",
+          "CONTACTS_UPSERT",
+          "CONTACTS_UPDATE",
+          "GROUPS_UPSERT",
+          "CHATS_UPDATE"
         ]
       }
     }
