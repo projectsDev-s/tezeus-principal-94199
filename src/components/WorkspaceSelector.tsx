@@ -14,7 +14,9 @@ export function WorkspaceSelector() {
   const { workspaces, isLoading } = useWorkspaces();
 
   const handleWorkspaceChange = (workspace: typeof workspaces[0]) => {
-    setSelectedWorkspace(workspace);
+    // Salva DIRETAMENTE no localStorage de forma síncrona
+    localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
+    
     // Força refresh completo da página e vai para o dashboard
     window.location.href = '/dashboard';
   };
