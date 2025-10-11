@@ -1459,6 +1459,7 @@ export function WhatsAppChat({
                     <ConnectionBadge 
                       connectionId={selectedConversation.connection_id}
                       connectionInfo={selectedConversation.connection}
+                      iconOnly
                     />
                   )}
                   
