@@ -36,17 +36,28 @@ const permissoes = [
     ]
   },
   { 
-    id: "crm", 
-    label: "CRM",
-    subPermissions: [
-      { id: "crm-item", label: "CRM" }
-    ]
-  },
-  { 
     id: "conexoes", 
     label: "Conexões",
     subPermissions: [
       { id: "conexoes-item", label: "Conexões" }
+    ]
+  },
+  { 
+    id: "workspace", 
+    label: "Workspace",
+    subPermissions: [
+      { id: "workspace-empresas", label: "Empresas" },
+      { id: "workspace-relatorios", label: "Relatórios" }
+    ]
+  },
+  { 
+    id: "crm", 
+    label: "CRM",
+    subPermissions: [
+      { id: "crm-negocios", label: "Negócios" },
+      { id: "crm-contatos", label: "Contatos" },
+      { id: "crm-tags", label: "Tags" },
+      { id: "crm-produtos", label: "Produtos" }
     ]
   },
   { 
