@@ -191,19 +191,19 @@ function DraggableDeal({
     }} 
     {...(!isSelectionMode && { ...attributes, ...listeners })} 
     className={cn(
-      "hover:shadow-md transition-shadow mb-3 border-l-4 relative",
+      "hover:shadow-md transition-shadow mb-2 md:mb-2.5 border-l-4 relative min-h-[100px] md:min-h-[110px]",
       !isSelectionMode && "cursor-pointer",
       isSelectionMode && "cursor-pointer hover:bg-accent/50",
       isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30",
       isDarkMode ? "bg-card border-border" : "bg-card border-border"
-    )} 
+    )}
     onClick={isSelectionMode ? (e) => {
       e.preventDefault();
       e.stopPropagation();
       onToggleSelection?.();
     } : onClick}
   >
-    <CardContent className="p-3">
+    <CardContent className="p-2 md:p-2.5">
       {isSelectionMode && (
         <div className="absolute top-2 right-2 z-10">
           <input 
@@ -219,7 +219,7 @@ function DraggableDeal({
         </div>
       )}
       {/* Header com menu, avatar, nome e produto/valor */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
           {/* Menu de ações - PRIMEIRO */}
           {!isSelectionMode && (
             <DropdownMenu>
@@ -227,9 +227,9 @@ function DraggableDeal({
                 <Button 
                   size="icon" 
                   variant="ghost" 
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground flex-shrink-0"
+                  className="h-5 w-5 text-muted-foreground hover:text-foreground flex-shrink-0"
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-popover z-50" onClick={(e) => e.stopPropagation()}>
@@ -288,14 +288,14 @@ function DraggableDeal({
           
           {/* Avatar do contato - SEGUNDO */}
           <div className="flex-shrink-0">
-            {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-8 h-8 rounded-full object-cover border border-primary/20" onError={e => {
+            {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover border border-primary/20" onError={e => {
             // Fallback para iniciais se a imagem falhar
             const target = e.currentTarget as HTMLImageElement;
             target.style.display = 'none';
             const fallback = target.nextElementSibling as HTMLElement;
             if (fallback) fallback.style.display = 'flex';
           }} /> : null}
-            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
+            <div className={cn("w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
               {getInitials(deal.contact?.name || deal.name)}
             </div>
           </div>
@@ -340,7 +340,7 @@ function DraggableDeal({
         </div>
         
         {/* Área central para tags do contato */}
-        <div className="mb-3 min-h-[28px] flex items-center justify-between gap-2">
+        <div className="mb-2 min-h-[24px] flex items-center justify-between gap-2">
           <div className="flex items-start flex-wrap gap-1 flex-1 min-w-0">
           {contactTags.map((tag) => (
             <Badge
@@ -351,7 +351,7 @@ function DraggableDeal({
                 borderColor: tag.color,
                 color: tag.color
               }}
-              className="text-xs px-2 py-0.5 h-auto rounded-full font-medium flex items-center gap-1"
+              className="text-[10px] md:text-xs px-1.5 py-0 h-auto rounded-full font-medium flex items-center gap-1"
             >
               <span>{tag.name}</span>
               <button
@@ -372,7 +372,7 @@ function DraggableDeal({
                 }}
                 className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
               >
-                <X className="w-2.5 h-2.5" />
+                <X className="w-2 h-2 md:w-2.5 md:h-2.5" />
               </button>
             </Badge>
           ))}
@@ -381,9 +381,9 @@ function DraggableDeal({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 px-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
+                className="h-5 px-1.5 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" />
               </Button>
             </PopoverTrigger>
             <PopoverContent 
@@ -442,9 +442,9 @@ function DraggableDeal({
         </div>
         
         {/* Footer com ícones de ação e prioridade */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-green-100 hover:text-green-600" onClick={async (e) => {
+            <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-green-100 hover:text-green-600" onClick={async (e) => {
             e.stopPropagation();
             
             console.log('🎯 Clique no botão de chat - Deal:', deal);
@@ -499,13 +499,13 @@ function DraggableDeal({
               console.error('❌ Deal não tem contact_id');
             }
           }}>
-              <MessageCircle className="w-3.5 h-3.5" />
+              <MessageCircle className="w-3 h-3" />
             </Button>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600" onClick={e => e.stopPropagation()}>
-                    <User className="w-3.5 h-3.5" />
+                  <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-blue-100 hover:text-blue-600" onClick={e => e.stopPropagation()}>
+                    <User className="w-3 h-3" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -516,11 +516,11 @@ function DraggableDeal({
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] md:text-xs text-muted-foreground">
               {formatTimeAgo(deal.created_at)}
             </span>
-            {deal.priority === 'high' && <div className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-600">
-                <AlertTriangle className="w-3 h-3" />
+            {deal.priority === 'high' && <div className="flex items-center justify-center w-4 h-4 md:w-5 md:h-5 rounded-full bg-orange-100 text-orange-600">
+                <AlertTriangle className="w-2.5 h-2.5" />
               </div>}
           </div>
         </div>
@@ -1236,7 +1236,7 @@ export function CRMNegocios({
                               <p className="text-muted-foreground text-sm">
                                 Nenhum negócio encontrado nesta etapa
                               </p>
-                            </div> : <div className="space-y-3">
+                            </div> : <div className="space-y-2 md:space-y-2.5">
                               <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
                                 {columnCards.map(card => {
                           const deal: Deal = {
