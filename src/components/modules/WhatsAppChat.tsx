@@ -1312,7 +1312,7 @@ export function WhatsAppChat({
                      {/* Main content */}
                     <div className="flex-1 min-w-0">
                        {/* First line: Name with connection badge */}
-                       <div className="flex items-center gap-1.5 mb-0.5">
+                       <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
                         <span className="text-xs font-normal text-foreground tracking-tight truncate" style={{
                           fontWeight: 400,
                           letterSpacing: '-0.2px',
@@ -1327,8 +1327,8 @@ export function WhatsAppChat({
                       </div>
                       
                         {/* ✅ Última mensagem da conversa */}
-                      <div className="flex items-center">
-                        <span className="text-foreground/87 truncate" style={{
+                      <div className="flex items-center min-w-0">
+                        <span className="text-foreground/87 truncate whitespace-nowrap overflow-hidden text-ellipsis block" style={{
                           fontSize: '11px',
                           fontWeight: 400,
                           letterSpacing: '0px'
