@@ -114,6 +114,7 @@ export function WhatsAppChat({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customFiltersOpen, setCustomFiltersOpen] = useState(false);
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
+  const [isHoveringConversations, setIsHoveringConversations] = useState(false);
 
   // Estados para as abas baseadas no papel
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -1220,13 +1221,19 @@ export function WhatsAppChat({
       </div>
 
       {/* Sidebar com lista de conversas */}
-      <div className={cn(
-        "w-full border-r border-border flex flex-col",
-        "transition-all duration-300 ease-in-out",
-        isConversationListCollapsed 
-          ? "md:w-48 lg:w-48 md:min-w-48 lg:min-w-48"
-          : "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
-      )}>
+      <div 
+        className={cn(
+          "w-full border-r border-border flex flex-col",
+          "transition-all duration-300 ease-in-out",
+          isConversationListCollapsed && isHoveringConversations
+            ? "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
+            : isConversationListCollapsed 
+              ? "md:w-48 lg:w-48 md:min-w-48 lg:min-w-48"
+              : "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
+        )}
+        onMouseEnter={() => setIsHoveringConversations(true)}
+        onMouseLeave={() => setIsHoveringConversations(false)}
+      >
         {/* Header */}
         <div className="p-4 border-b border-border">
           {/* Toggle e Search bar */}
