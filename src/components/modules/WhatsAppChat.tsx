@@ -1313,7 +1313,7 @@ export function WhatsAppChat({
                     <div className="flex-1 min-w-0">
                        {/* First line: Name with connection badge */}
                        <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
-                        <span className="text-xs font-normal text-foreground tracking-tight truncate" style={{
+                        <span className="text-xs font-normal text-foreground tracking-tight truncate whitespace-nowrap overflow-hidden text-ellipsis block" style={{
                           fontWeight: 400,
                           letterSpacing: '-0.2px',
                           fontSize: '12px'
