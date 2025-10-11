@@ -362,7 +362,7 @@ serve(async (req) => {
               ),
               conversation:conversations(
                 *,
-                connection:connections(
+                connection:connections!conversations_connection_id_fkey(
                   id,
                   instance_name,
                   phone_number,
@@ -411,7 +411,7 @@ serve(async (req) => {
                 ),
                 conversation:conversations(
                   *,
-                  connection:connections(
+                  connection:connections!conversations_connection_id_fkey(
                     id,
                     instance_name,
                     phone_number,
