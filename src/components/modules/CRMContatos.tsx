@@ -760,53 +760,57 @@ export function CRMContatos() {
               <Label className="text-sm font-medium">Informações adicionais</Label>
               <div className="space-y-3 mt-2">
                 
+                {/* Lista de campos adicionados */}
+                {customFields.map((field, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-yellow-600 text-sm">★</span>
+                    </div>
+                    <Input 
+                      value={field.name} 
+                      onChange={e => updateCustomField(index, 'name', e.target.value)} 
+                      className="flex-1"
+                      placeholder="Nome do campo"
+                    />
+                    <Input 
+                      value={field.value} 
+                      onChange={e => updateCustomField(index, 'value', e.target.value)} 
+                      className="flex-1"
+                      placeholder="Valor"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => removeCustomField(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
                 {/* Inputs para adicionar novo campo */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex gap-2 items-center">
+                  <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-yellow-600 text-sm">★</span>
+                  </div>
                   <Input 
                     placeholder="Nome do campo" 
                     value={newFieldName}
                     onChange={e => setNewFieldName(e.target.value)}
+                    className="flex-1"
                   />
                   <Input 
                     placeholder="Valor" 
                     value={newFieldValue}
                     onChange={e => setNewFieldValue(e.target.value)}
+                    className="flex-1"
                   />
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={handleAddNewField}
+                    disabled={!newFieldName.trim() || !newFieldValue.trim()}
+                    className="text-yellow-600 hover:text-yellow-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleAddNewField}
-                  disabled={!newFieldName.trim() || !newFieldValue.trim()}
-                  className="text-yellow-600 hover:text-yellow-700"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Informação
-                </Button>
-
-                {/* Lista de campos adicionados */}
-                {customFields.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    {customFields.map((field, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input 
-                          value={field.name} 
-                          onChange={e => updateCustomField(index, 'name', e.target.value)} 
-                          className="flex-1"
-                        />
-                        <Input 
-                          value={field.value} 
-                          onChange={e => updateCustomField(index, 'value', e.target.value)} 
-                          className="flex-1"
-                        />
-                        <Button variant="ghost" size="sm" onClick={() => removeCustomField(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>
