@@ -2,21 +2,25 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import type { Workspace } from '@/contexts/WorkspaceContext';
+import { useWorkspace, type Workspace } from '@/contexts/WorkspaceContext';
 
 export function useWorkspaces() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user, userRole } = useAuth();
+  const { setWorkspaces: setContextWorkspaces, setIsLoadingWorkspaces } = useWorkspace();
 
   const fetchWorkspaces = async () => {
     if (!user) {
       setWorkspaces([]);
+      setContextWorkspaces([]);
+      setIsLoadingWorkspaces(false);
       return;
     }
 
     setIsLoading(true);
+    setIsLoadingWorkspaces(true);
     try {
       // Always use the Edge function to bypass RLS issues
       // Fetching workspaces via Edge function
@@ -46,6 +50,7 @@ export function useWorkspaces() {
 
       // Workspaces fetched
       setWorkspaces(workspaceData);
+      setContextWorkspaces(workspaceData);
 
       // Fallback: buscar connections_count diretamente se não veio da Edge function
       if (workspaceData.some((w: any) => !w.connections_count && w.connections_count !== 0)) {
@@ -67,6 +72,7 @@ export function useWorkspaces() {
           }));
           
           setWorkspaces(updatedWorkspaces);
+          setContextWorkspaces(updatedWorkspaces);
         } catch (fallbackError) {
           // Fallback connections count failed
           // Não mostrar erro para fallback, apenas usar os workspaces sem connection count
@@ -84,6 +90,7 @@ export function useWorkspaces() {
       }
     } finally {
       setIsLoading(false);
+      setIsLoadingWorkspaces(false);
     }
   };
 
