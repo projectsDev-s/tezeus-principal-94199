@@ -107,11 +107,11 @@ export function ConnectionBadge({ connectionId, connectionInfo: propConnectionIn
         <TooltipTrigger asChild>
           <Badge 
             variant="outline" 
-            className="flex items-center gap-1 h-5 px-1.5 cursor-pointer hover:bg-muted transition-colors"
+            className="flex items-center gap-1 h-5 px-1.5 cursor-pointer hover:bg-muted transition-colors max-w-[120px]"
           >
-            <Smartphone className="w-3 h-3" />
-            <span className="text-[10px] font-medium">
-              {connectionInfo?.instance_name?.slice(0, 8)}
+            <Smartphone className="w-3 h-3 flex-shrink-0" />
+            <span className="text-[10px] font-medium truncate">
+              {connectionInfo?.instance_name}
             </span>
           </Badge>
         </TooltipTrigger>
