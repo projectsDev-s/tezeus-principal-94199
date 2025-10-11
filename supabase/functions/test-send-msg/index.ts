@@ -34,9 +34,10 @@ serve(async (req) => {
     
     const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name } = body;
 
-    // Para mensagens de mídia, content pode ser vazio (apenas o arquivo)
+    // Para mensagens de mídia, ignorar placeholders como [IMAGE], [VIDEO], etc
     const isMediaMessage = message_type && message_type !== 'text';
-    const effectiveContent = content || (isMediaMessage ? '' : null);
+    const isPlaceholder = content && /^\[.*\]$/.test(content); // Detecta [IMAGE], [VIDEO], [DOCUMENT]
+    const effectiveContent = (isMediaMessage && isPlaceholder) ? '' : (content || '');
 
     if (!conversation_id || (!effectiveContent && !isMediaMessage)) {
       console.log(`❌ [${requestId}] Missing required fields - conversation_id: ${!!conversation_id}, content: ${!!content}, message_type: ${message_type}`);
