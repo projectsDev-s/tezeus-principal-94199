@@ -1455,6 +1455,13 @@ export function WhatsAppChat({
                     Agente IA
                   </Button>
                   
+                  {selectedConversation.connection_id && (
+                    <ConnectionBadge 
+                      connectionId={selectedConversation.connection_id}
+                      connectionInfo={selectedConversation.connection}
+                    />
+                  )}
+                  
                   <AcceptConversationButton conversation={selectedConversation} onAccept={async (conversationId: string) => {
                 // Get current user info for immediate UI update
                 const userData = localStorage.getItem('currentUser');
