@@ -131,6 +131,7 @@ export function useWorkspaceMembers(workspaceId?: string) {
       senha: string;
       default_channel?: string;
       phone?: string;
+      cargo_ids?: string[];
     },
     role: 'user' | 'admin' | 'master'
   ) => {
