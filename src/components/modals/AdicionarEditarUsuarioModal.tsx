@@ -140,19 +140,20 @@ export function AdicionarEditarUsuarioModal({
 
     setIsSubmitting(true);
     try {
-      if (editingUser) {
-        // Update existing user
-        const updateData = {
-          id: editingUser.id,
-          name: formData.name,
-          email: formData.email,
-          profile: formData.profile,
-          status: editingUser.status,
-          phone: formData.phone,
-          default_channel: formData.default_channel || null,
-          // Only include password if it was changed
-          ...(formData.senha && { senha: formData.senha })
-        };
+    if (editingUser) {
+      // Update existing user
+      const updateData = {
+        id: editingUser.id,
+        name: formData.name,
+        email: formData.email,
+        profile: formData.profile,
+        status: editingUser.status,
+        phone: formData.phone,
+        default_channel: formData.default_channel || null,
+        cargo_ids: selectedCargos,
+        // Only include password if it was changed
+        ...(formData.senha && { senha: formData.senha })
+      };
 
         const result = await updateUser(updateData);
         
