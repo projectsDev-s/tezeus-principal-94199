@@ -1549,7 +1549,7 @@ export function WhatsAppChat({
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-[#005C4B] px-2 py-1.5" : "bg-[#005C4B] text-white px-2 py-1.5")}>
+                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary px-2 py-1.5" : "bg-primary text-primary-foreground px-2 py-1.5")}>
                       {/* Menu de contexto */}
                       {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => {/* TODO: implementar resposta */}} onDownload={message.file_url ? () => {
                   const link = document.createElement('a');
@@ -1569,7 +1569,7 @@ export function WhatsAppChat({
                       <span className={cn(
                         message.sender_type === 'contact' 
                           ? "text-muted-foreground" 
-                          : "text-white/70"
+                          : "text-primary-foreground/70"
                       )}>
                         {new Date(message.created_at).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
