@@ -25,10 +25,15 @@ export function ImpersonateWorkspaceModal({ open, onOpenChange }: ImpersonateWor
   const handleConfirm = () => {
     const workspace = workspaces.find(w => w.workspace_id === selectedWorkspaceId);
     if (workspace) {
-      // Impersonating workspace
-      setSelectedWorkspace(workspace);
+      // Salva DIRETAMENTE no localStorage de forma síncrona
+      localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
+      
+      // Fecha o modal
+      onOpenChange(false);
+      
+      // Força refresh completo da página E vai para o dashboard
+      window.location.href = '/dashboard';
     }
-    onOpenChange(false);
   };
 
   const handleCancel = () => {
