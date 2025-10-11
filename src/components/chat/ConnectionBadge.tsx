@@ -1,5 +1,6 @@
 import { Smartphone } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,20 +103,20 @@ export function ConnectionBadge({ connectionId, connectionInfo: propConnectionIn
   };
 
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={100}>
-        <TooltipTrigger asChild>
-          <Badge 
-            variant="outline" 
-            className="flex items-center gap-1 h-5 px-1.5 cursor-pointer hover:bg-muted transition-colors max-w-[90px]"
-          >
-            <Smartphone className="w-3 h-3 flex-shrink-0" />
-            <span className="text-[10px] font-medium truncate">
-              {connectionInfo?.instance_name}
-            </span>
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <Badge 
+          variant="outline" 
+          className="flex items-center gap-1 h-5 px-1.5 cursor-pointer hover:bg-muted transition-colors max-w-[90px]"
+        >
+          <Smartphone className="w-3 h-3 flex-shrink-0" />
+          <span className="text-[10px] font-medium truncate">
+            {connectionInfo?.instance_name}
+          </span>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipPrimitive.Portal>
+        <TooltipContent side="top" className="max-w-xs z-[9999]" sideOffset={8}>
           <div className="space-y-2">
             <div>
               <p className="text-xs font-semibold">Instância WhatsApp</p>
@@ -142,7 +143,7 @@ export function ConnectionBadge({ connectionId, connectionInfo: propConnectionIn
             </div>
           </div>
         </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      </TooltipPrimitive.Portal>
+    </Tooltip>
   );
 }
