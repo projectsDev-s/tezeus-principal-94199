@@ -135,30 +135,6 @@ export const useWhatsAppConversations = () => {
       const connectionMap = new Map(
         enrichedData?.map(item => [item.id, item.connection_id]) || []
       );
-
-      // 🔥 Buscar dados completos das conexões (incluindo metadata)
-      const uniqueConnectionIds = Array.from(new Set(
-        enrichedData?.map(item => item.connection_id).filter(Boolean) || []
-      ));
-
-      let connectionsData: Array<{ id: string; instance_name: string; phone_number?: string; status: string; metadata: any }> = [];
-      if (uniqueConnectionIds.length > 0) {
-        const { data: connections, error: connError } = await supabase
-          .from('connections')
-          .select('id, instance_name, phone_number, status, metadata')
-          .in('id', uniqueConnectionIds);
-
-        if (connError) {
-          console.warn('⚠️ Erro ao buscar dados das conexões:', connError);
-        } else {
-          connectionsData = connections || [];
-        }
-      }
-
-      // Criar mapa de conexões por ID
-      const connectionsMapById = new Map(
-        connectionsData.map(conn => [conn.id, conn])
-      );
       
       // ✅ Mapear para formato compatível com connection_id da tabela
       const formattedConversations = conversationsOnly.map(conv => ({
@@ -180,10 +156,7 @@ export const useWhatsAppConversations = () => {
         last_message: conv.last_message,
         conversation_tags: conv.conversation_tags || [],
         connection_id: connectionMap.get(conv.id) || conv.connection_id,
-        connection: (() => {
-          const connId = connectionMap.get(conv.id) || conv.connection_id;
-          return connId ? connectionsMapById.get(connId) || null : null;
-        })(),
+        connection: conv.connection || null,
         workspace_id: conv.workspace_id,
         messages: []
       }));
