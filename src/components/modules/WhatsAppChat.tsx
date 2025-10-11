@@ -1450,9 +1450,8 @@ export function WhatsAppChat({
                 </div>
 
                 <div className="flex items-center gap-3 ml-auto">
-                  <Button variant="ghost" size="sm" onClick={handleToggleAgent} disabled className={cn("h-8 px-3 rounded-full text-sm font-medium transition-colors", selectedConversation.agente_ativo ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80")} title={selectedConversation.agente_ativo ? "Desativar IA" : "Ativar IA"}>
-                    <Bot className="w-4 h-4 mr-1" />
-                    Agente IA
+                  <Button variant="ghost" size="sm" onClick={handleToggleAgent} disabled className={cn("h-8 w-8 p-0 rounded-full transition-colors", selectedConversation.agente_ativo ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80")} title={selectedConversation.agente_ativo ? "Desativar IA" : "Ativar IA"}>
+                    <Bot className="w-4 h-4" />
                   </Button>
                   
                   {selectedConversation.connection_id && (
