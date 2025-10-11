@@ -790,13 +790,27 @@ export function ChatModal({
               <div className="flex items-end gap-2">
                 {/* Upload de mídia funcional */}
                 <MediaUpload onFileSelect={async (file, mediaType, fileUrl, caption) => {
+                  console.log('📥 ChatModal recebeu onFileSelect:', { 
+                    fileName: file.name, 
+                    mediaType, 
+                    caption,
+                    captionType: typeof caption 
+                  });
+                  
                   if (!conversationId) return;
+                  
+                  const contentToSend = caption || `[${mediaType.toUpperCase()}]`;
+                  
+                  console.log('📤 ChatModal vai enviar:', { 
+                    content: contentToSend,
+                    usouCaption: !!caption 
+                  });
                   
                   try {
                     const { data, error } = await supabase.functions.invoke('test-send-msg', {
                       body: {
                         conversation_id: conversationId,
-                        content: caption || `[${mediaType.toUpperCase()}]`,
+                        content: contentToSend,
                         message_type: mediaType,
                         sender_type: 'agent',
                         file_url: fileUrl,
