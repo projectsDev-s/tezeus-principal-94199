@@ -153,24 +153,6 @@ export function EditarCargoModal({ isOpen, onClose, onEditCargo, cargo }: Editar
     }));
   };
 
-  const handleSelectAllForSubPermission = (subPermissionId: string) => {
-    setSelectedPermissions(prev => ({
-      ...prev,
-      [subPermissionId]: {
-        ver: true,
-        criar: true,
-        editar: true,
-        deletar: true
-      }
-    }));
-  };
-
-  const handleDeselectAllForSubPermission = (subPermissionId: string) => {
-    setSelectedPermissions(prev => ({
-      ...prev,
-      [subPermissionId]: {}
-    }));
-  };
 
   const isFormValid = nome && tipo;
 
@@ -302,32 +284,6 @@ export function EditarCargoModal({ isOpen, onClose, onEditCargo, cargo }: Editar
                         {/* Conteúdo expandido */}
                         {expandedModules.has(permissao.id) && (
                           <div className="border-t border-gray-200 p-3">
-                            {/* Botões de ação para este módulo */}
-                            <div className="flex gap-2 mb-3">
-                              {permissao.subPermissions.map(sub => (
-                                <React.Fragment key={sub.id}>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleSelectAllForSubPermission(sub.id)}
-                                    className="bg-white text-yellow-500 border-yellow-500 hover:bg-yellow-50 text-xs px-2 py-1 h-7"
-                                  >
-                                    Selecionar Tudo
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleDeselectAllForSubPermission(sub.id)}
-                                    className="bg-white text-yellow-500 border-yellow-500 hover:bg-yellow-50 text-xs px-2 py-1 h-7"
-                                  >
-                                    Desmarcar Tudo
-                                  </Button>
-                                </React.Fragment>
-                              ))}
-                            </div>
-                            
                             {/* Tabela de permissões */}
                             <div className="overflow-x-auto">
                               <table className="w-full text-sm">
