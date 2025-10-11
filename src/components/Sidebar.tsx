@@ -14,6 +14,7 @@ import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ImpersonateWorkspaceModal } from "@/components/modals/ImpersonateWorkspaceModal";
 import { useSystemCustomizationContext } from "@/contexts/SystemCustomizationContext";
+import { useCargoPermissions } from "@/hooks/useCargoPermissions";
 import { LayoutDashboard, MessageCircle, Users, FolderOpen, Settings, Zap, Link, Shield, DollarSign, Target, Package, Calendar, CheckSquare, MessageSquare, Bot, BrainCircuit, GitBranch, Bell, User, LogOut, Handshake, FileText, Building2, BarChart3, AudioLines } from "lucide-react";
 interface SidebarProps {
   activeModule: ModuleType;
@@ -60,6 +61,7 @@ export function Sidebar({
     hasRole,
     logout
   } = useAuth();
+  const { canView, canViewAnyIn } = useCargoPermissions();
   const {
     workspaces,
     isLoading
@@ -285,10 +287,31 @@ export function Sidebar({
       
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {ungroupedItems.map(renderMenuItem)}
+        {ungroupedItems.filter(item => {
+          // Dashboard - sempre visível
+          if (item.id === 'dashboard') return canView('dashboard-item');
+          // Conversas - sempre visível
+          if (item.id === 'conversas') return canView('conversas-item');
+          // DS Voice - sempre visível
+          if (item.id === 'ds-voice') return true;
+          return true;
+        }).map(renderMenuItem)}
         
-        {renderGroup("crm", "CRM", crmItems)}
-        {hasRole(['master', 'admin', 'mentor_master', 'gestor']) && renderGroup("workspace", "Workspace", workspaceItems)}
+        {canViewAnyIn(['crm-negocios-item', 'crm-contatos-item', 'crm-tags-item', 'crm-produtos-item']) && 
+          renderGroup("crm", "CRM", crmItems.filter(item => {
+            if (item.id === 'crm-negocios') return canView('crm-negocios-item');
+            if (item.id === 'crm-contatos') return canView('crm-contatos-item');
+            if (item.id === 'crm-tags') return canView('crm-tags-item');
+            if (item.id === 'crm-produtos') return canView('crm-produtos-item');
+            return false;
+          }))}
+        
+        {(hasRole(['master', 'admin', 'mentor_master', 'gestor']) || canViewAnyIn(['workspace-empresas', 'workspace-relatorios'])) && 
+          renderGroup("workspace", "Workspace", workspaceItems.filter(item => {
+            if (item.id === 'workspace-empresas') return canView('workspace-empresas');
+            if (item.id === 'workspace-relatorios') return canView('workspace-relatorios');
+            return hasRole(['master', 'admin', 'mentor_master', 'gestor']);
+          }))}
         
         {hasRole(['master', 'admin']) && renderGroup("administracao", "Administração", administracaoItems)}
       </nav>
