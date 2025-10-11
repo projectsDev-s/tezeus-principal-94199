@@ -565,36 +565,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         return [updatedCard, ...prev];
       }
       
-      const currentCard = prev[index];
+      // ✅ SEMPRE APLICAR ATUALIZAÇÃO REALTIME (fonte autoritativa do servidor)
+      console.log('🔄 [Realtime] Aplicando atualização do servidor');
       
-      // ✅ VERIFICAR SE A MUDANÇA JÁ FOI APLICADA (evitar sobrescrever otimista)
-      if (currentCard.column_id === updatedCard.column_id && 
-          currentCard.updated_at === updatedCard.updated_at) {
-        console.log('⏭️ [Realtime] Card já está atualizado, ignorando');
-        return prev;
-      }
-      
-      console.log('🔄 [Realtime] Aplicando atualização:', {
-        de: currentCard.column_id,
-        para: updatedCard.column_id
-      });
-      
-      // Atualizar card existente
       const newCards = [...prev];
       newCards[index] = { ...newCards[index], ...updatedCard };
       
-      // Feedback visual apenas se mudou de coluna
-      if (currentCard.column_id !== updatedCard.column_id) {
-        toast({
-          title: "Negócio atualizado",
-          description: "Um negócio foi movido",
-          duration: 2000,
-        });
-      }
-      
       return newCards;
     });
-  }, [toast]);
+  }, []);
 
   const handleCardDelete = useCallback((cardId: string) => {
     console.log('🗑️ [Realtime Handler] Card deletado:', cardId);
