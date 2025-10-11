@@ -114,7 +114,7 @@ export function WhatsAppChat({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customFiltersOpen, setCustomFiltersOpen] = useState(false);
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
-  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [isHoveringConversations, setIsHoveringConversations] = useState(false);
 
   // Estados para as abas baseadas no papel
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -1225,10 +1225,14 @@ export function WhatsAppChat({
         className={cn(
           "w-full border-r border-border flex flex-col",
           "transition-all duration-300 ease-in-out",
-          isConversationListCollapsed 
-            ? "md:w-48 lg:w-48 md:min-w-48 lg:min-w-48"
-            : "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
+          isConversationListCollapsed && isHoveringConversations
+            ? "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
+            : isConversationListCollapsed 
+              ? "md:w-48 lg:w-48 md:min-w-48 lg:min-w-48"
+              : "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
         )}
+        onMouseEnter={() => setIsHoveringConversations(true)}
+        onMouseLeave={() => setIsHoveringConversations(false)}
       >
         {/* Header */}
         <div className="p-4 border-b border-border">
@@ -1276,23 +1280,7 @@ export function WhatsAppChat({
             return <li key={conversation.id} className="list-none">
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
-                      <div 
-                        className={cn(
-                          "relative flex items-center px-4 py-2 cursor-pointer hover:bg-muted/50 border-b border-border/50",
-                          "transition-all duration-300 ease-in-out",
-                          selectedConversation?.id === conversation.id && "bg-muted",
-                          isConversationListCollapsed && hoveredCardId === conversation.id
-                            ? "md:w-96 lg:w-96 md:absolute md:left-0 md:z-50 md:bg-background md:shadow-lg md:border-r"
-                            : ""
-                        )} 
-                        onClick={() => {
-                          handleSelectConversation(conversation);
-                          setHoveredCardId(null);
-                        }}
-                        onMouseEnter={() => setHoveredCardId(conversation.id)}
-                        onMouseLeave={() => setHoveredCardId(null)}
-                        role="button" 
-                        tabIndex={0}>
+                      <div className={cn("relative flex items-center px-4 py-2 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50", selectedConversation?.id === conversation.id && "bg-muted")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
                   {/* Status indicator bar - cor da conexão */}
                   <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
                     backgroundColor: (() => {
