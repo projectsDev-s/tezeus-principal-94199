@@ -77,11 +77,14 @@ export const useAuthState = () => {
       
       // Criar uma sessão Supabase para permitir checagens no servidor
       try {
+        const supabaseEmail = `${user.id}@tezeus.app`;
+        
         // Primeiro tenta fazer signUp (cria conta se não existir)
         const { error: signUpError } = await supabase.auth.signUp({
-          email: `${user.id}@example.com`,
+          email: supabaseEmail,
           password: user.id,
           options: {
+            emailRedirectTo: `${window.location.origin}/`,
             data: {
               system_user_id: user.id,
               system_email: user.email,
@@ -94,7 +97,7 @@ export const useAuthState = () => {
         // Se usuário já existe ou criou com sucesso, fazer signIn
         if (!signUpError || signUpError.message.includes('already registered')) {
           const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: `${user.id}@example.com`,
+            email: supabaseEmail,
             password: user.id
           });
           
