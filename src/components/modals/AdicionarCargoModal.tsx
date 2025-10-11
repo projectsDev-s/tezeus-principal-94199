@@ -15,10 +15,10 @@ interface AdicionarCargoModalProps {
 
 const permissoes = [
   { 
-    id: "visao-geral", 
-    label: "Visão geral",
+    id: "dashboard", 
+    label: "Dashboard",
     subPermissions: [
-      { id: "visao-geral-item", label: "Visão geral" }
+      { id: "dashboard-item", label: "Dashboard" }
     ]
   },
   { 
@@ -29,10 +29,10 @@ const permissoes = [
     ]
   },
   { 
-    id: "ds-voice", 
-    label: "DS Voice",
+    id: "conversas-rapidas", 
+    label: "Conversas Rápidas",
     subPermissions: [
-      { id: "ds-voice-item", label: "DS Voice" }
+      { id: "conversas-rapidas-item", label: "Conversas Rápidas" }
     ]
   },
   { 
@@ -43,31 +43,20 @@ const permissoes = [
     ]
   },
   { 
-    id: "ds-track", 
-    label: "DS Track",
+    id: "conexoes", 
+    label: "Conexões",
     subPermissions: [
-      { id: "ds-track-item", label: "DS Track" }
+      { id: "conexoes-item", label: "Conexões" }
     ]
   },
   { 
-    id: "recursos", 
-    label: "Recursos",
+    id: "administracao", 
+    label: "Administração",
     subPermissions: [
-      { id: "recursos-item", label: "Recursos" }
-    ]
-  },
-  { 
-    id: "automations", 
-    label: "Automations",
-    subPermissions: [
-      { id: "automations-item", label: "Automations" }
-    ]
-  },
-  { 
-    id: "canais-atendimento", 
-    label: "Canais de Atendimento",
-    subPermissions: [
-      { id: "canais-atendimento-item", label: "Canais de Atendimento" }
+      { id: "administracao-agente-virtual", label: "Agente Virtual" },
+      { id: "administracao-filas", label: "Filas" },
+      { id: "administracao-usuarios", label: "Usuários" },
+      { id: "administracao-configuracoes", label: "Configurações" }
     ]
   }
 ];
