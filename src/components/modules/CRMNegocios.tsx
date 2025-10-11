@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
@@ -75,6 +76,14 @@ interface Deal {
   };
   conversation?: {
     id: string;
+    connection_id?: string;
+    connection?: {
+      id: string;
+      instance_name: string;
+      phone_number?: string;
+      status: string;
+      metadata?: any;
+    };
   };
 }
 interface DroppableColumnProps {
@@ -331,7 +340,8 @@ function DraggableDeal({
         </div>
         
         {/* Área central para tags do contato */}
-        <div className="mb-3 min-h-[28px] flex items-start flex-wrap gap-1">
+        <div className="mb-3 min-h-[28px] flex items-center justify-between gap-2">
+          <div className="flex items-start flex-wrap gap-1 flex-1 min-w-0">
           {contactTags.map((tag) => (
             <Badge
               key={tag.id}
@@ -418,6 +428,17 @@ function DraggableDeal({
               </Command>
             </PopoverContent>
           </Popover>
+          </div>
+          
+          {/* ConnectionBadge à direita */}
+          {deal.conversation?.connection_id && (
+            <div className="flex-shrink-0">
+              <ConnectionBadge 
+                connectionId={deal.conversation.connection_id}
+                connectionInfo={deal.conversation.connection}
+              />
+            </div>
+          )}
         </div>
         
         {/* Footer com ícones de ação e prioridade */}

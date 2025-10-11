@@ -360,7 +360,16 @@ serve(async (req) => {
                   tags!contact_tags_tag_id_fkey(id, name, color)
                 )
               ),
-              conversation:conversations(*),
+              conversation:conversations(
+                *,
+                connection:connections(
+                  id,
+                  instance_name,
+                  phone_number,
+                  status,
+                  metadata
+                )
+              ),
               responsible_user:system_users!responsible_user_id(id, name)
             `)
             .eq('pipeline_id', pipelineId)
@@ -400,7 +409,16 @@ serve(async (req) => {
                     tags!contact_tags_tag_id_fkey(id, name, color)
                   )
                 ),
-                conversation:conversations(*),
+                conversation:conversations(
+                  *,
+                  connection:connections(
+                    id,
+                    instance_name,
+                    phone_number,
+                    status,
+                    metadata
+                  )
+                ),
                 responsible_user:system_users!responsible_user_id(id, name)
               `)
               .single();
