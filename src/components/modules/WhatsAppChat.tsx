@@ -113,6 +113,7 @@ export function WhatsAppChat({
   const [isUpdatingProfileImages, setIsUpdatingProfileImages] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customFiltersOpen, setCustomFiltersOpen] = useState(false);
+  const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
 
   // Estados para as abas baseadas no papel
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -497,6 +498,7 @@ export function WhatsAppChat({
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     setSelectedConversation(conversation);
+    setIsConversationListCollapsed(true); // ✅ Colapsa ao selecionar
 
     // Limpar modo de seleção ao trocar de conversa
     setSelectionMode(false);
@@ -1218,11 +1220,30 @@ export function WhatsAppChat({
       </div>
 
       {/* Sidebar com lista de conversas */}
-      <div className="w-full md:w-96 lg:w-96 md:min-w-96 lg:min-w-96 border-r border-border flex flex-col">
+      <div className={cn(
+        "w-full border-r border-border flex flex-col",
+        "transition-all duration-300 ease-in-out",
+        isConversationListCollapsed 
+          ? "md:w-48 lg:w-48 md:min-w-48 lg:min-w-48"
+          : "md:w-96 lg:w-96 md:min-w-96 lg:min-w-96"
+      )}>
         {/* Header */}
         <div className="p-4 border-b border-border">
-          {/* Search bar */}
-          <div className="flex items-center w-full">
+          {/* Toggle e Search bar */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsConversationListCollapsed(!isConversationListCollapsed)}
+              className="h-8 w-8 flex-shrink-0"
+              title={isConversationListCollapsed ? "Expandir lista" : "Colapsar lista"}
+            >
+              <PanelLeft className={cn(
+                "h-4 w-4 transition-transform duration-300",
+                isConversationListCollapsed && "rotate-180"
+              )} />
+            </Button>
+            
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-[#d1d1d1]/30" />
