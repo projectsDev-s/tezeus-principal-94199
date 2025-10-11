@@ -141,6 +141,7 @@ export const useAuthState = () => {
     setUser(null);
     setUserRole(null);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('selectedWorkspace');
     
     // Também fazer logout do Supabase Auth
     try {

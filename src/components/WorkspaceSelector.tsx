@@ -14,13 +14,6 @@ export function WorkspaceSelector() {
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace();
   const { workspaces, isLoading } = useWorkspaces();
 
-  // Auto-select first workspace if none selected and workspaces available
-  useEffect(() => {
-    if (!selectedWorkspace && workspaces.length > 0 && !isLoading) {
-      // Auto-selecting first workspace
-      setSelectedWorkspace(workspaces[0]);
-    }
-  }, [selectedWorkspace, workspaces, isLoading, setSelectedWorkspace]);
 
   if (isLoading) {
     return (

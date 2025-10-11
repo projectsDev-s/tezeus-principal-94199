@@ -30,25 +30,33 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
 
-  // Persist selected workspace in localStorage
+  // Persist selected workspace in localStorage with validation
   useEffect(() => {
     const stored = localStorage.getItem('selectedWorkspace');
-    if (stored) {
+    if (stored && workspaces.length > 0) {
       try {
         const parsed = JSON.parse(stored);
-        // Restoring workspace from localStorage
-        setSelectedWorkspaceState(parsed);
+        
+        // Validar: workspace salvo ainda pertence ao usuário?
+        const isValid = workspaces.some(w => w.workspace_id === parsed.workspace_id);
+        
+        if (isValid) {
+          setSelectedWorkspaceState(parsed);
+        } else {
+          // Workspace inválido, remover do localStorage
+          localStorage.removeItem('selectedWorkspace');
+        }
       } catch (error) {
         console.error('Error parsing stored workspace:', error);
         localStorage.removeItem('selectedWorkspace');
       }
     }
-  }, []);
+  }, [workspaces]);
 
-  // Auto-select first workspace when workspaces load and none is selected
+  // Auto-select ONLY if user has exactly 1 workspace
   useEffect(() => {
-    if (!selectedWorkspace && workspaces.length > 0 && !isLoadingWorkspaces) {
-      // Auto-selecting first available workspace
+    if (!selectedWorkspace && workspaces.length === 1 && !isLoadingWorkspaces) {
+      // Usuário tem apenas 1 workspace, selecionar automaticamente
       setSelectedWorkspace(workspaces[0]);
     }
   }, [selectedWorkspace, workspaces, isLoadingWorkspaces]);
