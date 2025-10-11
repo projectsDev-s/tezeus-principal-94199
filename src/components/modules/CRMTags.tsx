@@ -15,6 +15,7 @@ import { EditarTagModal } from "@/components/modals/EditarTagModal";
 import { DeletarTagModal } from "@/components/modals/DeletarTagModal";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CRMTags() {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -30,7 +31,12 @@ export function CRMTags() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const { selectedWorkspace } = useWorkspace();
-  const { members: fetchedMembers, isLoading: loadingMembers } = useWorkspaceMembers(selectedWorkspace?.workspace_id || "");
+  const { userRole } = useAuth();
+  
+  const shouldFetchMembers = userRole === 'admin' || userRole === 'master';
+  const { members: fetchedMembers, isLoading: loadingMembers } = useWorkspaceMembers(
+    shouldFetchMembers ? (selectedWorkspace?.workspace_id || "") : ""
+  );
   const members = fetchedMembers || [];
   const { tags, isLoading, error, refetch } = useTags(startDate, endDate, selectedUserId);
 
@@ -92,47 +98,49 @@ export function CRMTags() {
           
           {/* Filters */}
           <div className="flex gap-4 mb-6">
-            <div className="flex-1 relative" ref={dropdownRef}>
-              <div className="relative max-w-sm">
-                <Input
-                  type="text"
-                  placeholder={loadingMembers ? "Carregando..." : (selectedUser?.user?.name || "Procurar por usuário")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onClick={() => setIsDropdownOpen(true)}
-                  disabled={loadingMembers}
-                  className="pr-8"
-                />
-                {selectedUser && (
-                  <button
-                    onClick={handleClearUser}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              
-              {isDropdownOpen && !loadingMembers && (
-                <div className="absolute top-full left-0 mt-1 w-full max-w-sm bg-background border rounded-md shadow-lg z-50 max-h-[300px] overflow-y-auto">
-                  {filteredMembers.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">
-                      Nenhum usuário encontrado
-                    </div>
-                  ) : (
-                    filteredMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        onClick={() => handleSelectUser(member.user_id)}
-                        className="px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors"
-                      >
-                        {member.user?.name}
-                      </div>
-                    ))
+            {(userRole === 'admin' || userRole === 'master') && (
+              <div className="flex-1 relative" ref={dropdownRef}>
+                <div className="relative max-w-sm">
+                  <Input
+                    type="text"
+                    placeholder={loadingMembers ? "Carregando..." : (selectedUser?.user?.name || "Procurar por usuário")}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onClick={() => setIsDropdownOpen(true)}
+                    disabled={loadingMembers}
+                    className="pr-8"
+                  />
+                  {selectedUser && (
+                    <button
+                      onClick={handleClearUser}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
+                
+                {isDropdownOpen && !loadingMembers && (
+                  <div className="absolute top-full left-0 mt-1 w-full max-w-sm bg-background border rounded-md shadow-lg z-50 max-h-[300px] overflow-y-auto">
+                    {filteredMembers.length === 0 ? (
+                      <div className="p-3 text-sm text-muted-foreground text-center">
+                        Nenhum usuário encontrado
+                      </div>
+                    ) : (
+                      filteredMembers.map((member) => (
+                        <div
+                          key={member.id}
+                          onClick={() => handleSelectUser(member.user_id)}
+                          className="px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors"
+                        >
+                          {member.user?.name}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             
             <Popover>
               <PopoverTrigger asChild>
