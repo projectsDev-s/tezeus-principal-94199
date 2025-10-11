@@ -8,11 +8,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
-import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function WorkspaceSelector() {
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspace();
   const { workspaces, isLoading } = useWorkspaces();
+  const navigate = useNavigate();
+
+  const handleWorkspaceChange = (workspace: typeof workspaces[0]) => {
+    setSelectedWorkspace(workspace);
+    // Redireciona para o dashboard quando trocar de empresa
+    navigate('/dashboard');
+  };
 
 
   if (isLoading) {
@@ -48,7 +55,7 @@ export function WorkspaceSelector() {
         {workspaces.map((workspace) => (
           <DropdownMenuItem
             key={workspace.workspace_id}
-            onClick={() => setSelectedWorkspace(workspace)}
+            onClick={() => handleWorkspaceChange(workspace)}
             className={selectedWorkspace?.workspace_id === workspace.workspace_id ? "bg-accent" : ""}
           >
             <div className="flex flex-col gap-1">
