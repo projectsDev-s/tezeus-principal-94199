@@ -16,6 +16,7 @@ interface Cargo {
   funcao: string;
   created_at: string;
   updated_at: string;
+  permissions?: Record<string, any>;
 }
 
 interface AdministracaoCargosProps {
@@ -286,7 +287,8 @@ export function AdministracaoCargos({ onBack }: AdministracaoCargosProps) {
             nome: selectedCargo.nome,
             tipo: selectedCargo.tipo,
             funcao: selectedCargo.funcao,
-            criadoEm: new Date(selectedCargo.created_at).toLocaleDateString('pt-BR')
+            criadoEm: new Date(selectedCargo.created_at).toLocaleDateString('pt-BR'),
+            permissions: selectedCargo.permissions
           } : undefined}
         />
 

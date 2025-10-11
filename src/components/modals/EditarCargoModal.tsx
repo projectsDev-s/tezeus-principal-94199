@@ -11,6 +11,7 @@ interface Cargo {
   tipo: string;
   funcao: string;
   criadoEm: string;
+  permissions?: Record<string, any>;
 }
 
 interface EditarCargoModalProps {
@@ -101,7 +102,13 @@ export function EditarCargoModal({ isOpen, onClose, onEditCargo, cargo }: Editar
     if (cargo) {
       setNome(cargo.nome);
       setTipo(cargo.tipo);
-      setSelectedPermissions({});
+      
+      // ✅ CARREGAR PERMISSÕES EXISTENTES
+      if (cargo.permissions) {
+        setSelectedPermissions(cargo.permissions);
+      } else {
+        setSelectedPermissions({});
+      }
     }
   }, [cargo]);
 
