@@ -34,7 +34,7 @@ import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1059,7 +1059,7 @@ export function WhatsAppChat({
         <div className="p-3 border-b border-border flex items-center justify-between bg-white">
           {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
           <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="h-8 w-8">
-            <Filter className="h-4 w-4" />
+            <PanelLeft className="h-4 w-4" />
           </Button>
         </div>
 
