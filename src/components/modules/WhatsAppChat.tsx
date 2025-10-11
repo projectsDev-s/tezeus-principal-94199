@@ -1252,10 +1252,16 @@ export function WhatsAppChat({
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
                       <div className={cn("relative flex items-center px-4 py-2 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50", selectedConversation?.id === conversation.id && "bg-muted")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
-                    {/* Status indicator bar */}
-                    <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
-                      backgroundColor: conversation.agente_ativo ? 'rgb(83, 0, 235)' : 'rgb(76, 175, 80)'
-                    }} title={conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO'} />
+                  {/* Status indicator bar - cor da conexão */}
+                  <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
+                    backgroundColor: (() => {
+                      // Prioridade: cor da conexão > status do agente
+                      if (conversation.connection?.metadata?.border_color) {
+                        return conversation.connection.metadata.border_color;
+                      }
+                      return conversation.agente_ativo ? 'rgb(83, 0, 235)' : 'rgb(76, 175, 80)';
+                    })()
+                  }} title={conversation.connection?.instance_name || (conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO')} />
                     
                     {/* Avatar container */}
                     <div className="flex-shrink-0 mr-3 ml-2">

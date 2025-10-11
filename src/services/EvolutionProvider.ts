@@ -7,6 +7,7 @@ interface ConnectionCreateRequest {
   workspaceId: string;
   autoCreateCrmCard?: boolean;
   defaultPipelineId?: string;
+  metadata?: Record<string, any>;
 }
 
 interface ConnectionUpdateRequest {

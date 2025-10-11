@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { getRandomConnectionColor } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -228,12 +229,18 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     try {
       setIsCreating(true);
 
+      // Gera cor aleatória para a nova conexão
+      const connectionColor = getRandomConnectionColor();
+
       const connection = await evolutionProvider.createConnection({
         instanceName: instanceName.trim(),
         historyRecovery: historyRecovery as 'none' | 'week' | 'month' | 'quarter',
         workspaceId,
         autoCreateCrmCard: createCrmCard,
-        defaultPipelineId: selectedPipeline || undefined
+        defaultPipelineId: selectedPipeline || undefined,
+        metadata: {
+          border_color: connectionColor
+        }
       });
 
       // Connection created
@@ -940,7 +947,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {connections.map((connection) => (
-            <Card key={connection.id} className="relative">
+            <Card 
+              key={connection.id} 
+              className="relative border-l-4"
+              style={{ 
+                borderLeftColor: connection.metadata?.border_color || '#8B5CF6' 
+              }}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   {connection.instance_name}
