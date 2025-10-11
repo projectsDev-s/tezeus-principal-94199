@@ -314,8 +314,14 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          // New message received via real-time
           const newMessage = payload.new as WhatsAppMessage;
+          
+          // ✅ IGNORAR mensagens de agente no INSERT
+          // Elas serão adicionadas via UPDATE quando status = 'sent'
+          if (newMessage.sender_type === 'agent') {
+            console.log('⏭️ Ignorando INSERT de mensagem agent (será adicionada via UPDATE):', newMessage.id);
+            return;
+          }
           
           // Verificar se é do workspace atual
           if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
@@ -332,17 +338,23 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          // Message updated via real-time
           const updatedMessage = payload.new as WhatsAppMessage;
           
           // Verificar se é do workspace atual
           if (updatedMessage.workspace_id === selectedWorkspace.workspace_id) {
-            console.log('📊 Status da mensagem atualizado:', {
-              id: updatedMessage.id,
-              status: updatedMessage.status,
-              external_id: updatedMessage.external_id
-            });
-            updateMessage(updatedMessage.id, updatedMessage);
+            // Se for mensagem de agente com status 'sent', adicionar (não atualizar)
+            if (updatedMessage.sender_type === 'agent' && updatedMessage.status === 'sent') {
+              console.log('✅ Adicionando mensagem agent enviada:', updatedMessage.id);
+              addMessage(updatedMessage);
+            } else {
+              // Para outras atualizações (delivered, read, etc), apenas atualizar
+              console.log('📊 Status da mensagem atualizado:', {
+                id: updatedMessage.id,
+                status: updatedMessage.status,
+                external_id: updatedMessage.external_id
+              });
+              updateMessage(updatedMessage.id, updatedMessage);
+            }
           }
         }
       )
