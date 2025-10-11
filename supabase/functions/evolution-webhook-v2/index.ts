@@ -21,7 +21,17 @@ function generateRequestId(): string {
 }
 
 function sanitizePhoneNumber(phone: string): string {
-  return phone.replace(/\D/g, '');
+  // Remove todos os caracteres não-numéricos
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Remove sufixos comuns do Evolution API (62, 63, etc)
+  // Esses são adicionados incorretamente pelo WhatsApp em alguns casos
+  if (cleaned.length > 13 && cleaned.endsWith('62')) {
+    cleaned = cleaned.slice(0, -2);
+    console.log(`⚠️ Removed '62' suffix from phone: ${phone} -> ${cleaned}`);
+  }
+  
+  return cleaned;
 }
 
 function extractPhoneFromRemoteJid(remoteJid: string): string {
@@ -443,18 +453,38 @@ serve(async (req) => {
         const sanitizedPhone = phoneNumber; // Already sanitized by extractPhoneFromRemoteJid
         
         if (sanitizedPhone && messageContent) {
-          // Find or create contact
+          // Find or create contact with deduplication
           let contactId: string;
+          
+          // Tentar encontrar contato com telefone exato
           const { data: existingContact } = await supabase
             .from('contacts')
-            .select('id')
+            .select('id, phone')
             .eq('phone', sanitizedPhone)
             .eq('workspace_id', workspaceId)
             .maybeSingle();
 
-          if (existingContact) {
-            contactId = existingContact.id;
+          // Se não encontrar, tentar variações (sem últimos 2 dígitos, caso seja sufixo)
+          let contactToUse = existingContact;
+          if (!contactToUse && sanitizedPhone.length > 12) {
+            const phoneWithoutSuffix = sanitizedPhone.slice(0, -2);
+            const { data: alternativeContact } = await supabase
+              .from('contacts')
+              .select('id, phone')
+              .eq('phone', phoneWithoutSuffix)
+              .eq('workspace_id', workspaceId)
+              .maybeSingle();
+            
+            if (alternativeContact) {
+              console.log(`⚠️ [${requestId}] Found contact with phone ${phoneWithoutSuffix} instead of ${sanitizedPhone}, using existing contact`);
+              contactToUse = alternativeContact;
+            }
+          }
+
+          if (contactToUse) {
+            contactId = contactToUse.id;
           } else {
+            // Criar novo contato apenas se realmente não existe
             const { data: newContact } = await supabase
               .from('contacts')
               .insert({
