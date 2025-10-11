@@ -80,37 +80,33 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // 🔒 CRÍTICO: Verificar se o usuário tem permissão para acessar este workspace
-    const { data: userWorkspaceAccess } = await supabaseService
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', systemUserId)
-      .single();
-
+    // ✅ NÍVEL OPERACIONAL: Verificar apenas se o usuário está ativo
+    // workspace_members é usado apenas para permissões ADMINISTRATIVAS (aba Workspace)
     const { data: userData } = await supabaseService
       .from('system_users')
-      .select('profile')
+      .select('profile, status')
       .eq('id', systemUserId)
       .single();
 
-    console.log('📋 User profile:', userData?.profile);
-    console.log('🔒 User workspace access:', userWorkspaceAccess);
-
-    // Verificar permissões de acesso ao workspace
     const userProfile = userData?.profile;
-    const hasWorkspaceAccess = userProfile === 'master' || userWorkspaceAccess;
+    const userStatus = userData?.status;
 
-    if (!hasWorkspaceAccess) {
-      console.error('❌ SECURITY: User', systemUserId, 'attempted to access workspace', workspaceId, 'without permission');
+    console.log('📋 User profile:', userProfile);
+    console.log('🔒 User status:', userStatus);
+
+    // Bloquear apenas usuários inativos (nível operacional)
+    if (userStatus !== 'active') {
+      console.error('❌ SECURITY: Inactive user', systemUserId, 'attempted to access conversations');
       return new Response(
-        JSON.stringify({ error: 'Acesso negado a este workspace' }),
+        JSON.stringify({ error: 'Usuário inativo' }),
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
+
+    console.log('✅ User has operational access - Profile:', userProfile);
 
     let query = supabase
       .from('conversations')
