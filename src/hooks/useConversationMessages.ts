@@ -335,19 +335,44 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           
           // Verificar se é do workspace atual
           if (updatedMessage.workspace_id === selectedWorkspace.workspace_id) {
-            // Se for mensagem de agente com status 'sent', adicionar (não atualizar)
-            if (updatedMessage.sender_type === 'agent' && updatedMessage.status === 'sent') {
-              console.log('✅ Adicionando mensagem agent enviada:', updatedMessage.id);
+          // Para mensagens de agente, sempre tentar ATUALIZAR primeiro (pela mensagem otimista)
+          if (updatedMessage.sender_type === 'agent') {
+            // Tentar encontrar mensagem temporária pelo external_id
+            const hasTempMessage = messages.some(m => 
+              m.id.startsWith('temp-') && 
+              m.conversation_id === updatedMessage.conversation_id &&
+              m.sender_type === 'agent' &&
+              m.message_type === updatedMessage.message_type &&
+              Math.abs(new Date(m.created_at).getTime() - new Date(updatedMessage.created_at).getTime()) < 5000 // 5 segundos de diferença
+            );
+
+            if (hasTempMessage) {
+              // Substituir mensagem temporária pela real
+              console.log('🔄 Substituindo mensagem otimista pela real:', updatedMessage.id);
+              setMessages(prev => {
+                // Remover mensagem temporária
+                const filtered = prev.filter(m => 
+                  !(m.id.startsWith('temp-') && 
+                    m.conversation_id === updatedMessage.conversation_id &&
+                    m.sender_type === 'agent' &&
+                    m.message_type === updatedMessage.message_type &&
+                    Math.abs(new Date(m.created_at).getTime() - new Date(updatedMessage.created_at).getTime()) < 5000)
+                );
+                // Adicionar mensagem real no lugar
+                return [...filtered, updatedMessage];
+              });
+            } else if (updatedMessage.status === 'sent') {
+              // Se não há mensagem temporária e status é 'sent', adicionar normalmente
+              console.log('✅ Adicionando mensagem agent enviada (sem otimista):', updatedMessage.id);
               addMessage(updatedMessage);
             } else {
-              // Para outras atualizações (delivered, read, etc), apenas atualizar
-              console.log('📊 Status da mensagem atualizado:', {
-                id: updatedMessage.id,
-                status: updatedMessage.status,
-                external_id: updatedMessage.external_id
-              });
+              // Caso padrão: apenas atualizar status
               updateMessage(updatedMessage.id, updatedMessage);
             }
+          } else {
+            // Para mensagens de contato, apenas atualizar
+            updateMessage(updatedMessage.id, updatedMessage);
+          }
           }
         }
       )
