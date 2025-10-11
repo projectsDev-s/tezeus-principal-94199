@@ -32,18 +32,18 @@ export const useWorkspaceAnalytics = () => {
   const { user, userRole } = useAuth();
 
   const fetchAnalytics = async () => {
+    setIsLoading(true); // Skeleton imediato
+    
     if (!selectedWorkspace || !user) {
-      // Missing workspace or user data
+      setIsLoading(false);
       return;
     }
     
-    setIsLoading(true);
     try {
       const workspaceId = selectedWorkspace.workspace_id;
       const isUser = userRole === 'user';
-      // Starting analytics fetch
 
-      // Fetch conversations data
+      // ETAPA 2: Queries paralelas - Primeira rodada (conversations + pipelines)
       let conversationQuery = supabase
         .from('conversations')
         .select('id, status, created_at')
@@ -53,40 +53,33 @@ export const useWorkspaceAnalytics = () => {
         conversationQuery = conversationQuery.eq('assigned_user_id', user.id);
       }
 
-      // Fetching conversations
-      const { data: conversations, error: conversationsError } = await conversationQuery;
+      const [
+        { data: conversations, error: conversationsError },
+        { data: pipelines, error: pipelinesError }
+      ] = await Promise.all([
+        conversationQuery,
+        supabase
+          .from('pipelines')
+          .select('id')
+          .eq('workspace_id', workspaceId)
+      ]);
       
       if (conversationsError) {
         console.error('❌ Analytics: Conversations error', conversationsError);
         throw conversationsError;
       }
-      
-      // Conversations fetched
-
-      const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
-      const totalConversations = conversations?.length || 0;
-
-      // Fetch pipelines for this workspace first
-      // Fetching pipelines
-      const { data: pipelines, error: pipelinesError } = await supabase
-        .from('pipelines')
-        .select('id')
-        .eq('workspace_id', workspaceId);
 
       if (pipelinesError) {
         console.error('❌ Analytics: Pipelines error', pipelinesError);
         throw pipelinesError;
       }
 
+      const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
+      const totalConversations = conversations?.length || 0;
+
       const pipelineIds = pipelines?.map(p => p.id) || [];
-      // Pipelines fetched
 
       if (pipelineIds.length === 0) {
-        // No pipelines found, skipping cards fetch
-        // Continue with just conversation data
-        const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
-        const totalConversations = conversations?.length || 0;
-
         setAnalytics({
           activeConversations,
           totalConversations,
@@ -101,51 +94,41 @@ export const useWorkspaceAnalytics = () => {
         return;
       }
 
-      // Fetch pipeline columns
-      // Fetching pipeline columns
-      const { data: columns, error: columnsError } = await supabase
-        .from('pipeline_columns')
-        .select('id, name')
-        .in('pipeline_id', pipelineIds);
-
-      if (columnsError) {
-        console.error('❌ Analytics: Columns error', columnsError);
-        throw columnsError;
-      }
-      
-      // Columns fetched
-
-      // Fetch pipeline cards
-      // Fetching pipeline cards
+      // ETAPA 3: Query otimizada com JOIN (cards + columns em uma query)
       let cardsQuery = supabase
         .from('pipeline_cards')
-        .select('id, column_id, value, created_at, updated_at')
-        .in('column_id', columns?.map(c => c.id) || []);
+        .select(`
+          id,
+          column_id,
+          value,
+          created_at,
+          updated_at,
+          pipeline_columns!inner(
+            id,
+            name,
+            pipeline_id
+          )
+        `)
+        .in('pipeline_columns.pipeline_id', pipelineIds);
 
       if (isUser) {
         cardsQuery = cardsQuery.eq('responsible_user_id', user.id);
-        // Filtering cards by user
       }
 
-      const { data: cards, error: cardsError } = await cardsQuery;
+      const { data: cardsWithColumns, error: cardsError } = await cardsQuery;
       
       if (cardsError) {
         console.error('❌ Analytics: Cards error', cardsError);
         throw cardsError;
       }
-      
-      // Cards fetched
 
-      // Create a map of column names
-      const columnMap = new Map(columns?.map(col => [col.id, col.name.toLowerCase()]) || []);
-
-      // Categorize deals
+      // Processar cards com dados da coluna já embutidos
       let completedDealsCount = 0;
       let lostDealsCount = 0;
       let dealsInProgressCount = 0;
 
-      cards?.forEach(card => {
-        const columnName = columnMap.get(card.column_id) || '';
+      cardsWithColumns?.forEach(card => {
+        const columnName = (card.pipeline_columns as any)?.name?.toLowerCase() || '';
         
         if (columnName.includes('concluído') || columnName.includes('ganho') || columnName.includes('fechado')) {
           completedDealsCount++;
@@ -178,18 +161,18 @@ export const useWorkspaceAnalytics = () => {
 
       // Deal trends
       const dealTrends = last7Days.map(date => {
-        const dayCards = cards?.filter(card => 
+        const dayCards = cardsWithColumns?.filter(card => 
           card.updated_at?.startsWith(date)
         ) || [];
 
         const completed = dayCards.filter(card => {
-          const columnName = columnMap.get(card.column_id) || '';
-          return columnName.includes('concluído');
+          const columnName = (card.pipeline_columns as any)?.name?.toLowerCase() || '';
+          return columnName.includes('concluído') || columnName.includes('ganho');
         }).length;
 
         const lost = dayCards.filter(card => {
-          const columnName = columnMap.get(card.column_id) || '';
-          return columnName.includes('perdido');
+          const columnName = (card.pipeline_columns as any)?.name?.toLowerCase() || '';
+          return columnName.includes('perdido') || columnName.includes('cancelado');
         }).length;
 
         return { date, completed, lost };
