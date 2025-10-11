@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { useToast } from '@/hooks/use-toast';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 export interface ContactPipelineCard {
   id: string;
@@ -21,9 +22,10 @@ export function useContactPipelineCards(contactId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const { getHeaders } = useWorkspaceHeaders();
   const { toast } = useToast();
+  const { selectedWorkspace } = useWorkspace();
 
   const fetchContactCards = async () => {
-    if (!contactId) {
+    if (!contactId || !selectedWorkspace) {
       setCards([]);
       setCurrentPipeline(null);
       return;
@@ -33,7 +35,7 @@ export function useContactPipelineCards(contactId: string | null) {
       setIsLoading(true);
       const headers = getHeaders();
       
-      // Buscar todos os cards do contato
+      // Buscar todos os cards do contato no workspace atual
       const { data: cardsData, error: cardsError } = await supabase
         .from('pipeline_cards')
         .select(`
@@ -44,10 +46,11 @@ export function useContactPipelineCards(contactId: string | null) {
           value,
           title,
           description,
-          pipelines!inner(id, name),
+          pipelines!inner(id, name, workspace_id),
           pipeline_columns!inner(id, name)
         `)
-        .eq('contact_id', contactId);
+        .eq('contact_id', contactId)
+        .eq('pipelines.workspace_id', selectedWorkspace.workspace_id);
 
       if (cardsError) throw cardsError;
 
@@ -161,7 +164,7 @@ export function useContactPipelineCards(contactId: string | null) {
 
   useEffect(() => {
     fetchContactCards();
-  }, [contactId]);
+  }, [contactId, selectedWorkspace]);
 
   return {
     cards,
