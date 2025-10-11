@@ -93,31 +93,16 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
   };
 
   const handleConfirmSend = () => {
-    console.log('🔵 INICIO handleConfirmSend', { pendingMedia: !!pendingMedia, caption });
     if (!pendingMedia) return;
     
-    // ✅ Capturar o caption ANTES de qualquer limpeza
-    const finalCaption = caption.trim() || undefined;
-    
-    console.log('🎯 MediaUpload - Caption CAPTURADO:', { 
-      captionOriginal: caption, 
-      captionTrim: caption.trim(),
-      finalCaption,
-      file: pendingMedia.file.name 
-    });
-    
-    // Limpar preview e estado
+    // Limpar preview
     URL.revokeObjectURL(pendingMedia.previewUrl);
-    const mediaToSend = { ...pendingMedia }; // Clone para evitar referência
+    
+    // Chamar callback SEM caption (sempre usa placeholder)
+    onFileSelect(pendingMedia.file, pendingMedia.type, pendingMedia.url);
+    
     setPendingMedia(null);
     setCaption('');
-    
-    console.log('🟢 ANTES de chamar onFileSelect:', { finalCaption });
-    
-    // Chamar callback DEPOIS da limpeza visual
-    onFileSelect(mediaToSend.file, mediaToSend.type, mediaToSend.url, finalCaption);
-    
-    console.log('✅ onFileSelect CHAMADO com caption:', finalCaption);
     
     toast.success('Arquivo enviado com sucesso!');
   };

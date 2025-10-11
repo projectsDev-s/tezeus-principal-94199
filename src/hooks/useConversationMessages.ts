@@ -47,7 +47,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   
   // Cache em memória para evitar re-fetch desnecessário
   const cacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; timestamp: number }>>(new Map());
-  const CACHE_TTL = 10000; // 10 segundos
+  const CACHE_TTL = 2000; // 2 segundos
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -58,28 +58,15 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
   const loadInitial = useCallback(async (conversationId: string) => {
     console.log('🔄 loadInitial chamado para conversationId:', conversationId);
-    // Loading initial conversation messages
     
     if (!selectedWorkspace?.workspace_id) {
       console.error('❌ Nenhum workspace selecionado!');
       return;
     }
 
-    // Verificar cache
+    // ✅ SEMPRE invalidar cache ao carregar inicial (buscar dados frescos)
     const cacheKey = `${selectedWorkspace.workspace_id}:${conversationId}`;
-    const cached = cacheRef.current.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log('📋 Usando cache, mensagens:', cached.messages.length);
-      setMessages(cached.messages);
-      setCurrentConversationId(conversationId);
-      // Assumir que pode ter mais se tiver 5 ou mais mensagens
-      setHasMore(cached.messages.length >= 5);
-      if (cached.messages.length > 0) {
-        const firstMessage = cached.messages[0];
-        setCursorBefore(`${firstMessage.created_at}|${firstMessage.id}`);
-      }
-      return;
-    }
+    cacheRef.current.delete(cacheKey);
 
     setLoading(true);
     setMessages([]);

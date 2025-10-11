@@ -162,9 +162,6 @@ export function ChatModal({
       if (error) throw error;
 
       setNewMessage('');
-      
-      // Recarregar mensagens para mostrar a nova mensagem
-      loadInitial(conversationId);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
@@ -789,28 +786,14 @@ export function ChatModal({
             ) : (
               <div className="flex items-end gap-2">
                 {/* Upload de mídia funcional */}
-                <MediaUpload onFileSelect={async (file, mediaType, fileUrl, caption) => {
-                  console.log('📥 ChatModal recebeu onFileSelect:', { 
-                    fileName: file.name, 
-                    mediaType, 
-                    caption,
-                    captionType: typeof caption 
-                  });
-                  
+                <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
                   if (!conversationId) return;
-                  
-                  const contentToSend = caption || `[${mediaType.toUpperCase()}]`;
-                  
-                  console.log('📤 ChatModal vai enviar:', { 
-                    content: contentToSend,
-                    usouCaption: !!caption 
-                  });
                   
                   try {
                     const { data, error } = await supabase.functions.invoke('test-send-msg', {
                       body: {
                         conversation_id: conversationId,
-                        content: contentToSend,
+                        content: `[${mediaType.toUpperCase()}]`,
                         message_type: mediaType,
                         sender_type: 'agent',
                         file_url: fileUrl,
@@ -819,8 +802,6 @@ export function ChatModal({
                     });
 
                     if (error) throw error;
-
-                    loadInitial(conversationId);
                   } catch (error) {
                     console.error('Erro ao enviar arquivo:', error);
                     toast({
