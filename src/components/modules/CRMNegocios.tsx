@@ -136,12 +136,21 @@ function DraggableDeal({
   onOpenTransferModal,
   onVincularResponsavel
 }: DraggableDealProps) {
-  const { selectedWorkspace } = useWorkspace();
-  const { toast } = useToast();
+  const {
+    selectedWorkspace
+  } = useWorkspace();
+  const {
+    toast
+  } = useToast();
   const [isTagPopoverOpen, setIsTagPopoverOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { contactTags, availableTags, addTagToContact, getFilteredTags, refreshTags } = useContactTags(deal.contact?.id || null);
-  
+  const {
+    contactTags,
+    availableTags,
+    addTagToContact,
+    getFilteredTags,
+    refreshTags
+  } = useContactTags(deal.contact?.id || null);
   const {
     attributes,
     listeners,
@@ -182,109 +191,69 @@ function DraggableDeal({
       return `há ${daysAgo} ${daysAgo === 1 ? 'dia' : 'dias'}`;
     }
   };
-  
-  return <Card 
-    ref={setNodeRef} 
-    style={{
-      ...style,
-      borderLeftColor: columnColor
-    }} 
-    {...(!isSelectionMode && { ...attributes, ...listeners })} 
-    className={cn(
-      "hover:shadow-md transition-shadow mb-2 md:mb-2.5 border-l-4 relative min-h-[100px] md:min-h-[110px]",
-      !isSelectionMode && "cursor-pointer",
-      isSelectionMode && "cursor-pointer hover:bg-accent/50",
-      isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30",
-      isDarkMode ? "bg-card border-border" : "bg-card border-border"
-    )}
-    onClick={isSelectionMode ? (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onToggleSelection?.();
-    } : onClick}
-  >
+  return <Card ref={setNodeRef} style={{
+    ...style,
+    borderLeftColor: columnColor
+  }} {...!isSelectionMode && {
+    ...attributes,
+    ...listeners
+  }} className={cn("hover:shadow-md transition-shadow mb-2 md:mb-2.5 border-l-4 relative min-h-[100px] md:min-h-[110px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30", isDarkMode ? "bg-card border-border" : "bg-card border-border")} onClick={isSelectionMode ? e => {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleSelection?.();
+  } : onClick}>
     <CardContent className="p-2 md:p-2.5">
-      {isSelectionMode && (
-        <div className="absolute top-2 right-2 z-10">
-          <input 
-            type="checkbox" 
-            checked={isSelected} 
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggleSelection?.();
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-5 h-5 cursor-pointer accent-primary"
-          />
-        </div>
-      )}
+      {isSelectionMode && <div className="absolute top-2 right-2 z-10">
+          <input type="checkbox" checked={isSelected} onChange={e => {
+          e.stopPropagation();
+          onToggleSelection?.();
+        }} onClick={e => e.stopPropagation()} className="w-5 h-5 cursor-pointer accent-primary" />
+        </div>}
       {/* Header com menu, avatar, nome e produto/valor */}
       <div className="flex items-center gap-2 mb-2">
           {/* Menu de ações - PRIMEIRO */}
-          {!isSelectionMode && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-5 w-5 text-muted-foreground hover:text-foreground flex-shrink-0"
-                >
+          {!isSelectionMode && <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                <Button size="icon" variant="ghost" className="h-5 w-5 text-muted-foreground hover:text-foreground flex-shrink-0">
                   <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-popover z-50" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onVincularResponsavel?.(
-                      deal.id, 
-                      deal.conversation?.id, 
-                      deal.responsible_user_id,
-                      deal.contact?.id
-                    );
-                  }}
-                >
+              <DropdownMenuContent align="end" className="w-48 bg-popover z-50" onClick={e => e.stopPropagation()}>
+                <DropdownMenuItem onClick={e => {
+              e.stopPropagation();
+              onVincularResponsavel?.(deal.id, deal.conversation?.id, deal.responsible_user_id, deal.contact?.id);
+            }}>
                   Vincular Responsável
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTransferModal?.(deal.id);
-                  }}
-                >
+                <DropdownMenuItem onClick={e => {
+              e.stopPropagation();
+              onOpenTransferModal?.(deal.id);
+            }}>
                   Trocar Negócio
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (deal.contact?.id) {
-                      onEditContact?.(deal.contact.id);
-                    }
-                  }}
-                >
+                <DropdownMenuItem onClick={e => {
+              e.stopPropagation();
+              if (deal.contact?.id) {
+                onEditContact?.(deal.contact.id);
+              }
+            }}>
                   Editar Contato
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onLinkProduct?.(deal.id, deal.value);
-                  }}
-                >
+                <DropdownMenuItem onClick={e => {
+              e.stopPropagation();
+              onLinkProduct?.(deal.id, deal.value);
+            }}>
                   Vincular Produto
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteCard?.(deal.id);
-                  }}
-                  className="text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem onClick={e => {
+              e.stopPropagation();
+              onDeleteCard?.(deal.id);
+            }} className="text-destructive focus:text-destructive">
                   Excluir
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            </DropdownMenu>}
           
           {/* Avatar do contato - SEGUNDO */}
           <div className="flex-shrink-0">
@@ -309,32 +278,20 @@ function DraggableDeal({
             
             {/* Produto + Valor à direita */}
             <div className="flex items-center gap-1 text-xs flex-shrink-0">
-              {deal.product_name && (
-                <span className="text-muted-foreground truncate max-w-[80px]">
+              {deal.product_name && <span className="text-muted-foreground truncate max-w-[80px]">
                   {deal.product_name}
-                </span>
-              )}
-              {deal.value > 0 ? (
-                <span 
-                  className={cn("font-medium cursor-pointer hover:underline", "text-primary")} 
-                  onClick={e => {
-                    e.stopPropagation();
-                    onValueClick?.(deal);
-                  }}
-                >
+                </span>}
+              {deal.value > 0 ? <span className={cn("font-medium cursor-pointer hover:underline", "text-primary")} onClick={e => {
+              e.stopPropagation();
+              onValueClick?.(deal);
+            }}>
                   {formatCurrency(deal.value)}
-                </span>
-              ) : (
-                <span 
-                  className={cn("font-medium cursor-pointer hover:underline text-muted-foreground")} 
-                  onClick={e => {
-                    e.stopPropagation();
-                    onValueClick?.(deal);
-                  }}
-                >
+                </span> : <span className={cn("font-medium cursor-pointer hover:underline text-muted-foreground")} onClick={e => {
+              e.stopPropagation();
+              onValueClick?.(deal);
+            }}>
                   +valor
-                </span>
-              )}
+                </span>}
             </div>
           </div>
         </div>
@@ -342,87 +299,54 @@ function DraggableDeal({
         {/* Área central para tags do contato */}
         <div className="mb-2 min-h-[24px] flex items-center justify-between gap-2">
           <div className="flex items-start flex-wrap gap-1 flex-1 min-w-0">
-          {contactTags.map((tag) => (
-            <Badge
-              key={tag.id}
-              variant="outline"
-              style={{ 
-                backgroundColor: `${tag.color}15`,
-                borderColor: tag.color,
-                color: tag.color
-              }}
-              className="text-[10px] md:text-xs px-1.5 py-0 h-auto rounded-full font-medium flex items-center gap-1"
-            >
+          {contactTags.map(tag => <Badge key={tag.id} variant="outline" style={{
+            backgroundColor: `${tag.color}15`,
+            borderColor: tag.color,
+            color: tag.color
+          }} className="text-[10px] md:text-xs px-1.5 py-0 h-auto rounded-full font-medium flex items-center gap-1">
               <span>{tag.name}</span>
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    // Remove tag from contact
-                    await supabase
-                      .from('contact_tags')
-                      .delete()
-                      .eq('contact_id', deal.contact?.id)
-                      .eq('tag_id', tag.id);
-                    
-                    await refreshTags();
-                  } catch (error) {
-                    console.error('Erro ao remover tag:', error);
-                  }
-                }}
-                className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
-              >
+              <button onClick={async e => {
+              e.stopPropagation();
+              try {
+                // Remove tag from contact
+                await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
+                await refreshTags();
+              } catch (error) {
+                console.error('Erro ao remover tag:', error);
+              }
+            }} className="hover:bg-black/10 rounded-full p-0.5 transition-colors">
                 <X className="w-2 h-2 md:w-2.5 md:h-2.5" />
               </button>
-            </Badge>
-          ))}
+            </Badge>)}
           <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
-            <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-5 px-1.5 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
-              >
+            <PopoverTrigger asChild onClick={e => e.stopPropagation()}>
+              <Button variant="outline" size="sm" className="h-5 px-1.5 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary">
                 <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent 
-              className="w-64 p-0" 
-              align="start"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <PopoverContent className="w-64 p-0" align="start" onClick={e => e.stopPropagation()}>
               <Command>
-                <CommandInput 
-                  placeholder="Buscar tags..." 
-                  value={searchTerm}
-                  onValueChange={setSearchTerm}
-                />
+                <CommandInput placeholder="Buscar tags..." value={searchTerm} onValueChange={setSearchTerm} />
                 <CommandList>
                   <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
                   <CommandGroup>
-                    {getFilteredTags(searchTerm).map((tag) => (
-                      <CommandItem
-                        key={tag.id}
-                        onSelect={async () => {
-                          try {
-                            await addTagToContact(tag.id);
-                            await refreshTags();
-                            setIsTagPopoverOpen(false);
-                            setSearchTerm("");
-                          } catch (error) {
-                            console.error('Erro ao adicionar tag:', error);
-                          }
-                        }}
-                      >
+                    {getFilteredTags(searchTerm).map(tag => <CommandItem key={tag.id} onSelect={async () => {
+                      try {
+                        await addTagToContact(tag.id);
+                        await refreshTags();
+                        setIsTagPopoverOpen(false);
+                        setSearchTerm("");
+                      } catch (error) {
+                        console.error('Erro ao adicionar tag:', error);
+                      }
+                    }}>
                         <div className="flex items-center gap-2 w-full">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: tag.color }}
-                          />
+                          <div className="w-3 h-3 rounded-full" style={{
+                          backgroundColor: tag.color
+                        }} />
                           <span>{tag.name}</span>
                         </div>
-                      </CommandItem>
-                    ))}
+                      </CommandItem>)}
                   </CommandGroup>
                 </CommandList>
               </Command>
@@ -431,60 +355,50 @@ function DraggableDeal({
           </div>
           
           {/* ConnectionBadge à direita */}
-          {deal.conversation?.connection_id && (
-            <div className="flex-shrink-0">
-              <ConnectionBadge 
-                connectionId={deal.conversation.connection_id}
-                connectionInfo={deal.conversation.connection}
-              />
-            </div>
-          )}
+          {deal.conversation?.connection_id && <div className="flex-shrink-0">
+              <ConnectionBadge connectionId={deal.conversation.connection_id} connectionInfo={deal.conversation.connection} />
+            </div>}
         </div>
         
         {/* Footer com ícones de ação e prioridade */}
         <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-green-100 hover:text-green-600" onClick={async (e) => {
+            <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-green-100 hover:text-green-600" onClick={async e => {
             e.stopPropagation();
-            
             console.log('🎯 Clique no botão de chat - Deal:', deal);
             console.log('📞 Contact ID:', deal.contact?.id);
-            
+
             // Buscar conversa do contato antes de abrir o modal
             if (deal.contact?.id) {
               try {
                 console.log('🔍 Buscando conversa para contact_id:', deal.contact.id);
-                
-                const { data: conversations, error } = await supabase
-                  .from('conversations')
-                  .select('id')
-                  .eq('contact_id', deal.contact.id)
-                  .eq('workspace_id', selectedWorkspace?.workspace_id)
-                  .eq('status', 'open')
-                  .limit(1);
-                
-                console.log('📊 Resultado da busca:', { conversations, error });
-                
+                const {
+                  data: conversations,
+                  error
+                } = await supabase.from('conversations').select('id').eq('contact_id', deal.contact.id).eq('workspace_id', selectedWorkspace?.workspace_id).eq('status', 'open').limit(1);
+                console.log('📊 Resultado da busca:', {
+                  conversations,
+                  error
+                });
                 if (error) throw error;
-                
                 if (conversations && conversations.length > 0) {
                   // Anexar conversation_id ao deal antes de passar para o modal
                   const dealWithConversation = {
                     ...deal,
                     conversation_id: conversations[0].id,
-                    conversation: { id: conversations[0].id }
+                    conversation: {
+                      id: conversations[0].id
+                    }
                   };
-                  
                   console.log('✅ Conversa encontrada! ID:', conversations[0].id);
                   console.log('📦 Deal com conversa:', dealWithConversation);
-                  
                   onChatClick?.(dealWithConversation);
                 } else {
                   console.warn('⚠️ Nenhuma conversa encontrada para o contato');
                   toast({
                     title: "Conversa não encontrada",
                     description: "Não há conversa ativa para este contato",
-                    variant: "destructive",
+                    variant: "destructive"
                   });
                 }
               } catch (error) {
@@ -492,7 +406,7 @@ function DraggableDeal({
                 toast({
                   title: "Erro",
                   description: "Erro ao buscar conversa do contato",
-                  variant: "destructive",
+                  variant: "destructive"
                 });
               }
             } else {
@@ -540,7 +454,9 @@ export function CRMNegocios({
     canManagePipelines,
     canManageColumns
   } = useWorkspaceRole();
-  const { getHeaders } = useWorkspaceHeaders();
+  const {
+    getHeaders
+  } = useWorkspaceHeaders();
   const {
     toast
   } = useToast();
@@ -582,7 +498,10 @@ export function CRMNegocios({
   const [appliedFilters, setAppliedFilters] = useState<{
     tags: string[];
     selectedDate?: Date;
-    dateRange?: { from: Date; to: Date };
+    dateRange?: {
+      from: Date;
+      to: Date;
+    };
   } | null>(null);
   const [isTransferirModalOpen, setIsTransferirModalOpen] = useState(false);
   const [selectedColumnForAction, setSelectedColumnForAction] = useState<string | null>(null);
@@ -593,7 +512,10 @@ export function CRMNegocios({
   const [isEditarContatoModalOpen, setIsEditarContatoModalOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isVincularProdutoModalOpen, setIsVincularProdutoModalOpen] = useState(false);
-  const [selectedCardForProduct, setSelectedCardForProduct] = useState<{id: string, value: number} | null>(null);
+  const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
+    id: string;
+    value: number;
+  } | null>(null);
   const [isVincularResponsavelModalOpen, setIsVincularResponsavelModalOpen] = useState(false);
   const [selectedCardForResponsavel, setSelectedCardForResponsavel] = useState<{
     cardId: string;
@@ -602,7 +524,10 @@ export function CRMNegocios({
     currentResponsibleId?: string;
   } | null>(null);
   const [isDeleteDealModalOpen, setIsDeleteDealModalOpen] = useState(false);
-  const [selectedCardForDeletion, setSelectedCardForDeletion] = useState<{ id: string; name: string } | null>(null);
+  const [selectedCardForDeletion, setSelectedCardForDeletion] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -648,31 +573,27 @@ export function CRMNegocios({
     if (appliedFilters?.selectedDate || appliedFilters?.dateRange) {
       columnCards = columnCards.filter(card => {
         if (!card.created_at) return false;
-        
         const cardDate = new Date(card.created_at);
         cardDate.setHours(0, 0, 0, 0); // Normalizar para início do dia
-        
+
         if (appliedFilters.selectedDate) {
           // Filtro por data única
           const filterDate = new Date(appliedFilters.selectedDate);
           filterDate.setHours(0, 0, 0, 0);
           return cardDate.getTime() === filterDate.getTime();
         }
-        
         if (appliedFilters.dateRange?.from && appliedFilters.dateRange?.to) {
           // Filtro por período
           const fromDate = new Date(appliedFilters.dateRange.from);
           fromDate.setHours(0, 0, 0, 0);
           const toDate = new Date(appliedFilters.dateRange.to);
           toDate.setHours(23, 59, 59, 999); // Até o fim do dia
-          
+
           return cardDate >= fromDate && cardDate <= toDate;
         }
-        
         return true;
       });
     }
-    
     return columnCards;
   };
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -693,13 +614,11 @@ export function CRMNegocios({
       active,
       over
     } = event;
-    
     if (!over) {
       setActiveId(null);
       setDragOverColumn(null);
       return;
     }
-
     const activeId = active.id as string;
     const overId = over.id as string;
 
@@ -733,7 +652,7 @@ export function CRMNegocios({
         from: activeCard.column_id,
         to: newColumnId
       });
-      
+
       // Não precisa await - deixar executar em background
       moveCardOptimistic(activeCard.id, newColumnId);
     }
@@ -781,17 +700,14 @@ export function CRMNegocios({
       });
     }
   };
-
   const handleOpenTransferModal = useCallback((cardId: string) => {
     setSelectedCardsForTransfer(new Set([cardId]));
     setIsTransferirModalOpen(true);
   }, []);
-
   const handleTransferComplete = useCallback(() => {
     setSelectedCardsForTransfer(new Set());
     refreshCurrentPipeline();
   }, [refreshCurrentPipeline]);
-
   const handleVincularResponsavel = useCallback((cardId: string, conversationId?: string, currentResponsibleId?: string, contactId?: string) => {
     setSelectedCardForResponsavel({
       cardId,
@@ -801,7 +717,6 @@ export function CRMNegocios({
     });
     setIsVincularResponsavelModalOpen(true);
   }, []);
-
   const handleCreateBusiness = async (business: any) => {
     if (!selectedPipeline || !selectedWorkspace) {
       toast({
@@ -811,27 +726,21 @@ export function CRMNegocios({
       });
       return;
     }
-
     try {
       // 1. Buscar dados completos do contato
-      const { data: contact, error: contactError } = await supabase
-        .from('contacts')
-        .select('id, name, phone, profile_image_url')
-        .eq('id', business.lead)
-        .single();
-
+      const {
+        data: contact,
+        error: contactError
+      } = await supabase.from('contacts').select('id, name, phone, profile_image_url').eq('id', business.lead).single();
       if (contactError || !contact?.phone) {
         throw new Error('Contato não encontrado ou sem telefone');
       }
 
       // 2. Verificar se já existe conversa ativa (para reusar se existir)
-      const { data: existingConversations, error: convError } = await supabase
-        .from('conversations')
-        .select('id, status')
-        .eq('contact_id', business.lead)
-        .eq('workspace_id', selectedWorkspace.workspace_id)
-        .eq('status', 'open');
-
+      const {
+        data: existingConversations,
+        error: convError
+      } = await supabase.from('conversations').select('id, status').eq('contact_id', business.lead).eq('workspace_id', selectedWorkspace.workspace_id).eq('status', 'open');
       if (convError) {
         console.error('Erro ao verificar conversas existentes:', convError);
       }
@@ -841,23 +750,21 @@ export function CRMNegocios({
 
       // 3. Criar conversa apenas se não existe
       if (!conversationId) {
-        const { data: conversationData, error: conversationError } = await supabase.functions.invoke(
-          'create-quick-conversation',
-          {
-            body: {
-              phoneNumber: contact.phone,
-              orgId: selectedWorkspace.workspace_id
-            }
+        const {
+          data: conversationData,
+          error: conversationError
+        } = await supabase.functions.invoke('create-quick-conversation', {
+          body: {
+            phoneNumber: contact.phone,
+            orgId: selectedWorkspace.workspace_id
           }
-        );
-
+        });
         if (conversationError) throw conversationError;
         conversationId = conversationData?.conversationId;
       }
 
       // 4. Validar se a coluna selecionada existe
       const targetColumn = columns.find(col => col.id === business.column);
-      
       if (!targetColumn) {
         throw new Error('Coluna selecionada não encontrada');
       }
@@ -878,12 +785,10 @@ export function CRMNegocios({
           profile_image_url: contact.profile_image_url
         }
       } as any);
-
       toast({
         title: "Sucesso",
         description: "Negócio criado com sucesso!"
       });
-
       setIsCriarNegocioModalOpen(false);
     } catch (error) {
       console.error('Erro ao criar negócio:', error);
@@ -894,7 +799,6 @@ export function CRMNegocios({
       });
     }
   };
-
   if (!selectedWorkspace) {
     return <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -987,16 +891,10 @@ export function CRMNegocios({
                 </Button>}
 
               {/* Indicador de Realtime */}
-              {selectedPipeline && (
-                <TooltipProvider>
+              {selectedPipeline && <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-700">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                          Tempo Real
-                        </span>
-                      </div>
+                      
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="font-medium">Conectado em tempo real</p>
@@ -1005,31 +903,16 @@ export function CRMNegocios({
                       </p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
-              )}
+                </TooltipProvider>}
 
               {/* Filtrar Button */}
               <div className="relative flex-shrink-0">
-                <Button 
-                  size="sm" 
-                  className={cn(
-                    "font-medium relative", 
-                    (appliedFilters?.tags && appliedFilters.tags.length > 0) || appliedFilters?.selectedDate || appliedFilters?.dateRange
-                      ? "bg-orange-500 text-white hover:bg-orange-600" 
-                      : isDarkMode 
-                        ? "bg-yellow-500 text-black hover:bg-yellow-600" 
-                        : "bg-yellow-400 text-black hover:bg-yellow-500"
-                  )} 
-                  onClick={() => setIsFilterModalOpen(true)} 
-                  disabled={!selectedPipeline}
-                >
+                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-orange-500 text-white hover:bg-orange-600" : isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
                   <Filter className="w-4 h-4 mr-2" />
                   Filtrar
-                  {((appliedFilters?.tags && appliedFilters.tags.length > 0) || appliedFilters?.selectedDate || appliedFilters?.dateRange) && (
-                    <Badge className="ml-2 bg-white text-orange-500 text-xs px-1 py-0 h-auto">
+                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-white text-orange-500 text-xs px-1 py-0 h-auto">
                       {(appliedFilters?.tags?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
-                    </Badge>
-                  )}
+                    </Badge>}
                 </Button>
               </div>
               
@@ -1154,23 +1037,23 @@ export function CRMNegocios({
                                 <div className="flex items-center justify-between">
                                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                                     <input type="checkbox" checked={columnCards.length > 0 && columnCards.every(card => selectedCardsForTransfer.has(card.id))} onChange={e => {
-                              const newSet = new Set(selectedCardsForTransfer);
-                              columnCards.forEach(card => {
-                                if (e.target.checked) {
-                                  newSet.add(card.id);
-                                } else {
-                                  newSet.delete(card.id);
-                                }
-                              });
-                              setSelectedCardsForTransfer(newSet);
-                            }} className="w-4 h-4 cursor-pointer" />
+                            const newSet = new Set(selectedCardsForTransfer);
+                            columnCards.forEach(card => {
+                              if (e.target.checked) {
+                                newSet.add(card.id);
+                              } else {
+                                newSet.delete(card.id);
+                              }
+                            });
+                            setSelectedCardsForTransfer(newSet);
+                          }} className="w-4 h-4 cursor-pointer" />
                                     <span className="font-medium">Selecionar todos</span>
                                   </label>
                                   <Button size="sm" variant="ghost" onClick={() => {
-                              setIsSelectionMode(false);
-                              setSelectedCardsForTransfer(new Set());
-                              setSelectedColumnForAction(null);
-                            }}>
+                          setIsSelectionMode(false);
+                          setSelectedCardsForTransfer(new Set());
+                          setSelectedColumnForAction(null);
+                        }}>
                                     <X className="h-4 w-4" />
                                   </Button>
                                 </div>
@@ -1276,54 +1159,41 @@ export function CRMNegocios({
                               id: card.conversation_id
                             } : undefined)
                           };
-                          return <DraggableDeal 
-                            key={card.id} 
-                            deal={deal} 
-                            isDarkMode={isDarkMode} 
-                            onClick={() => !isSelectionMode && openCardDetails(card)} 
-                            columnColor={column.color}
-                            onOpenTransferModal={handleOpenTransferModal}
-                            onVincularResponsavel={handleVincularResponsavel}
-                            onChatClick={dealData => {
-                              console.log('🎯 CRM: Abrindo chat para deal:', dealData);
-                              console.log('🆔 CRM: Deal ID:', dealData.id);
-                              console.log('🗣️ CRM: Deal conversation:', dealData.conversation);
-                              console.log('👤 CRM: Deal contact:', dealData.contact);
-                              setSelectedChatCard(dealData);
-                              setIsChatModalOpen(true);
-                            }} 
-                            onValueClick={dealData => {
-                              setSelectedCardForValue(dealData);
-                              setIsSetValueModalOpen(true);
-                            }}
-                            isSelectionMode={isSelectionMode && selectedColumnForAction === column.id}
-                            isSelected={selectedCardsForTransfer.has(card.id)}
-                            onToggleSelection={() => {
-                              const newSet = new Set(selectedCardsForTransfer);
-                              if (newSet.has(card.id)) {
-                                newSet.delete(card.id);
-                              } else {
-                                newSet.add(card.id);
-                              }
-                              setSelectedCardsForTransfer(newSet);
-                            }}
-                            onEditContact={(contactId) => {
-                              setSelectedContactId(contactId);
-                              setIsEditarContatoModalOpen(true);
-                            }}
-                            onLinkProduct={(cardId, currentValue) => {
-                              setSelectedCardForProduct({ id: cardId, value: currentValue });
-                              setIsVincularProdutoModalOpen(true);
-                            }}
-                            onDeleteCard={(cardId) => {
-                              const card = cards.find(c => c.id === cardId);
-                              setSelectedCardForDeletion({
-                                id: cardId,
-                                name: card?.title || 'este negócio'
-                              });
-                              setIsDeleteDealModalOpen(true);
-                            }}
-                          />;
+                          return <DraggableDeal key={card.id} deal={deal} isDarkMode={isDarkMode} onClick={() => !isSelectionMode && openCardDetails(card)} columnColor={column.color} onOpenTransferModal={handleOpenTransferModal} onVincularResponsavel={handleVincularResponsavel} onChatClick={dealData => {
+                            console.log('🎯 CRM: Abrindo chat para deal:', dealData);
+                            console.log('🆔 CRM: Deal ID:', dealData.id);
+                            console.log('🗣️ CRM: Deal conversation:', dealData.conversation);
+                            console.log('👤 CRM: Deal contact:', dealData.contact);
+                            setSelectedChatCard(dealData);
+                            setIsChatModalOpen(true);
+                          }} onValueClick={dealData => {
+                            setSelectedCardForValue(dealData);
+                            setIsSetValueModalOpen(true);
+                          }} isSelectionMode={isSelectionMode && selectedColumnForAction === column.id} isSelected={selectedCardsForTransfer.has(card.id)} onToggleSelection={() => {
+                            const newSet = new Set(selectedCardsForTransfer);
+                            if (newSet.has(card.id)) {
+                              newSet.delete(card.id);
+                            } else {
+                              newSet.add(card.id);
+                            }
+                            setSelectedCardsForTransfer(newSet);
+                          }} onEditContact={contactId => {
+                            setSelectedContactId(contactId);
+                            setIsEditarContatoModalOpen(true);
+                          }} onLinkProduct={(cardId, currentValue) => {
+                            setSelectedCardForProduct({
+                              id: cardId,
+                              value: currentValue
+                            });
+                            setIsVincularProdutoModalOpen(true);
+                          }} onDeleteCard={cardId => {
+                            const card = cards.find(c => c.id === cardId);
+                            setSelectedCardForDeletion({
+                              id: cardId,
+                              name: card?.title || 'este negócio'
+                            });
+                            setIsDeleteDealModalOpen(true);
+                          }} />;
                         })}
                                 
                                 {/* Invisible drop zone for empty columns and bottom of lists */}
@@ -1378,174 +1248,98 @@ export function CRMNegocios({
       // Implementar reordenação se necessário
     }} />
 
-      <FilterModal 
-        open={isFilterModalOpen} 
-        onOpenChange={setIsFilterModalOpen} 
-        onApplyFilters={filters => {
-          setAppliedFilters({
-            tags: filters.tags,
-            selectedDate: filters.selectedDate,
-            dateRange: filters.dateRange
-          });
-        }} 
-      />
+      <FilterModal open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen} onApplyFilters={filters => {
+      setAppliedFilters({
+        tags: filters.tags,
+        selectedDate: filters.selectedDate,
+        dateRange: filters.dateRange
+      });
+    }} />
 
       <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
 
-      <CriarNegocioModal 
-        isOpen={isCriarNegocioModalOpen} 
-        onClose={() => setIsCriarNegocioModalOpen(false)} 
-        onCreateBusiness={handleCreateBusiness} 
-        isDarkMode={isDarkMode}
-        columns={columns}
-        onResponsibleUpdated={() => {
-          console.log('🔄 Negócio criado com responsável, refreshing active users...');
-          refreshActiveUsers();
-        }}
-      />
+      <CriarNegocioModal isOpen={isCriarNegocioModalOpen} onClose={() => setIsCriarNegocioModalOpen(false)} onCreateBusiness={handleCreateBusiness} isDarkMode={isDarkMode} columns={columns} onResponsibleUpdated={() => {
+      console.log('🔄 Negócio criado com responsável, refreshing active users...');
+      refreshActiveUsers();
+    }} />
 
-      {selectedCard && (
-        <DealDetailsModal 
-          isOpen={isDealDetailsModalOpen} 
-          onClose={() => setIsDealDetailsModalOpen(false)} 
-          dealName={selectedCard.title || ""} 
-          contactNumber={selectedCard.contact?.phone || ""} 
-          isDarkMode={isDarkMode}
-          cardId={selectedCard.id}
-          currentColumnId={selectedCard.column_id}
-          currentPipelineId={selectedCard.pipeline_id}
-          contactData={selectedCard.contact}
-        />
-      )}
+      {selectedCard && <DealDetailsModal isOpen={isDealDetailsModalOpen} onClose={() => setIsDealDetailsModalOpen(false)} dealName={selectedCard.title || ""} contactNumber={selectedCard.contact?.phone || ""} isDarkMode={isDarkMode} cardId={selectedCard.id} currentColumnId={selectedCard.column_id} currentPipelineId={selectedCard.pipeline_id} contactData={selectedCard.contact} />}
 
-      <ChatModal 
-        isOpen={isChatModalOpen} 
-        onClose={() => {
-          console.log('🔽 Fechando ChatModal');
-          setIsChatModalOpen(false);
-        }} 
-        conversationId={selectedChatCard?.conversation?.id || selectedChatCard?.conversation_id || ""} 
-        contactName={selectedChatCard?.contact?.name || selectedChatCard?.name || ""} 
-        contactPhone={selectedChatCard?.contact?.phone || ""} 
-        contactAvatar={selectedChatCard?.contact?.profile_image_url || ""}
-        contactId={selectedChatCard?.contact?.id || ""}
-      />
+      <ChatModal isOpen={isChatModalOpen} onClose={() => {
+      console.log('🔽 Fechando ChatModal');
+      setIsChatModalOpen(false);
+    }} conversationId={selectedChatCard?.conversation?.id || selectedChatCard?.conversation_id || ""} contactName={selectedChatCard?.contact?.name || selectedChatCard?.name || ""} contactPhone={selectedChatCard?.contact?.phone || ""} contactAvatar={selectedChatCard?.contact?.profile_image_url || ""} contactId={selectedChatCard?.contact?.id || ""} />
 
-      <TransferirModal 
-        isOpen={isTransferirModalOpen} 
-        onClose={() => {
-          setIsTransferirModalOpen(false);
-          setSelectedColumnForAction(null);
-          setIsSelectionMode(false);
-          setSelectedCardsForTransfer(new Set());
-        }} 
-        selectedCards={Array.from(selectedCardsForTransfer)}
-        currentPipelineId={selectedPipeline?.id || ""}
-        currentPipelineName={selectedPipeline?.name || ""}
-        onTransferComplete={() => {
-          refreshCurrentPipeline();
-          setIsSelectionMode(false);
-          setSelectedCardsForTransfer(new Set());
-          setSelectedColumnForAction(null);
-        }}
-        isDarkMode={isDarkMode}
-      />
+      <TransferirModal isOpen={isTransferirModalOpen} onClose={() => {
+      setIsTransferirModalOpen(false);
+      setSelectedColumnForAction(null);
+      setIsSelectionMode(false);
+      setSelectedCardsForTransfer(new Set());
+    }} selectedCards={Array.from(selectedCardsForTransfer)} currentPipelineId={selectedPipeline?.id || ""} currentPipelineName={selectedPipeline?.name || ""} onTransferComplete={() => {
+      refreshCurrentPipeline();
+      setIsSelectionMode(false);
+      setSelectedCardsForTransfer(new Set());
+      setSelectedColumnForAction(null);
+    }} isDarkMode={isDarkMode} />
 
       <SetValueModal isOpen={isSetValueModalOpen} onClose={() => {
       setIsSetValueModalOpen(false);
       setSelectedCardForValue(null);
     }} onSave={handleSetCardValue} currentValue={selectedCardForValue?.value || 0} isDarkMode={isDarkMode} />
 
-      <EditarColunaModal
-        open={isEditarColunaModalOpen}
-        onOpenChange={setIsEditarColunaModalOpen}
-        columnId={selectedColumnForAction}
-        columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''}
-        columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'}
-        onUpdate={() => {
-          refreshCurrentPipeline();
-        }}
-      />
+      <EditarColunaModal open={isEditarColunaModalOpen} onOpenChange={setIsEditarColunaModalOpen} columnId={selectedColumnForAction} columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''} columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'} onUpdate={() => {
+      refreshCurrentPipeline();
+    }} />
 
-      <EditarContatoModal 
-        isOpen={isEditarContatoModalOpen} 
-        onClose={() => {
-          setIsEditarContatoModalOpen(false);
-          setSelectedContactId(null);
-        }} 
-        contactId={selectedContactId}
-        onContactUpdated={() => refreshCurrentPipeline()}
-      />
+      <EditarContatoModal isOpen={isEditarContatoModalOpen} onClose={() => {
+      setIsEditarContatoModalOpen(false);
+      setSelectedContactId(null);
+    }} contactId={selectedContactId} onContactUpdated={() => refreshCurrentPipeline()} />
 
-      <VincularProdutoModal 
-        isOpen={isVincularProdutoModalOpen} 
-        onClose={() => {
-          setIsVincularProdutoModalOpen(false);
-          setSelectedCardForProduct(null);
-        }} 
-        cardId={selectedCardForProduct?.id || null}
-        currentValue={selectedCardForProduct?.value || 0}
-        onProductLinked={() => refreshCurrentPipeline()}
-      />
+      <VincularProdutoModal isOpen={isVincularProdutoModalOpen} onClose={() => {
+      setIsVincularProdutoModalOpen(false);
+      setSelectedCardForProduct(null);
+    }} cardId={selectedCardForProduct?.id || null} currentValue={selectedCardForProduct?.value || 0} onProductLinked={() => refreshCurrentPipeline()} />
 
-      <VincularResponsavelModal
-        isOpen={isVincularResponsavelModalOpen}
-        onClose={() => {
-          setIsVincularResponsavelModalOpen(false);
-          setSelectedCardForResponsavel(null);
-        }}
-        cardId={selectedCardForResponsavel?.cardId || ""}
-        conversationId={selectedCardForResponsavel?.conversationId}
-        contactId={selectedCardForResponsavel?.contactId}
-        currentResponsibleId={selectedCardForResponsavel?.currentResponsibleId}
-        onSuccess={() => refreshCurrentPipeline()}
-        onResponsibleUpdated={() => {
-          console.log('🔄 Responsável atualizado, refreshing active users...');
-          refreshActiveUsers();
-        }}
-      />
+      <VincularResponsavelModal isOpen={isVincularResponsavelModalOpen} onClose={() => {
+      setIsVincularResponsavelModalOpen(false);
+      setSelectedCardForResponsavel(null);
+    }} cardId={selectedCardForResponsavel?.cardId || ""} conversationId={selectedCardForResponsavel?.conversationId} contactId={selectedCardForResponsavel?.contactId} currentResponsibleId={selectedCardForResponsavel?.currentResponsibleId} onSuccess={() => refreshCurrentPipeline()} onResponsibleUpdated={() => {
+      console.log('🔄 Responsável atualizado, refreshing active users...');
+      refreshActiveUsers();
+    }} />
 
-      <DeleteDealModal
-        isOpen={isDeleteDealModalOpen}
-        onClose={() => {
-          setIsDeleteDealModalOpen(false);
-          setSelectedCardForDeletion(null);
-        }}
-        onConfirm={async () => {
-          if (!selectedCardForDeletion) return;
-          
-          try {
-            const headers = getHeaders();
-            
-            const { data, error } = await supabase.functions.invoke(
-              `pipeline-management/cards?id=${selectedCardForDeletion.id}`,
-              { 
-                method: 'DELETE',
-                headers 
-              }
-            );
-
-            if (error) throw error;
-
-            toast({
-              title: "Sucesso",
-              description: "Negócio excluído permanentemente"
-            });
-
-            refreshCurrentPipeline();
-          } catch (error) {
-            console.error('Erro ao excluir negócio:', error);
-            toast({
-              title: "Erro",
-              description: error.message || "Erro ao excluir negócio",
-              variant: "destructive"
-            });
-          } finally {
-            setIsDeleteDealModalOpen(false);
-            setSelectedCardForDeletion(null);
-          }
-        }}
-        dealName={selectedCardForDeletion?.name}
-      />
+      <DeleteDealModal isOpen={isDeleteDealModalOpen} onClose={() => {
+      setIsDeleteDealModalOpen(false);
+      setSelectedCardForDeletion(null);
+    }} onConfirm={async () => {
+      if (!selectedCardForDeletion) return;
+      try {
+        const headers = getHeaders();
+        const {
+          data,
+          error
+        } = await supabase.functions.invoke(`pipeline-management/cards?id=${selectedCardForDeletion.id}`, {
+          method: 'DELETE',
+          headers
+        });
+        if (error) throw error;
+        toast({
+          title: "Sucesso",
+          description: "Negócio excluído permanentemente"
+        });
+        refreshCurrentPipeline();
+      } catch (error) {
+        console.error('Erro ao excluir negócio:', error);
+        toast({
+          title: "Erro",
+          description: error.message || "Erro ao excluir negócio",
+          variant: "destructive"
+        });
+      } finally {
+        setIsDeleteDealModalOpen(false);
+        setSelectedCardForDeletion(null);
+      }
+    }} dealName={selectedCardForDeletion?.name} />
     </DndContext>;
 }
