@@ -6,6 +6,7 @@ import { WhatsAppAudioPlayer } from './WhatsAppAudioPlayer';
 import { ImageModal } from './ImageModal';
 import { PdfModal } from './PdfModal';
 import { VideoModal } from './VideoModal';
+import { MessageStatusIndicator } from '@/components/ui/message-status-indicator';
 
 interface MediaViewerProps {
   fileUrl: string;
@@ -179,13 +180,18 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
                 }}
                 loading="lazy"
               />
-              {/* Timestamp sobreposto na imagem */}
+              {/* Timestamp e status sobreposto na imagem */}
               {timestamp && hasLoaded && !isLoading && (
-                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-                  {new Date(timestamp).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+                <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1.5 py-0.5 rounded flex items-center gap-1" style={{ fontSize: '11px' }}>
+                  <span>
+                    {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                  {messageStatus && senderType !== 'contact' && (
+                    <MessageStatusIndicator status={messageStatus} />
+                  )}
                 </div>
               )}
             </>
@@ -234,13 +240,18 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           >
             Seu navegador não suporta o elemento de vídeo.
           </video>
-          {/* Timestamp sobreposto */}
+          {/* Timestamp e status sobreposto */}
           {timestamp && (
-            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded pointer-events-none">
-              {new Date(timestamp).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1.5 py-0.5 rounded pointer-events-none flex items-center gap-1" style={{ fontSize: '11px' }}>
+              <span>
+                {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+              {messageStatus && senderType !== 'contact' && (
+                <MessageStatusIndicator status={messageStatus} />
+              )}
             </div>
           )}
         </div>
