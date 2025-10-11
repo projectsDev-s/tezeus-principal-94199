@@ -195,11 +195,24 @@ serve(async (req) => {
     // Buscar última mensagem e nome do usuário responsável para cada conversa
     const conversationsWithMessages = await Promise.all(
       (conversations || []).map(async (conv) => {
-        // Usar service role apenas para buscar dados complementares que não são sensíveis
         const supabaseService = createClient(
           Deno.env.get('SUPABASE_URL')!,
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         );
+
+        // ✅ Garantir connection data de forma explícita
+        let connectionData = conv.connections;
+        
+        if (!connectionData && conv.connection_id) {
+          // Fallback: buscar connection diretamente se JOIN falhou
+          const { data: connData } = await supabaseService
+            .from('connections')
+            .select('id, instance_name, phone_number, status')
+            .eq('id', conv.connection_id)
+            .single();
+          
+          connectionData = connData;
+        }
 
         const { data: lastMessage } = await supabaseService
           .from('messages')
@@ -224,7 +237,7 @@ serve(async (req) => {
         return {
           ...conv,
           connection_id: conv.connection_id,
-          connection: conv.connections || null,
+          connection: connectionData || null, // ✅ Garantido
           last_message: lastMessage || [],
           assigned_user_name: assignedUserName,
           conversation_tags: conv.conversation_tags || []

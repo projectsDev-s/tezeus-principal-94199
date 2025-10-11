@@ -56,7 +56,15 @@ export function ConnectionBadge({ connectionId, connectionInfo: propConnectionIn
     fetchConnectionInfo();
   }, [connectionId, propConnectionInfo]);
 
-  if (!connectionInfo || loading) {
+  if (loading) {
+    return (
+      <Badge variant="outline" className="flex items-center gap-1 h-5 px-1.5 opacity-50">
+        <Smartphone className="w-3 h-3 animate-pulse" />
+      </Badge>
+    );
+  }
+
+  if (!connectionInfo) {
     return null;
   }
 

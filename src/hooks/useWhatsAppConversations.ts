@@ -116,27 +116,10 @@ export const useWhatsAppConversations = () => {
         throw functionError;
       }
 
-      // ✅ Conversas SEM mensagens
+      // ✅ Conversas SEM mensagens (dados agora garantidos pela Edge Function)
       const conversationsOnly = response.items || [];
       
-      // 🔥 Buscar connection_id diretamente da tabela conversations
-      const conversationIds = conversationsOnly.map(conv => conv.id);
-      
-      const { data: enrichedData, error: enrichError } = await supabase
-        .from('conversations')
-        .select('id, connection_id')
-        .in('id', conversationIds);
-
-      if (enrichError) {
-        console.warn('⚠️ Erro ao buscar connection_id:', enrichError);
-      }
-
-      // Criar mapa de connection_id por conversa
-      const connectionMap = new Map(
-        enrichedData?.map(item => [item.id, item.connection_id]) || []
-      );
-      
-      // ✅ Mapear para formato compatível com connection_id da tabela
+      // ✅ Mapear para formato compatível (connection_id e connection já vêm da Edge Function)
       const formattedConversations = conversationsOnly.map(conv => ({
         id: conv.id,
         contact: {
@@ -155,8 +138,8 @@ export const useWhatsAppConversations = () => {
         priority: conv.priority,
         last_message: conv.last_message,
         conversation_tags: conv.conversation_tags || [],
-        connection_id: connectionMap.get(conv.id) || conv.connection_id,
-        connection: conv.connection || null,
+        connection_id: conv.connection_id, // ✅ Direto da Edge Function
+        connection: conv.connection,       // ✅ Garantido pela Edge Function
         workspace_id: conv.workspace_id,
         messages: []
       }));
