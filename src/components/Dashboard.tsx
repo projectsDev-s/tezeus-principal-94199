@@ -10,23 +10,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
   const { analytics, isLoading } = useWorkspaceAnalytics();
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, isLoadingWorkspaces } = useWorkspace();
   const { userRole } = useAuth();
 
   const isUserRole = userRole === 'user';
   const isMasterRole = userRole === 'master';
 
-  if (!selectedWorkspace) {
-    return (
-      <div className="p-6 space-y-6 bg-background min-h-screen">
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Selecione um workspace para visualizar os relatórios</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
+  // Loading state - mostrar skeleton enquanto carrega workspace ou analytics
+  if (isLoadingWorkspaces || !selectedWorkspace || isLoading) {
     return (
       <div className="p-6 space-y-6 bg-background min-h-screen">
         <div className="space-y-2">
