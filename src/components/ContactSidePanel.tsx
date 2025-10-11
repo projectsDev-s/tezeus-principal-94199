@@ -22,6 +22,7 @@ import { CriarNegocioModal } from './modals/CriarNegocioModal';
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
 interface Contact {
   id: string;
   name: string;
@@ -50,6 +51,7 @@ interface ContactSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
   contact: Contact | null;
+  onContactUpdated?: () => void;
 }
 
 // Função auxiliar para obter iniciais
@@ -66,7 +68,8 @@ const getAvatarColor = (name: string) => {
 export function ContactSidePanel({
   isOpen,
   onClose,
-  contact
+  contact,
+  onContactUpdated
 }: ContactSidePanelProps) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [customFields, setCustomFields] = useState<Array<{
@@ -148,16 +151,31 @@ export function ContactSidePanel({
     pipeline: card.pipeline_name,
     column_name: card.column_name
   }));
+  // Recarregar dados frescos do banco ao abrir o painel
   useEffect(() => {
-    if (contact) {
-      console.log('🔄 useEffect disparado - contact mudou:', contact);
-      setEditingContact({
-        ...contact
-      });
-    } else {
-      console.log('⚠️ Contact é null/undefined');
+    if (isOpen && contact?.id) {
+      const loadFreshData = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('contacts')
+            .select('id, name, phone, email, profile_image_url, workspace_id, created_at, updated_at')
+            .eq('id', contact.id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            console.log('✅ Dados frescos carregados:', data);
+            setEditingContact(data as Contact);
+          }
+        } catch (error) {
+          console.error('❌ Erro ao recarregar dados do contato:', error);
+        }
+      };
+
+      loadFreshData();
     }
-  }, [contact]);
+  }, [isOpen, contact?.id]);
 
   // 🆕 useEffect separado para converter extraFields em customFields
   useEffect(() => {
@@ -228,6 +246,11 @@ export function ContactSidePanel({
       // Atualizar estado local
       if (updatedData) {
         setEditingContact(updatedData as Contact);
+        
+        // Notificar componente pai para recarregar lista
+        if (onContactUpdated) {
+          onContactUpdated();
+        }
       }
     } catch (error) {
       console.error('❌ Erro geral ao salvar contato:', error);
