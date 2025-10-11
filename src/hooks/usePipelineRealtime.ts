@@ -52,8 +52,16 @@ export function usePipelineRealtime({
           filter: `pipeline_id=eq.${pipelineId}`,
         },
         (payload) => {
-          console.log('🔄 [Realtime] Card atualizado:', payload.new);
-          onCardUpdate?.(payload.new as PipelineCard);
+          console.log('🔄 [Realtime] Card atualizado (RAW):', payload);
+          console.log('🔄 [Realtime] payload.new:', payload.new);
+          console.log('🔄 [Realtime] Chamando onCardUpdate...');
+          
+          if (onCardUpdate) {
+            onCardUpdate(payload.new as PipelineCard);
+            console.log('✅ [Realtime] onCardUpdate executado');
+          } else {
+            console.warn('⚠️ [Realtime] onCardUpdate é undefined!');
+          }
         }
       )
       .on(

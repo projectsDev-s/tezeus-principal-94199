@@ -408,7 +408,6 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   }, [updateCard]);
 
   const moveCardOptimistic = useCallback(async (cardId: string, newColumnId: string) => {
-    // 1. GUARDAR estado anterior para rollback
     const previousCards = [...cards];
     const cardToMove = cards.find(c => c.id === cardId);
     
@@ -421,17 +420,23 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString()
     });
 
-    // 2. ATUALIZAR UI IMEDIATAMENTE (otimista)
+    // Atualização otimista local (apenas visual)
+    const optimisticTimestamp = new Date().toISOString();
     setCards(prev => prev.map(card => 
       card.id === cardId 
-        ? { ...card, column_id: newColumnId, updated_at: new Date().toISOString() }
+        ? { 
+            ...card, 
+            column_id: newColumnId, 
+            updated_at: optimisticTimestamp 
+          }
         : card
     ));
 
-    // 3. SINCRONIZAR com backend em background (silencioso)
     try {
       if (!getHeaders) throw new Error('Headers not available');
 
+      console.log('📤 [Optimistic] Enviando para backend...');
+      
       const { data, error } = await supabase.functions.invoke(`pipeline-management/cards?id=${cardId}`, {
         method: 'PUT',
         headers: getHeaders,
@@ -440,21 +445,28 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      console.log('✅ [Optimistic] Sincronização concluída:', {
-        cardId,
-        newColumn: newColumnId
-      });
+      console.log('✅ [Optimistic] Backend confirmou mudança');
+      console.log('⏳ [Optimistic] Aguardando evento realtime...');
 
-      // NÃO atualizar estado aqui - deixar o realtime fazer isso
-      // Isso evita conflitos e garante que todos veem a mesma versão
+      // O evento realtime vai atualizar o estado com o timestamp correto do banco
+      // Não fazemos nada aqui para evitar duplicação
+
+      // ✅ Timeout de segurança: se realtime não chegar em 5s, forçar atualização
+      setTimeout(() => {
+        console.warn('⏰ [Realtime] Timeout - forçando atualização local');
+        
+        setCards(prev => prev.map(card => 
+          card.id === cardId 
+            ? { ...card, column_id: newColumnId }
+            : card
+        ));
+      }, 5000);
 
     } catch (error) {
-      console.error('❌ [Optimistic] Erro na sincronização - revertendo:', error);
+      console.error('❌ [Optimistic] Erro - revertendo:', error);
       
-      // 4. ROLLBACK: Reverter para estado anterior
       setCards(previousCards);
       
-      // 5. MOSTRAR toast de erro
       toast({
         title: "Erro ao mover card",
         description: "O card foi retornado à posição original",
@@ -546,21 +558,43 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
     
     setCards(prev => {
-      // Encontrar e atualizar o card
       const index = prev.findIndex(c => c.id === updatedCard.id);
       
       if (index === -1) {
-        // Card não existe localmente, adicionar (pode ter sido filtrado por permissões antes)
         console.log('ℹ️ [Realtime] Card não encontrado localmente, adicionando');
         return [updatedCard, ...prev];
       }
       
+      const currentCard = prev[index];
+      
+      // ✅ VERIFICAR SE A MUDANÇA JÁ FOI APLICADA (evitar sobrescrever otimista)
+      if (currentCard.column_id === updatedCard.column_id && 
+          currentCard.updated_at === updatedCard.updated_at) {
+        console.log('⏭️ [Realtime] Card já está atualizado, ignorando');
+        return prev;
+      }
+      
+      console.log('🔄 [Realtime] Aplicando atualização:', {
+        de: currentCard.column_id,
+        para: updatedCard.column_id
+      });
+      
       // Atualizar card existente
       const newCards = [...prev];
       newCards[index] = { ...newCards[index], ...updatedCard };
+      
+      // Feedback visual apenas se mudou de coluna
+      if (currentCard.column_id !== updatedCard.column_id) {
+        toast({
+          title: "Negócio atualizado",
+          description: "Um negócio foi movido",
+          duration: 2000,
+        });
+      }
+      
       return newCards;
     });
-  }, []);
+  }, [toast]);
 
   const handleCardDelete = useCallback((cardId: string) => {
     console.log('🗑️ [Realtime Handler] Card deletado:', cardId);
