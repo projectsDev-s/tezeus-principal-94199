@@ -118,6 +118,7 @@ serve(async (req) => {
     // Check if user can manage this workspace
     const isMaster = systemUser.profile === 'master'
     let canManageWorkspace = isMaster
+    let isMemberOfWorkspace = false
     
     console.log('User profile:', systemUser.profile, 'isMaster:', isMaster)
     
@@ -140,11 +141,22 @@ serve(async (req) => {
 
       console.log('Workspace membership:', membership)
       canManageWorkspace = membership?.role === 'admin' || membership?.role === 'master'
+      isMemberOfWorkspace = !!membership
     }
     
-    if (!canManageWorkspace) {
+    // For 'list' action, any workspace member can view
+    // For other actions, need to be admin/master
+    if (action !== 'list' && !canManageWorkspace) {
       return new Response(
         JSON.stringify({ success: false, error: 'Insufficient permissions to manage this workspace' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // For 'list' action, verify user is at least a member
+    if (action === 'list' && !isMaster && !isMemberOfWorkspace) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'You must be a member of this workspace to view members' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
