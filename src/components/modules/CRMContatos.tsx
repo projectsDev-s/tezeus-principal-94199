@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X } from "lucide-react";
+import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X, Pin } from "lucide-react";
 import { ContactTags } from "@/components/chat/ContactTags";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -51,6 +51,7 @@ export function CRMContatos() {
     name: string;
     value: string;
   }>>([]);
+  const [pinnedFields, setPinnedFields] = useState<string[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldValue, setNewFieldValue] = useState('');
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
@@ -467,6 +468,21 @@ export function CRMContatos() {
       setIsSaving(false);
     }
   };
+  const handlePinField = () => {
+    if (!newFieldName.trim()) return;
+    setPinnedFields(prev => [...prev, newFieldName.trim()]);
+    setNewFieldName('');
+    setNewFieldValue('');
+    toast({
+      title: "Campo fixado",
+      description: "Agora você pode preencher o valor quando precisar"
+    });
+  };
+
+  const removePinnedField = (index: number) => {
+    setPinnedFields(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleAddNewField = () => {
     if (!newFieldName.trim() || !newFieldValue.trim()) return;
     
@@ -760,12 +776,31 @@ export function CRMContatos() {
               <Label className="text-sm font-medium">Informações adicionais</Label>
               <div className="space-y-3 mt-2">
                 
-                {/* Lista de campos adicionados */}
+                {/* Lista de campos fixados (só nome, sem valor) */}
+                {pinnedFields.map((fieldName, index) => (
+                  <div key={`pinned-${index}`} className="flex gap-2 items-center">
+                    <Pin className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                    <Input 
+                      value={fieldName} 
+                      readOnly
+                      className="flex-1 font-medium bg-muted"
+                      placeholder="Nome do campo"
+                    />
+                    <Input 
+                      placeholder="Preencher depois..." 
+                      className="flex-1 text-muted-foreground"
+                      disabled
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => removePinnedField(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                {/* Lista de campos completos (nome + valor) */}
                 {customFields.map((field, index) => (
                   <div key={index} className="flex gap-2 items-center">
-                    <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-yellow-600 text-sm">★</span>
-                    </div>
+                    <Pin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <Input 
                       value={field.name} 
                       onChange={e => updateCustomField(index, 'name', e.target.value)} 
@@ -786,9 +821,16 @@ export function CRMContatos() {
                 
                 {/* Inputs para adicionar novo campo */}
                 <div className="flex gap-2 items-center">
-                  <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-yellow-600 text-sm">★</span>
-                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={handlePinField}
+                    disabled={!newFieldName.trim()}
+                    className="text-yellow-500 hover:text-yellow-600"
+                    title="Fixar apenas o nome do campo"
+                  >
+                    <Pin className="h-4 w-4" />
+                  </Button>
                   <Input 
                     placeholder="Nome do campo" 
                     value={newFieldName}
@@ -806,7 +848,8 @@ export function CRMContatos() {
                     size="icon"
                     onClick={handleAddNewField}
                     disabled={!newFieldName.trim() || !newFieldValue.trim()}
-                    className="text-yellow-600 hover:text-yellow-700"
+                    className="text-green-600 hover:text-green-700"
+                    title="Adicionar campo completo"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>

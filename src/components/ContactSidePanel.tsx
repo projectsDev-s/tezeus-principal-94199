@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Upload, FileText, Paperclip, Pencil, Trash2, Star, Plus } from "lucide-react";
+import { X, Upload, FileText, Paperclip, Pencil, Trash2, Star, Plus, Pin } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,7 @@ export function ContactSidePanel({
     key: '',
     value: ''
   });
+  const [pinnedFields, setPinnedFields] = useState<string[]>([]);
   const [newObservation, setNewObservation] = useState('');
   const [selectedCardId, setSelectedCardId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -261,6 +262,20 @@ export function ContactSidePanel({
       });
     }
   };
+  const handlePinField = () => {
+    if (!newCustomField.key.trim()) return;
+    setPinnedFields(prev => [...prev, newCustomField.key.trim()]);
+    setNewCustomField({ key: '', value: '' });
+    toast({
+      title: "Campo fixado",
+      description: "Agora você pode preencher o valor quando precisar"
+    });
+  };
+
+  const removePinnedField = (index: number) => {
+    setPinnedFields(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleAddCustomField = () => {
     if (!newCustomField.key.trim() || !newCustomField.value.trim()) {
       toast({
@@ -428,36 +443,81 @@ export function ContactSidePanel({
                   <div className="space-y-3 pt-2">
                     <h4 className="text-sm font-semibold">Informações adicionais</h4>
                     
-                    {/* Lista de campos personalizados */}
-                    {customFields.length > 0 && <div className="space-y-2">
-                        {customFields.map((field, index) => <div key={index} className="flex items-center gap-2">
-                            <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                            <div className="flex-1 grid grid-cols-2 gap-2">
-                              <Input value={field.key} readOnly className="text-sm font-medium border-0 bg-transparent px-0" />
-                              <Input value={field.value} readOnly className="text-sm border-0 bg-transparent px-0" />
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleRemoveCustomField(index)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>)}
-                      </div>}
+                    {/* Lista de campos fixados (só nome, sem valor) */}
+                    {pinnedFields.map((fieldName, index) => (
+                      <div key={`pinned-${index}`} className="flex gap-2 items-center">
+                        <Pin className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                        <Input 
+                          value={fieldName} 
+                          readOnly
+                          className="flex-1 font-medium bg-muted text-sm"
+                        />
+                        <Input 
+                          placeholder="Preencher depois..." 
+                          className="flex-1 text-muted-foreground text-sm"
+                          disabled
+                        />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removePinnedField(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
 
-                    {/* Adicionar novo campo */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input id="field-name" placeholder="Nome da compra" value={newCustomField.key} onChange={e => setNewCustomField(prev => ({
-                      ...prev,
-                      key: e.target.value
-                    }))} className="text-sm" />
-                      <Input id="field-value" placeholder="Valor" value={newCustomField.value} onChange={e => setNewCustomField(prev => ({
-                      ...prev,
-                      value: e.target.value
-                    }))} className="text-sm" />
+                    {/* Lista de campos completos (nome + valor) */}
+                    {customFields.map((field, index) => (
+                      <div key={index} className="flex gap-2 items-center">
+                        <Pin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <Input 
+                          value={field.key} 
+                          readOnly 
+                          className="flex-1 text-sm font-medium border-0 bg-transparent px-0"
+                        />
+                        <Input 
+                          value={field.value} 
+                          readOnly 
+                          className="flex-1 text-sm border-0 bg-transparent px-0"
+                        />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveCustomField(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    {/* Inputs para adicionar novo campo */}
+                    <div className="flex gap-2 items-center pt-2 border-t">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={handlePinField}
+                        disabled={!newCustomField.key.trim()}
+                        className="text-yellow-500 hover:text-yellow-600 h-8 w-8"
+                        title="Fixar apenas o nome do campo"
+                      >
+                        <Pin className="h-4 w-4" />
+                      </Button>
+                      <Input 
+                        placeholder="Nome do campo" 
+                        value={newCustomField.key}
+                        onChange={e => setNewCustomField(prev => ({...prev, key: e.target.value}))}
+                        className="flex-1 text-sm"
+                      />
+                      <Input 
+                        placeholder="Valor" 
+                        value={newCustomField.value}
+                        onChange={e => setNewCustomField(prev => ({...prev, value: e.target.value}))}
+                        className="flex-1 text-sm"
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={handleAddCustomField}
+                        disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}
+                        className="text-green-600 hover:text-green-700 h-8 w-8"
+                        title="Adicionar campo completo"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                    
-                    <Button variant="ghost" size="sm" onClick={handleAddCustomField} disabled={!newCustomField.key.trim() || !newCustomField.value.trim()} className="w-full text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar informação
-                    </Button>
                   </div>
 
                   {/* Lista de Negócios */}
