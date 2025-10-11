@@ -51,6 +51,8 @@ export function CRMContatos() {
     name: string;
     value: string;
   }>>([]);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldValue, setNewFieldValue] = useState('');
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -300,11 +302,10 @@ export function CRMContatos() {
       tags: [],
       extra_info: {}
     });
-    // Default fields - Título e Contexto
-    setCustomFields([
-      { name: "Título", value: "" },
-      { name: "Contexto", value: "" }
-    ]);
+    // Start with empty fields
+    setCustomFields([]);
+    setNewFieldName('');
+    setNewFieldValue('');
   };
   const handleEditContact = async (contact: Contact) => {
     setEditingContact(contact);
@@ -327,19 +328,17 @@ export function CRMContatos() {
         }));
         setCustomFields(existingFields);
       } else {
-        // Default fields - Título e Contexto
-        setCustomFields([
-          { name: "Título", value: "" },
-          { name: "Contexto", value: "" }
-        ]);
+        // No existing fields
+        setCustomFields([]);
       }
     } catch (error) {
       console.error('Error loading extra info:', error);
-      setCustomFields([
-        { name: "Título", value: "" },
-        { name: "Contexto", value: "" }
-      ]);
+      setCustomFields([]);
     }
+    
+    // Reset new field inputs
+    setNewFieldName('');
+    setNewFieldValue('');
   };
   const handleSaveContact = async () => {
     if (!editingContact) return;
@@ -468,12 +467,19 @@ export function CRMContatos() {
       setIsSaving(false);
     }
   };
-  const addCustomField = () => {
+  const handleAddNewField = () => {
+    if (!newFieldName.trim() || !newFieldValue.trim()) return;
+    
     setCustomFields(prev => [...prev, {
-      name: "",
-      value: ""
+      name: newFieldName.trim(),
+      value: newFieldValue.trim()
     }]);
+    
+    // Clear inputs
+    setNewFieldName('');
+    setNewFieldValue('');
   };
+  
   const updateCustomField = (index: number, field: 'name' | 'value', value: string) => {
     setCustomFields(prev => prev.map((item, i) => i === index ? {
       ...item,
@@ -753,26 +759,54 @@ export function CRMContatos() {
             <div>
               <Label className="text-sm font-medium">Informações adicionais</Label>
               <div className="space-y-3 mt-2">
-                {customFields.map((field, index) => <div key={index} className="flex gap-2">
-                    <Input 
-                      placeholder={index === 0 ? "Título" : index === 1 ? "Contexto" : "Nome do campo"} 
-                      value={field.name} 
-                      onChange={e => updateCustomField(index, 'name', e.target.value)} 
-                      className="flex-1"
-                      disabled={index === 0 || index === 1} // Título e Contexto são fixos
-                    />
-                    <Input placeholder="Valor" value={field.value} onChange={e => updateCustomField(index, 'value', e.target.value)} className="flex-1" />
-                    {index > 1 && (
-                      <Button variant="ghost" size="sm" onClick={() => removeCustomField(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>)}
                 
-                <Button variant="ghost" size="sm" onClick={addCustomField} className="text-yellow-600 hover:text-yellow-700">
+                {/* Inputs para adicionar novo campo */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Input 
+                    placeholder="Nome do campo" 
+                    value={newFieldName}
+                    onChange={e => setNewFieldName(e.target.value)}
+                  />
+                  <Input 
+                    placeholder="Valor" 
+                    value={newFieldValue}
+                    onChange={e => setNewFieldValue(e.target.value)}
+                  />
+                </div>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleAddNewField}
+                  disabled={!newFieldName.trim() || !newFieldValue.trim()}
+                  className="text-yellow-600 hover:text-yellow-700"
+                >
                   <Plus className="h-4 w-4 mr-1" />
                   Adicionar Informação
                 </Button>
+
+                {/* Lista de campos adicionados */}
+                {customFields.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    {customFields.map((field, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input 
+                          value={field.name} 
+                          onChange={e => updateCustomField(index, 'name', e.target.value)} 
+                          className="flex-1"
+                        />
+                        <Input 
+                          value={field.value} 
+                          onChange={e => updateCustomField(index, 'value', e.target.value)} 
+                          className="flex-1"
+                        />
+                        <Button variant="ghost" size="sm" onClick={() => removeCustomField(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
