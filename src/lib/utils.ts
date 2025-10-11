@@ -23,3 +23,19 @@ export const CONNECTION_COLORS = [
 export function getRandomConnectionColor(): string {
   return CONNECTION_COLORS[Math.floor(Math.random() * CONNECTION_COLORS.length)];
 }
+
+// Gera cor consistente baseada no ID da conexão
+export function getConnectionColor(connectionId: string, metadata?: any): string {
+  // Se já tem cor salva, usa ela
+  if (metadata?.border_color) {
+    return metadata.border_color;
+  }
+  
+  // Senão, gera cor baseada no hash do ID
+  let hash = 0;
+  for (let i = 0; i < connectionId.length; i++) {
+    hash = connectionId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % CONNECTION_COLORS.length;
+  return CONNECTION_COLORS[index];
+}

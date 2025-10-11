@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getConnectionColor } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1255,10 +1256,14 @@ export function WhatsAppChat({
                   {/* Status indicator bar - cor da conexão */}
                   <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
                     backgroundColor: (() => {
-                      // Prioridade: cor da conexão > status do agente
-                      if (conversation.connection?.metadata?.border_color) {
-                        return conversation.connection.metadata.border_color;
+                      // Se tem conexão, usa cor da conexão (salva ou gerada por hash)
+                      if (conversation.connection) {
+                        return getConnectionColor(
+                          conversation.connection.id, 
+                          conversation.connection.metadata
+                        );
                       }
+                      // Senão, usa lógica do agente
                       return conversation.agente_ativo ? 'rgb(83, 0, 235)' : 'rgb(76, 175, 80)';
                     })()
                   }} title={conversation.connection?.instance_name || (conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO')} />
