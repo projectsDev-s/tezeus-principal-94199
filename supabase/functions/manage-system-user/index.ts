@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
         console.log('Filtered users for admin:', filteredUsers.length, 'out of', users.length);
       }
 
-      // Enrich users with workspace information
+      // Enrich users with workspace information and cargo names
       if (filteredUsers && filteredUsers.length > 0) {
         const userIds = filteredUsers.map(user => user.id);
         
@@ -225,13 +225,32 @@ Deno.serve(async (req) => {
           .select('id, name')
           .in('id', workspaceIds);
 
+        // Get cargo associations for filtered users
+        const { data: userCargos } = await supabase
+          .from('system_user_cargos')
+          .select('user_id, cargo_id')
+          .in('user_id', userIds);
+
+        // Get all cargo IDs
+        const cargoIds = userCargos ? Array.from(new Set(userCargos.map(uc => uc.cargo_id))) : [];
+        const { data: cargos } = await supabase
+          .from('cargos')
+          .select('id, nome')
+          .in('id', cargoIds);
+
         // Create workspace lookup
         const workspaceMap = new Map();
         if (workspaces) {
           workspaces.forEach(ws => workspaceMap.set(ws.id, ws));
         }
 
-        // Enrich each user with workspace data
+        // Create cargo lookup
+        const cargoMap = new Map();
+        if (cargos) {
+          cargos.forEach(c => cargoMap.set(c.id, c.nome));
+        }
+
+        // Enrich each user with workspace data and cargo names
         const enrichedUsers = filteredUsers.map(user => {
           const userMemberships = memberships ? memberships.filter(m => m.user_id === user.id) : [];
           const userWorkspaces = userMemberships.map(m => ({
@@ -239,6 +258,10 @@ Deno.serve(async (req) => {
             name: workspaceMap.get(m.workspace_id)?.name || 'Workspace não encontrado',
             role: m.role
           }));
+
+          // Get user's cargo names
+          const userCargoAssociations = userCargos ? userCargos.filter(uc => uc.user_id === user.id) : [];
+          const cargoNames = userCargoAssociations.map(uc => cargoMap.get(uc.cargo_id)).filter(Boolean);
 
           // Create empresa summary string
           let empresa = '-';
@@ -253,7 +276,8 @@ Deno.serve(async (req) => {
           return {
             ...user,
             workspaces: userWorkspaces,
-            empresa
+            empresa,
+            cargo_names: cargoNames
           };
         });
 
