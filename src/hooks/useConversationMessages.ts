@@ -266,20 +266,13 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     }
    }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
-  // Effect para limpar cache e recarregar mensagens quando workspace muda
+  // Limpar cache quando o workspace muda (sem recarregar automaticamente)
   useEffect(() => {
-    if (currentConversationId) {
-      // Workspace changed - reloading conversation
-      // Limpar todo o cache
+    if (selectedWorkspace?.workspace_id) {
       cacheRef.current.clear();
-      // Limpar mensagens atuais
-      setMessages([]);
-      setHasMore(true);
-      setCursorBefore(null);
-      // Recarregar mensagens da conversa atual
-      loadInitial(currentConversationId);
+      console.log('🗑️ Cache limpo devido à mudança de workspace');
     }
-  }, [selectedWorkspace?.workspace_id, currentConversationId, loadInitial]);
+  }, [selectedWorkspace?.workspace_id]);
 
   // Limpar cache antigo a cada 30 segundos
   useEffect(() => {
