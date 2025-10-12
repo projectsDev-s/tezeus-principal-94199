@@ -393,7 +393,7 @@ export function ContactSidePanel({
 
               {/* Seção: Dados do contato */}
               <Card className="border-0 shadow-none rounded-none overflow-hidden">
-                <CardContent className="p-0 relative min-h-[280px]">
+                <CardContent className="p-0 relative max-h-[500px]">
                   {/* Background image com overlay */}
                   <div 
                     className="absolute inset-0 bg-contain bg-center bg-no-repeat"
