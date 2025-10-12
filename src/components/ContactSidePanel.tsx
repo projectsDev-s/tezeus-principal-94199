@@ -89,6 +89,7 @@ export function ContactSidePanel({
   const [editingContent, setEditingContent] = useState('');
   const [deletingObservationId, setDeletingObservationId] = useState<string | null>(null);
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
 
   // Hook para buscar pipelines reais
   const {
@@ -398,52 +399,70 @@ export function ContactSidePanel({
 
               {/* Seção: Dados do contato */}
               <Card>
-                <CardContent className="space-y-4 pt-6">
-                  {/* Avatar e título */}
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16">
-                      {editingContact?.profile_image_url && <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />}
-                      <AvatarFallback className="text-white font-medium" style={{
-                      backgroundColor: getAvatarColor(editingContact?.name || '')
-                    }}>
+                <CardContent className="pt-6 pb-6">
+                  <div className="flex flex-col items-center space-y-3">
+                    {/* Avatar centralizado */}
+                    <Avatar className="h-24 w-24 border-4 border-white shadow-md">
+                      {editingContact?.profile_image_url && (
+                        <AvatarImage 
+                          src={editingContact.profile_image_url} 
+                          alt={editingContact.name} 
+                          className="object-cover" 
+                        />
+                      )}
+                      <AvatarFallback 
+                        className="text-white font-medium text-2xl" 
+                        style={{
+                          backgroundColor: getAvatarColor(editingContact?.name || '')
+                        }}
+                      >
                         {getInitials(editingContact?.name || '')}
                       </AvatarFallback>
                     </Avatar>
-                    <h3 className="text-base font-semibold">Dados do contato</h3>
-                  </div>
 
-                  {/* Campos editáveis */}
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <Label htmlFor="name">Nome</Label>
-                      <Input id="name" value={editingContact?.name || ''} onChange={e => setEditingContact(prev => prev ? {
-                      ...prev,
-                      name: e.target.value
-                    } : null)} />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="phone">Telefone</Label>
+                    {/* Nome editável (inline) */}
+                    <div className="w-full max-w-sm">
                       <Input 
-                        id="phone" 
-                        value={editingContact?.phone || ''} 
-                        readOnly
-                        disabled
-                        className="bg-muted cursor-not-allowed"
-                        title="O telefone não pode ser alterado após a criação do contato"
+                        value={editingContact?.name || ''} 
+                        onChange={(e) => setEditingContact(prev => prev ? {
+                          ...prev,
+                          name: e.target.value
+                        } : null)}
+                        className="text-lg font-semibold text-center border-none bg-transparent focus:bg-white focus:border-input hover:bg-muted/50 transition-colors"
+                        placeholder="Nome do contato"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        ⚠️ O número não pode ser alterado para preservar o histórico de conversas
+                    </div>
+
+                    {/* Telefone (não editável) */}
+                    <p className="text-sm text-muted-foreground">
+                      {editingContact?.phone || 'Sem telefone'}
+                    </p>
+
+                    {/* Email editável com duplo clique */}
+                    {isEditingEmail ? (
+                      <Input
+                        type="email"
+                        value={editingContact?.email || ''}
+                        onChange={(e) => setEditingContact(prev => prev ? {
+                          ...prev,
+                          email: e.target.value
+                        } : null)}
+                        onBlur={async () => {
+                          setIsEditingEmail(false);
+                          await handleSaveContact();
+                        }}
+                        autoFocus
+                        className="text-sm text-center border rounded-md px-3 py-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    ) : (
+                      <p
+                        onDoubleClick={() => setIsEditingEmail(true)}
+                        className="text-sm text-primary cursor-pointer hover:underline"
+                        title="Clique duas vezes para editar"
+                      >
+                        {editingContact?.email || 'Adicionar email'}
                       </p>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" value={editingContact?.email || ''} onChange={e => setEditingContact(prev => prev ? {
-                      ...prev,
-                      email: e.target.value
-                    } : null)} />
-                    </div>
+                    )}
                   </div>
 
                   {/* Informações adicionais integradas */}
