@@ -392,75 +392,77 @@ export function ContactSidePanel({
               {deals.length > 0}
 
               {/* Seção: Dados do contato */}
-              <Card className="border-0 shadow-none rounded-none">
-                <CardContent className="p-0 relative max-h-[500px] h-full overflow-hidden">
-                  {/* Background image com overlay */}
-                  <div 
-                    className="absolute inset-0 bg-contain bg-center bg-no-repeat"
-                    style={{ backgroundImage: `url(${contactBackground})` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <Card className="border-0 shadow-none rounded-none overflow-visible">
+                <CardContent className="p-0">
+                  {/* Banner Header */}
+                  <div className="relative h-48 bg-cover bg-center" 
+                       style={{ backgroundImage: `url(${contactBackground})` }}>
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60" />
+                  </div>
                   
-                  {/* Conteúdo */}
-                  <div className="relative flex flex-col items-center space-y-3 pt-8 pb-8 z-10">
-                    {/* Avatar centralizado */}
-                    <Avatar className="h-24 w-24 border-4 border-white shadow-md rounded-full">
-                      {editingContact?.profile_image_url && (
-                        <AvatarImage 
-                          src={editingContact.profile_image_url} 
-                          alt={editingContact.name} 
-                          className="object-cover" 
-                        />
-                      )}
-                      <AvatarFallback 
-                        className="text-white font-medium text-2xl" 
-                        style={{
-                          backgroundColor: getAvatarColor(editingContact?.name || '')
-                        }}
-                      >
-                        {getInitials(editingContact?.name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    {/* Nome - não editável */}
-                    <h2 className="text-lg font-semibold text-white drop-shadow-md">
-                      {editingContact?.name || 'Nome do contato'}
-                    </h2>
-
-                    {/* Telefone (não editável) */}
-                    <p className="text-sm text-gray-100">
-                      {editingContact?.phone || 'Sem telefone'}
-                    </p>
-
-                    {/* Email editável com duplo clique */}
-                    {isEditingEmail ? (
-                      <Input
-                        type="email"
-                        value={editingContact?.email || ''}
-                        onChange={(e) => setEditingContact(prev => prev ? {
-                          ...prev,
-                          email: e.target.value
-                        } : null)}
-                        onBlur={async () => {
-                          setIsEditingEmail(false);
-                          await handleSaveContact();
-                        }}
-                        autoFocus
-                        className="text-sm text-center border rounded px-2 py-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-ring bg-white"
-                      />
-                    ) : (
-                      <p
-                        onDoubleClick={() => setIsEditingEmail(true)}
-                        className="text-sm text-gray-200 cursor-pointer hover:underline"
-                        title="Clique duas vezes para editar"
-                      >
-                        {editingContact?.email || 'Adicionar email'}
+                  {/* Área de Informações com Avatar */}
+                  <div className="relative bg-background pt-14 pb-6 -mt-12">
+                    {/* Avatar sobreposto */}
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+                        {editingContact?.profile_image_url && (
+                          <AvatarImage 
+                            src={editingContact.profile_image_url} 
+                            alt={editingContact.name || 'Contato'}
+                            className="object-cover"
+                          />
+                        )}
+                        <AvatarFallback 
+                          className="text-xl font-semibold"
+                          style={{ 
+                            backgroundColor: getAvatarColor(editingContact?.name || 'Contato')
+                          }}
+                        >
+                          {getInitials(editingContact?.name || 'Contato')}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    
+                    {/* Informações centralizadas */}
+                    <div className="flex flex-col items-center space-y-2 px-4">
+                      <h2 className="text-xl font-semibold text-foreground">
+                        {editingContact?.name || 'Nome do contato'}
+                      </h2>
+                      
+                      <p className="text-sm text-muted-foreground">
+                        {editingContact?.phone || 'Sem telefone'}
                       </p>
-                    )}
+                      
+                      {/* Email editável */}
+                      {isEditingEmail ? (
+                        <Input 
+                          type="email"
+                          value={editingContact?.email || ''} 
+                          onChange={(e) => setEditingContact(prev => prev ? {
+                            ...prev,
+                            email: e.target.value
+                          } : null)}
+                          onBlur={async () => {
+                            setIsEditingEmail(false);
+                            await handleSaveContact();
+                          }}
+                          autoFocus
+                          className="text-sm text-center border rounded px-2 py-1 max-w-xs"
+                        />
+                      ) : (
+                        <p
+                          onDoubleClick={() => setIsEditingEmail(true)}
+                          className="text-sm text-muted-foreground cursor-pointer hover:underline"
+                          title="Clique duas vezes para editar"
+                        >
+                          {editingContact?.email || 'Adicionar email'}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Informações adicionais integradas */}
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-3 pt-2 px-6">
                     <h4 className="text-sm font-semibold">Informações adicionais</h4>
                     
                     {/* Lista de campos fixados (só nome, sem valor) */}
