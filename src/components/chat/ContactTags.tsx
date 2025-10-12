@@ -91,7 +91,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             fill={tag.color}
           />
           <span 
-            className="absolute left-6 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 pointer-events-none"
             style={{ 
               backgroundColor: 'white',
               borderColor: tag.color,
