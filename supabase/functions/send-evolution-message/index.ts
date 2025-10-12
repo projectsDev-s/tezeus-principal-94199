@@ -214,6 +214,23 @@ serve(async (req) => {
       status: responseData.status
     });
 
+    // Salvar evolution_key_id no banco de dados para permitir ACKs futuros
+    if (responseData.key?.id && messageId) {
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update({ 
+          evolution_key_id: responseData.key.id,
+          external_id: responseData.key.id
+        })
+        .eq('id', messageId);
+
+      if (updateError) {
+        console.error(`⚠️ [${messageId}] Failed to save evolution_key_id:`, updateError);
+      } else {
+        console.log(`💾 [${messageId}] evolution_key_id saved: ${responseData.key.id}`);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       method: 'evolution_direct',
