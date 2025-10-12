@@ -399,12 +399,12 @@ export function ContactSidePanel({
                     className="absolute inset-0 bg-contain bg-center bg-no-repeat"
                     style={{ backgroundImage: `url(${contactBackground})` }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   
                   {/* Conteúdo */}
-                  <div className="relative flex flex-col items-center space-y-3 pt-6 pb-6 z-10 h-full">
+                  <div className="relative flex flex-col items-center space-y-3 pt-8 pb-8 z-10">
                     {/* Avatar centralizado */}
-                    <Avatar className="h-24 w-24 border-4 border-white shadow-md">
+                    <Avatar className="h-24 w-24 border-4 border-white shadow-md rounded-full">
                       {editingContact?.profile_image_url && (
                         <AvatarImage 
                           src={editingContact.profile_image_url} 
@@ -422,33 +422,13 @@ export function ContactSidePanel({
                       </AvatarFallback>
                     </Avatar>
 
-                    {/* Nome editável com duplo clique */}
-                    {isEditingName ? (
-                      <Input 
-                        value={editingContact?.name || ''} 
-                        onChange={(e) => setEditingContact(prev => prev ? {
-                          ...prev,
-                          name: e.target.value
-                        } : null)}
-                        onBlur={async () => {
-                          setIsEditingName(false);
-                          await handleSaveContact();
-                        }}
-                        autoFocus
-                        className="text-lg font-semibold text-center border rounded-md px-3 py-1 max-w-sm focus:outline-none focus:ring-2 focus:ring-ring bg-white"
-                      />
-                    ) : (
-                      <h2
-                        onDoubleClick={() => setIsEditingName(true)}
-                        className="text-lg font-semibold text-white drop-shadow-lg cursor-pointer hover:underline"
-                        title="Clique duas vezes para editar"
-                      >
-                        {editingContact?.name || 'Nome do contato'}
-                      </h2>
-                    )}
+                    {/* Nome - não editável */}
+                    <h2 className="text-lg font-semibold text-white drop-shadow-md">
+                      {editingContact?.name || 'Nome do contato'}
+                    </h2>
 
                     {/* Telefone (não editável) */}
-                    <p className="text-sm text-white drop-shadow-lg">
+                    <p className="text-sm text-gray-100">
                       {editingContact?.phone || 'Sem telefone'}
                     </p>
 
@@ -466,12 +446,12 @@ export function ContactSidePanel({
                           await handleSaveContact();
                         }}
                         autoFocus
-                        className="text-sm text-center border rounded-md px-3 py-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-ring bg-white"
+                        className="text-sm text-center border rounded px-2 py-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-ring bg-white"
                       />
                     ) : (
                       <p
                         onDoubleClick={() => setIsEditingEmail(true)}
-                        className="text-sm text-white drop-shadow-lg cursor-pointer hover:underline"
+                        className="text-sm text-gray-200 cursor-pointer hover:underline"
                         title="Clique duas vezes para editar"
                       >
                         {editingContact?.email || 'Adicionar email'}
