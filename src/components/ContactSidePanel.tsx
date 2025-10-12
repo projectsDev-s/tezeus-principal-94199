@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import contactBackground from "@/assets/contact-background.png";
 import { X, Upload, FileText, Paperclip, Pencil, Trash2, Star, Plus, Pin } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -391,8 +392,16 @@ export function ContactSidePanel({
 
               {/* Seção: Dados do contato */}
               <Card className="border-0 shadow-none rounded-none">
-                <CardContent className="p-0">
-                  <div className="flex flex-col items-center space-y-3 pt-6 pb-6">
+                <CardContent className="p-0 relative">
+                  {/* Background image com overlay */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${contactBackground})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+                  
+                  {/* Conteúdo */}
+                  <div className="relative flex flex-col items-center space-y-3 pt-6 pb-6 z-10">
                     {/* Avatar centralizado */}
                     <Avatar className="h-24 w-24 border-4 border-white shadow-md">
                       {editingContact?.profile_image_url && (
@@ -420,13 +429,13 @@ export function ContactSidePanel({
                           ...prev,
                           name: e.target.value
                         } : null)}
-                        className="text-lg font-semibold text-center border-none bg-transparent focus:bg-white focus:border-input hover:bg-muted/50 transition-colors"
+                        className="text-lg font-semibold text-center border-none bg-white/90 focus:bg-white focus:border-input hover:bg-white/95 transition-colors text-foreground"
                         placeholder="Nome do contato"
                       />
                     </div>
 
                     {/* Telefone (não editável) */}
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-white drop-shadow-lg">
                       {editingContact?.phone || 'Sem telefone'}
                     </p>
 
@@ -444,12 +453,12 @@ export function ContactSidePanel({
                           await handleSaveContact();
                         }}
                         autoFocus
-                        className="text-sm text-center border rounded-md px-3 py-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="text-sm text-center border rounded-md px-3 py-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-ring bg-white"
                       />
                     ) : (
                       <p
                         onDoubleClick={() => setIsEditingEmail(true)}
-                        className="text-sm text-primary cursor-pointer hover:underline"
+                        className="text-sm text-white drop-shadow-lg cursor-pointer hover:underline"
                         title="Clique duas vezes para editar"
                       >
                         {editingContact?.email || 'Adicionar email'}
