@@ -14,12 +14,35 @@ interface AddTagButtonProps {
 export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }: AddTagButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const { 
     availableTags,
     conversationTags,
     addTagToConversation
   } = useConversationTags(conversationId);
+
+  const handleMouseEnter = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setIsHovered(false);
+    }, 1000);
+    setHideTimeout(timeout);
+  };
+
+  const handlePillMouseEnter = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+  };
 
   // Verificar quais tags já estão atribuídas à conversa
   const assignedTagIds = conversationTags.map(ct => ct.tag_id);
@@ -35,8 +58,8 @@ export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }:
       <PopoverTrigger asChild>
         <div 
           className="relative flex items-center"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           {/* Botão circular com + */}
           <Button
@@ -48,11 +71,15 @@ export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }:
           </Button>
           
           {/* Pill hover - Imagem 2 */}
-          {isHovered && (
-            <div className="absolute left-8 top-0 flex items-center h-6 px-2 bg-popover border border-dashed border-border rounded-full text-xs text-muted-foreground whitespace-nowrap z-10">
-              + Adicionar tag
-            </div>
-          )}
+          <div 
+            onMouseEnter={handlePillMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            className={`absolute left-8 top-0 flex items-center h-6 px-2 bg-popover border border-dashed border-border rounded-full text-xs text-muted-foreground whitespace-nowrap z-10 -translate-x-1 transition-all duration-300 ease-out ${
+              isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            + Adicionar tag
+          </div>
         </div>
       </PopoverTrigger>
       
