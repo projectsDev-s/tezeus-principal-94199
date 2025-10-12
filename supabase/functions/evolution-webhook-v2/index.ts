@@ -800,8 +800,9 @@ serve(async (req) => {
           messageKeys: payload.data?.message ? Object.keys(payload.data.message) : []
         });
 
-        // For MESSAGES_UPDATE events, fetch message UUID from database
+        // For MESSAGES_UPDATE events, fetch message UUID and full data from database
         let dbMessageId = null;
+        let fullMessageData = null;
         if (payload.event?.toLowerCase() === 'messages.update') {
           const evolutionKeyId = payload.data?.keyId || payload.data?.key?.id;
           const evolutionMessageId = payload.data?.messageId;
@@ -810,7 +811,22 @@ serve(async (req) => {
             // Try to find message by evolution_key_id first, then by external_id
             let query = supabase
               .from('messages')
-              .select('id, conversation_id')
+              .select(`
+                id,
+                content,
+                message_type,
+                status,
+                conversation_id,
+                conversation:conversations (
+                  id,
+                  status,
+                  contact:contacts (
+                    id,
+                    name,
+                    phone
+                  )
+                )
+              `)
               .limit(1);
             
             if (evolutionKeyId) {
@@ -823,7 +839,14 @@ serve(async (req) => {
             
             if (msgData) {
               dbMessageId = msgData.id;
+              fullMessageData = msgData;
               console.log(`🔑 [${requestId}] Found message UUID from DB: ${dbMessageId} (conversation: ${msgData.conversation_id})`);
+              console.log(`📧 [${requestId}] Full message data retrieved for N8N:`, {
+                content: msgData.content,
+                message_type: msgData.message_type,
+                contact_name: msgData.conversation?.contact?.name,
+                contact_phone: msgData.conversation?.contact?.phone
+              });
             } else {
               console.log(`⚠️ [${requestId}] Message not found in DB - keyId: ${evolutionKeyId}, messageId: ${evolutionMessageId}`);
             }
@@ -843,6 +866,19 @@ serve(async (req) => {
           
           // Include message UUID from database if available (for N8N to anchor updates)
           ...(dbMessageId && { message_id: dbMessageId }),
+          
+          // Include full message data if this is a status update event
+          ...(fullMessageData && {
+            message_data: {
+              id: fullMessageData.id,
+              content: fullMessageData.content,
+              message_type: fullMessageData.message_type,
+              status: fullMessageData.status,
+              conversation_id: fullMessageData.conversation_id,
+              contact_name: fullMessageData.conversation?.contact?.name,
+              contact_phone: fullMessageData.conversation?.contact?.phone
+            }
+          }),
           
           // Event type identification for N8N processing (based on original event)
           event_type: (() => {
