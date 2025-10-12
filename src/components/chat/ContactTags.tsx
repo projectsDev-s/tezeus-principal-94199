@@ -89,14 +89,22 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             borderColor: tag.color,
             color: tag.color
           }}
-          className="group relative text-xs px-1.5 py-0.5 h-auto rounded-full font-medium flex items-center gap-0 overflow-hidden"
+          className="group relative text-xs px-1.5 py-0.5 h-auto rounded-full font-medium flex items-center gap-0"
         >
           <Tag 
             className="w-3 h-3 flex-shrink-0" 
             style={{ color: tag.color }} 
             fill={tag.color}
           />
-          <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[200px] transition-all duration-300 ease-out ml-1">
+          <span 
+            className="absolute left-6 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 rounded-full z-[9999]"
+            style={{ 
+              backgroundColor: `${tag.color}15`,
+              borderColor: tag.color,
+              color: tag.color,
+              border: `1px solid ${tag.color}`
+            }}
+          >
             {tag.name}
           </span>
           <button
