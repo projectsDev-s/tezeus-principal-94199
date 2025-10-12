@@ -403,7 +403,7 @@ export function ContactSidePanel({
                   {/* Conteúdo sobre o banner */}
                   <div className="relative z-10 flex flex-col items-center pt-4">
                     {/* Avatar */}
-                    <Avatar className="h-20 w-20 border-3 border-white shadow-lg">
+                    <Avatar className="h-20 w-20 border-2 border-white shadow-lg">
                       {editingContact?.profile_image_url && (
                         <AvatarImage 
                           src={editingContact.profile_image_url} 
