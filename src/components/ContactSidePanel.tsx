@@ -394,9 +394,9 @@ export function ContactSidePanel({
               {/* Seção: Dados do contato */}
             <Card className="border-0 shadow-none rounded-none overflow-hidden">
               <CardContent className="p-0">
-                {/* Banner Header com todas informações dentro */}
-                <div className="relative h-32 bg-cover bg-center" 
-                     style={{ backgroundImage: `url(${contactBackground})` }}>
+    {/* Banner Header com todas informações dentro */}
+    <div className="relative h-48 bg-cover bg-center" 
+         style={{ backgroundImage: `url(${contactBackground})` }}>
                   {/* Overlay para legibilidade */}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/50" />
                   
