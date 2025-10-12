@@ -392,8 +392,8 @@ export function ContactSidePanel({
               {deals.length > 0}
 
               {/* Seção: Dados do contato */}
-              <Card className="border-0 shadow-none rounded-none overflow-hidden">
-                <CardContent className="p-0 relative max-h-[500px]">
+              <Card className="border-0 shadow-none rounded-none">
+                <CardContent className="p-0 relative max-h-[500px] h-full overflow-hidden">
                   {/* Background image com overlay */}
                   <div 
                     className="absolute inset-0 bg-contain bg-center bg-no-repeat"
@@ -402,7 +402,7 @@ export function ContactSidePanel({
                   <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
                   
                   {/* Conteúdo */}
-                  <div className="relative flex flex-col items-center space-y-3 pt-6 pb-6 z-10">
+                  <div className="relative flex flex-col items-center space-y-3 pt-6 pb-6 z-10 h-full">
                     {/* Avatar centralizado */}
                     <Avatar className="h-24 w-24 border-4 border-white shadow-md">
                       {editingContact?.profile_image_url && (
