@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { X, Bookmark } from "lucide-react";
+import { X, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -91,7 +91,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
           }}
           className="group relative text-xs px-1.5 py-0.5 h-auto rounded-full font-medium flex items-center gap-0 overflow-hidden"
         >
-          <Bookmark 
+          <Tag 
             className="w-3 h-3 flex-shrink-0" 
             style={{ color: tag.color }} 
             fill={tag.color}
