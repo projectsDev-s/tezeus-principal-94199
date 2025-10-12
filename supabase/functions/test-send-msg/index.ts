@@ -218,26 +218,29 @@ serve(async (req) => {
       });
     }
 
-    // Buscar credenciais da Evolution API do workspace
-    console.log(`🔍 [${requestId}] Fetching Evolution credentials for workspace`);
-    const { data: evolutionConfig, error: evolutionError } = await supabase
+    // Buscar credenciais da Evolution API do _master_config (URL + API Key Global)
+    console.log(`🔍 [${requestId}] Fetching Evolution credentials from _master_config`);
+    const { data: masterConfig, error: configError } = await supabase
       .from('evolution_instance_tokens')
       .select('evolution_url, token')
-      .eq('instance_name', instance_name)
+      .eq('workspace_id', conversation.workspace_id)
+      .eq('instance_name', '_master_config')
       .maybeSingle();
 
-    if (evolutionError || !evolutionConfig) {
-      console.error(`❌ [${requestId}] Evolution config not found:`, evolutionError);
+    if (configError || !masterConfig) {
+      console.error(`❌ [${requestId}] Master config not found:`, configError);
       return new Response(JSON.stringify({
-        error: 'Evolution API configuration not found',
-        details: evolutionError?.message
+        error: 'Evolution API not configured for this workspace',
+        details: configError?.message
       }), {
         status: 424,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`✅ [${requestId}] Evolution config found: ${evolutionConfig.evolution_url}`);
+    const evolutionUrl = masterConfig.evolution_url;
+    const evolutionApiKey = masterConfig.token;
+    console.log(`✅ [${requestId}] Evolution config found: ${evolutionUrl}`);
 
 
     // Generate external_id for tracking
@@ -303,8 +306,8 @@ serve(async (req) => {
     
     // Construir payload para Evolution baseado no tipo de mensagem
     const evolutionEndpoint = message_type === 'text'
-      ? `${evolutionConfig.evolution_url}/message/sendText/${instance_name}`
-      : `${evolutionConfig.evolution_url}/message/sendMedia/${instance_name}`;
+      ? `${evolutionUrl}/message/sendText/${instance_name}`
+      : `${evolutionUrl}/message/sendMedia/${instance_name}`;
 
     let evolutionPayload: any;
 
@@ -334,7 +337,7 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': evolutionConfig.token
+          'apikey': evolutionApiKey
         },
         body: JSON.stringify(evolutionPayload),
         signal: AbortSignal.timeout(20000)
