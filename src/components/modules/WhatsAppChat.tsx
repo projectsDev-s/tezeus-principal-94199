@@ -1243,7 +1243,7 @@ export function WhatsAppChat({
                 <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada</p>
                 <p className="text-xs text-muted-foreground">Configure conexões WhatsApp para ver conversas</p>
               </div>
-            </div> : <div className="space-y-0">
+            </div> : <div className="space-y-0 group/list flex flex-col">
             {getFilteredConversations().map(conversation => {
             // ✅ Removido lastMessage (lazy loading)
             const lastActivity = getActivityDisplay(conversation);
@@ -1252,7 +1252,7 @@ export function WhatsAppChat({
             return <li key={conversation.id} className="list-none">
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
-                      <div className={cn("relative flex items-center px-4 py-2 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50", selectedConversation?.id === conversation.id && "bg-muted")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
+                      <div className={cn("relative flex items-center px-4 py-2 cursor-pointer rounded-lg transition-all duration-200 border-b border-border/50", "group-hover/list:opacity-40 hover:!opacity-100 hover:shadow-md hover:scale-[1.01] hover:bg-white hover:z-10", selectedConversation?.id === conversation.id && "bg-muted !opacity-100")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
                   {/* Status indicator bar - cor da conexão */}
                   <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
                     backgroundColor: (() => {
