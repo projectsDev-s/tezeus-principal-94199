@@ -91,7 +91,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             fill={tag.color}
           />
           <span 
-            className="absolute left-6 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1"
+            className="absolute left-6 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 pointer-events-none"
             style={{ 
               backgroundColor: 'white',
               borderColor: tag.color,
@@ -105,7 +105,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
                 e.stopPropagation();
                 removeTag(tag.id);
               }}
-              className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0"
+              className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0 pointer-events-auto"
               disabled={isLoading}
             >
               <X className="w-3 h-3" />
