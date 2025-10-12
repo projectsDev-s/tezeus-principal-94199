@@ -390,9 +390,9 @@ export function ContactSidePanel({
               {deals.length > 0}
 
               {/* Seção: Dados do contato */}
-              <Card>
-                <CardContent className="pt-6 pb-6">
-                  <div className="flex flex-col items-center space-y-3">
+              <Card className="border-0 shadow-none">
+                <CardContent className="p-0">
+                  <div className="flex flex-col items-center space-y-3 pt-8 px-6 pb-6">
                     {/* Avatar centralizado */}
                     <Avatar className="h-24 w-24 border-4 border-white shadow-md">
                       {editingContact?.profile_image_url && (
