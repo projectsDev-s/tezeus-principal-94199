@@ -15,7 +15,7 @@ serve(async (req) => {
   
   try {
     requestBody = await req.json();
-    const { messageId, phoneNumber, content, messageType = 'text', fileUrl, fileName, evolutionInstance } = requestBody;
+    const { messageId, phoneNumber, content, messageType = 'text', fileUrl, fileName, evolutionInstance, external_id } = requestBody;
     
     if (!evolutionInstance) {
       return new Response(JSON.stringify({
@@ -215,19 +215,24 @@ serve(async (req) => {
     });
 
     // Salvar evolution_key_id no banco de dados para permitir ACKs futuros
-    if (responseData.key?.id && messageId) {
+    if (responseData.key?.id) {
+      const searchBy = external_id || messageId;
+      const searchColumn = external_id ? 'external_id' : 'id';
+      
+      console.log(`🔍 [${messageId}] Procurando mensagem por ${searchColumn}: ${searchBy}`);
+      
       const { error: updateError } = await supabase
         .from('messages')
         .update({ 
           evolution_key_id: responseData.key.id,
-          external_id: responseData.key.id
+          status: 'sent'
         })
-        .eq('id', messageId);
+        .eq(searchColumn, searchBy);
 
       if (updateError) {
         console.error(`⚠️ [${messageId}] Failed to save evolution_key_id:`, updateError);
       } else {
-        console.log(`💾 [${messageId}] evolution_key_id saved: ${responseData.key.id}`);
+        console.log(`💾 [${messageId}] evolution_key_id saved: ${responseData.key.id} (found by ${searchColumn}: ${searchBy})`);
       }
     }
 
