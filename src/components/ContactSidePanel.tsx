@@ -393,13 +393,13 @@ export function ContactSidePanel({
 
               {/* Seção: Dados do contato */}
               <Card className="border-0 shadow-none rounded-none overflow-hidden">
-                <CardContent className="p-0 relative">
+                <CardContent className="p-0 relative min-h-[280px]">
                   {/* Background image com overlay */}
                   <div 
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    className="absolute inset-0 bg-contain bg-center bg-no-repeat"
                     style={{ backgroundImage: `url(${contactBackground})` }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
                   
                   {/* Conteúdo */}
                   <div className="relative flex flex-col items-center space-y-3 pt-6 pb-6 z-10">
