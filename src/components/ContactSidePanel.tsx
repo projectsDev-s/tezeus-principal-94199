@@ -91,6 +91,7 @@ export function ContactSidePanel({
   const [deletingObservationId, setDeletingObservationId] = useState<string | null>(null);
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // Hook para buscar pipelines reais
   const {
@@ -391,11 +392,11 @@ export function ContactSidePanel({
               {deals.length > 0}
 
               {/* Seção: Dados do contato */}
-              <Card className="border-0 shadow-none rounded-none">
+              <Card className="border-0 shadow-none rounded-none overflow-hidden">
                 <CardContent className="p-0 relative">
                   {/* Background image com overlay */}
                   <div 
-                    className="absolute inset-0 bg-cover bg-center"
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{ backgroundImage: `url(${contactBackground})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
@@ -421,18 +422,30 @@ export function ContactSidePanel({
                       </AvatarFallback>
                     </Avatar>
 
-                    {/* Nome editável (inline) */}
-                    <div className="w-full max-w-sm">
+                    {/* Nome editável com duplo clique */}
+                    {isEditingName ? (
                       <Input 
                         value={editingContact?.name || ''} 
                         onChange={(e) => setEditingContact(prev => prev ? {
                           ...prev,
                           name: e.target.value
                         } : null)}
-                        className="text-lg font-semibold text-center border-none bg-white/90 focus:bg-white focus:border-input hover:bg-white/95 transition-colors text-foreground"
-                        placeholder="Nome do contato"
+                        onBlur={async () => {
+                          setIsEditingName(false);
+                          await handleSaveContact();
+                        }}
+                        autoFocus
+                        className="text-lg font-semibold text-center border rounded-md px-3 py-1 max-w-sm focus:outline-none focus:ring-2 focus:ring-ring bg-white"
                       />
-                    </div>
+                    ) : (
+                      <h2
+                        onDoubleClick={() => setIsEditingName(true)}
+                        className="text-lg font-semibold text-white drop-shadow-lg cursor-pointer hover:underline"
+                        title="Clique duas vezes para editar"
+                      >
+                        {editingContact?.name || 'Nome do contato'}
+                      </h2>
+                    )}
 
                     {/* Telefone (não editável) */}
                     <p className="text-sm text-white drop-shadow-lg">
