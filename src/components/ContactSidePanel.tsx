@@ -421,10 +421,15 @@ export function ContactSidePanel({
                       </AvatarFallback>
                     </Avatar>
                     
-                    {/* Nome */}
-                    <h2 className="text-white text-base font-semibold drop-shadow-lg mt-2">
-                      {editingContact?.name || 'Nome do contato'}
-                    </h2>
+        {/* Nome */}
+        <h2 className="text-white text-base font-semibold drop-shadow-lg mt-2">
+          {editingContact?.name || 'Nome do contato'}
+        </h2>
+        
+        {/* Telefone */}
+        <p className="text-white/80 text-sm drop-shadow-md mt-1">
+          {editingContact?.phone || 'Sem telefone'}
+        </p>
                     
                     {/* Email editável */}
                     {isEditingEmail ? (
