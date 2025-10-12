@@ -384,15 +384,15 @@ export function ContactSidePanel({
         <div className="flex flex-col h-full">
           {/* Cabeçalho removido - card ocupa todo espaço */}
 
-          <ScrollArea className="flex-1 px-6">
-            <div className="space-y-6 py-6">
+          <ScrollArea className="flex-1">
+            <div className="space-y-6">
               {/* Seção: Negócios - Movido para o topo */}
               {deals.length > 0}
 
               {/* Seção: Dados do contato */}
-              <Card className="border-0 shadow-none">
+              <Card className="border-0 shadow-none rounded-none">
                 <CardContent className="p-0">
-                  <div className="flex flex-col items-center space-y-3 pt-8 px-6 pb-6">
+                  <div className="flex flex-col items-center space-y-3 pt-6 pb-6">
                     {/* Avatar centralizado */}
                     <Avatar className="h-24 w-24 border-4 border-white shadow-md">
                       {editingContact?.profile_image_url && (
