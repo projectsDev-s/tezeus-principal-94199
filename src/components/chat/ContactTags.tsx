@@ -89,7 +89,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             borderColor: tag.color,
             color: tag.color
           }}
-          className="group relative text-xs px-1.5 py-0.5 h-auto rounded-full font-medium flex items-center gap-0"
+          className="group relative text-xs p-1 h-auto rounded-full font-medium flex items-center"
         >
           <Tag 
             className="w-3 h-3 flex-shrink-0" 
@@ -97,26 +97,26 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             fill={tag.color}
           />
           <span 
-            className="absolute left-6 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 rounded-full z-[9999]"
+            className="absolute left-6 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1"
             style={{ 
-              backgroundColor: `${tag.color}15`,
+              backgroundColor: 'white',
               borderColor: tag.color,
               color: tag.color,
-              border: `1px solid ${tag.color}`
+              border: `2px solid ${tag.color}`
             }}
           >
             {tag.name}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTag(tag.id);
+              }}
+              className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0"
+              disabled={isLoading}
+            >
+              <X className="w-3 h-3" />
+            </button>
           </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              removeTag(tag.id);
-            }}
-            className="hover:bg-black/10 rounded-full p-0.5 transition-colors ml-1 flex-shrink-0"
-            disabled={isLoading}
-          >
-            <X className="w-2.5 h-2.5" />
-          </button>
         </Badge>
       ))}
     </div>
