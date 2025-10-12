@@ -382,15 +382,7 @@ export function ContactSidePanel({
   return <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="w-[500px] sm:w-[540px] p-0">
         <div className="flex flex-col h-full">
-          {/* Cabeçalho */}
-          <SheetHeader className="p-6 border-b">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-lg font-semibold">Dados do contato</SheetTitle>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </SheetHeader>
+          {/* Cabeçalho removido - card ocupa todo espaço */}
 
           <ScrollArea className="flex-1 px-6">
             <div className="space-y-6 py-6">
