@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Bookmark } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -89,15 +89,22 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             borderColor: tag.color,
             color: tag.color
           }}
-          className="text-xs px-2 py-0.5 h-auto rounded-full font-medium flex items-center gap-1"
+          className="group relative text-xs px-1.5 py-0.5 h-auto rounded-full font-medium flex items-center gap-0 overflow-hidden"
         >
-          <span>{tag.name}</span>
+          <Bookmark 
+            className="w-3 h-3 flex-shrink-0" 
+            style={{ color: tag.color }} 
+            fill={tag.color}
+          />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[200px] transition-all duration-300 ease-out ml-1">
+            {tag.name}
+          </span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               removeTag(tag.id);
             }}
-            className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
+            className="hover:bg-black/10 rounded-full p-0.5 transition-colors ml-1 flex-shrink-0"
             disabled={isLoading}
           >
             <X className="w-2.5 h-2.5" />
