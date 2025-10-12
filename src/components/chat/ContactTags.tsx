@@ -81,15 +81,9 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {tags.map((tag) => (
-        <Badge
+        <div
           key={tag.id}
-          variant="outline"
-          style={{ 
-            backgroundColor: `${tag.color}15`,
-            borderColor: tag.color,
-            color: tag.color
-          }}
-          className="group relative text-xs p-1 h-auto rounded-full font-medium flex items-center"
+          className="group relative cursor-pointer"
         >
           <Tag 
             className="w-3 h-3 flex-shrink-0" 
@@ -117,7 +111,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
               <X className="w-3 h-3" />
             </button>
           </span>
-        </Badge>
+        </div>
       ))}
     </div>
   );
