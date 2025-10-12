@@ -314,9 +314,7 @@ serve(async (req) => {
     if (message_type === 'text') {
       evolutionPayload = {
         number: contact.phone,
-        textMessage: {
-          text: effectiveContent
-        }
+        text: effectiveContent
       };
     } else {
       evolutionPayload = {

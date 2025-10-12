@@ -92,9 +92,7 @@ serve(async (req) => {
       endpoint = evolutionEndpoint;
       payload = {
         number: phoneNumber,
-        textMessage: {
-          text: content
-        }
+        text: content
       };
     } else {
       endpoint = evolutionEndpoint;
