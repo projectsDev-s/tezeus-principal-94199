@@ -20,7 +20,31 @@ interface ContactTagsProps {
 export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: ContactTagsProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [visibleTagId, setVisibleTagId] = useState<string | null>(null);
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  const handleMouseEnter = (tagId: string) => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    setVisibleTagId(tagId);
+  };
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setVisibleTagId(null);
+    }, 1000);
+    setHideTimeout(timeout);
+  };
+
+  const handleNameMouseEnter = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+  };
 
   const fetchContactTags = async () => {
     if (!contactId) return;
@@ -83,7 +107,9 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
       {tags.map((tag) => (
         <div
           key={tag.id}
-          className="group relative cursor-pointer"
+          className="relative cursor-pointer"
+          onMouseEnter={() => handleMouseEnter(tag.id)}
+          onMouseLeave={handleMouseLeave}
         >
           <Tag 
             className="w-3 h-3 flex-shrink-0" 
@@ -91,7 +117,12 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
             fill={tag.color}
           />
           <span 
-            className="absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 pointer-events-none"
+            onMouseEnter={handleNameMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1",
+              visibleTagId === tag.id ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none"
+            )}
             style={{ 
               backgroundColor: 'white',
               borderColor: tag.color,
