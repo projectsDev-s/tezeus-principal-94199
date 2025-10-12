@@ -427,7 +427,7 @@ export function ContactSidePanel({
         </h2>
         
         {/* Telefone */}
-        <p className="text-white/80 text-sm drop-shadow-md mt-1">
+        <p className="text-white/80 text-sm drop-shadow-md mt-0.5">
           {editingContact?.phone || 'Sem telefone'}
         </p>
                     
@@ -445,12 +445,12 @@ export function ContactSidePanel({
                           await handleSaveContact();
                         }}
                         autoFocus
-                        className="text-sm text-center border rounded px-2 py-1 max-w-xs bg-white/90 mt-1"
+                        className="text-sm text-center border rounded px-2 py-1 max-w-xs bg-white/90 mt-0.5"
                       />
                     ) : (
                       <p
                         onDoubleClick={() => setIsEditingEmail(true)}
-                        className="text-white/90 text-sm drop-shadow-md cursor-pointer hover:underline mt-1"
+                        className="text-white/90 text-sm drop-shadow-md cursor-pointer hover:underline mt-0.5"
                         title="Clique duas vezes para editar"
                       >
                         {editingContact?.email || 'Adicionar email'}
