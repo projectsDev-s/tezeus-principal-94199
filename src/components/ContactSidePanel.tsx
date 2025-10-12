@@ -422,7 +422,7 @@ export function ContactSidePanel({
                     </Avatar>
                     
         {/* Nome */}
-        <h2 className="text-white text-base font-semibold drop-shadow-lg mt-2">
+        <h2 className="text-white text-lg font-semibold drop-shadow-lg mt-2">
           {editingContact?.name || 'Nome do contato'}
         </h2>
         
