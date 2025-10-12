@@ -218,6 +218,28 @@ serve(async (req) => {
       });
     }
 
+    // Buscar credenciais da Evolution API do workspace
+    console.log(`🔍 [${requestId}] Fetching Evolution credentials for workspace`);
+    const { data: evolutionConfig, error: evolutionError } = await supabase
+      .from('evolution_instance_tokens')
+      .select('evolution_url, token')
+      .eq('instance_name', instance_name)
+      .maybeSingle();
+
+    if (evolutionError || !evolutionConfig) {
+      console.error(`❌ [${requestId}] Evolution config not found:`, evolutionError);
+      return new Response(JSON.stringify({
+        error: 'Evolution API configuration not found',
+        details: evolutionError?.message
+      }), {
+        status: 424,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`✅ [${requestId}] Evolution config found: ${evolutionConfig.evolution_url}`);
+
+
     // Generate external_id for tracking
     const external_id = crypto.randomUUID();
     
@@ -274,158 +296,170 @@ serve(async (req) => {
       });
     }
     
-    let n8nPayload: any;
+    // ============================================================
+    // ENVIAR MENSAGEM DIRETAMENTE PARA EVOLUTION API
+    // ============================================================
+    console.log(`📤 [${requestId}] Sending message directly to Evolution API`);
+    
+    // Construir payload para Evolution baseado no tipo de mensagem
+    const evolutionEndpoint = message_type === 'text'
+      ? `${evolutionConfig.evolution_url}/message/sendText/${instance_name}`
+      : `${evolutionConfig.evolution_url}/message/sendMedia/${instance_name}`;
 
-    // Se for mensagem de mídia com file_url, usar URL diretamente (já salva no Supabase Storage)
-    if (message_type !== 'text' && file_url) {
-      console.log(`📁 [${requestId}] Using direct media URL: ${file_url} (type: ${message_type})`);
-      
-      // Formato para N8N com URL direta (sem base64)
-      n8nPayload = {
-        direction: 'outbound',
-        external_id: external_id,
-        message_id: external_id,
-        phone_number: contact.phone,
-        message_type: message_type,
-        sender_type: sender_type || 'agent',
-        sender_id: sender_id,
-        file_url: file_url, // ✅ URL direta do Supabase Storage
-        file_name: file_name,
-        mime_type: null, // Será detectado pelo N8N se necessário
-        workspace_id: conversation.workspace_id,
-        conversation_id: conversation_id,
-        connection_id: actualConnectionId,
-        contact_id: conversation.contact_id,
-        instance: instance_name,
-        source: 'test-send-msg',
-        timestamp: new Date().toISOString(),
-        request_id: requestId,
-        content: effectiveContent || ''
+    let evolutionPayload: any;
+
+    if (message_type === 'text') {
+      evolutionPayload = {
+        number: contact.phone,
+        textMessage: {
+          text: effectiveContent
+        }
       };
     } else {
-      // Formato padrão para mensagens de texto
-      n8nPayload = {
-        direction: 'outbound',
-        external_id: external_id,
-        message_id: external_id,
-        phone_number: contact.phone,
-        message_type: message_type,
-        sender_type: sender_type || 'agent',
-        sender_id: sender_id,
-        file_url: file_url || null,
-        file_name: file_name || null,
-        workspace_id: conversation.workspace_id,
-        conversation_id: conversation_id,
-        connection_id: actualConnectionId,
-        contact_id: conversation.contact_id,
-        instance: instance_name,
-        source: 'test-send-msg',
-        timestamp: new Date().toISOString(),
-        request_id: requestId
+      evolutionPayload = {
+        number: contact.phone,
+        mediaMessage: {
+          mediatype: message_type,
+          media: file_url,
+          caption: effectiveContent || '',
+          fileName: file_name || `file_${Date.now()}`
+        }
       };
-
-      // Só incluir content se houver conteúdo válido
-      if (content && content.trim() !== '') {
-        n8nPayload.content = content.trim();
-      }
     }
-    
-    console.log(`📤 [${requestId}] Sending to N8N workspace webhook: ${n8nWebhookUrl.substring(0, 50)}...`);
-    console.log(`📋 [${requestId}] N8N Payload:`, JSON.stringify(n8nPayload, null, 2));
 
-    let n8nSuccess = false;
-    
+    console.log(`🌐 [${requestId}] Calling Evolution: ${evolutionEndpoint}`);
+
     try {
-      const webhookResponse = await fetch(n8nWebhookUrl, {
+      const evolutionResponse = await fetch(evolutionEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': evolutionConfig.token
         },
-        body: JSON.stringify(n8nPayload)
+        body: JSON.stringify(evolutionPayload),
+        signal: AbortSignal.timeout(20000)
       });
 
-      if (!webhookResponse.ok) {
-        console.error(`❌ [${requestId}] N8N webhook failed with status: ${webhookResponse.status}`);
-        const errorText = await webhookResponse.text();
-        console.error(`❌ [${requestId}] N8N response: ${errorText}`);
-      } else {
-        console.log(`✅ [${requestId}] N8N webhook called successfully`);
-        n8nSuccess = true;
-        
-        // Atualizar status da mensagem para 'sent' após sucesso do N8N
-        try {
-          await supabase
-            .from('messages')
-            .update({ 
-              status: 'sent',
-              metadata: {
-                source: 'test-send-msg-post-n8n',
-                request_id: requestId,
-                n8n_success: true,
-                step: 'after_n8n_success'
-              }
-            })
-            .eq('external_id', external_id);
-          
-          console.log(`✅ [${requestId}] Message status updated to 'sent'`);
-        } catch (updateError) {
-          console.error(`⚠️ [${requestId}] Failed to update message status:`, updateError);
-        }
-      }
-    } catch (webhookErr) {
-      console.error(`❌ [${requestId}] Error calling N8N webhook:`, webhookErr);
-    }
+      const evolutionData = await evolutionResponse.json();
 
-    // Se N8N falhar, atualizar status para 'failed'
-    if (!n8nSuccess) {
-      console.log(`❌ [${requestId}] N8N failed, updating message status to 'failed'`);
-      
-      try {
+      if (!evolutionResponse.ok || evolutionData.error) {
+        console.error(`❌ [${requestId}] Evolution API error:`, evolutionData);
+        
+        // Atualizar mensagem como failed
         await supabase
           .from('messages')
           .update({ 
             status: 'failed',
             metadata: {
-              source: 'test-send-msg-n8n-failed',
-              request_id: requestId,
-              n8n_failed: true,
-              step: 'after_n8n_failed',
-              original_payload: n8nPayload
+              error: evolutionData.error || evolutionData.message,
+              step: 'evolution_api_failed'
             }
           })
           .eq('external_id', external_id);
 
-        console.log(`✅ [${requestId}] Message status updated to 'failed'`);
-      } catch (updateError) {
-        console.error(`❌ [${requestId}] Failed to update message status after N8N failure:`, updateError);
+        return new Response(JSON.stringify({
+          error: 'Evolution API error',
+          details: evolutionData
+        }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-      
+
+      console.log(`✅ [${requestId}] Evolution API success:`, evolutionData);
+
+      // SALVAR evolution_key_id NA MENSAGEM
+      if (evolutionData.key?.id) {
+        console.log(`💾 [${requestId}] Saving evolution_key_id: ${evolutionData.key.id}`);
+        
+        const { error: updateError } = await supabase
+          .from('messages')
+          .update({ 
+            evolution_key_id: evolutionData.key.id,
+            status: 'sent',
+            metadata: {
+              source: 'test-send-msg-direct',
+              request_id: requestId,
+              step: 'after_evolution_success',
+              evolution_response: evolutionData
+            }
+          })
+          .eq('external_id', external_id);
+
+        if (updateError) {
+          console.error(`⚠️ [${requestId}] Failed to save evolution_key_id:`, updateError);
+        } else {
+          console.log(`✅ [${requestId}] evolution_key_id saved successfully!`);
+        }
+      }
+
+      // Notificar N8N (opcional, para processamento adicional)
+      if (n8nWebhookUrl) {
+        console.log(`📢 [${requestId}] Notifying N8N (post-processing)`);
+        const n8nPayload = {
+    
+          direction: 'outbound',
+          external_id: external_id,
+          phone_number: contact.phone,
+          message_type: message_type,
+          evolution_key_id: evolutionData.key?.id,
+          workspace_id: conversation.workspace_id,
+          conversation_id: conversation_id,
+          instance: instance_name,
+          source: 'test-send-msg-notification',
+          timestamp: new Date().toISOString()
+        };
+
+        try {
+          await fetch(n8nWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(n8nPayload)
+          });
+          console.log(`✅ [${requestId}] N8N notified`);
+        } catch (n8nErr) {
+          console.warn(`⚠️ [${requestId}] N8N notification failed (non-critical):`, n8nErr);
+        }
+      }
+
+      console.log(`🎉 [${requestId}] SUCCESS - Message sent with evolution_key_id: ${evolutionData.key?.id}`);
+
       return new Response(JSON.stringify({
-        error: 'N8N webhook failed',
+        success: true,
         external_id: external_id,
-        message_saved: true,
-        status: 'failed'
+        evolution_key_id: evolutionData.key?.id,
+        status: 'sent',
+        message: 'Message sent successfully via Evolution API',
+        conversation_id: conversation_id,
+        phone_number: contact.phone
       }), {
-        status: 424,
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } catch (evolutionError) {
+      console.error(`❌ [${requestId}] Evolution API call failed:`, evolutionError);
+      
+      // Atualizar mensagem como failed
+      await supabase
+        .from('messages')
+        .update({ 
+          status: 'failed',
+          metadata: {
+            error: evolutionError.message,
+            step: 'evolution_api_exception'
+          }
+        })
+        .eq('external_id', external_id);
+
+      return new Response(JSON.stringify({
+        error: 'Failed to send message via Evolution API',
+        details: evolutionError.message
+      }), {
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-
-
-    console.log(`🎉 [${requestId}] SUCCESS - Message sent to N8N with external_id: ${external_id}`);
-
-    // Return 202 Accepted with external_id for optimistic UI updates
-    return new Response(JSON.stringify({
-      success: true,
-      external_id: external_id,
-      status: 'sent_to_n8n',
-      message: 'Message sent to N8N for processing',
-      conversation_id: conversation_id,
-      phone_number: contact.phone
-    }), {
-      status: 202, // Accepted - processing asynchronously
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
 
   } catch (error) {
     console.error(`💥 [${requestId}] Unexpected error:`, error);
