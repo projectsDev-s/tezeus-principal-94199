@@ -213,9 +213,12 @@ export function WhatsAppChat({
   // Usar a função de filtro unificada
   const filteredConversations = getFilteredConversations();
 
+  // ✅ Flag para evitar múltiplas chamadas simultâneas
+  const isLoadingMoreRef = useRef(false);
+
   // ✅ Detectar scroll para o topo e carregar automaticamente
   const handleMessagesScroll = useCallback(() => {
-    if (!messagesScrollRef.current || loadingMore || !hasMore) return;
+    if (!messagesScrollRef.current || loadingMore || !hasMore || isLoadingMoreRef.current) return;
     
     const scrollContainer = messagesScrollRef.current;
     const scrollTop = scrollContainer.scrollTop;
@@ -226,24 +229,37 @@ export function WhatsAppChat({
     // Detectar quando está próximo do topo visual (mensagens antigas)
     const distanceFromTop = scrollHeight - clientHeight - scrollTop;
     
-    console.log('📊 Scroll info:', { scrollTop, scrollHeight, clientHeight, distanceFromTop });
-    
-    if (distanceFromTop <= 50 && !loadingMore) {
+    // Só carregar se realmente está próximo do topo E não está já carregando
+    if (distanceFromTop >= (scrollHeight - clientHeight - 100) && distanceFromTop <= (scrollHeight - clientHeight)) {
       console.log('🔄 Topo visual detectado, carregando mensagens antigas...');
+      console.log('📊 Scroll info:', { scrollTop, scrollHeight, clientHeight, distanceFromTop });
       
+      isLoadingMoreRef.current = true;
       const scrollHeightBefore = scrollContainer.scrollHeight;
       const scrollTopBefore = scrollContainer.scrollTop;
       
       loadMoreMessages();
       
-      // Aguardar próximo frame para ajustar scroll
-      setTimeout(() => {
-        if (scrollContainer) {
-          const scrollHeightAfter = scrollContainer.scrollHeight;
-          const heightDifference = scrollHeightAfter - scrollHeightBefore;
-          scrollContainer.scrollTop = scrollTopBefore + heightDifference;
-        }
-      }, 100);
+      // Aguardar o DOM atualizar e ajustar scroll
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (scrollContainer) {
+            const scrollHeightAfter = scrollContainer.scrollHeight;
+            const heightDifference = scrollHeightAfter - scrollHeightBefore;
+            
+            // Ajustar scroll para manter posição visual
+            scrollContainer.scrollTop = scrollTopBefore + heightDifference;
+            
+            console.log('✅ Scroll ajustado:', { 
+              scrollTopBefore, 
+              scrollTopAfter: scrollContainer.scrollTop,
+              heightDifference 
+            });
+            
+            isLoadingMoreRef.current = false;
+          }
+        }, 200);
+      });
     }
   }, [loadMoreMessages, loadingMore, hasMore]);
 
