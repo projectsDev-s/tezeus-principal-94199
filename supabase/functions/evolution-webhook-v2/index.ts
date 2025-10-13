@@ -807,6 +807,8 @@ serve(async (req) => {
           const evolutionKeyId = payload.data?.keyId || payload.data?.key?.id;
           const evolutionMessageId = payload.data?.messageId;
           
+          console.log(`🔍 [${requestId}] Searching for message - evolution_key_id: "${evolutionKeyId}", messageId: "${evolutionMessageId}"`);
+          
           if (evolutionKeyId || evolutionMessageId) {
             // Try to find message by evolution_key_id first, then by external_id
             let query = supabase
@@ -817,6 +819,8 @@ serve(async (req) => {
                 message_type,
                 status,
                 conversation_id,
+                evolution_key_id,
+                external_id,
                 conversation:conversations (
                   id,
                   status,
@@ -830,12 +834,18 @@ serve(async (req) => {
               .limit(1);
             
             if (evolutionKeyId) {
+              console.log(`🔎 [${requestId}] Query 1: Searching by evolution_key_id = "${evolutionKeyId}"`);
               query = query.eq('evolution_key_id', evolutionKeyId);
             } else if (evolutionMessageId) {
+              console.log(`🔎 [${requestId}] Query 2: Searching by external_id = "${evolutionMessageId}"`);
               query = query.eq('external_id', evolutionMessageId);
             }
             
-            const { data: msgData } = await query.maybeSingle();
+            const { data: msgData, error: msgError } = await query.maybeSingle();
+            
+            if (msgError) {
+              console.error(`❌ [${requestId}] Database query error:`, msgError);
+            }
             
             if (msgData) {
               dbMessageId = msgData.id;
