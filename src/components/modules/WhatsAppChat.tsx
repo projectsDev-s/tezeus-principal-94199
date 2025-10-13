@@ -1019,14 +1019,18 @@ export function WhatsAppChat({
 
   // Auto-scroll APENAS quando conversa é selecionada (carregamento inicial)
   useEffect(() => {
-    if (selectedConversation && messages.length > 0 && isInitialLoadRef.current) {
-      // Scroll direto para o final sem animação no primeiro carregamento
-      messagesEndRef.current?.scrollIntoView({
-        behavior: 'auto'
-      });
-      isInitialLoadRef.current = false;
-    }
-  }, [selectedConversation?.id]); // ✅ Removido messages.length - só roda quando troca conversa
+    // ✅ APENAS no carregamento inicial (não ao carregar mais mensagens)
+    if (!selectedConversation) return;
+    
+    const timer = setTimeout(() => {
+      if (messages.length > 0 && isInitialLoadRef.current && messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        isInitialLoadRef.current = false;
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [selectedConversation?.id]); // Só dispara ao selecionar conversa
 
 
   // ✅ CORREÇÃO: Listener ESC para voltar da conversa
