@@ -215,6 +215,8 @@ export function WhatsAppChat({
 
   // ✅ Flag para evitar múltiplas chamadas simultâneas
   const isLoadingMoreRef = useRef(false);
+  const isInitialLoadRef = useRef(true);
+  const previousMessagesLengthRef = useRef(0);
 
   // ✅ Detectar scroll para o topo e carregar automaticamente
   const handleMessagesScroll = useCallback(() => {
@@ -1066,34 +1068,54 @@ export function WhatsAppChat({
 
   // Auto-scroll quando conversa é selecionada ou mensagens carregam
   useEffect(() => {
-    if (selectedConversation && messages.length > 0) {
+    if (selectedConversation && messages.length > 0 && isInitialLoadRef.current) {
       // Scroll direto para o final sem animação no primeiro carregamento
       messagesEndRef.current?.scrollIntoView({
         behavior: 'auto'
       });
+      isInitialLoadRef.current = false;
     }
   }, [selectedConversation, messages.length]);
 
   // Auto-scroll suave quando novas mensagens chegam (não no carregamento inicial)
   useEffect(() => {
-    if (selectedConversation && messages.length > 0 && !loading) {
-      const isAtBottom = () => {
-        const container = messagesEndRef.current?.parentElement;
-        if (!container) return true;
-        const threshold = 100;
-        return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
-      };
+    if (selectedConversation && messages.length > 0 && !loading && !loadingMore) {
+      const currentLength = messages.length;
+      const previousLength = previousMessagesLengthRef.current;
+      
+      // Detectar se é uma NOVA mensagem (adicionada no final)
+      // Não é carregamento de mensagens antigas (que adiciona no início)
+      const isNewMessage = currentLength > previousLength && !isLoadingMoreRef.current;
+      
+      if (isNewMessage) {
+        const isAtBottom = () => {
+          const container = messagesEndRef.current?.parentElement;
+          if (!container) return true;
+          const threshold = 100;
+          return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+        };
 
-      // Se já está próximo do final, faz scroll suave para nova mensagem
-      if (isAtBottom()) {
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({
-            behavior: 'smooth'
-          });
-        }, 100);
+        // Se já está próximo do final, faz scroll suave para nova mensagem
+        if (isAtBottom()) {
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({
+              behavior: 'smooth'
+            });
+          }, 100);
+        }
       }
+      
+      previousMessagesLengthRef.current = currentLength;
     }
-  }, [messages, loading]);
+  }, [messages, loading, loadingMore]);
+
+  // Resetar flags ao trocar de conversa
+  useEffect(() => {
+    if (selectedConversation) {
+      isInitialLoadRef.current = true;
+      previousMessagesLengthRef.current = 0;
+    }
+  }, [selectedConversation?.id]);
 
   // ✅ Cleanup do scroll listener
   useEffect(() => {
