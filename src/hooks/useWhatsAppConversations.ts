@@ -552,20 +552,21 @@ export const useWhatsAppConversations = () => {
       return;
     }
 
-    console.log('🔌 Iniciando subscription de realtime para workspace:', selectedWorkspace.workspace_id);
+    const workspaceId = selectedWorkspace.workspace_id; // ✅ Capturar workspace_id no closure
+    console.log('🔌 Iniciando subscription de realtime para workspace:', workspaceId);
 
     // Subscription para novas mensagens  
     // Setting up realtime subscriptions
     
     const messagesChannel = supabase
-      .channel(`whatsapp-messages-${selectedWorkspace.workspace_id}`) // ✅ Canal único por workspace
+      .channel(`whatsapp-messages-${workspaceId}`) // ✅ Canal único por workspace
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           const newMessage = payload.new as any;
           
           // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
-          if (newMessage.workspace_id !== selectedWorkspace?.workspace_id) {
+          if (newMessage.workspace_id !== workspaceId) {
             return;
           }
           
@@ -688,7 +689,7 @@ export const useWhatsAppConversations = () => {
 
     // ✅ CORREÇÃO: Subscription única para conversas com canal único por workspace
     const conversationsChannel = supabase
-      .channel(`wapp-convs-${selectedWorkspace.workspace_id}`) // ✅ Canal único por workspace
+      .channel(`wapp-convs-${workspaceId}`) // ✅ Canal único por workspace
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'conversations' },
         async (payload) => {
@@ -699,7 +700,7 @@ export const useWhatsAppConversations = () => {
           if (newConv.canal !== 'whatsapp') return;
           
           // ✅ Filtrar por workspace_id para garantir que apenas conversas do workspace atual sejam processadas
-          if (newConv.workspace_id !== selectedWorkspace?.workspace_id) {
+          if (newConv.workspace_id !== workspaceId) {
             // Conversation from different workspace - ignored
             return;
           }
@@ -785,7 +786,7 @@ export const useWhatsAppConversations = () => {
             }
           
           // ✅ Filtrar por workspace_id para garantir que apenas conversas do workspace atual sejam processadas
-          if (updatedConv.workspace_id !== selectedWorkspace?.workspace_id) {
+          if (updatedConv.workspace_id !== workspaceId) {
             // Conversation update from different workspace - ignored
             return;
           }
