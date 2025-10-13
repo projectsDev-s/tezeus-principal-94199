@@ -81,7 +81,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       const { data, error } = await supabase.functions.invoke('whatsapp-get-messages', {
         body: { 
           conversation_id: conversationId,
-          limit: 5
+          limit: 6
         },
         headers
       });
@@ -147,7 +147,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       const { data, error } = await supabase.functions.invoke('whatsapp-get-messages', {
         body: { 
           conversation_id: currentConversationId,
-          limit: 50, // ✅ Aumentado de 5 para 50
+          limit: 6,
           before: cursorBefore
         },
         headers
