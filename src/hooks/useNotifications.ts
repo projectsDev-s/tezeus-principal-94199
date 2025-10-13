@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWhatsAppConversations } from './useWhatsAppConversations';
 import { useNotificationSound } from './useNotificationSound';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export interface NotificationMessage {
@@ -17,155 +16,68 @@ export interface NotificationMessage {
 
 export function useNotifications() {
   const { conversations, markAsRead } = useWhatsAppConversations();
-  const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
-  const [totalUnread, setTotalUnread] = useState(0);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const { playNotificationSound } = useNotificationSound();
   const [lastToastTime, setLastToastTime] = useState(0);
-  const conversationsRef = useRef(conversations);
-  
-  // Logs de debug condicionais (apenas se necessário)
-  const DEBUG_NOTIFICATIONS = false; // Mudar para true para debug
-  if (DEBUG_NOTIFICATIONS) {
-    console.log('🔔 useNotifications - conversations:', conversations.length, 'total unread:', totalUnread);
-  }
-  
-  // Debounce para evitar re-renders excessivos
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Detectar novas mensagens para toast
-  const checkForNewMessages = useCallback(() => {
-    const previousConversations = conversationsRef.current;
-    const newConversations = conversations;
+  // Calcular notificações com useMemo para otimização
+  const { notifications, totalUnread } = useMemo(() => {
+    const newNotifications: NotificationMessage[] = [];
+    let unreadCount = 0;
     
-    // Verificar se há novas mensagens
-    newConversations.forEach((conv) => {
-      const previousConv = previousConversations.find(c => c.id === conv.id);
-      if (!previousConv) return;
+    conversations.forEach((conv) => {
+      const convUnreadCount = conv.unread_count || 0;
+      unreadCount += convUnreadCount;
       
-      const newMessages = conv.messages.filter(msg => 
-        msg.sender_type === 'contact' && 
-        (!msg.read_at || msg.read_at === null) &&
-        !previousConv.messages.some(prevMsg => prevMsg.id === msg.id)
-      );
-      
-      // Mostrar toast para nova mensagem (máximo 1 por segundo)
-      if (newMessages.length > 0) {
+      if (convUnreadCount > 0) {
+        const lastMsg = conv.last_message?.[0];
+        
+        newNotifications.push({
+          id: `${conv.id}-${convUnreadCount}`,
+          conversationId: conv.id,
+          contactName: conv.contact.name,
+          contactPhone: conv.contact.phone,
+          content: lastMsg?.content || 'Nova mensagem',
+          messageType: lastMsg?.message_type || 'text',
+          timestamp: new Date(conv.last_activity_at || new Date()),
+          isMedia: ['image', 'video', 'audio', 'document'].includes(lastMsg?.message_type || '')
+        });
+      }
+    });
+    
+    newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    
+    return { notifications: newNotifications, totalUnread: unreadCount };
+  }, [conversations]);
+
+  // Tocar som quando totalUnread aumenta
+  useEffect(() => {
+    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+      playNotificationSound();
+    }
+    setPreviousUnreadCount(totalUnread);
+  }, [totalUnread, previousUnreadCount, playNotificationSound]);
+
+  // Toast para novas mensagens
+  useEffect(() => {
+    conversations.forEach((conv) => {
+      if (conv.unread_count > 0 && conv.last_message?.[0]) {
+        const lastMsg = conv.last_message[0];
         const now = Date.now();
-        if (now - lastToastTime > 1000) {
-          const lastMessage = newMessages[newMessages.length - 1];
-          const isMedia = ['image', 'video', 'audio', 'document'].includes(lastMessage.message_type || '');
+        
+        if (now - lastToastTime > 1000 && lastMsg.sender_type === 'contact') {
+          const isMedia = ['image', 'video', 'audio', 'document'].includes(lastMsg.message_type || '');
           
           toast({
             title: `Nova mensagem de ${conv.contact.name}`,
-            description: isMedia ? '📎 Mídia' : (lastMessage.content?.substring(0, 50) || '') + '...',
+            description: isMedia ? '📎 Mídia' : (lastMsg.content?.substring(0, 50) || '') + '...',
             duration: 4000,
           });
           setLastToastTime(now);
         }
       }
     });
-    
-    conversationsRef.current = newConversations;
   }, [conversations, lastToastTime]);
-
-  useEffect(() => {
-    // Debounce para processar atualizações
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    
-    debounceTimeoutRef.current = setTimeout(() => {
-      // Calcular total de mensagens não lidas baseado em mensagens reais, não no contador
-      let unreadCount = 0;
-      const newNotifications: NotificationMessage[] = [];
-      
-      conversations.forEach((conv) => {
-        if (DEBUG_NOTIFICATIONS) {
-          console.log('🔔 Processing conv:', conv.contact.name, 'messages:', conv.messages?.length || 0, 'unread_count:', conv.unread_count);
-        }
-        
-        // ✅ CORREÇÃO 6: Priorizar unread_count da conversa sempre
-        const convUnreadCount = conv.unread_count || 0;
-        unreadCount += convUnreadCount;
-        
-        // Criar notificação se há mensagens não lidas (baseado em unread_count)
-        if (convUnreadCount > 0) {
-          // Usar última mensagem se disponível, senão criar notificação genérica
-          const lastMsg = conv.last_message?.[0];
-          
-          newNotifications.push({
-            id: `${conv.id}-unread-${convUnreadCount}`, // ✅ ID único baseado no count
-            conversationId: conv.id,
-            contactName: conv.contact.name,
-            contactPhone: conv.contact.phone,
-            content: lastMsg?.content || 'Nova mensagem',
-            messageType: lastMsg?.message_type || 'text',
-            timestamp: new Date(conv.last_activity_at || new Date()),
-            isMedia: ['image', 'video', 'audio', 'document'].includes(lastMsg?.message_type || '')
-          });
-          
-          if (DEBUG_NOTIFICATIONS) {
-            console.log('✅ Notificação criada para:', conv.contact.name, 'unread:', convUnreadCount);
-          }
-        }
-        
-        // Se há mensagens carregadas, processar também (para casos específicos)
-        if (conv.messages && conv.messages.length > 0) {
-          // Filtrar mensagens não lidas do contato (sender_type = 'contact' e read_at = null)
-          const unreadContactMessages = conv.messages.filter(msg => 
-            msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
-          );
-          
-          // Não somar aqui pois já foi somado acima via unread_count
-          // unreadCount += unreadContactMessages.length;
-          
-          if (unreadContactMessages.length > 0) {
-            // Pegar APENAS a última mensagem não lida do contato
-            const lastUnreadMessage = unreadContactMessages[unreadContactMessages.length - 1];
-            
-            const isMedia = ['image', 'video', 'audio', 'document'].includes(lastUnreadMessage.message_type || '');
-            
-            // Só adicionar se não já temos notificação baseada em unread_count
-            const existingNotification = newNotifications.find(n => n.conversationId === conv.id);
-            if (!existingNotification) {
-              newNotifications.push({
-                id: lastUnreadMessage.id,
-                conversationId: conv.id,
-                contactName: conv.contact.name,
-                contactPhone: conv.contact.phone,
-                content: isMedia ? 'Imagem' : (lastUnreadMessage.content || ''),
-                messageType: lastUnreadMessage.message_type || 'text',
-                timestamp: new Date(lastUnreadMessage.created_at),
-                isMedia
-              });
-            }
-          }
-        }
-      });
-      
-      // Tocar som se o número de não lidas aumentou
-      if (unreadCount > previousUnreadCount && previousUnreadCount > 0) {
-        playNotificationSound();
-      }
-      
-      // Verificar novas mensagens para toast
-      checkForNewMessages();
-      
-      setPreviousUnreadCount(unreadCount);
-      setTotalUnread(unreadCount);
-
-      // Ordenar por mais recente primeiro
-      newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      setNotifications(newNotifications);
-    }, 500); // Debounce aumentado para 500ms para reduzir execuções
-
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [conversations, previousUnreadCount, playNotificationSound, checkForNewMessages]);
 
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -204,79 +116,6 @@ export function useNotifications() {
     await Promise.all(conversationsWithUnread.map(conv => markAsRead(conv.id)));
   };
 
-  // ✅ CORREÇÃO: Subscription em tempo real otimizada para atualizar imediatamente
-  useEffect(() => {
-    const channel = supabase
-      .channel('notifications-realtime-updates')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: 'sender_type=eq.contact'
-      }, (payload) => {
-        console.log('🔔 Realtime: Mensagem atualizada', {
-          id: payload.new?.id,
-          read_at_old: payload.old?.read_at,
-          read_at_new: payload.new?.read_at
-        });
-        
-        // Se read_at foi atualizado (mensagem lida), disparar evento para forçar atualização
-        if (payload.new?.read_at && !payload.old?.read_at) {
-          // Disparar evento customizado para forçar re-fetch
-          window.dispatchEvent(new CustomEvent('conversation-read'));
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'conversations'
-      }, (payload) => {
-        const oldUnread = payload.old?.unread_count;
-        const newUnread = payload.new?.unread_count;
-        
-        console.log('🔔 Realtime: Conversa atualizada', {
-          id: payload.new?.id,
-          unread_old: oldUnread,
-          unread_new: newUnread
-        });
-        
-        // Se unread_count foi alterado, disparar evento
-        if (newUnread !== oldUnread) {
-          window.dispatchEvent(new CustomEvent('conversation-read'));
-        }
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: 'sender_type=eq.contact'
-      }, (payload) => {
-        console.log('🔔 Realtime: Nova mensagem de contato', {
-          id: payload.new?.id,
-          conversation_id: payload.new?.conversation_id
-        });
-        
-        // Nova mensagem de contato = atualizar notificações
-        window.dispatchEvent(new CustomEvent('new-contact-message'));
-      })
-      .subscribe();
-
-    // Listener para eventos customizados que forçam atualização
-    const handleForceUpdate = () => {
-      console.log('🔔 Forçando atualização de notificações');
-      // Força re-render do useEffect principal
-      conversationsRef.current = [];
-    };
-
-    window.addEventListener('conversation-read', handleForceUpdate);
-    window.addEventListener('new-contact-message', handleForceUpdate);
-
-    return () => {
-      supabase.removeChannel(channel);
-      window.removeEventListener('conversation-read', handleForceUpdate);
-      window.removeEventListener('new-contact-message', handleForceUpdate);
-    };
-  }, []);
 
   return {
     notifications,
