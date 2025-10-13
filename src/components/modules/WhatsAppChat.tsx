@@ -235,37 +235,45 @@ export function WhatsAppChat({
     // Só carregar se realmente está próximo do topo E não está já carregando
     if (distanceFromTop >= (scrollHeight - clientHeight - 100) && distanceFromTop <= (scrollHeight - clientHeight)) {
       console.log('🔄 Topo visual detectado, carregando mensagens antigas...');
-      console.log('📊 Scroll info:', { scrollTop, scrollHeight, clientHeight, distanceFromTop });
       
       isLoadingMoreRef.current = true;
-      const scrollHeightBefore = scrollContainer.scrollHeight;
-      const scrollTopBefore = scrollContainer.scrollTop;
+      
+      // Guardar posição ANTES de carregar
+      const firstVisibleMessage = scrollContainer.querySelector('[data-message-id]');
+      const firstMessageId = firstVisibleMessage?.getAttribute('data-message-id');
+      const firstMessageOffsetTop = firstVisibleMessage?.getBoundingClientRect().top;
       
       loadMoreMessages();
       
-      // Aguardar o DOM atualizar e ajustar scroll
+      // Aguardar DOM atualizar e restaurar posição baseado no elemento
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          if (scrollContainer) {
-            const scrollHeightAfter = scrollContainer.scrollHeight;
-            const heightDifference = scrollHeightAfter - scrollHeightBefore;
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            if (scrollContainer && firstMessageId) {
+              // Encontrar a mesma mensagem após o carregamento
+              const sameMessage = scrollContainer.querySelector(`[data-message-id="${firstMessageId}"]`);
+              
+              if (sameMessage && firstMessageOffsetTop) {
+                const newOffsetTop = sameMessage.getBoundingClientRect().top;
+                const difference = newOffsetTop - firstMessageOffsetTop;
+                
+                // Ajustar scroll pela diferença
+                scrollContainer.scrollTop += difference;
+                
+                console.log('✅ Scroll ajustado por elemento:', { 
+                  firstMessageId,
+                  difference 
+                });
+              }
+            }
             
-            // Ajustar scroll para manter posição visual
-            scrollContainer.scrollTop = scrollTopBefore + heightDifference;
-            
-            console.log('✅ Scroll ajustado:', { 
-              scrollTopBefore, 
-              scrollTopAfter: scrollContainer.scrollTop,
-              heightDifference 
-            });
-            
-            // Manter o loading visível por 1 segundo adicional para transição suave
-            loadingDelayTimeoutRef.current = setTimeout(() => {
+            // Liberar flag após ajuste
+            setTimeout(() => {
               isLoadingMoreRef.current = false;
-              console.log('✅ Loading finalizado após delay visual');
-            }, 1000);
-          }
-        }, 200);
+              console.log('✅ Loading finalizado');
+            }, 300);
+          }, 50);
+        });
       });
     }
   }, [loadMoreMessages, loadingMore, hasMore]);
@@ -1661,7 +1669,7 @@ export function WhatsAppChat({
                 </div>}
               
                 <div className="space-y-4">
-                {messages.map(message => <div key={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
+                {messages.map(message => <div key={message.id} data-message-id={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
                     {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
                         <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact.name))}>
