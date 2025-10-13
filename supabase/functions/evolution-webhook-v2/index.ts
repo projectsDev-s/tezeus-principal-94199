@@ -841,10 +841,12 @@ serve(async (req) => {
               dbMessageId = msgData.id;
               fullMessageData = msgData;
               console.log(`🔑 [${requestId}] Found message UUID from DB: ${dbMessageId} (conversation: ${msgData.conversation_id})`);
+              console.log(`📊 [${requestId}] Current message status in DB: "${msgData.status}"`);
               
               // ✅ Atualizar status no banco quando for messages.update
               if (payload.event === 'messages.update' && payload.data?.status) {
                 const evolutionStatus = payload.data.status;
+                console.log(`🔄 [${requestId}] Processing status update - Evolution status: "${evolutionStatus}"`);
                 
                 // Mapear status da Evolution para nosso schema
                 let newStatus = null;
@@ -853,16 +855,20 @@ serve(async (req) => {
                 if (evolutionStatus === 'DELIVERY_ACK') {
                   newStatus = 'delivered';
                   updateData.delivered_at = new Date().toISOString();
+                  console.log(`✅ [${requestId}] Will update to DELIVERED`);
                 } else if (evolutionStatus === 'READ') {
                   newStatus = 'read';
                   updateData.read_at = new Date().toISOString();
+                  console.log(`✅ [${requestId}] Will update to READ`);
                 } else if (evolutionStatus === 'SERVER_ACK') {
                   // Ignorar SERVER_ACK - é um status intermediário
                   console.log(`ℹ️ [${requestId}] Ignoring SERVER_ACK status (intermediate)`);
                 }
                 
                 // Só atualizar se não for SERVER_ACK
-                if (newStatus && newStatus !== msgData.status) {
+                if (newStatus) {
+                  console.log(`💾 [${requestId}] Attempting to update message status: ${msgData.status} → ${newStatus}`);
+                  
                   const { error: updateError } = await supabase
                     .from('messages')
                     .update({ 
@@ -874,8 +880,10 @@ serve(async (req) => {
                   if (updateError) {
                     console.error(`❌ [${requestId}] Failed to update message status:`, updateError);
                   } else {
-                    console.log(`✅ [${requestId}] Message status updated: ${msgData.status} → ${newStatus}`);
+                    console.log(`✅ [${requestId}] Message status updated successfully: ${msgData.status} → ${newStatus}`);
                   }
+                } else {
+                  console.log(`⏭️ [${requestId}] Skipping status update (SERVER_ACK ignored)`);
                 }
               }
               
