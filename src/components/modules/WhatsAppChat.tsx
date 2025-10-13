@@ -213,40 +213,8 @@ export function WhatsAppChat({
   // Usar a função de filtro unificada
   const filteredConversations = getFilteredConversations();
 
-  // ✅ Flag para evitar múltiplas chamadas simultâneas
-  const isLoadingMoreRef = useRef(false);
+  // Estados para controle de carregamento manual
   const isInitialLoadRef = useRef(true);
-  const scrollHeightBeforeLoadRef = useRef(0);
-
-  // ✅ Detectar scroll para o topo e carregar automaticamente (modelo WhatsApp)
-  const handleMessagesScroll = useCallback(() => {
-    if (!messagesScrollRef.current || loadingMore || !hasMore || isLoadingMoreRef.current) return;
-    
-    const scrollContainer = messagesScrollRef.current;
-    const scrollTop = scrollContainer.scrollTop;
-    const scrollHeight = scrollContainer.scrollHeight;
-    const clientHeight = scrollContainer.clientHeight;
-    
-    // Log de debug para entender o scroll
-    console.log('📏 Scroll info:', { 
-      scrollTop, 
-      scrollHeight, 
-      clientHeight, 
-      isAtTop: scrollTop === 0,
-      hasMore 
-    });
-    
-    // Detectar quando o usuário rola para o TOPO EXATO (mensagens antigas)
-    // scrollTop === 0 = topo absoluto do container
-    if (scrollTop === 0) {
-      console.log('🔄 Chegou ao topo (scrollTop === 0), carregando mensagens antigas...');
-      
-      isLoadingMoreRef.current = true;
-      scrollHeightBeforeLoadRef.current = scrollContainer.scrollHeight;
-      
-      loadMoreMessages();
-    }
-  }, [loadMoreMessages, loadingMore, hasMore]);
 
   // ✅ Enviar mensagem usando o hook de mensagens
   const handleSendMessage = async () => {
@@ -1060,70 +1028,6 @@ export function WhatsAppChat({
     }
   }, [selectedConversation, messages.length]);
 
-  // ✅ Ajustar scroll após carregar mensagens antigas (manter posição visual)
-  useEffect(() => {
-    if (messages.length > 0 && isLoadingMoreRef.current && messagesScrollRef.current) {
-      const scrollContainer = messagesScrollRef.current;
-      const scrollHeightBefore = scrollHeightBeforeLoadRef.current;
-      const scrollHeightAfter = scrollContainer.scrollHeight;
-      
-      // Calcular quanto o conteúdo cresceu
-      const heightDifference = scrollHeightAfter - scrollHeightBefore;
-      
-      if (heightDifference > 0) {
-        // Ajustar scroll para manter a posição visual do usuário
-        scrollContainer.scrollTop += heightDifference;
-        
-        console.log('✅ Scroll ajustado após carregar:', { 
-          heightDifference,
-          scrollTopAntes: scrollContainer.scrollTop - heightDifference,
-          scrollTopDepois: scrollContainer.scrollTop
-        });
-      }
-      
-      // Liberar flag após ajuste
-      setTimeout(() => {
-        isLoadingMoreRef.current = false;
-        console.log('✅ Loading finalizado');
-      }, 100);
-    }
-  }, [messages.length]);
-
-  // ✅ Resetar flag quando loadingMore termina E PRESERVAR POSIÇÃO DE SCROLL
-  useEffect(() => {
-    if (!loadingMore && isLoadingMoreRef.current) {
-      console.log('⚠️ Resetando flag e ajustando scroll após loadMore');
-      
-      setTimeout(() => {
-        if (messagesScrollRef.current && scrollHeightBeforeLoadRef.current > 0) {
-          const scrollContainer = messagesScrollRef.current;
-          const newScrollHeight = scrollContainer.scrollHeight;
-          const heightDifference = newScrollHeight - scrollHeightBeforeLoadRef.current;
-          
-          console.log('📏 Ajustando scroll:', { 
-            oldHeight: scrollHeightBeforeLoadRef.current, 
-            newHeight: newScrollHeight, 
-            diff: heightDifference 
-          });
-          
-          // Ajustar scroll para manter a posição visual do usuário
-          scrollContainer.scrollTop = heightDifference;
-        }
-        
-        isLoadingMoreRef.current = false;
-        scrollHeightBeforeLoadRef.current = 0;
-      }, 100);
-    }
-  }, [loadingMore]);
-
-  // Resetar flags ao trocar de conversa
-  useEffect(() => {
-    if (selectedConversation) {
-      isInitialLoadRef.current = true;
-      isLoadingMoreRef.current = false;
-      scrollHeightBeforeLoadRef.current = 0;
-    }
-  }, [selectedConversation?.id]);
 
   // ✅ CORREÇÃO: Listener ESC para voltar da conversa
   useEffect(() => {
@@ -1148,23 +1052,6 @@ export function WhatsAppChat({
     window.history.pushState({}, '', url.toString());
   };
 
-  // ✅ Cleanup do scroll listener
-  useEffect(() => {
-    const scrollContainer = messagesScrollRef.current;
-    
-    if (scrollContainer) {
-      // Re-anexar listener quando handleMessagesScroll mudar
-      scrollContainer.addEventListener('scroll', handleMessagesScroll);
-      console.log('✅ Listener anexado via useEffect');
-    }
-    
-    return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener('scroll', handleMessagesScroll);
-        console.log('🗑️ Listener removido');
-      }
-    };
-  }, [handleMessagesScroll]);
   if (loading) {
     return <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -1659,46 +1546,40 @@ export function WhatsAppChat({
           if (node) {
             const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
             if (scrollContainer) {
-              // Remover listener antigo se existir
-              if (messagesScrollRef.current) {
-                messagesScrollRef.current.removeEventListener('scroll', handleMessagesScroll);
-              }
-              
               messagesScrollRef.current = scrollContainer as HTMLElement;
-              
-              // ✅ Sempre adicionar o listener atualizado
-              scrollContainer.addEventListener('scroll', handleMessagesScroll);
-              console.log('✅ Scroll listener anexado');
-              
-              // Log de diagnóstico para entender se há scroll disponível
-              setTimeout(() => {
-                if (messagesScrollRef.current) {
-                  const messagesContainer = messagesScrollRef.current.querySelector('.space-y-4');
-                  console.log('📊 Container info após render:', {
-                    scrollHeight: messagesScrollRef.current.scrollHeight,
-                    clientHeight: messagesScrollRef.current.clientHeight,
-                    hasScroll: messagesScrollRef.current.scrollHeight > messagesScrollRef.current.clientHeight,
-                    scrollTop: messagesScrollRef.current.scrollTop,
-                    messagesCount: messages.length,
-                    messagesContainerHeight: messagesContainer?.scrollHeight || 0
-                  });
-                }
-              }, 500);
             }
           }
         }}>
-              {/* ✅ Loading automático no topo durante scroll infinito - usar loadingMore ao invés de ref */}
-              {loadingMore && <div className="flex justify-center py-3 animate-fade-in">
+              {/* Botão Carregar Mais Mensagens */}
+              {hasMore && !loadingMore && messages.length > 0 && (
+                <div className="flex justify-center py-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadMoreMessages}
+                    className="text-xs"
+                  >
+                    Carregar mais mensagens
+                  </Button>
+                </div>
+              )}
+              
+              {/* Loading ao carregar mais mensagens */}
+              {loadingMore && (
+                <div className="flex justify-center py-3">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
                     <span className="text-sm">Carregando mensagens...</span>
                   </div>
-                </div>}
+                </div>
+              )}
               
-              {/* ✅ Loading inicial das mensagens */}
-              {messagesLoading && messages.length === 0 && <div className="flex justify-center p-4">
+              {/* Loading inicial das mensagens */}
+              {messagesLoading && messages.length === 0 && (
+                <div className="flex justify-center p-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>}
+                </div>
+              )}
               
                 <div className="space-y-4">
                 {messages.map(message => <div key={message.id} data-message-id={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
