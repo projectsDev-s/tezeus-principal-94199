@@ -232,14 +232,14 @@ export function WhatsAppChat({
       scrollTop, 
       scrollHeight, 
       clientHeight, 
-      canLoadMore: scrollTop < 100,
+      isAtTop: scrollTop === 0,
       hasMore 
     });
     
-    // Detectar quando o usuário rola para o TOPO (mensagens antigas)
-    // scrollTop próximo de 0 = topo do container
-    if (scrollTop < 100) {
-      console.log('🔄 Chegou ao topo, carregando mensagens antigas...');
+    // Detectar quando o usuário rola para o TOPO EXATO (mensagens antigas)
+    // scrollTop === 0 = topo absoluto do container
+    if (scrollTop === 0) {
+      console.log('🔄 Chegou ao topo (scrollTop === 0), carregando mensagens antigas...');
       
       isLoadingMoreRef.current = true;
       scrollHeightBeforeLoadRef.current = scrollContainer.scrollHeight;
