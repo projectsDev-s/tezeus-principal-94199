@@ -1557,7 +1557,10 @@ export function WhatsAppChat({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={loadMoreMessages}
+                    onClick={() => {
+                      console.log('🔘 Clicou em Carregar Mais - scroll atual:', messagesScrollRef.current?.scrollTop);
+                      loadMoreMessages();
+                    }}
                     className="text-xs"
                   >
                     Carregar mais mensagens

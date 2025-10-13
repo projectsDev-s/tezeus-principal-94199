@@ -179,6 +179,12 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         return;
       }
 
+      console.log('🔍 Antes de adicionar mensagens antigas:', {
+        mensagensAntigas: newMessages.length,
+        mensagensAtuais: messages.length,
+        totalAposCarregar: newMessages.length + messages.length
+      });
+
       // Concatenar mensagens antigas no início
       setMessages(prevMessages => [...newMessages, ...prevMessages]);
       setHasMore(!!data?.nextBefore);
@@ -191,6 +197,8 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         messages: updatedMessages,
         timestamp: Date.now()
       });
+
+      console.log('✅ Mensagens antigas carregadas - NÃO deve haver scroll automático');
 
     } catch (error) {
       console.error('Unexpected error loading more messages:', error);
