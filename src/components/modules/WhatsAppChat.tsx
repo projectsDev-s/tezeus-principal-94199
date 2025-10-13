@@ -507,7 +507,17 @@ export function WhatsAppChat({
 
     // ✅ CRÍTICO: Carregar mensagens APENAS quando conversa é selecionada
     clearMessages(); // Limpar mensagens da conversa anterior
+    isInitialLoadRef.current = true; // Marcar como carregamento inicial
     await loadMessages(conversation.id);
+    
+    // ✅ Scroll para o final APÓS carregar mensagens
+    setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        isInitialLoadRef.current = false;
+      }
+    }, 100);
+    
     if (conversation.unread_count > 0) {
       markAsRead(conversation.id);
     }
@@ -1017,20 +1027,7 @@ export function WhatsAppChat({
     }
   }, [selectedConversationId, conversations, markAsRead]);
 
-  // Auto-scroll APENAS quando conversa é selecionada (carregamento inicial)
-  useEffect(() => {
-    // ✅ APENAS no carregamento inicial (não ao carregar mais mensagens)
-    if (!selectedConversation) return;
-    
-    const timer = setTimeout(() => {
-      if (messages.length > 0 && isInitialLoadRef.current && messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-        isInitialLoadRef.current = false;
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [selectedConversation?.id]); // Só dispara ao selecionar conversa
+  // ✅ Removido - scroll agora acontece após loadInitial completar
 
 
   // ✅ CORREÇÃO: Listener ESC para voltar da conversa
