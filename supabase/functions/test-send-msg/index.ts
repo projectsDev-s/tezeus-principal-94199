@@ -341,12 +341,10 @@ serve(async (req) => {
 
       evolutionPayload = {
         number: contact.phone,
-        mediaMessage: {
-          mediatype: mediaType,  // ✅ Sempre válido agora
-          media: file_url,
-          caption: effectiveContent || '',
-          fileName: file_name || `media_${Date.now()}`
-        }
+        mediatype: mediaType,  // ✅ Campo no nível raiz, não dentro de mediaMessage
+        media: file_url,
+        caption: effectiveContent || '',
+        fileName: file_name || `media_${Date.now()}`
       };
     }
 
