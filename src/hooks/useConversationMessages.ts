@@ -167,7 +167,10 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       
       console.log('📥 Mensagens antigas recebidas:', {
         count: newMessages.length,
-        hasNext: !!data?.nextBefore
+        hasNext: !!data?.nextBefore,
+        firstMessage: newMessages[0],
+        imagesCount: newMessages.filter((m: WhatsAppMessage) => m.message_type === 'image').length,
+        sampleImage: newMessages.find((m: WhatsAppMessage) => m.message_type === 'image')
       });
       
       if (newMessages.length === 0) {

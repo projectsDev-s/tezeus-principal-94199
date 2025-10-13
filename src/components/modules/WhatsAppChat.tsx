@@ -224,6 +224,17 @@ export function WhatsAppChat({
     
     const scrollContainer = messagesScrollRef.current;
     const scrollTop = scrollContainer.scrollTop;
+    const scrollHeight = scrollContainer.scrollHeight;
+    const clientHeight = scrollContainer.clientHeight;
+    
+    // Log de debug para entender o scroll
+    console.log('📏 Scroll info:', { 
+      scrollTop, 
+      scrollHeight, 
+      clientHeight, 
+      canLoadMore: scrollTop < 100,
+      hasMore 
+    });
     
     // Detectar quando o usuário rola para o TOPO (mensagens antigas)
     // scrollTop próximo de 0 = topo do container
@@ -1078,11 +1089,30 @@ export function WhatsAppChat({
     }
   }, [messages.length]);
 
-  // ✅ Resetar flag quando loadingMore termina (fallback se o useEffect acima não executar)
+  // ✅ Resetar flag quando loadingMore termina E PRESERVAR POSIÇÃO DE SCROLL
   useEffect(() => {
     if (!loadingMore && isLoadingMoreRef.current) {
-      console.log('⚠️ Resetando flag via fallback (loadingMore mudou para false)');
-      isLoadingMoreRef.current = false;
+      console.log('⚠️ Resetando flag e ajustando scroll após loadMore');
+      
+      setTimeout(() => {
+        if (messagesScrollRef.current && scrollHeightBeforeLoadRef.current > 0) {
+          const scrollContainer = messagesScrollRef.current;
+          const newScrollHeight = scrollContainer.scrollHeight;
+          const heightDifference = newScrollHeight - scrollHeightBeforeLoadRef.current;
+          
+          console.log('📏 Ajustando scroll:', { 
+            oldHeight: scrollHeightBeforeLoadRef.current, 
+            newHeight: newScrollHeight, 
+            diff: heightDifference 
+          });
+          
+          // Ajustar scroll para manter a posição visual do usuário
+          scrollContainer.scrollTop = heightDifference;
+        }
+        
+        isLoadingMoreRef.current = false;
+        scrollHeightBeforeLoadRef.current = 0;
+      }, 100);
     }
   }, [loadingMore]);
 
@@ -1625,7 +1655,7 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-        <ScrollArea className="flex-1 p-4" ref={node => {
+        <ScrollArea className="flex-1 min-h-0 p-4" ref={node => {
           if (node) {
             const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
             if (scrollContainer) {

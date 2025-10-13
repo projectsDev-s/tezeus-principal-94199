@@ -41,7 +41,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasLoaded, setHasLoaded] = useState(false);
   
   // Log para debug
   console.log('🟡 MediaViewer render:', { 
@@ -156,32 +155,37 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
 
   // SEGUNDA VERIFICAÇÃO: IMAGEM
   if (isImageFile || messageType === 'image') {
+    console.log('📸 Renderizando imagem:', { fileName, fileUrl, isLoading });
+    
     return (
       <div className={className}>
         <div className="relative inline-block">
           {!imageError && (
             <>
+              {/* Skeleton/placeholder enquanto carrega */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-muted animate-pulse rounded-lg max-w-[300px] max-h-[200px]" 
+                     style={{ width: '300px', height: '200px' }} />
+              )}
+              
               <img
                 src={fileUrl}
                 alt={fileName || 'Imagem'}
-                className={`max-w-[300px] max-h-[200px] rounded-lg object-cover cursor-pointer transition-opacity duration-200 border border-border ${
-                  isLoading && !hasLoaded ? 'opacity-0 absolute' : 'opacity-100'
-                }`}
+                className="max-w-[300px] max-h-[200px] rounded-lg object-cover cursor-pointer border border-border"
                 onClick={() => setIsImageModalOpen(true)}
                 onError={handleImageError}
                 onLoad={() => {
+                  console.log('✅ Imagem carregada:', { fileName, fileUrl });
                   setImageError(null);
                   setIsLoading(false);
-                  setHasLoaded(true);
                 }}
                 onLoadStart={() => {
                   setIsLoading(true);
-                  setHasLoaded(false);
                 }}
-                loading="lazy"
               />
+              
               {/* Timestamp e status sobreposto na imagem */}
-              {timestamp && hasLoaded && !isLoading && (
+              {timestamp && !isLoading && (
                 <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1.5 py-0.5 rounded flex items-center gap-1" style={{ fontSize: '11px' }}>
                   <span>
                     {new Date(timestamp).toLocaleTimeString('pt-BR', {
