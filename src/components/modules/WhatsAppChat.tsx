@@ -219,25 +219,31 @@ export function WhatsAppChat({
     
     const scrollContainer = messagesScrollRef.current;
     const scrollTop = scrollContainer.scrollTop;
+    const scrollHeight = scrollContainer.scrollHeight;
+    const clientHeight = scrollContainer.clientHeight;
     
-    // Quando o scroll chega ao topo (ou próximo), carregar mais mensagens
-    if (scrollTop <= 50) {
-      console.log('🔄 Scroll no topo detectado, carregando mais mensagens...');
+    // Com flex-col-reverse, o TOPO visual está no scroll MÁXIMO
+    // Detectar quando está próximo do topo visual (mensagens antigas)
+    const distanceFromTop = scrollHeight - clientHeight - scrollTop;
+    
+    console.log('📊 Scroll info:', { scrollTop, scrollHeight, clientHeight, distanceFromTop });
+    
+    if (distanceFromTop <= 50 && !loadingMore) {
+      console.log('🔄 Topo visual detectado, carregando mensagens antigas...');
       
-      // Guardar altura do scroll antes de carregar
       const scrollHeightBefore = scrollContainer.scrollHeight;
       const scrollTopBefore = scrollContainer.scrollTop;
       
-      loadMoreMessages().then(() => {
-        // Após carregar, ajustar scroll para manter posição
-        requestAnimationFrame(() => {
-          if (scrollContainer) {
-            const scrollHeightAfter = scrollContainer.scrollHeight;
-            const heightDifference = scrollHeightAfter - scrollHeightBefore;
-            scrollContainer.scrollTop = scrollTopBefore + heightDifference;
-          }
-        });
-      });
+      loadMoreMessages();
+      
+      // Aguardar próximo frame para ajustar scroll
+      setTimeout(() => {
+        if (scrollContainer) {
+          const scrollHeightAfter = scrollContainer.scrollHeight;
+          const heightDifference = scrollHeightAfter - scrollHeightBefore;
+          scrollContainer.scrollTop = scrollTopBefore + heightDifference;
+        }
+      }, 100);
     }
   }, [loadMoreMessages, loadingMore, hasMore]);
 
@@ -1077,9 +1083,16 @@ export function WhatsAppChat({
   useEffect(() => {
     const scrollContainer = messagesScrollRef.current;
     
+    if (scrollContainer) {
+      // Re-anexar listener quando handleMessagesScroll mudar
+      scrollContainer.addEventListener('scroll', handleMessagesScroll);
+      console.log('✅ Listener anexado via useEffect');
+    }
+    
     return () => {
       if (scrollContainer) {
         scrollContainer.removeEventListener('scroll', handleMessagesScroll);
+        console.log('🗑️ Listener removido');
       }
     };
   }, [handleMessagesScroll]);
@@ -1541,14 +1554,20 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-            <ScrollArea className="flex-1 p-4" ref={node => {
+        <ScrollArea className="flex-1 p-4" ref={node => {
           if (node) {
             const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
-            if (scrollContainer && !messagesScrollRef.current) {
+            if (scrollContainer) {
+              // Remover listener antigo se existir
+              if (messagesScrollRef.current) {
+                messagesScrollRef.current.removeEventListener('scroll', handleMessagesScroll);
+              }
+              
               messagesScrollRef.current = scrollContainer as HTMLElement;
               
-              // ✅ Adicionar listener de scroll para carregamento automático
+              // ✅ Sempre adicionar o listener atualizado
               scrollContainer.addEventListener('scroll', handleMessagesScroll);
+              console.log('✅ Scroll listener anexado');
             }
           }
         }}>
