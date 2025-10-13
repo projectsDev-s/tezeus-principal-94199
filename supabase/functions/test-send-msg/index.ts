@@ -39,6 +39,17 @@ serve(async (req) => {
     const isPlaceholder = content && /^\[.*\]$/.test(content); // Detecta [IMAGE], [VIDEO], [DOCUMENT]
     const effectiveContent = (isMediaMessage && isPlaceholder) ? '' : (content || '');
 
+    // Validação de file_url para mensagens de mídia
+    if (isMediaMessage && !file_url) {
+      console.log(`❌ [${requestId}] Media message missing file_url`);
+      return new Response(JSON.stringify({
+        error: 'file_url is required for media messages'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     if (!conversation_id || (!effectiveContent && !isMediaMessage)) {
       console.log(`❌ [${requestId}] Missing required fields - conversation_id: ${!!conversation_id}, content: ${!!content}, message_type: ${message_type}`);
       return new Response(JSON.stringify({
@@ -304,6 +315,12 @@ serve(async (req) => {
     // ============================================================
     console.log(`📤 [${requestId}] Sending message directly to Evolution API`);
     
+    // Validar message_type para mídia
+    const validMediaTypes = ['image', 'video', 'document', 'audio'];
+    const mediaType = message_type && validMediaTypes.includes(message_type) 
+      ? message_type 
+      : 'document'; // fallback seguro
+
     // Construir payload para Evolution baseado no tipo de mensagem
     const evolutionEndpoint = message_type === 'text'
       ? `${evolutionUrl}/message/sendText/${instance_name}`
@@ -317,17 +334,23 @@ serve(async (req) => {
         text: effectiveContent
       };
     } else {
+      // Garantir que todos os campos obrigatórios estejam presentes
+      if (!file_url) {
+        throw new Error(`file_url is required for media messages (type: ${message_type})`);
+      }
+
       evolutionPayload = {
         number: contact.phone,
         mediaMessage: {
-          mediatype: message_type,
+          mediatype: mediaType,  // ✅ Sempre válido agora
           media: file_url,
           caption: effectiveContent || '',
-          fileName: file_name || `file_${Date.now()}`
+          fileName: file_name || `media_${Date.now()}`
         }
       };
     }
 
+    console.log(`🔍 [${requestId}] Evolution payload constructed:`, JSON.stringify(evolutionPayload, null, 2));
     console.log(`🌐 [${requestId}] Calling Evolution: ${evolutionEndpoint}`);
 
     try {
