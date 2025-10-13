@@ -510,14 +510,6 @@ export function WhatsAppChat({
     isInitialLoadRef.current = true; // Marcar como carregamento inicial
     await loadMessages(conversation.id);
     
-    // ✅ Scroll para o final APÓS carregar mensagens
-    setTimeout(() => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-        isInitialLoadRef.current = false;
-      }
-    }, 100);
-    
     if (conversation.unread_count > 0) {
       markAsRead(conversation.id);
     }
@@ -1027,7 +1019,23 @@ export function WhatsAppChat({
     }
   }, [selectedConversationId, conversations, markAsRead]);
 
-  // ✅ Removido - scroll agora acontece após loadInitial completar
+  // ✅ Scroll para última mensagem APENAS no carregamento inicial da conversa
+  useEffect(() => {
+    if (!selectedConversation || messages.length === 0) return;
+    
+    // Scroll apenas se for carregamento inicial
+    if (isInitialLoadRef.current) {
+      const timer = setTimeout(() => {
+        if (messagesEndRef.current) {
+          console.log('📜 Fazendo scroll inicial para última mensagem');
+          messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+          isInitialLoadRef.current = false;
+        }
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedConversation?.id, messages.length]);
 
 
   // ✅ CORREÇÃO: Listener ESC para voltar da conversa
