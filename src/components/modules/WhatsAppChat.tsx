@@ -1642,8 +1642,8 @@ export function WhatsAppChat({
             }
           }
         }}>
-              {/* ✅ Loading automático no topo durante scroll infinito */}
-              {isLoadingMoreRef.current && <div className="flex justify-center py-3 animate-fade-in">
+              {/* ✅ Loading automático no topo durante scroll infinito - usar loadingMore ao invés de ref */}
+              {loadingMore && <div className="flex justify-center py-3 animate-fade-in">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
                     <span className="text-sm">Carregando mensagens...</span>
