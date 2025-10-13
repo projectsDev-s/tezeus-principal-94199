@@ -1551,7 +1551,7 @@ export function WhatsAppChat({
       </div>
 
       {/* Área principal de chat */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {selectedConversation ? <>
             {/* Cabeçalho do chat */}
             <div className="p-4 border-b border-border bg-white">
@@ -1655,7 +1655,7 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-        <ScrollArea className="flex-1 min-h-0 p-4" ref={node => {
+        <ScrollArea className="flex-1 h-0 p-4" ref={node => {
           if (node) {
             const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
             if (scrollContainer) {
@@ -1673,11 +1673,14 @@ export function WhatsAppChat({
               // Log de diagnóstico para entender se há scroll disponível
               setTimeout(() => {
                 if (messagesScrollRef.current) {
+                  const messagesContainer = messagesScrollRef.current.querySelector('.space-y-4');
                   console.log('📊 Container info após render:', {
                     scrollHeight: messagesScrollRef.current.scrollHeight,
                     clientHeight: messagesScrollRef.current.clientHeight,
                     hasScroll: messagesScrollRef.current.scrollHeight > messagesScrollRef.current.clientHeight,
-                    scrollTop: messagesScrollRef.current.scrollTop
+                    scrollTop: messagesScrollRef.current.scrollTop,
+                    messagesCount: messages.length,
+                    messagesContainerHeight: messagesContainer?.scrollHeight || 0
                   });
                 }
               }, 500);
