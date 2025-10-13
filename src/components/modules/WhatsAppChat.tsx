@@ -267,11 +267,11 @@ export function WhatsAppChat({
               }
             }
             
-            // Liberar flag após ajuste
+            // Liberar flag após ajuste - manter loading visível por 5 segundos
             setTimeout(() => {
               isLoadingMoreRef.current = false;
-              console.log('✅ Loading finalizado');
-            }, 300);
+              console.log('✅ Loading finalizado após 5 segundos');
+            }, 5000);
           }, 50);
         });
       });
