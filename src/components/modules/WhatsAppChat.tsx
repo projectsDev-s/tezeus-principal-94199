@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getConnectionColor } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -212,6 +212,34 @@ export function WhatsAppChat({
 
   // Usar a função de filtro unificada
   const filteredConversations = getFilteredConversations();
+
+  // ✅ Detectar scroll para o topo e carregar automaticamente
+  const handleMessagesScroll = useCallback(() => {
+    if (!messagesScrollRef.current || loadingMore || !hasMore) return;
+    
+    const scrollContainer = messagesScrollRef.current;
+    const scrollTop = scrollContainer.scrollTop;
+    
+    // Quando o scroll chega ao topo (ou próximo), carregar mais mensagens
+    if (scrollTop <= 50) {
+      console.log('🔄 Scroll no topo detectado, carregando mais mensagens...');
+      
+      // Guardar altura do scroll antes de carregar
+      const scrollHeightBefore = scrollContainer.scrollHeight;
+      const scrollTopBefore = scrollContainer.scrollTop;
+      
+      loadMoreMessages().then(() => {
+        // Após carregar, ajustar scroll para manter posição
+        requestAnimationFrame(() => {
+          if (scrollContainer) {
+            const scrollHeightAfter = scrollContainer.scrollHeight;
+            const heightDifference = scrollHeightAfter - scrollHeightBefore;
+            scrollContainer.scrollTop = scrollTopBefore + heightDifference;
+          }
+        });
+      });
+    }
+  }, [loadMoreMessages, loadingMore, hasMore]);
 
   // ✅ Enviar mensagem usando o hook de mensagens
   const handleSendMessage = async () => {
@@ -1044,6 +1072,17 @@ export function WhatsAppChat({
       }
     }
   }, [messages, loading]);
+
+  // ✅ Cleanup do scroll listener
+  useEffect(() => {
+    const scrollContainer = messagesScrollRef.current;
+    
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleMessagesScroll);
+      }
+    };
+  }, [handleMessagesScroll]);
   if (loading) {
     return <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -1507,6 +1546,9 @@ export function WhatsAppChat({
             const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
             if (scrollContainer && !messagesScrollRef.current) {
               messagesScrollRef.current = scrollContainer as HTMLElement;
+              
+              // ✅ Adicionar listener de scroll para carregamento automático
+              scrollContainer.addEventListener('scroll', handleMessagesScroll);
             }
           }
         }}>
@@ -1515,29 +1557,12 @@ export function WhatsAppChat({
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 </div>}
               
-              {/* ✅ Botão Load More no TOPO (scroll infinito) */}
-              {hasMore && messages.length > 0 && <div className="flex justify-center p-2">
-                  <Button variant="ghost" size="sm" onClick={async () => {
-              // Guardar altura do scroll antes de carregar
-              if (messagesScrollRef.current) {
-                const scrollContainer = messagesScrollRef.current;
-                const scrollHeightBefore = scrollContainer.scrollHeight;
-                await loadMoreMessages();
-
-                // Após carregar, ajustar scroll para manter posição
-                setTimeout(() => {
-                  if (scrollContainer) {
-                    const scrollHeightAfter = scrollContainer.scrollHeight;
-                    const heightDifference = scrollHeightAfter - scrollHeightBefore;
-                    scrollContainer.scrollTop = heightDifference;
-                  }
-                }, 50);
-              } else {
-                await loadMoreMessages();
-              }
-            }} disabled={loadingMore}>
-                    {loadingMore ? 'Carregando...' : 'Carregar mensagens anteriores'}
-                  </Button>
+              {/* ✅ Loading automático no topo durante scroll infinito */}
+              {loadingMore && <div className="flex justify-center py-3 animate-fade-in">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
+                    <span className="text-sm">Carregando mensagens...</span>
+                  </div>
                 </div>}
               
                 <div className="space-y-4">
