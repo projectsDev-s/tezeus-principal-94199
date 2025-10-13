@@ -1087,6 +1087,29 @@ export function WhatsAppChat({
     }
   }, [selectedConversation?.id]);
 
+  // ✅ CORREÇÃO: Listener ESC para voltar da conversa
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedConversation) {
+        handleBackToList();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [selectedConversation]);
+
+  // ✅ CORREÇÃO: Função para voltar à lista de conversas
+  const handleBackToList = () => {
+    setSelectedConversation(null);
+    clearMessages();
+    
+    // Limpar URL params
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    window.history.pushState({}, '', url.toString());
+  };
+
   // ✅ Cleanup do scroll listener
   useEffect(() => {
     const scrollContainer = messagesScrollRef.current;
@@ -1496,6 +1519,25 @@ export function WhatsAppChat({
             <div className="p-4 border-b border-border bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  {/* ✅ CORREÇÃO: Botão Voltar visível */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleBackToList}
+                          className="h-9 w-9 hover:bg-muted"
+                        >
+                          <ArrowRight className="h-5 w-5 rotate-180" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Voltar à lista (ESC)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
                    <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all" onClick={() => setContactPanelOpen(true)}>
                     {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
                     <AvatarFallback style={{

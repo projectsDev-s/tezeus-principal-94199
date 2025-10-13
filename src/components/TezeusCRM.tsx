@@ -118,22 +118,13 @@ export function TezeusCRM() {
         navigate(`/conversas?id=${conversationId}`, { replace: true });
       }
       
-      // ✅ CORREÇÃO 4: Só bloquear navegação se NÃO for via notificação
-      if (!isNotificationNavigation) {
-        setCanNavigateFreely(false);
-        
-        // Permitir navegação livre após tempo reduzido
-        const timer = setTimeout(() => {
-          setCanNavigateFreely(true);
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-      }
+      // ✅ Navegação via notificação NUNCA bloqueia
+      setCanNavigateFreely(true);
     } else if (!conversationId && selectedConversationId) {
       setSelectedConversationId(null);
       setCanNavigateFreely(true);
     }
-  }, [location.search, location.state, selectedConversationId, isNotificationNavigation, navigate]);
+  }, [location.search, location.state, selectedConversationId, navigate]);
 
   // Listener para navegação via toast
   useEffect(() => {
