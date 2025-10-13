@@ -1669,6 +1669,18 @@ export function WhatsAppChat({
               // ✅ Sempre adicionar o listener atualizado
               scrollContainer.addEventListener('scroll', handleMessagesScroll);
               console.log('✅ Scroll listener anexado');
+              
+              // Log de diagnóstico para entender se há scroll disponível
+              setTimeout(() => {
+                if (messagesScrollRef.current) {
+                  console.log('📊 Container info após render:', {
+                    scrollHeight: messagesScrollRef.current.scrollHeight,
+                    clientHeight: messagesScrollRef.current.clientHeight,
+                    hasScroll: messagesScrollRef.current.scrollHeight > messagesScrollRef.current.clientHeight,
+                    scrollTop: messagesScrollRef.current.scrollTop
+                  });
+                }
+              }, 500);
             }
           }
         }}>
