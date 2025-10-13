@@ -841,6 +841,44 @@ serve(async (req) => {
               dbMessageId = msgData.id;
               fullMessageData = msgData;
               console.log(`🔑 [${requestId}] Found message UUID from DB: ${dbMessageId} (conversation: ${msgData.conversation_id})`);
+              
+              // ✅ Atualizar status no banco quando for messages.update
+              if (payload.event === 'messages.update' && payload.data?.status) {
+                const evolutionStatus = payload.data.status;
+                
+                // Mapear status da Evolution para nosso schema
+                let newStatus = null;
+                let updateData: any = {};
+                
+                if (evolutionStatus === 'DELIVERY_ACK') {
+                  newStatus = 'delivered';
+                  updateData.delivered_at = new Date().toISOString();
+                } else if (evolutionStatus === 'READ') {
+                  newStatus = 'read';
+                  updateData.read_at = new Date().toISOString();
+                } else if (evolutionStatus === 'SERVER_ACK') {
+                  // Ignorar SERVER_ACK - é um status intermediário
+                  console.log(`ℹ️ [${requestId}] Ignoring SERVER_ACK status (intermediate)`);
+                }
+                
+                // Só atualizar se não for SERVER_ACK
+                if (newStatus && newStatus !== msgData.status) {
+                  const { error: updateError } = await supabase
+                    .from('messages')
+                    .update({ 
+                      status: newStatus,
+                      ...updateData
+                    })
+                    .eq('id', dbMessageId);
+                  
+                  if (updateError) {
+                    console.error(`❌ [${requestId}] Failed to update message status:`, updateError);
+                  } else {
+                    console.log(`✅ [${requestId}] Message status updated: ${msgData.status} → ${newStatus}`);
+                  }
+                }
+              }
+              
               console.log(`📧 [${requestId}] Full message data retrieved for N8N:`, {
                 content: msgData.content,
                 message_type: msgData.message_type,
