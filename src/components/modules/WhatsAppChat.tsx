@@ -1083,16 +1083,33 @@ export function WhatsAppChat({
       const currentLength = messages.length;
       const previousLength = previousMessagesLengthRef.current;
       
-      // Detectar se é uma NOVA mensagem (adicionada no final)
-      // Não é carregamento de mensagens antigas (que adiciona no início)
-      const isNewMessage = currentLength > previousLength && !isLoadingMoreRef.current;
+      // Detectar se é uma NOVA mensagem (adicionada NO FINAL, não no início)
+      const lastMessage = messages[messages.length - 1];
+      const wasLastMessageDifferent = previousLength > 0 && 
+        messages[previousLength - 1] && 
+        (!lastMessage || lastMessage.id !== messages[previousLength - 1]?.id);
+
+      const isNewMessage = currentLength > previousLength && 
+                           !isLoadingMoreRef.current && 
+                           wasLastMessageDifferent;
+      
+      console.log('🔍 Verificando scroll automático:', {
+        currentLength,
+        previousLength,
+        isLoadingMoreRef: isLoadingMoreRef.current,
+        isNewMessage,
+        wasLastMessageDifferent,
+        lastMessageId: lastMessage?.id
+      });
       
       if (isNewMessage) {
         const isAtBottom = () => {
-          const container = messagesEndRef.current?.parentElement;
+          const container = messagesScrollRef.current;
           if (!container) return true;
+          
+          // Com flex-col-reverse, scrollTop próximo de 0 = no final
           const threshold = 100;
-          return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+          return Math.abs(container.scrollTop) <= threshold;
         };
 
         // Se já está próximo do final, faz scroll suave para nova mensagem
