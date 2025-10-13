@@ -1078,6 +1078,14 @@ export function WhatsAppChat({
     }
   }, [messages.length]);
 
+  // ✅ Resetar flag quando loadingMore termina (fallback se o useEffect acima não executar)
+  useEffect(() => {
+    if (!loadingMore && isLoadingMoreRef.current) {
+      console.log('⚠️ Resetando flag via fallback (loadingMore mudou para false)');
+      isLoadingMoreRef.current = false;
+    }
+  }, [loadingMore]);
+
   // Resetar flags ao trocar de conversa
   useEffect(() => {
     if (selectedConversation) {

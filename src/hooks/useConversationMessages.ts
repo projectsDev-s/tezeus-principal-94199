@@ -123,8 +123,21 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
   const loadMore = useCallback(async () => {
     if (!selectedWorkspace?.workspace_id || !currentConversationId || !cursorBefore || loadingMore || !hasMore) {
+      console.log('⏭️ loadMore ignorado:', {
+        hasWorkspace: !!selectedWorkspace?.workspace_id,
+        hasConversationId: !!currentConversationId,
+        hasCursor: !!cursorBefore,
+        isLoadingMore: loadingMore,
+        hasMore
+      });
       return;
     }
+
+    console.log('📜 Carregando mais mensagens...', {
+      currentConversationId,
+      cursorBefore,
+      messagesCount: messages.length
+    });
 
     setLoadingMore(true);
 
@@ -134,7 +147,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       const { data, error } = await supabase.functions.invoke('whatsapp-get-messages', {
         body: { 
           conversation_id: currentConversationId,
-          limit: 5,
+          limit: 50, // ✅ Aumentado de 5 para 50
           before: cursorBefore
         },
         headers
@@ -152,7 +165,13 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
       const newMessages = data?.items || [];
       
+      console.log('📥 Mensagens antigas recebidas:', {
+        count: newMessages.length,
+        hasNext: !!data?.nextBefore
+      });
+      
       if (newMessages.length === 0) {
+        console.log('✅ Sem mais mensagens antigas');
         setHasMore(false);
         return;
       }
@@ -180,7 +199,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     } finally {
       setLoadingMore(false);
     }
-  }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, toast]);
+  }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, toast, getHeaders]);
 
   const addMessage = useCallback((message: WhatsAppMessage) => {
     setMessages(prevMessages => {
