@@ -1017,7 +1017,7 @@ export function WhatsAppChat({
     }
   }, [selectedConversationId, conversations, markAsRead]);
 
-  // Auto-scroll quando conversa é selecionada ou mensagens carregam
+  // Auto-scroll APENAS quando conversa é selecionada (carregamento inicial)
   useEffect(() => {
     if (selectedConversation && messages.length > 0 && isInitialLoadRef.current) {
       // Scroll direto para o final sem animação no primeiro carregamento
@@ -1026,7 +1026,7 @@ export function WhatsAppChat({
       });
       isInitialLoadRef.current = false;
     }
-  }, [selectedConversation, messages.length]);
+  }, [selectedConversation?.id]); // ✅ Removido messages.length - só roda quando troca conversa
 
 
   // ✅ CORREÇÃO: Listener ESC para voltar da conversa
