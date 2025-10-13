@@ -216,65 +216,30 @@ export function WhatsAppChat({
   // ✅ Flag para evitar múltiplas chamadas simultâneas
   const isLoadingMoreRef = useRef(false);
   const isInitialLoadRef = useRef(true);
-  const previousMessagesLengthRef = useRef(0);
-  const loadingDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollHeightBeforeLoadRef = useRef(0);
 
-  // ✅ Detectar scroll para o topo e carregar automaticamente
+  // ✅ Detectar scroll para o topo e carregar automaticamente (modelo WhatsApp)
   const handleMessagesScroll = useCallback(() => {
     if (!messagesScrollRef.current || loadingMore || !hasMore || isLoadingMoreRef.current) return;
     
     const scrollContainer = messagesScrollRef.current;
     const scrollTop = scrollContainer.scrollTop;
+    
+    // Com flex-col-reverse, scrollTop = 0 é o FUNDO (mensagens novas)
+    // Precisamos detectar quando chega próximo ao TOPO (mensagens antigas)
+    // No flex-col-reverse, rolar para cima significa scrollTop AUMENTA
     const scrollHeight = scrollContainer.scrollHeight;
     const clientHeight = scrollContainer.clientHeight;
+    const distanceFromTop = scrollHeight - scrollTop - clientHeight;
     
-    // Com flex-col-reverse, o TOPO visual está no scroll MÁXIMO
-    // Detectar quando está próximo do topo visual (mensagens antigas)
-    const distanceFromTop = scrollHeight - clientHeight - scrollTop;
-    
-    // Só carregar se realmente está próximo do topo E não está já carregando
-    if (distanceFromTop >= (scrollHeight - clientHeight - 100) && distanceFromTop <= (scrollHeight - clientHeight)) {
-      console.log('🔄 Topo visual detectado, carregando mensagens antigas...');
+    // Quando está próximo do topo (mensagens antigas), carregar mais
+    if (distanceFromTop < 100) {
+      console.log('🔄 Chegou ao topo, carregando mensagens antigas...');
       
       isLoadingMoreRef.current = true;
-      
-      // Guardar posição ANTES de carregar
-      const firstVisibleMessage = scrollContainer.querySelector('[data-message-id]');
-      const firstMessageId = firstVisibleMessage?.getAttribute('data-message-id');
-      const firstMessageOffsetTop = firstVisibleMessage?.getBoundingClientRect().top;
+      scrollHeightBeforeLoadRef.current = scrollHeight;
       
       loadMoreMessages();
-      
-      // Aguardar DOM atualizar e restaurar posição baseado no elemento
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            if (scrollContainer && firstMessageId) {
-              // Encontrar a mesma mensagem após o carregamento
-              const sameMessage = scrollContainer.querySelector(`[data-message-id="${firstMessageId}"]`);
-              
-              if (sameMessage && firstMessageOffsetTop) {
-                const newOffsetTop = sameMessage.getBoundingClientRect().top;
-                const difference = newOffsetTop - firstMessageOffsetTop;
-                
-                // Ajustar scroll pela diferença
-                scrollContainer.scrollTop += difference;
-                
-                console.log('✅ Scroll ajustado por elemento:', { 
-                  firstMessageId,
-                  difference 
-                });
-              }
-            }
-            
-            // Liberar flag após ajuste - manter loading visível por 5 segundos
-            setTimeout(() => {
-              isLoadingMoreRef.current = false;
-              console.log('✅ Loading finalizado após 5 segundos');
-            }, 5000);
-          }, 50);
-        });
-      });
     }
   }, [loadMoreMessages, loadingMore, hasMore]);
 
@@ -1090,78 +1055,43 @@ export function WhatsAppChat({
     }
   }, [selectedConversation, messages.length]);
 
-  // Auto-scroll suave quando novas mensagens chegam (não no carregamento inicial)
+  // ✅ Ajustar scroll após carregar mensagens antigas (manter posição visual)
   useEffect(() => {
-    if (selectedConversation && messages.length > 0 && !loading && !loadingMore) {
-      const currentLength = messages.length;
-      const previousLength = previousMessagesLengthRef.current;
+    if (messages.length > 0 && isLoadingMoreRef.current && messagesScrollRef.current) {
+      const scrollContainer = messagesScrollRef.current;
+      const scrollHeightBefore = scrollHeightBeforeLoadRef.current;
+      const scrollHeightAfter = scrollContainer.scrollHeight;
       
-      // Detectar se é uma NOVA mensagem (adicionada NO FINAL, não no início)
-      const lastMessage = messages[messages.length - 1];
-      const wasLastMessageDifferent = previousLength > 0 && 
-        messages[previousLength - 1] && 
-        (!lastMessage || lastMessage.id !== messages[previousLength - 1]?.id);
-
-      const isNewMessage = currentLength > previousLength && 
-                           !isLoadingMoreRef.current && 
-                           wasLastMessageDifferent;
+      // Calcular quanto o conteúdo cresceu
+      const heightDifference = scrollHeightAfter - scrollHeightBefore;
       
-      console.log('🔍 Verificando scroll automático:', {
-        currentLength,
-        previousLength,
-        isLoadingMoreRef: isLoadingMoreRef.current,
-        isNewMessage,
-        wasLastMessageDifferent,
-        lastMessageId: lastMessage?.id
-      });
-      
-      if (isNewMessage) {
-        const isAtBottom = () => {
-          const container = messagesScrollRef.current;
-          if (!container) return true;
-          
-          // Com flex-col-reverse, scrollTop próximo de 0 = no final
-          const threshold = 100;
-          return Math.abs(container.scrollTop) <= threshold;
-        };
-
-        // Se já está próximo do final, faz scroll suave para nova mensagem
-        if (isAtBottom()) {
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({
-              behavior: 'smooth'
-            });
-          }, 100);
-        }
+      if (heightDifference > 0) {
+        // Ajustar scroll para manter a posição visual do usuário
+        scrollContainer.scrollTop += heightDifference;
+        
+        console.log('✅ Scroll ajustado após carregar:', { 
+          heightDifference,
+          scrollTopAntes: scrollContainer.scrollTop - heightDifference,
+          scrollTopDepois: scrollContainer.scrollTop
+        });
       }
       
-      previousMessagesLengthRef.current = currentLength;
+      // Liberar flag após ajuste
+      setTimeout(() => {
+        isLoadingMoreRef.current = false;
+        console.log('✅ Loading finalizado');
+      }, 100);
     }
-  }, [messages, loading, loadingMore]);
+  }, [messages.length]);
 
   // Resetar flags ao trocar de conversa
   useEffect(() => {
     if (selectedConversation) {
-      // Limpar timeout anterior se existir
-      if (loadingDelayTimeoutRef.current) {
-        clearTimeout(loadingDelayTimeoutRef.current);
-        loadingDelayTimeoutRef.current = null;
-      }
-      
       isInitialLoadRef.current = true;
-      previousMessagesLengthRef.current = 0;
       isLoadingMoreRef.current = false;
+      scrollHeightBeforeLoadRef.current = 0;
     }
   }, [selectedConversation?.id]);
-
-  // Cleanup do timeout ao desmontar
-  useEffect(() => {
-    return () => {
-      if (loadingDelayTimeoutRef.current) {
-        clearTimeout(loadingDelayTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // ✅ Cleanup do scroll listener
   useEffect(() => {
