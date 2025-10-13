@@ -821,7 +821,7 @@ serve(async (req) => {
                 conversation_id,
                 evolution_key_id,
                 external_id,
-                conversation:conversations (
+                conversation:conversations!fk_messages_conversation_id (
                   id,
                   status,
                   contact:contacts (
