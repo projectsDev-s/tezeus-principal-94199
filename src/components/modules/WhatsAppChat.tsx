@@ -1700,7 +1700,7 @@ export function WhatsAppChat({
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 </div>}
               
-                <div className="space-y-2">
+                <div className="space-y-4">
                 {messages.map(message => <div key={message.id} data-message-id={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
                     {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
