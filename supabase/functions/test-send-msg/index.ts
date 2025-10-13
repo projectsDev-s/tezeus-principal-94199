@@ -398,11 +398,13 @@ serve(async (req) => {
       if (n8nWebhookUrl) {
         console.log(`📢 [${requestId}] Notifying N8N (post-processing)`);
         const n8nPayload = {
-    
           direction: 'outbound',
           external_id: external_id,
           phone_number: contact.phone,
           message_type: message_type,
+          content: effectiveContent,
+          file_url: file_url || null,
+          file_name: file_name || null,
           evolution_key_id: evolutionData.key?.id,
           workspace_id: conversation.workspace_id,
           conversation_id: conversation_id,
