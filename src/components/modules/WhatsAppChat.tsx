@@ -217,6 +217,7 @@ export function WhatsAppChat({
   const isLoadingMoreRef = useRef(false);
   const isInitialLoadRef = useRef(true);
   const previousMessagesLengthRef = useRef(0);
+  const loadingDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ✅ Detectar scroll para o topo e carregar automaticamente
   const handleMessagesScroll = useCallback(() => {
@@ -258,7 +259,11 @@ export function WhatsAppChat({
               heightDifference 
             });
             
-            isLoadingMoreRef.current = false;
+            // Manter o loading visível por 1 segundo adicional para transição suave
+            loadingDelayTimeoutRef.current = setTimeout(() => {
+              isLoadingMoreRef.current = false;
+              console.log('✅ Loading finalizado após delay visual');
+            }, 1000);
           }
         }, 200);
       });
@@ -1129,10 +1134,26 @@ export function WhatsAppChat({
   // Resetar flags ao trocar de conversa
   useEffect(() => {
     if (selectedConversation) {
+      // Limpar timeout anterior se existir
+      if (loadingDelayTimeoutRef.current) {
+        clearTimeout(loadingDelayTimeoutRef.current);
+        loadingDelayTimeoutRef.current = null;
+      }
+      
       isInitialLoadRef.current = true;
       previousMessagesLengthRef.current = 0;
+      isLoadingMoreRef.current = false;
     }
   }, [selectedConversation?.id]);
+
+  // Cleanup do timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (loadingDelayTimeoutRef.current) {
+        clearTimeout(loadingDelayTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ✅ Cleanup do scroll listener
   useEffect(() => {
