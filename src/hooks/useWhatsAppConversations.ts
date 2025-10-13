@@ -542,38 +542,49 @@ export const useWhatsAppConversations = () => {
     }
   }, [selectedWorkspace?.workspace_id]); // Re-fetch when workspace changes
 
+  // ✅ CORREÇÃO: Subscription única e otimizada para evitar duplicação
   useEffect(() => {
     // Get current user from localStorage
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
-    if (!currentUserData?.id) {
+    if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
       return;
     }
+
+    console.log('🔌 Iniciando subscription de realtime para workspace:', selectedWorkspace.workspace_id);
 
     // Subscription para novas mensagens  
     // Setting up realtime subscriptions
     
     const messagesChannel = supabase
-      .channel('whatsapp-messages')
+      .channel(`whatsapp-messages-${selectedWorkspace.workspace_id}`) // ✅ Canal único por workspace
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
-          // Realtime: New message received
           const newMessage = payload.new as any;
           
           // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
           if (newMessage.workspace_id !== selectedWorkspace?.workspace_id) {
-            // Message from different workspace - ignored
             return;
           }
+          
+          console.log('📨 Realtime: Nova mensagem', {
+            id: newMessage.id,
+            conversation_id: newMessage.conversation_id,
+            sender_type: newMessage.sender_type,
+            workspace_id: newMessage.workspace_id
+          });
           
           setConversations(prev => {
             const updated = prev.map(conv => {
               if (conv.id === newMessage.conversation_id) {
-                // Verificar se mensagem já existe para evitar duplicatas
+                // ✅ Verificar se mensagem já existe para evitar duplicatas
                 const messageExists = conv.messages.some(msg => msg.id === newMessage.id);
-                if (messageExists) return conv;
+                if (messageExists) {
+                  console.log('⚠️ Mensagem duplicada detectada e ignorada:', newMessage.id);
+                  return conv;
+                }
 
                 // Criar objeto da nova mensagem
                 const messageObj = {
@@ -604,16 +615,12 @@ export const useWhatsAppConversations = () => {
                   last_activity_at: newMessage.created_at
                 };
 
-                console.log('📨 Nova mensagem adicionada com last_message atualizada:', {
+                console.log('✅ Mensagem adicionada:', {
                   conversation_id: conv.id,
-                  message_content: newMessage.content,
-                  message_type: newMessage.message_type,
+                  message_id: newMessage.id,
                   sender_type: newMessage.sender_type,
-                  last_message_updated: true
+                  total_messages: updatedConv.messages.length
                 });
-
-                // O unread_count será atualizado automaticamente pelo trigger no banco
-                // e será refletido via evento UPDATE da conversa que virá em seguida
 
                 return updatedConv;
               }
@@ -624,15 +631,6 @@ export const useWhatsAppConversations = () => {
             const sorted = updated.sort((a, b) => 
               new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
             );
-            
-            console.log('📨➡️ Lista reordenada após nova mensagem:', {
-              message_conversation_id: newMessage.conversation_id,
-              sender_type: newMessage.sender_type,
-              new_order: sorted.slice(0, 3).map(c => ({ 
-                id: c.id, 
-                last_activity: c.last_activity_at
-              }))
-            });
             
             return sorted;
           });
@@ -688,9 +686,9 @@ export const useWhatsAppConversations = () => {
       )
       .subscribe();
 
-    // Subscription para mudanças em conversas
+    // ✅ CORREÇÃO: Subscription única para conversas com canal único por workspace
     const conversationsChannel = supabase
-      .channel('whatsapp-conversations')
+      .channel(`wapp-convs-${selectedWorkspace.workspace_id}`) // ✅ Canal único por workspace
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'conversations' },
         async (payload) => {

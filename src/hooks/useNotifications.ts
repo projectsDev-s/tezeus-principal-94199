@@ -204,29 +204,26 @@ export function useNotifications() {
     await Promise.all(conversationsWithUnread.map(conv => markAsRead(conv.id)));
   };
 
-  // Subscription em tempo real para mudanças otimizada
+  // ✅ CORREÇÃO: Subscription em tempo real otimizada para atualizar imediatamente
   useEffect(() => {
-    
     const channel = supabase
-      .channel('notifications-updates')
+      .channel('notifications-realtime-updates')
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'messages',
         filter: 'sender_type=eq.contact'
       }, (payload) => {
-        // Real-time: Message updated check
+        console.log('🔔 Realtime: Mensagem atualizada', {
+          id: payload.new?.id,
+          read_at_old: payload.old?.read_at,
+          read_at_new: payload.new?.read_at
+        });
         
-        // Se read_at foi atualizado (mensagem lida), forçar re-processamento
+        // Se read_at foi atualizado (mensagem lida), disparar evento para forçar atualização
         if (payload.new?.read_at && !payload.old?.read_at) {
-          // Trigger debounced update sem logs
-          if (debounceTimeoutRef.current) {
-            clearTimeout(debounceTimeoutRef.current);
-          }
-          
-          debounceTimeoutRef.current = setTimeout(() => {
-            conversationsRef.current = conversations;
-          }, 300);
+          // Disparar evento customizado para forçar re-fetch
+          window.dispatchEvent(new CustomEvent('conversation-read'));
         }
       })
       .on('postgres_changes', {
@@ -234,23 +231,50 @@ export function useNotifications() {
         schema: 'public',
         table: 'conversations'
       }, (payload) => {
-        // Real-time: Conversation updated check
+        const oldUnread = payload.old?.unread_count;
+        const newUnread = payload.new?.unread_count;
         
-        // Se unread_count foi alterado, forçar re-processamento
-        if (payload.new?.unread_count !== payload.old?.unread_count) {
-          if (debounceTimeoutRef.current) {
-            clearTimeout(debounceTimeoutRef.current);
-          }
-          
-          debounceTimeoutRef.current = setTimeout(() => {
-            conversationsRef.current = conversations;
-          }, 300);
+        console.log('🔔 Realtime: Conversa atualizada', {
+          id: payload.new?.id,
+          unread_old: oldUnread,
+          unread_new: newUnread
+        });
+        
+        // Se unread_count foi alterado, disparar evento
+        if (newUnread !== oldUnread) {
+          window.dispatchEvent(new CustomEvent('conversation-read'));
         }
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: 'sender_type=eq.contact'
+      }, (payload) => {
+        console.log('🔔 Realtime: Nova mensagem de contato', {
+          id: payload.new?.id,
+          conversation_id: payload.new?.conversation_id
+        });
+        
+        // Nova mensagem de contato = atualizar notificações
+        window.dispatchEvent(new CustomEvent('new-contact-message'));
       })
       .subscribe();
 
+    // Listener para eventos customizados que forçam atualização
+    const handleForceUpdate = () => {
+      console.log('🔔 Forçando atualização de notificações');
+      // Força re-render do useEffect principal
+      conversationsRef.current = [];
+    };
+
+    window.addEventListener('conversation-read', handleForceUpdate);
+    window.addEventListener('new-contact-message', handleForceUpdate);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener('conversation-read', handleForceUpdate);
+      window.removeEventListener('new-contact-message', handleForceUpdate);
     };
   }, []);
 

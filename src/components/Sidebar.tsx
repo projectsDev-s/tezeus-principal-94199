@@ -81,6 +81,27 @@ export function Sidebar({
     }
   }, [userRole, selectedWorkspace, workspaces, isLoading, setSelectedWorkspace]);
 
+  // ✅ CORREÇÃO: Listener para forçar atualização das notificações em tempo real
+  useEffect(() => {
+    const handleConversationRead = () => {
+      console.log('🔔 Sidebar: Detectada leitura de conversa, forçando atualização');
+      // O hook useNotifications já vai reagir automaticamente
+    };
+
+    const handleNewMessage = () => {
+      console.log('🔔 Sidebar: Nova mensagem detectada, forçando atualização');
+      // O hook useNotifications já vai reagir automaticamente
+    };
+
+    window.addEventListener('conversation-read', handleConversationRead);
+    window.addEventListener('new-contact-message', handleNewMessage);
+
+    return () => {
+      window.removeEventListener('conversation-read', handleConversationRead);
+      window.removeEventListener('new-contact-message', handleNewMessage);
+    };
+  }, []);
+
   // Garantir que o grupo "administracao" fique expandido quando os módulos de administração estiverem ativos
   useEffect(() => {
     if (activeModule === "administracao-financeiro" || activeModule === "administracao-usuarios" || activeModule === "administracao-configuracoes" || activeModule === "administracao-dashboard" || activeModule === "automacoes-agente" || activeModule === "automacoes-filas") {
