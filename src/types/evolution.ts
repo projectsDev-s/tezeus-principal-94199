@@ -5,6 +5,7 @@ export interface Connection {
   qr_code?: string;
   phone_number?: string;
   history_recovery: 'none' | 'week' | 'month' | 'quarter';
+  history_days?: number;
   history_sync_status?: 'pending' | 'syncing' | 'completed' | 'failed';
   history_sync_started_at?: string;
   history_messages_synced?: number;

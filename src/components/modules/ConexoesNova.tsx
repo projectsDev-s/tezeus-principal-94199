@@ -430,7 +430,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
 
   const forceResyncHistory = async (connection: Connection) => {
     try {
-      const { error } = await supabase
+      toast({
+        title: 'Sincronizando...',
+        description: 'Iniciando sincronização de histórico',
+      });
+      
+      // Resetar status no banco
+      const { error: updateError } = await supabase
         .from('connections')
         .update({ 
           history_sync_status: 'pending',
@@ -438,11 +444,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         })
         .eq('id', connection.id);
       
-      if (error) throw error;
+      if (updateError) throw updateError;
+      
+      // Chamar edge function diretamente
+      const { data, error: invokeError } = await supabase.functions.invoke('evolution-trigger-history-sync', {
+        body: {
+          instanceName: connection.instance_name,
+          workspaceId: workspaceId,
+          historyDays: connection.history_days || 0,
+          historyRecovery: connection.history_recovery || 'none'
+        }
+      });
+      
+      if (invokeError) throw invokeError;
       
       toast({
-        title: 'Ressincronização Iniciada',
-        description: 'O histórico será sincronizado novamente em instantes.',
+        title: 'Sincronização Iniciada',
+        description: `${data?.total || 0} mensagens encontradas para processar`,
       });
       
       // Reload connections
