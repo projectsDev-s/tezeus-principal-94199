@@ -308,21 +308,22 @@ serve(async (req) => {
     };
     
     const historyDays = historyDaysMap[historyRecovery as keyof typeof historyDaysMap] || 0;
-    console.log(`📅 History recovery setting: ${historyRecovery} → ${historyDays} days`);
+    console.log(`📅 History recovery setting: ${historyRecovery} → sync_full_history: ${historyDays > 0}`);
     
     const evolutionPayload = {
       instanceName: instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
       
-      // Settings for history synchronization
+      // Settings for history synchronization (Evolution API v2 format - snake_case)
       settings: {
-        syncFullHistory: historyDays > 0,
-        historyLength: historyDays,
-        alwaysOnline: true,
-        readMessages: false,
-        readStatus: false,
-        groupsIgnore: false
+        sync_full_history: historyDays > 0,  // ✅ Correto - snake_case
+        always_online: true,                  // ✅ Correto - snake_case
+        read_messages: false,                 // ✅ Correto - snake_case
+        read_status: false,                   // ✅ Correto - snake_case
+        groups_ignore: false,                 // ✅ Correto - snake_case
+        reject_call: false,                   // ✅ Rejeitar chamadas
+        msg_call: ""                          // ✅ Mensagem ao rejeitar chamada
       },
       
       webhook: {
@@ -347,7 +348,8 @@ serve(async (req) => {
     }
 
     console.log('🚀 Calling Evolution API to create instance');
-    console.log('📋 Payload:', JSON.stringify(evolutionPayload, null, 2));
+    console.log('📋 Evolution API Payload (v2 format):', JSON.stringify(evolutionPayload, null, 2));
+    console.log('✅ Using snake_case for settings parameters as required by Evolution API v2');
     
     // Normalize URL to avoid double slashes
     const baseUrl = evolutionConfig.url.endsWith('/') 
