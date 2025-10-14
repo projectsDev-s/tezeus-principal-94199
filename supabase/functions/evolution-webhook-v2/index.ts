@@ -157,6 +157,9 @@ serve(async (req) => {
         }
       }
       
+      // ✅ Declarar updatedMessage1 ANTES do if para estar acessível em todo o escopo
+      let updatedMessage1 = null;
+      
       if (evolutionMessageId) {
         // Map Evolution ACK levels to our message status
         let newStatus: string | undefined;
@@ -178,9 +181,6 @@ serve(async (req) => {
             console.log(`⚠️ [${requestId}] Unknown ACK level: ${ackLevel}`);
             break;
         }
-        
-        // ✅ FASE 1.3: Declarar updatedMessage1 globalmente para uso posterior
-        let updatedMessage1 = null;
         
         if (newStatus) {
           // Update message status in database
