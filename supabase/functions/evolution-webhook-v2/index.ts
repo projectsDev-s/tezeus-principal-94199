@@ -518,6 +518,13 @@ serve(async (req) => {
     if (workspaceId && payload.data && (payload.data.message || event.includes('message')) && payload.data?.key?.fromMe === false) {
       console.log(`📝 [${requestId}] Processing inbound message locally before forwarding`);
       
+      // ✅ CRITICAL: Load connectionData for message processing context (needed for history filtering)
+      const { data: messageConnectionData } = await supabase
+        .from('connections')
+        .select('workspace_id, history_days, history_recovery, history_sync_status, created_at')
+        .eq('instance_name', instanceName)
+        .single();
+      
       // Extract message data from Evolution webhook
       const messageData = payload.data;
       const remoteJid = messageData.key?.remoteJid || '';
@@ -562,7 +569,7 @@ serve(async (req) => {
         console.log(`📜 [${requestId}] Processing historical message from ${messageTimestamp.toISOString()}`);
         
         // Update sync status if not started yet
-        if (connectionData?.history_sync_status === 'pending') {
+        if (messageConnectionData?.history_sync_status === 'pending') {
           await supabase
             .from('connections')
             .update({
@@ -603,9 +610,9 @@ serve(async (req) => {
       let cutoffDate: Date | null = null;
       
       // Calculate cutoff date based on history_recovery
-      if (connectionData?.history_recovery && connectionData.history_recovery !== 'none') {
+      if (messageConnectionData?.history_recovery && messageConnectionData.history_recovery !== 'none') {
         cutoffDate = new Date();
-        switch (connectionData.history_recovery) {
+        switch (messageConnectionData.history_recovery) {
           case 'week':
             cutoffDate.setDate(cutoffDate.getDate() - 7);
             break;
@@ -616,12 +623,12 @@ serve(async (req) => {
             cutoffDate.setDate(cutoffDate.getDate() - 90);
             break;
         }
-        console.log(`📅 [${requestId}] History recovery filter: ${connectionData.history_recovery} (cutoff: ${cutoffDate.toISOString()})`);
-      } else if (connectionData?.history_days && connectionData.history_days > 0) {
+        console.log(`📅 [${requestId}] History recovery filter: ${messageConnectionData.history_recovery} (cutoff: ${cutoffDate.toISOString()})`);
+      } else if (messageConnectionData?.history_days && messageConnectionData.history_days > 0) {
         // Fallback to history_days if history_recovery is not set
         cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - connectionData.history_days);
-        console.log(`📅 [${requestId}] History days filter: ${connectionData.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
+        cutoffDate.setDate(cutoffDate.getDate() - messageConnectionData.history_days);
+        console.log(`📅 [${requestId}] History days filter: ${messageConnectionData.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
       }
       
       if (cutoffDate && messageTimestamp < cutoffDate) {
@@ -631,8 +638,8 @@ serve(async (req) => {
           reason: 'message_too_old',
           message_date: messageTimestamp.toISOString(),
           cutoff_date: cutoffDate.toISOString(),
-          history_recovery: connectionData?.history_recovery,
-          history_days: connectionData?.history_days
+          history_recovery: messageConnectionData?.history_recovery,
+          history_days: messageConnectionData?.history_days
         };
         
         // Retornar early, não processar esta mensagem
