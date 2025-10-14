@@ -356,6 +356,12 @@ serve(async (req) => {
           webhookUrl = webhookSettings.webhook_url;
           webhookSecret = webhookSettings.webhook_secret;
         }
+        
+        console.log(`🔧 [${requestId}] Webhook configuration loaded:`, {
+          workspace_id: workspaceId,
+          webhook_url: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NOT FOUND',
+          has_secret: !!webhookSecret
+        });
       }
     }
 
@@ -1040,6 +1046,12 @@ serve(async (req) => {
     }
 
     // Forward to N8N with processed data
+    console.log(`🔍 [${requestId}] Pre-send check:`, {
+      has_webhookUrl: !!webhookUrl,
+      webhookUrl_value: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NULL',
+      has_processedData: !!processedData
+    });
+    
     if (webhookUrl) {
       console.log(`🚀 [${requestId}] Forwarding to N8N: ${webhookUrl}`);
       
@@ -1241,9 +1253,11 @@ serve(async (req) => {
       } catch (error) {
         console.error(`❌ [${requestId}] Error calling N8N webhook:`, error);
       }
+    } else {
+      console.warn(`⚠️ [${requestId}] NOT sending to N8N - webhookUrl is null/undefined`);
     }
 
-    // Always return processed data or basic structure  
+    // Always return processed data or basic structure
     return new Response(JSON.stringify({
       success: true,
       action: 'processed_and_forwarded',
