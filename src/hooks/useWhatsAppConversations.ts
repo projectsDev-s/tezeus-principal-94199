@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -66,6 +66,9 @@ export const useWhatsAppConversations = () => {
   const [loading, setLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
   const { user, logout } = useAuth();
+  
+  // ✅ Rastrear último update processado para evitar duplicatas
+  const lastUpdateProcessed = useRef<Map<string, number>>(new Map());
 
   const fetchConversations = async () => {
     const DEBUG_CONVERSATIONS = true; // Ativado para debug
@@ -790,6 +793,17 @@ export const useWhatsAppConversations = () => {
             // Conversation update from different workspace - ignored
             return;
           }
+          
+          // ✅ CRÍTICO: Evitar processar updates duplicados em menos de 500ms
+          const now = Date.now();
+          const lastUpdate = lastUpdateProcessed.current.get(updatedConv.id) || 0;
+          
+          if (now - lastUpdate < 500) {
+            console.log('⚠️ [Realtime] Update duplicado ignorado:', updatedConv.id, `(${now - lastUpdate}ms)`);
+            return;
+          }
+          
+          lastUpdateProcessed.current.set(updatedConv.id, now);
           
           setConversations(prev => {
             console.log('🔍 Antes da atualização:', {

@@ -18,7 +18,7 @@ export function useNotifications() {
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const { playNotificationSound } = useNotificationSound();
   
-  // ✅ Rastrear mensagens já notificadas por conversation_id + timestamp
+  // ✅ Rastrear mensagens já notificadas por message_id único
   const notifiedMessagesRef = useRef<Set<string>>(new Set());
 
   // Calcular notificações com useMemo para otimização
@@ -33,12 +33,13 @@ export function useNotifications() {
       if (convUnreadCount > 0) {
         const lastMsg = conv.last_message?.[0];
         
-        // Criar ID único para rastreamento (conversation_id + timestamp da última mensagem)
+        // ✅ CRÍTICO: Usar timestamp + conversa para rastreamento preciso (last_message não tem id)
         const messageKey = `${conv.id}-${lastMsg?.created_at || ''}`;
         
         // ✅ Só contabilizar se ainda não foi notificado
         if (lastMsg && !notifiedMessagesRef.current.has(messageKey)) {
-          unreadCount += convUnreadCount;
+          // ✅ Contar apenas 1 por mensagem, não o unread_count total
+          unreadCount += 1;
           
           newNotifications.push({
             id: `${conv.id}-${convUnreadCount}`,
