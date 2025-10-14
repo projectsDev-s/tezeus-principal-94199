@@ -1033,10 +1033,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <Star className="mr-2 h-4 w-4" />
                         Definir como Padrão
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => configureWebhook(connection)}>
-                        <Webhook className="mr-2 h-4 w-4" />
-                        Configurar Webhook
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => openEditModal(connection)}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
