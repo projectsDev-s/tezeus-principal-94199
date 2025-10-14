@@ -310,34 +310,40 @@ serve(async (req) => {
     const historyDays = historyDaysMap[historyRecovery as keyof typeof historyDaysMap] || 0;
     console.log(`📅 History recovery setting: ${historyRecovery} → sync_full_history: ${historyDays > 0}`);
     
-    // ✅ PAYLOAD CORRETO: integration e qrcode no nível raiz + config com sync_full_history e webhook
+    // ✅ PAYLOAD CORRETO conforme documentação Evolution API v2
+    // settings vai separado de config/webhook
     const evolutionPayload = {
       instanceName: instanceName,
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
-      config: {
-        sync_full_history: historyDays > 0,
-        webhook: {
-          url: webhookUrl,
-          headers: {
-            "apikey": token,
-            "Content-Type": "application/json"
-          },
-          events: [
-            "MESSAGE_UPDATE",
-            "MESSAGE_UPSERT",
-            "QRCODE_UPDATE",
-            "CONNECTION_UPDATE",
-            "CONTACTS_UPSERT",
-            "CONTACTS_UPDATE"
-          ]
-        }
+      settings: {
+        reject_call: false,
+        groups_ignore: false,
+        always_online: false,
+        read_messages: false,
+        read_status: false,
+        sync_full_history: historyDays > 0
+      },
+      webhook: {
+        url: webhookUrl,
+        headers: {
+          "apikey": token,
+          "Content-Type": "application/json"
+        },
+        events: [
+          "MESSAGE_UPDATE",
+          "MESSAGE_UPSERT",
+          "QRCODE_UPDATE",
+          "CONNECTION_UPDATE",
+          "CONTACTS_UPSERT",
+          "CONTACTS_UPDATE"
+        ]
       }
     }
 
     console.log('🚀 Calling Evolution API to create instance');
-    console.log('📋 Evolution API Payload (corrected structure):', JSON.stringify(evolutionPayload, null, 2));
-    console.log('✅ Using config object with sync_full_history and webhook inside');
+    console.log('📋 Evolution API Payload:', JSON.stringify(evolutionPayload, null, 2));
+    console.log(`✅ sync_full_history: ${historyDays > 0} (history recovery: ${historyRecovery})`);
     
     // Normalize URL to avoid double slashes
     const baseUrl = evolutionConfig.url.endsWith('/') 
