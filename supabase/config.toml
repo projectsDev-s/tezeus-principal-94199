@@ -233,3 +233,6 @@ verify_jwt = false
 
 [functions.smart-pipeline-card-manager]
 verify_jwt = false
+
+[functions.evolution-trigger-history-sync]
+verify_jwt = false

@@ -440,6 +440,46 @@ serve(async (req) => {
           console.log(`✅ [${requestId}] Connection updated with phone: ${phoneNumber}`);
         }
       }
+
+      // Se a conexão foi estabelecida, verificar/iniciar sincronização de histórico
+      if (state === 'open') {
+        console.log(`🔍 [${requestId}] Checking if history sync needed for ${instanceName}`);
+        
+        const { data: connection } = await supabase
+          .from('connections')
+          .select('history_days, history_recovery, history_sync_status')
+          .eq('instance_name', instanceName)
+          .eq('workspace_id', workspaceId)
+          .single();
+        
+        if (connection && connection.history_sync_status === 'pending' && 
+            (connection.history_days > 0 || connection.history_recovery !== 'none')) {
+          
+          console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connection.history_days})`);
+          
+          // Chamar função separada para forçar sincronização
+          try {
+            const { data: syncResult, error: syncError } = await supabase.functions.invoke('evolution-trigger-history-sync', {
+              body: {
+                instanceName,
+                workspaceId,
+                historyDays: connection.history_days,
+                historyRecovery: connection.history_recovery
+              }
+            });
+            
+            if (syncError) {
+              console.error(`❌ [${requestId}] Error invoking history sync:`, syncError);
+            } else {
+              console.log(`✅ [${requestId}] History sync triggered:`, syncResult);
+            }
+          } catch (invokeError) {
+            console.error(`❌ [${requestId}] Exception invoking history sync:`, invokeError);
+          }
+        } else {
+          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connection?.history_sync_status}, days=${connection?.history_days}`);
+        }
+      }
       
       processedData = {
         connection_updated: true,
@@ -871,7 +911,7 @@ serve(async (req) => {
           if (isHistoricalSync) {
             const { data: currentConnection } = await supabase
               .from('connections')
-              .select('history_messages_synced')
+              .select('history_messages_synced, history_sync_status')
               .eq('instance_name', instanceName)
               .eq('workspace_id', workspaceId)
               .single();
@@ -886,6 +926,37 @@ serve(async (req) => {
                 .eq('workspace_id', workspaceId);
               
               console.log(`📊 [${requestId}] History sync progress: ${(currentConnection.history_messages_synced || 0) + 1} messages synced`);
+              
+              // Verificar se a sincronização pode ser marcada como completa
+              // (se não receber mensagens históricas por 2 minutos, considerar concluída)
+              if (currentConnection.history_sync_status === 'syncing') {
+                const { data: recentMessages } = await supabase
+                  .from('messages')
+                  .select('created_at')
+                  .eq('workspace_id', workspaceId)
+                  .eq('conversation_id', conversationId)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+                
+                if (recentMessages && recentMessages.length > 0) {
+                  const lastMessageTime = new Date(recentMessages[0].created_at).getTime();
+                  const timeSinceLastMessage = Date.now() - lastMessageTime;
+                  
+                  // Se a última mensagem foi há mais de 2 minutos, considerar sync completo
+                  if (timeSinceLastMessage > 120000) {
+                    await supabase
+                      .from('connections')
+                      .update({
+                        history_sync_status: 'completed',
+                        history_sync_completed_at: new Date().toISOString()
+                      })
+                      .eq('instance_name', instanceName)
+                      .eq('workspace_id', workspaceId);
+                    
+                    console.log(`✅ [${requestId}] History sync marked as completed for ${instanceName} (timeout)`);
+                  }
+                }
+              }
             }
           }
 
