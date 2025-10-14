@@ -308,12 +308,20 @@ serve(async (req) => {
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
 
+    // ✅ PAYLOAD CORRETO conforme documentação Evolution API v2
+    // settings vai separado de config/webhook
     const evolutionPayload = {
       instanceName: instanceName,
-      token: evolutionConfig.apiKey,
-      qrcode: true,
       integration: "WHATSAPP-BAILEYS",
-      syncFullHistory: true,
+      qrcode: true,
+      settings: {
+        rejectCall: false,
+        groupsIgnore: false,
+        alwaysOnline: false,
+        readMessages: false,
+        readStatus: false,
+        syncFullHistory: true,
+      },
       webhook: {
         url: webhookUrl,
         headers: {
@@ -329,9 +337,6 @@ serve(async (req) => {
           "CONTACTS_UPDATE",
         ],
       },
-      webhookUrl: webhookUrl,
-      webhookBase64: true,
-      webhookByEvents: true,
     };
 
     // Primeiro fetch descartado, usando só o evolutionPayload abaixo
