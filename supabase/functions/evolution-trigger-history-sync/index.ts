@@ -12,15 +12,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Criar cliente Supabase no escopo global da função
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
   try {
     const { instanceName, workspaceId, historyDays, historyRecovery } = await req.json();
     
     console.log('🔄 Triggering history sync:', { instanceName, workspaceId, historyDays, historyRecovery });
-    
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
     
     // Buscar config da Evolution
     const { data: evolutionToken, error: tokenError } = await supabase
@@ -55,118 +56,131 @@ serve(async (req) => {
       })
     });
     
+    if (!response.ok) {
+      throw new Error(`Evolution API error: ${response.status} - ${response.statusText}`);
+    }
+    
     const responseData = await response.json();
     console.log('📥 Evolution API response:', { 
-      status: response.status, 
-      messageCount: Array.isArray(responseData) ? responseData.length : 0 
+      status: response.status,
+      hasMessages: responseData?.messages ? true : false,
+      messageCount: responseData?.messages?.records ? responseData.messages.records.length : 0,
+      totalPages: responseData?.messages?.pages || 0
     });
     
-    if (response.ok && Array.isArray(responseData)) {
-      console.log(`📊 Found ${responseData.length} historical messages to process`);
+    // ✅ Evolution retorna formato: { messages: { total, pages, records: [...] } }
+    const messages = responseData?.messages?.records || [];
+    
+    if (messages.length > 0) {
+      console.log(`📊 Found ${messages.length} historical messages to process`);
       
-      // ✅ SÓ atualiza status DEPOIS de confirmar que API funcionou
-      if (responseData.length > 0) {
-        await supabase
-          .from('connections')
-          .update({
-            history_sync_status: 'syncing',
-            history_sync_started_at: new Date().toISOString()
-          })
-          .eq('instance_name', instanceName)
-          .eq('workspace_id', workspaceId);
-      } else {
-        // Se não há mensagens, marcar como completo imediatamente
-        await supabase
-          .from('connections')
-          .update({
-            history_sync_status: 'completed',
-            history_sync_completed_at: new Date().toISOString(),
-            history_messages_synced: 0
-          })
-          .eq('instance_name', instanceName)
-          .eq('workspace_id', workspaceId);
-        
-        return new Response(JSON.stringify({ 
-          success: true,
-          message: 'No historical messages found',
-          processed: 0,
-          total: 0
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      
-      // Processar cada mensagem retornada
-      let processedCount = 0;
-      let errorCount = 0;
-      
-      for (const message of responseData) {
-        try {
-          // Chamar evolution-webhook-v2 para processar cada mensagem histórica
-          const webhookResponse = await supabase.functions.invoke('evolution-webhook-v2', {
-            body: {
-              event: 'messages.upsert',
-              instance: instanceName,
-              data: {
-                key: message.key,
-                message: message.message,
-                messageTimestamp: message.messageTimestamp,
-                pushName: message.pushName,
-                // ✅ Marcar explicitamente como histórico
-                isHistorical: true
-              }
-            }
-          });
-          
-          if (webhookResponse.error) {
-            console.error(`❌ Error processing message ${message.key?.id}:`, webhookResponse.error);
-            errorCount++;
-          } else {
-            processedCount++;
-            
-            // Log progresso a cada 10 mensagens
-            if (processedCount % 10 === 0) {
-              console.log(`⏳ Progress: ${processedCount}/${responseData.length} messages processed`);
-            }
-          }
-          
-        } catch (error) {
-          console.error(`❌ Error processing historical message:`, error);
-          errorCount++;
-        }
-      }
-      
-      console.log(`✅ History sync completed: ${processedCount} processed, ${errorCount} errors`);
-      
-      // Atualizar status final
+      // ✅ Atualizar status para 'syncing'
+      await supabase
+        .from('connections')
+        .update({
+          history_sync_status: 'syncing',
+          history_sync_started_at: new Date().toISOString()
+        })
+        .eq('instance_name', instanceName)
+        .eq('workspace_id', workspaceId);
+    } else {
+      // Se não há mensagens, marcar como completo imediatamente
       await supabase
         .from('connections')
         .update({
           history_sync_status: 'completed',
           history_sync_completed_at: new Date().toISOString(),
-          history_messages_synced: processedCount
+          history_messages_synced: 0
         })
         .eq('instance_name', instanceName)
         .eq('workspace_id', workspaceId);
       
       return new Response(JSON.stringify({ 
         success: true,
-        message: 'History sync completed',
-        processed: processedCount,
-        errors: errorCount,
-        total: responseData.length
+        message: 'No historical messages found',
+        processed: 0,
+        total: 0
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    throw new Error(`Failed to fetch messages: ${response.status} - ${JSON.stringify(responseData)}`);
+    // Processar cada mensagem retornada
+    let processedCount = 0;
+    let errorCount = 0;
     
+    for (const msg of messages) {
+      try {
+        // Enviar para o webhook v2 processar
+        const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook-v2`;
+        
+        const webhookPayload = {
+          event: 'messages.upsert',
+          instance: instanceName,
+          data: {
+            key: msg.key,
+            pushName: msg.pushName,
+            message: msg.message,
+            messageType: msg.messageType,
+            messageTimestamp: msg.messageTimestamp,
+            status: msg.status || 'SENT'
+          },
+          destination: msg.key?.remoteJid,
+          date_time: new Date(msg.messageTimestamp * 1000).toISOString(),
+          sender: msg.key?.fromMe ? instanceName : msg.key?.remoteJid,
+          server_url: evolutionToken.evolution_url,
+          apikey: evolutionToken.token
+        };
+        
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+          },
+          body: JSON.stringify(webhookPayload)
+        });
+        
+        processedCount++;
+        
+        // Log progresso a cada 100 mensagens
+        if (processedCount % 100 === 0) {
+          console.log(`⏳ Progress: ${processedCount}/${messages.length} messages processed`);
+        }
+      } catch (error) {
+        console.error(`❌ Error processing historical message:`, error);
+        errorCount++;
+      }
+    }
+    
+    console.log(`✅ History sync completed: ${processedCount} processed, ${errorCount} errors`);
+    
+    // Atualizar status final
+    await supabase
+      .from('connections')
+      .update({
+        history_sync_status: 'completed',
+        history_sync_completed_at: new Date().toISOString(),
+        history_messages_synced: processedCount
+      })
+      .eq('instance_name', instanceName)
+      .eq('workspace_id', workspaceId);
+    
+    return new Response(JSON.stringify({ 
+      success: true,
+      message: 'History sync completed',
+      processed: processedCount,
+      errors: errorCount,
+      total: messages.length
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('❌ Error triggering history sync:', error);
     
     // Marcar sync como falho no banco
     try {
+      const { instanceName, workspaceId } = await req.json();
       await supabase
         .from('connections')
         .update({
