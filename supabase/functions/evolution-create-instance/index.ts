@@ -467,37 +467,52 @@ serve(async (req) => {
       console.error('Error updating connection:', updateError)
     }
 
-    // ✅ PASSO 2: Configurar settings via endpoint /settings/set
+    // ✅ PASSO 2: Configurar settings via endpoint /settings/set/{instance}
     console.log('🔧 Configuring instance settings via /settings/set endpoint...');
     
     const settingsPayload = {
-      instanceName: instanceName,
-      settings: {
-        reject_call: false,
-        msg_call: "",
-        groups_ignore: false,
-        always_online: true,
-        read_messages: false,
-        read_status: false,
-        sync_full_history: historyDays > 0 // ✅ Aplicar configuração de histórico
-      }
+      reject_call: false,
+      msg_call: "",
+      groups_ignore: false,
+      always_online: true,
+      read_messages: false,
+      read_status: false,
+      sync_full_history: historyDays > 0 // ✅ Aplicar configuração de histórico
     };
     
     console.log('📋 Settings payload:', JSON.stringify(settingsPayload, null, 2));
     
     try {
-      const settingsResponse = await fetch(`${evolutionConfig.url}/settings/set`, {
+      // ✅ ENDPOINT CORRETO: /settings/set/{instance} (instance no PATH, não no body)
+      const settingsUrl = `${baseUrl}/settings/set/${instanceName}`;
+      console.log('🔗 Settings URL:', settingsUrl);
+      
+      const settingsResponse = await fetch(settingsUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionConfig.apiKey
         },
-        body: JSON.stringify(settingsPayload)
+        body: JSON.stringify(settingsPayload) // Apenas settings, sem instanceName
       });
       
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json();
         console.log('✅ Settings configured successfully:', settingsData);
+        
+        // ✅ Salvar confirmação no metadata
+        await supabase
+          .from('connections')
+          .update({
+            metadata: {
+              ...connectionData.metadata,
+              ...evolutionData,
+              settings_configured: true,
+              settings_response: settingsData
+            }
+          })
+          .eq('id', connectionData.id);
+          
       } else {
         const errorText = await settingsResponse.text();
         console.error('❌ Failed to configure settings:', settingsResponse.status, errorText);
@@ -505,6 +520,37 @@ serve(async (req) => {
     } catch (settingsError) {
       console.error('❌ Error calling settings endpoint:', settingsError);
       // Não falhar a criação da instância se settings falhar
+    }
+    
+    // ✅ PASSO 3: Verificar se settings foi aplicado
+    console.log('🔍 Verifying settings configuration...');
+    try {
+      const verifyUrl = `${baseUrl}/settings/find/${instanceName}`;
+      const verifyResponse = await fetch(verifyUrl, {
+        headers: {
+          'apikey': evolutionConfig.apiKey
+        }
+      });
+      
+      if (verifyResponse.ok) {
+        const currentSettings = await verifyResponse.json();
+        console.log('🔍 Current settings from Evolution API:', currentSettings);
+        
+        const expectedSyncHistory = historyDays > 0;
+        const actualSyncHistory = currentSettings.settings?.sync_full_history;
+        
+        if (actualSyncHistory !== expectedSyncHistory) {
+          console.error('⚠️ Settings verification FAILED!');
+          console.error(`   Expected sync_full_history: ${expectedSyncHistory}`);
+          console.error(`   Got sync_full_history: ${actualSyncHistory}`);
+        } else {
+          console.log('✅ Settings verified successfully - sync_full_history:', actualSyncHistory);
+        }
+      } else {
+        console.error('❌ Failed to verify settings:', verifyResponse.status);
+      }
+    } catch (verifyError) {
+      console.error('❌ Error verifying settings:', verifyError);
     }
 
     console.log('Instance created successfully:', {
