@@ -467,10 +467,51 @@ serve(async (req) => {
       console.error('Error updating connection:', updateError)
     }
 
+    // ✅ PASSO 2: Configurar settings via endpoint /settings/set
+    console.log('🔧 Configuring instance settings via /settings/set endpoint...');
+    
+    const settingsPayload = {
+      instanceName: instanceName,
+      settings: {
+        reject_call: false,
+        msg_call: "",
+        groups_ignore: false,
+        always_online: true,
+        read_messages: false,
+        read_status: false,
+        sync_full_history: historyDays > 0 // ✅ Aplicar configuração de histórico
+      }
+    };
+    
+    console.log('📋 Settings payload:', JSON.stringify(settingsPayload, null, 2));
+    
+    try {
+      const settingsResponse = await fetch(`${evolutionConfig.url}/settings/set`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionConfig.apiKey
+        },
+        body: JSON.stringify(settingsPayload)
+      });
+      
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        console.log('✅ Settings configured successfully:', settingsData);
+      } else {
+        const errorText = await settingsResponse.text();
+        console.error('❌ Failed to configure settings:', settingsResponse.status, errorText);
+      }
+    } catch (settingsError) {
+      console.error('❌ Error calling settings endpoint:', settingsError);
+      // Não falhar a criação da instância se settings falhar
+    }
+
     console.log('Instance created successfully:', {
       id: connectionData.id,
       instance_name: instanceName,
-      status: updateData.status
+      status: updateData.status,
+      sync_full_history: historyDays > 0
     })
 
     return new Response(
