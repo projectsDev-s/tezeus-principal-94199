@@ -317,12 +317,12 @@ serve(async (req) => {
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
       settings: {
-        reject_call: false,
-        groups_ignore: false,
-        always_online: false,
-        read_messages: false,
-        read_status: false,
-        sync_full_history: historyDays > 0
+        rejectCall: false,
+        groupsIgnore: false,
+        alwaysOnline: false,
+        readMessages: false,
+        readStatus: false,
+        syncFullHistory: historyRecovery !== 'none'
       },
       webhook: {
         url: webhookUrl,
@@ -331,9 +331,9 @@ serve(async (req) => {
           "Content-Type": "application/json"
         },
         events: [
-          "MESSAGE_UPDATE",
-          "MESSAGE_UPSERT",
-          "QRCODE_UPDATE",
+          "MESSAGES_UPDATE",
+          "MESSAGES_UPSERT",
+          "QRCODE_UPDATED",
           "CONNECTION_UPDATE",
           "CONTACTS_UPSERT",
           "CONTACTS_UPDATE"
@@ -343,7 +343,7 @@ serve(async (req) => {
 
     console.log('🚀 Calling Evolution API to create instance');
     console.log('📋 Evolution API Payload:', JSON.stringify(evolutionPayload, null, 2));
-    console.log(`✅ sync_full_history: ${historyDays > 0} (history recovery: ${historyRecovery})`);
+    console.log(`✅ syncFullHistory: ${historyRecovery !== 'none'} (history recovery: ${historyRecovery})`);
     
     // Normalize URL to avoid double slashes
     const baseUrl = evolutionConfig.url.endsWith('/') 
