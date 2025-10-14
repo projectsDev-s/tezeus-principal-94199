@@ -145,13 +145,33 @@ serve(async (req) => {
     }
 
     console.log("📋 Parsed request body:", requestBody);
-    const { instanceName, workspaceId, autoCreateCrmCard, defaultPipelineId } = requestBody;
+    const { 
+      instanceName, 
+      workspaceId, 
+      autoCreateCrmCard, 
+      defaultPipelineId,
+      historyRecovery = 'none',
+      phoneNumber
+    } = requestBody;
+    
+    // Map historyRecovery to days
+    const historyDaysMap: Record<string, number> = {
+      none: 0,
+      week: 7,
+      month: 30,
+      quarter: 90,
+    };
+    
+    const historyDays = historyDaysMap[historyRecovery] || 0;
     
     console.log("📋 Request params:", {
       instanceName,
       workspaceId,
       autoCreateCrmCard,
       defaultPipelineId,
+      historyRecovery,
+      historyDays,
+      phoneNumber: phoneNumber || 'not provided',
     });
 
     if (!instanceName || !workspaceId) {
@@ -256,6 +276,9 @@ serve(async (req) => {
         instance_name: instanceName,
         workspace_id: workspaceId,
         status: "creating",
+        history_recovery: historyRecovery,
+        history_days: historyDays,
+        phone_number: phoneNumber || null,
         auto_create_crm_card: autoCreateCrmCard || false,
         default_pipeline_id: defaultPipelineId || null,
       })
@@ -436,12 +459,25 @@ serve(async (req) => {
       updateData.qr_code = evolutionData.qrcode.code;
     } else if (evolutionData.instance?.state === "open") {
       updateData.status = "connected";
+      
+      // ✅ Priorizar número da Evolution, mas manter o manual se não vier
       if (evolutionData.instance?.owner) {
         updateData.phone_number = evolutionData.instance.owner;
+        console.log(`📱 Phone from Evolution: ${evolutionData.instance.owner}`);
+      } else if (!phoneNumber) {
+        console.log(`⚠️ No phone from Evolution and none provided manually`);
       }
+      // Se não veio da Evolution e não foi fornecido manualmente, manter null
     } else {
       updateData.status = "creating";
     }
+    
+    console.log(`💾 Updating connection with:`, {
+      status: updateData.status,
+      phone_from_evolution: evolutionData.instance?.owner,
+      phone_manual: phoneNumber,
+      phone_will_save: updateData.phone_number
+    });
 
     const { error: updateError } = await supabase.from("connections").update(updateData).eq("id", connectionData.id);
 

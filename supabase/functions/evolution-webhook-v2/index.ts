@@ -412,6 +412,41 @@ serve(async (req) => {
         event: payload.event
       };
     }
+    
+    // 📞 PROCESS CONNECTION UPDATE (phone number from QR scan)
+    if (payload.event === 'CONNECTION_UPDATE' && workspaceId && instanceName) {
+      console.log(`📞 [${requestId}] Processing connection update event`);
+      
+      const connectionData = payload.data;
+      const state = connectionData.state; // 'open', 'close', etc
+      const phoneNumber = connectionData.owner || connectionData.phoneNumber;
+      
+      if (phoneNumber) {
+        console.log(`📱 [${requestId}] Updating connection phone number: ${phoneNumber}`);
+        
+        const { error: updateError } = await supabase
+          .from('connections')
+          .update({
+            phone_number: phoneNumber,
+            status: state === 'open' ? 'connected' : 'disconnected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('instance_name', instanceName)
+          .eq('workspace_id', workspaceId);
+        
+        if (updateError) {
+          console.error(`❌ [${requestId}] Error updating connection:`, updateError);
+        } else {
+          console.log(`✅ [${requestId}] Connection updated with phone: ${phoneNumber}`);
+        }
+      }
+      
+      processedData = {
+        connection_updated: true,
+        phone_number: phoneNumber,
+        state: state
+      };
+    }
 
     // PROCESS MESSAGE LOCALLY FIRST (Only for inbound messages from contacts)
     if (workspaceId && payload.data?.message && payload.data?.key?.fromMe === false) {
