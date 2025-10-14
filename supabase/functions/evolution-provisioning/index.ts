@@ -173,7 +173,6 @@ serve(async (req) => {
           'MESSAGES_UPSERT',
           'MESSAGES_UPDATE',
           'QRCODE_UPDATED',
-          'QRCODE_UPDATE',
           'CONNECTION_UPDATE'
         ]
       };

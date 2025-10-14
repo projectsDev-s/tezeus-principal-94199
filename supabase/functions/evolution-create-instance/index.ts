@@ -357,8 +357,6 @@ serve(async (req) => {
           "MESSAGES_UPSERT",
           "QRCODE_UPDATED",
           "CONNECTION_UPDATE",
-          "CONTACTS_UPSERT",
-          "CONTACTS_UPDATE",
         ],
         webhookByEvents: true,  // ✅ Garantir que eventos sejam enviados
       },
