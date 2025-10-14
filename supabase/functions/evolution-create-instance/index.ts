@@ -328,17 +328,7 @@ serve(async (req) => {
       webhookByEvents: true, // opcional
     };
 
-    const response = await fetch(`${evolutionConfig.url}/instance/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: evolutionConfig.apiKey,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-    console.log("Evolution response:", data);
+    // Primeiro fetch descartado, usando só o evolutionPayload abaixo
 
     // Normalize URL to avoid double slashes
     const baseUrl = evolutionConfig.url.endsWith("/") ? evolutionConfig.url.slice(0, -1) : evolutionConfig.url;
