@@ -146,9 +146,14 @@ serve(async (req) => {
 
     console.log("📋 Parsed request body:", requestBody);
     const { instanceName, historyRecovery = "none", workspaceId, autoCreateCrmCard, defaultPipelineId } = requestBody;
+    
+    // Calcular history_days com base no historyRecovery
+    const historyDays = historyRecovery === "month" ? 30 : historyRecovery === "week" ? 7 : 0;
+    
     console.log("📋 Request params:", {
       instanceName,
       historyRecovery,
+      historyDays,
       workspaceId,
       autoCreateCrmCard,
       defaultPipelineId,
