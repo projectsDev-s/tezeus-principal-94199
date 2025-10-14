@@ -364,6 +364,55 @@ serve(async (req) => {
       webhookSecret = Deno.env.get('N8N_WEBHOOK_TOKEN');
     }
 
+    // 👥 PROCESS CONTACTS SYNC (CONTACTS_UPSERT / CONTACTS_UPDATE)
+    if ((payload.event === 'CONTACTS_UPSERT' || payload.event === 'CONTACTS_UPDATE') && workspaceId) {
+      console.log(`👥 [${requestId}] Processing contacts sync event`);
+      
+      const contactsData = Array.isArray(payload.data) ? payload.data : [payload.data];
+      let processedContacts = 0;
+      
+      for (const contactData of contactsData) {
+        try {
+          const remoteJid = contactData.id || contactData.remoteJid;
+          const phone = extractPhoneFromRemoteJid(remoteJid);
+          const name = contactData.name || contactData.pushName || phone;
+          const profileUrl = contactData.profilePictureUrl || contactData.profilePicUrl;
+          
+          console.log(`👤 [${requestId}] Upserting contact: ${phone} (${name})`);
+          
+          // Upsert contact (update if exists, insert if not)
+          const { error: upsertError } = await supabase
+            .from('contacts')
+            .upsert({
+              phone: phone,
+              name: name,
+              workspace_id: workspaceId,
+              profile_image_url: profileUrl || null,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'phone,workspace_id',
+              ignoreDuplicates: false
+            });
+          
+          if (upsertError) {
+            console.error(`❌ [${requestId}] Error upserting contact ${phone}:`, upsertError);
+          } else {
+            processedContacts++;
+          }
+        } catch (contactError) {
+          console.error(`❌ [${requestId}] Error processing contact:`, contactError);
+        }
+      }
+      
+      console.log(`✅ [${requestId}] Processed ${processedContacts} contacts from sync`);
+      
+      processedData = {
+        contacts_synced: processedContacts,
+        workspace_id: workspaceId,
+        event: payload.event
+      };
+    }
+
     // PROCESS MESSAGE LOCALLY FIRST (Only for inbound messages from contacts)
     if (workspaceId && payload.data?.message && payload.data?.key?.fromMe === false) {
       console.log(`📝 [${requestId}] Processing inbound message locally before forwarding`);
@@ -401,6 +450,31 @@ serve(async (req) => {
       
       console.log(`📱 [${requestId}] RemoteJid processing: ${remoteJid} -> ${phoneNumber}`);
       
+      // 📜 Check if this is a historical sync message
+      const messageTimestamp = messageData.messageTimestamp 
+        ? new Date(messageData.messageTimestamp * 1000) 
+        : new Date();
+      const isHistoricalSync = messageData.messageTimestamp && 
+        (Date.now() - messageData.messageTimestamp * 1000) > 60000; // Older than 1 minute
+      
+      if (isHistoricalSync) {
+        console.log(`📜 [${requestId}] Processing historical message from ${messageTimestamp.toISOString()}`);
+        
+        // Update sync status if not started yet
+        if (connection.history_sync_status === 'pending') {
+          await supabase
+            .from('connections')
+            .update({
+              history_sync_status: 'syncing',
+              history_sync_started_at: new Date().toISOString()
+            })
+            .eq('instance_name', instanceName)
+            .eq('workspace_id', workspaceId);
+          
+          console.log(`🔄 [${requestId}] History sync started for instance ${instanceName}`);
+        }
+      }
+      
       // Check if payload includes profilePictureUrl directly in various possible locations
       const directProfileImageUrl = messageData?.message?.profilePictureUrl || 
                                    messageData?.profilePictureUrl || 
@@ -424,41 +498,57 @@ serve(async (req) => {
         payloadKeys: Object.keys(payload)
       });
       
-      // ✅ FILTRAR MENSAGENS ANTIGAS BASEADO EM history_days
-      if (connection.history_days && connection.history_days > 0) {
-        const messageTimestamp = messageData.messageTimestamp 
-          ? new Date(messageData.messageTimestamp * 1000) 
-          : new Date();
-        
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - connection.history_days);
-        
-        if (messageTimestamp < cutoffDate) {
-          console.log(`⏭️ [${requestId}] Skipping old message (${messageTimestamp.toISOString()}) - older than ${connection.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
-          processedData = {
-            skipped: true,
-            reason: 'message_too_old',
-            message_date: messageTimestamp.toISOString(),
-            cutoff_date: cutoffDate.toISOString(),
-            history_days: connection.history_days
-          };
-          
-          // Retornar early, não processar esta mensagem
-          return new Response(
-            JSON.stringify({
-              success: true,
-              event: payload.event,
-              instance: instanceName,
-              workspace_id: workspaceId,
-              message_filtered: true,
-              reason: 'message_too_old',
-              request_id: requestId
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          console.log(`✅ [${requestId}] Message within date range (${messageTimestamp.toISOString()}) - keeping (${connection.history_days} days max)`);
+      // ✅ FILTRAR MENSAGENS ANTIGAS BASEADO EM history_days ou history_recovery
+      let cutoffDate: Date | null = null;
+      
+      // Calculate cutoff date based on history_recovery
+      if (connection.history_recovery && connection.history_recovery !== 'none') {
+        cutoffDate = new Date();
+        switch (connection.history_recovery) {
+          case 'week':
+            cutoffDate.setDate(cutoffDate.getDate() - 7);
+            break;
+          case 'month':
+            cutoffDate.setDate(cutoffDate.getDate() - 30);
+            break;
+          case 'quarter':
+            cutoffDate.setDate(cutoffDate.getDate() - 90);
+            break;
         }
+        console.log(`📅 [${requestId}] History recovery filter: ${connection.history_recovery} (cutoff: ${cutoffDate.toISOString()})`);
+      } else if (connection.history_days && connection.history_days > 0) {
+        // Fallback to history_days if history_recovery is not set
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - connection.history_days);
+        console.log(`📅 [${requestId}] History days filter: ${connection.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
+      }
+      
+      if (cutoffDate && messageTimestamp < cutoffDate) {
+        console.log(`⏭️ [${requestId}] Skipping old message (${messageTimestamp.toISOString()}) - older than configured period (cutoff: ${cutoffDate.toISOString()})`);
+        processedData = {
+          skipped: true,
+          reason: 'message_too_old',
+          message_date: messageTimestamp.toISOString(),
+          cutoff_date: cutoffDate.toISOString(),
+          history_recovery: connection.history_recovery,
+          history_days: connection.history_days
+        };
+        
+        // Retornar early, não processar esta mensagem
+        return new Response(
+          JSON.stringify({
+            success: true,
+            event: payload.event,
+            instance: instanceName,
+            workspace_id: workspaceId,
+            message_filtered: true,
+            reason: 'message_too_old',
+            request_id: requestId
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else if (cutoffDate) {
+        console.log(`✅ [${requestId}] Message within date range (${messageTimestamp.toISOString()}) - keeping`);
       }
       
       // Check if this message already exists (prevent duplicates)
@@ -741,6 +831,28 @@ serve(async (req) => {
               updated_at: new Date().toISOString()
             })
             .eq('id', conversationId);
+          
+          // 📊 Increment history sync counter if this is a historical message
+          if (isHistoricalSync) {
+            const { data: currentConnection } = await supabase
+              .from('connections')
+              .select('history_messages_synced')
+              .eq('instance_name', instanceName)
+              .eq('workspace_id', workspaceId)
+              .single();
+            
+            if (currentConnection) {
+              await supabase
+                .from('connections')
+                .update({
+                  history_messages_synced: (currentConnection.history_messages_synced || 0) + 1
+                })
+                .eq('instance_name', instanceName)
+                .eq('workspace_id', workspaceId);
+              
+              console.log(`📊 [${requestId}] History sync progress: ${(currentConnection.history_messages_synced || 0) + 1} messages synced`);
+            }
+          }
 
           // Check if we need to auto-create a CRM card
           try {

@@ -371,8 +371,12 @@ export type Database = {
           created_at: string | null
           default_pipeline_id: string | null
           history_days: number | null
+          history_messages_synced: number | null
           history_recovery: string | null
           history_status: string | null
+          history_sync_completed_at: string | null
+          history_sync_started_at: string | null
+          history_sync_status: string | null
           id: string
           instance_name: string
           last_activity_at: string | null
@@ -389,8 +393,12 @@ export type Database = {
           created_at?: string | null
           default_pipeline_id?: string | null
           history_days?: number | null
+          history_messages_synced?: number | null
           history_recovery?: string | null
           history_status?: string | null
+          history_sync_completed_at?: string | null
+          history_sync_started_at?: string | null
+          history_sync_status?: string | null
           id?: string
           instance_name: string
           last_activity_at?: string | null
@@ -407,8 +415,12 @@ export type Database = {
           created_at?: string | null
           default_pipeline_id?: string | null
           history_days?: number | null
+          history_messages_synced?: number | null
           history_recovery?: string | null
           history_status?: string | null
+          history_sync_completed_at?: string | null
+          history_sync_started_at?: string | null
+          history_sync_status?: string | null
           id?: string
           instance_name?: string
           last_activity_at?: string | null
