@@ -200,7 +200,6 @@ export function IniciarConversaContatoModal({
                 <SelectValue placeholder="Selecione uma fila" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sem fila</SelectItem>
                 {queues.map((queue) => (
                   <SelectItem key={queue.id} value={queue.id}>
                     <div className="flex items-center gap-2">
