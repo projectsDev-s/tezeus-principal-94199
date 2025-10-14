@@ -455,10 +455,10 @@ serve(async (req) => {
         // Usar connectionData já carregado anteriormente
         if (!connectionData) {
           console.warn(`⚠️ [${requestId}] No connection found for ${instanceName}`);
-        } else if (connection.history_sync_status === 'pending' && 
-            (connection.history_days > 0 || connection.history_recovery !== 'none')) {
+        } else if (connectionData.history_sync_status === 'pending' && 
+            (connectionData.history_days > 0 || connectionData.history_recovery !== 'none')) {
           
-          console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connection.history_days})`);
+          console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connectionData.history_days})`);
           
           // Chamar função separada para forçar sincronização
           try {
@@ -466,8 +466,8 @@ serve(async (req) => {
               body: {
                 instanceName,
                 workspaceId,
-                historyDays: connection.history_days,
-                historyRecovery: connection.history_recovery
+                historyDays: connectionData.history_days,
+                historyRecovery: connectionData.history_recovery
               }
             });
             
@@ -480,8 +480,8 @@ serve(async (req) => {
             console.error(`❌ [${requestId}] Exception invoking history sync:`, invokeError);
           }
         } else {
-          // Sabemos que connection existe aqui, podemos acessar diretamente
-          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connection.history_sync_status}, days=${connection.history_days}, recovery=${connection.history_recovery}`);
+          // Sabemos que connectionData existe aqui, podemos acessar diretamente
+          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connectionData.history_sync_status}, days=${connectionData.history_days}, recovery=${connectionData.history_recovery}`);
         }
       }
       
