@@ -1299,13 +1299,21 @@ export function WhatsAppChat({
                           </Avatar>
                           
                           {/* Badge de mensagens não lidas - estilo WhatsApp */}
-                          {conversation.unread_count > 0 && (
-                            <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                              <span className="text-white text-xs font-semibold">
-                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                              </span>
-                            </div>
-                          )}
+                          {(() => {
+                            // ✅ CRÍTICO: Calcular unread_count baseado em mensagens reais, não no valor do banco
+                            // que pode estar duplicado devido a updates em tempo real
+                            const actualUnreadCount = conversation.messages?.filter(
+                              msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
+                            ).length || 0;
+                            
+                            return actualUnreadCount > 0 && (
+                              <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                                <span className="text-white text-xs font-semibold">
+                                  {actualUnreadCount > 99 ? '99+' : actualUnreadCount}
+                                </span>
+                              </div>
+                            );
+                          })()}
                           
                           {/* WhatsApp status icon */}
                           <svg className="absolute -bottom-1 -right-1 w-5 h-5 text-green-500 bg-white rounded-full p-0.5" viewBox="0 0 24 24" fill="currentColor">
