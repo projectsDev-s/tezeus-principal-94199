@@ -1048,7 +1048,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Excluir
                       </DropdownMenuItem>
-                      {connection.history_sync_status === 'syncing' && (
+                      {(connection.history_sync_status === 'syncing' || connection.history_sync_status === 'pending' || connection.history_sync_status === 'failed') && (
                         <DropdownMenuItem
                           onClick={() => forceResyncHistory(connection)}
                         >
