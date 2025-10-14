@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useWhatsAppConversations } from './useWhatsAppConversations';
 import { useNotificationSound } from './useNotificationSound';
-import { toast } from '@/hooks/use-toast';
 
 export interface NotificationMessage {
   id: string;
@@ -18,7 +17,9 @@ export function useNotifications() {
   const { conversations, markAsRead } = useWhatsAppConversations();
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const { playNotificationSound } = useNotificationSound();
-  const [lastToastTime, setLastToastTime] = useState(0);
+  
+  // ✅ Rastrear mensagens já notificadas por conversation_id + timestamp
+  const notifiedMessagesRef = useRef<Set<string>>(new Set());
 
   // Calcular notificações com useMemo para otimização
   const { notifications, totalUnread } = useMemo(() => {
@@ -27,21 +28,32 @@ export function useNotifications() {
     
     conversations.forEach((conv) => {
       const convUnreadCount = conv.unread_count || 0;
-      unreadCount += convUnreadCount;
       
+      // ✅ Contabilizar apenas mensagens não lidas NOVAS
       if (convUnreadCount > 0) {
         const lastMsg = conv.last_message?.[0];
         
-        newNotifications.push({
-          id: `${conv.id}-${convUnreadCount}`,
-          conversationId: conv.id,
-          contactName: conv.contact.name,
-          contactPhone: conv.contact.phone,
-          content: lastMsg?.content || 'Nova mensagem',
-          messageType: lastMsg?.message_type || 'text',
-          timestamp: new Date(conv.last_activity_at || new Date()),
-          isMedia: ['image', 'video', 'audio', 'document'].includes(lastMsg?.message_type || '')
-        });
+        // Criar ID único para rastreamento (conversation_id + timestamp da última mensagem)
+        const messageKey = `${conv.id}-${lastMsg?.created_at || ''}`;
+        
+        // ✅ Só contabilizar se ainda não foi notificado
+        if (lastMsg && !notifiedMessagesRef.current.has(messageKey)) {
+          unreadCount += convUnreadCount;
+          
+          newNotifications.push({
+            id: `${conv.id}-${convUnreadCount}`,
+            conversationId: conv.id,
+            contactName: conv.contact.name,
+            contactPhone: conv.contact.phone,
+            content: lastMsg?.content || 'Nova mensagem',
+            messageType: lastMsg?.message_type || 'text',
+            timestamp: new Date(conv.last_activity_at || new Date()),
+            isMedia: ['image', 'video', 'audio', 'document'].includes(lastMsg?.message_type || '')
+          });
+          
+          // Marcar como notificado
+          notifiedMessagesRef.current.add(messageKey);
+        }
       }
     });
     
@@ -57,27 +69,6 @@ export function useNotifications() {
     }
     setPreviousUnreadCount(totalUnread);
   }, [totalUnread, previousUnreadCount, playNotificationSound]);
-
-  // Toast para novas mensagens
-  useEffect(() => {
-    conversations.forEach((conv) => {
-      if (conv.unread_count > 0 && conv.last_message?.[0]) {
-        const lastMsg = conv.last_message[0];
-        const now = Date.now();
-        
-        if (now - lastToastTime > 1000 && lastMsg.sender_type === 'contact') {
-          const isMedia = ['image', 'video', 'audio', 'document'].includes(lastMsg.message_type || '');
-          
-          toast({
-            title: `Nova mensagem de ${conv.contact.name}`,
-            description: isMedia ? '📎 Mídia' : (lastMsg.content?.substring(0, 50) || '') + '...',
-            duration: 4000,
-          });
-          setLastToastTime(now);
-        }
-      }
-    });
-  }, [conversations, lastToastTime]);
 
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -107,6 +98,11 @@ export function useNotifications() {
 
   const markContactAsRead = async (conversationId: string) => {
     await markAsRead(conversationId);
+    
+    // ✅ Limpar histórico de notificações dessa conversa
+    const keysToRemove = Array.from(notifiedMessagesRef.current)
+      .filter(key => key.startsWith(conversationId));
+    keysToRemove.forEach(key => notifiedMessagesRef.current.delete(key));
   };
 
   const markAllAsRead = async () => {
@@ -114,6 +110,9 @@ export function useNotifications() {
       conv.messages.some(msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null))
     );
     await Promise.all(conversationsWithUnread.map(conv => markAsRead(conv.id)));
+    
+    // ✅ Limpar todo o histórico de notificações
+    notifiedMessagesRef.current.clear();
   };
 
 
