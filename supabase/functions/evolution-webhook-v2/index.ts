@@ -28,8 +28,9 @@ function sanitizePhoneNumber(phone: string): string {
   // Remove sufixos comuns do Evolution API (62, 63, etc)
   // Esses são adicionados incorretamente pelo WhatsApp em alguns casos
   if (cleaned.length > 13 && cleaned.endsWith('62')) {
+    const original = cleaned;
     cleaned = cleaned.slice(0, -2);
-    console.log(`⚠️ Removed '62' suffix from phone: ${phone} -> ${cleaned}`);
+    console.log(`⚠️ [SANITIZE] Truncated phone number: "${phone}" -> original_digits="${original}" (${original.length} chars) -> final="${cleaned}" (${cleaned.length} chars)`);
   }
   
   return cleaned;
@@ -95,13 +96,16 @@ serve(async (req) => {
 
     // Extract instance name from payload
     const instanceName = payload.instance || payload.instanceName;
-    console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: ${payload.event}`);
+    
+    // ✅ FASE 1.1: Normalizar evento para processamento consistente
+    const event = (payload.event || "").toLowerCase().replace(/\./g, '_');
+    console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: "${payload.event}" → normalized: "${event}"`);
     
     // Debug: verificar evento recebido
-    console.log(`🔍 [${requestId}] Event check: payload.event="${payload.event}", uppercase="${payload.event?.toUpperCase()}", has_ack=${payload.data?.ack !== undefined}, has_status=${payload.data?.status !== undefined}, status="${payload.data?.status}"`);
+    console.log(`🔍 [${requestId}] Event check: payload.event="${payload.event}", normalized="${event}", has_ack=${payload.data?.ack !== undefined}, has_status=${payload.data?.status !== undefined}, status="${payload.data?.status}"`);
     
     // HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - Evolution API v2 (case-insensitive)
-    if (payload.event?.toUpperCase() === 'MESSAGES_UPDATE' && (payload.data?.ack !== undefined || payload.data?.status)) {
+    if (event === 'messages_update' && (payload.data?.ack !== undefined || payload.data?.status)) {
       console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}, status=${payload.data.status}`);
       
       const messageKey = payload.data.key;
@@ -174,6 +178,9 @@ serve(async (req) => {
             break;
         }
         
+        // ✅ FASE 1.3: Declarar updatedMessage1 globalmente para uso posterior
+        let updatedMessage1 = null;
+        
         if (newStatus) {
           // Update message status in database
           const updateData: any = { status: newStatus };
@@ -191,6 +198,7 @@ serve(async (req) => {
           if (updateError) {
             console.error(`❌ [${requestId}] Error updating message status:`, updateError);
           } else if (updatedMessage) {
+            updatedMessage1 = updatedMessage; // Salvar para uso no payload N8N
             console.log(`✅ [${requestId}] Message ${evolutionMessageId} status updated to: ${newStatus}`);
             console.log(`📊 [${requestId}] Updated message data:`, updatedMessage);
           } else {
@@ -221,15 +229,20 @@ serve(async (req) => {
         webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
       }
       
+      // ✅ FASE 1.4: Validar webhookUrl antes do fetch
+      if (!webhookUrl) {
+        console.error(`❌ [${requestId}] CRITICAL: webhookUrl is null/undefined - N8N webhook will NOT be sent! workspace_id=${workspaceId}`);
+      }
+      
       // Send LEAN payload to N8N for status update
       if (webhookUrl) {
         const updatePayload = {
           event: "MESSAGES_UPDATE",
           event_type: "update",
           workspace_id: workspaceId,
-          conversation_id: updatedMessage?.conversation_id,
+          conversation_id: updatedMessage1?.conversation_id,
           request_id: requestId,
-          external_id: updatedMessage?.external_id,
+          external_id: updatedMessage1?.external_id,
           evolution_key_id: evolutionMessageId,
           ack_level: ackLevel,
           status: ackLevel === 1 ? 'sent' : ackLevel === 2 ? 'delivered' : ackLevel === 3 ? 'read' : 'unknown',
@@ -421,12 +434,13 @@ serve(async (req) => {
     }
     
     // 📞 PROCESS CONNECTION UPDATE (phone number from QR scan)
-    if (payload.event === 'CONNECTION_UPDATE' && workspaceId && instanceName) {
+    if (event === 'connection_update' && workspaceId && instanceName) {
       console.log(`📞 [${requestId}] Processing connection update event`);
       
-      const connectionData = payload.data;
-      const state = connectionData.state; // 'open', 'close', etc
-      const phoneNumber = connectionData.owner || connectionData.phoneNumber;
+      // ✅ FASE 1.2: Renomear connectionData local para connectionUpdate (evitar conflito)
+      const connectionUpdate = payload.data;
+      const state = connectionUpdate.state; // 'open', 'close', etc
+      const phoneNumber = connectionUpdate.owner || connectionUpdate.phoneNumber;
       
       if (phoneNumber) {
         console.log(`📱 [${requestId}] Updating connection phone number: ${phoneNumber}`);
@@ -452,13 +466,20 @@ serve(async (req) => {
       if (state === 'open') {
         console.log(`🔍 [${requestId}] Checking if history sync needed for ${instanceName}`);
         
-        // Usar connectionData já carregado anteriormente
-        if (!connectionData) {
-          console.warn(`⚠️ [${requestId}] No connection found for ${instanceName}`);
-        } else if (connectionData.history_sync_status === 'pending' && 
-            (connectionData.history_days > 0 || connectionData.history_recovery !== 'none')) {
+        // ✅ FASE 2: Recarregar connectionMeta do banco (não usar connectionUpdate do evento)
+        const { data: connectionMeta, error: metaError } = await supabase
+          .from('connections')
+          .select('history_days, history_recovery, history_sync_status')
+          .eq('instance_name', instanceName)
+          .eq('workspace_id', workspaceId)
+          .single();
+        
+        if (metaError || !connectionMeta) {
+          console.warn(`⚠️ [${requestId}] No connection metadata found for ${instanceName}:`, metaError);
+        } else if (connectionMeta.history_sync_status === 'pending' && 
+            (connectionMeta.history_days > 0 || connectionMeta.history_recovery !== 'none')) {
           
-          console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connectionData.history_days})`);
+          console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connectionMeta.history_days}, recovery: ${connectionMeta.history_recovery})`);
           
           // Chamar função separada para forçar sincronização
           try {
@@ -466,8 +487,8 @@ serve(async (req) => {
               body: {
                 instanceName,
                 workspaceId,
-                historyDays: connectionData.history_days,
-                historyRecovery: connectionData.history_recovery
+                historyDays: connectionMeta.history_days,
+                historyRecovery: connectionMeta.history_recovery
               }
             });
             
@@ -480,8 +501,7 @@ serve(async (req) => {
             console.error(`❌ [${requestId}] Exception invoking history sync:`, invokeError);
           }
         } else {
-          // Sabemos que connectionData existe aqui, podemos acessar diretamente
-          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connectionData.history_sync_status}, days=${connectionData.history_days}, recovery=${connectionData.history_recovery}`);
+          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connectionMeta?.history_sync_status}, days=${connectionMeta?.history_days}, recovery=${connectionMeta?.history_recovery}`);
         }
       }
       
@@ -493,7 +513,8 @@ serve(async (req) => {
     }
 
     // PROCESS MESSAGE LOCALLY FIRST (Only for inbound messages from contacts)
-    if (workspaceId && payload.data?.message && payload.data?.key?.fromMe === false) {
+    // ✅ FASE 3: Melhorar filtro de mensagens para processar mesmo sem .message
+    if (workspaceId && payload.data && (payload.data.message || event.includes('message')) && payload.data?.key?.fromMe === false) {
       console.log(`📝 [${requestId}] Processing inbound message locally before forwarding`);
       
       // Extract message data from Evolution webhook
