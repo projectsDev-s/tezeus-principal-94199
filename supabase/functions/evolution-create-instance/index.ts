@@ -344,7 +344,7 @@ serve(async (req) => {
         alwaysOnline: false,
         readMessages: false,
         readStatus: false,
-        syncFullHistory: true,  // ✅ Manter aqui também
+        sync_full_history: true,  // ✅ snake_case conforme API Evolution v2
       },
       webhook: {
         url: webhookUrl,
@@ -502,11 +502,8 @@ serve(async (req) => {
       status: updateData.status,
     });
 
-    // Se configurado para sincronizar histórico, forçar sincronização imediatamente
+    // Atualizar status para syncing - a Evolution enviará histórico automaticamente
     if (historyDays > 0 || historyRecovery !== 'none') {
-      console.log(`🔄 Triggering history sync for ${instanceName} (${historyDays} days)`);
-      
-      // Atualizar status para syncing
       await supabase
         .from('connections')
         .update({
@@ -515,43 +512,7 @@ serve(async (req) => {
         })
         .eq('id', connectionData.id);
       
-      const syncUrl = `${baseUrl}/chat/syncHistory/${instanceName}`;
-      
-      try {
-        const syncResponse = await fetch(syncUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': evolutionConfig.apiKey
-          },
-          body: JSON.stringify({
-            days: historyDays,
-            fullHistory: true
-          })
-        });
-        
-        const syncResult = await syncResponse.text();
-        
-        if (syncResponse.ok) {
-          console.log(`✅ History sync triggered successfully for ${instanceName}:`, syncResult);
-        } else {
-          console.warn(`⚠️ History sync trigger failed (${syncResponse.status}):`, syncResult);
-          
-          // Reverter status
-          await supabase
-            .from('connections')
-            .update({ history_sync_status: 'pending' })
-            .eq('id', connectionData.id);
-        }
-      } catch (syncError) {
-        console.error(`❌ Error triggering history sync:`, syncError);
-        
-        // Reverter status
-        await supabase
-          .from('connections')
-          .update({ history_sync_status: 'pending' })
-          .eq('id', connectionData.id);
-      }
+      console.log(`✅ History sync configured for ${instanceName} - waiting for Evolution to send history via webhook`);
     }
 
     return new Response(
