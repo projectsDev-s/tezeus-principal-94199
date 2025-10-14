@@ -336,14 +336,14 @@ serve(async (req) => {
     
     if (instanceName) {
       // Get workspace_id and history_days from connections table
-      const { data: connection } = await supabase
+      const { data: connectionData } = await supabase
         .from('connections')
-        .select('workspace_id, history_days, created_at')
+        .select('workspace_id, history_days, history_recovery, history_sync_status, created_at')
         .eq('instance_name', instanceName)
         .single();
 
-      if (connection) {
-        workspaceId = connection.workspace_id;
+      if (connectionData) {
+        workspaceId = connectionData.workspace_id;
         
         // Get webhook settings for this workspace
         const { data: webhookSettings } = await supabase
@@ -452,17 +452,8 @@ serve(async (req) => {
       if (state === 'open') {
         console.log(`🔍 [${requestId}] Checking if history sync needed for ${instanceName}`);
         
-        const { data: connection, error: connectionError } = await supabase
-          .from('connections')
-          .select('history_days, history_recovery, history_sync_status')
-          .eq('instance_name', instanceName)
-          .eq('workspace_id', workspaceId)
-          .single();
-        
-        // Validação segura de erro e existência da conexão
-        if (connectionError) {
-          console.error(`❌ [${requestId}] Error fetching connection:`, connectionError);
-        } else if (!connection) {
+        // Usar connectionData já carregado anteriormente
+        if (!connectionData) {
           console.warn(`⚠️ [${requestId}] No connection found for ${instanceName}`);
         } else if (connection.history_sync_status === 'pending' && 
             (connection.history_days > 0 || connection.history_recovery !== 'none')) {
@@ -549,7 +540,7 @@ serve(async (req) => {
         console.log(`📜 [${requestId}] Processing historical message from ${messageTimestamp.toISOString()}`);
         
         // Update sync status if not started yet
-        if (connection.history_sync_status === 'pending') {
+        if (connectionData?.history_sync_status === 'pending') {
           await supabase
             .from('connections')
             .update({
@@ -590,9 +581,9 @@ serve(async (req) => {
       let cutoffDate: Date | null = null;
       
       // Calculate cutoff date based on history_recovery
-      if (connection.history_recovery && connection.history_recovery !== 'none') {
+      if (connectionData?.history_recovery && connectionData.history_recovery !== 'none') {
         cutoffDate = new Date();
-        switch (connection.history_recovery) {
+        switch (connectionData.history_recovery) {
           case 'week':
             cutoffDate.setDate(cutoffDate.getDate() - 7);
             break;
@@ -603,12 +594,12 @@ serve(async (req) => {
             cutoffDate.setDate(cutoffDate.getDate() - 90);
             break;
         }
-        console.log(`📅 [${requestId}] History recovery filter: ${connection.history_recovery} (cutoff: ${cutoffDate.toISOString()})`);
-      } else if (connection.history_days && connection.history_days > 0) {
+        console.log(`📅 [${requestId}] History recovery filter: ${connectionData.history_recovery} (cutoff: ${cutoffDate.toISOString()})`);
+      } else if (connectionData?.history_days && connectionData.history_days > 0) {
         // Fallback to history_days if history_recovery is not set
         cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - connection.history_days);
-        console.log(`📅 [${requestId}] History days filter: ${connection.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
+        cutoffDate.setDate(cutoffDate.getDate() - connectionData.history_days);
+        console.log(`📅 [${requestId}] History days filter: ${connectionData.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
       }
       
       if (cutoffDate && messageTimestamp < cutoffDate) {
@@ -618,8 +609,8 @@ serve(async (req) => {
           reason: 'message_too_old',
           message_date: messageTimestamp.toISOString(),
           cutoff_date: cutoffDate.toISOString(),
-          history_recovery: connection.history_recovery,
-          history_days: connection.history_days
+          history_recovery: connectionData?.history_recovery,
+          history_days: connectionData?.history_days
         };
         
         // Retornar early, não processar esta mensagem
