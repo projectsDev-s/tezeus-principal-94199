@@ -562,8 +562,13 @@ serve(async (req) => {
       const messageTimestamp = messageData.messageTimestamp 
         ? new Date(messageData.messageTimestamp * 1000) 
         : new Date();
-      const isHistoricalSync = messageData.messageTimestamp && 
-        (Date.now() - messageData.messageTimestamp * 1000) > 60000; // Older than 1 minute
+      // ✅ Detectar mensagens históricas:
+      // 1. Se Evolution marca como histórico (payload.data?.isHistorical)
+      // 2. OU se a mensagem é mais antiga que 5 minutos (considerar delay de rede)
+      const isHistoricalSync = messageData.messageTimestamp && (
+        payload.data?.isHistorical === true ||
+        (Date.now() - messageData.messageTimestamp * 1000) > 300000 // 5 minutos
+      );
       
       if (isHistoricalSync) {
         console.log(`📜 [${requestId}] Processing historical message from ${messageTimestamp.toISOString()}`);
@@ -606,58 +611,14 @@ serve(async (req) => {
         payloadKeys: Object.keys(payload)
       });
       
-      // ✅ FILTRAR MENSAGENS ANTIGAS BASEADO EM history_days ou history_recovery
-      let cutoffDate: Date | null = null;
-      
-      // Calculate cutoff date based on history_recovery
-      if (messageConnectionData?.history_recovery && messageConnectionData.history_recovery !== 'none') {
-        cutoffDate = new Date();
-        switch (messageConnectionData.history_recovery) {
-          case 'week':
-            cutoffDate.setDate(cutoffDate.getDate() - 7);
-            break;
-          case 'month':
-            cutoffDate.setDate(cutoffDate.getDate() - 30);
-            break;
-          case 'quarter':
-            cutoffDate.setDate(cutoffDate.getDate() - 90);
-            break;
-        }
-        console.log(`📅 [${requestId}] History recovery filter: ${messageConnectionData.history_recovery} (cutoff: ${cutoffDate.toISOString()})`);
-      } else if (messageConnectionData?.history_days && messageConnectionData.history_days > 0) {
-        // Fallback to history_days if history_recovery is not set
-        cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - messageConnectionData.history_days);
-        console.log(`📅 [${requestId}] History days filter: ${messageConnectionData.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
-      }
-      
-      if (cutoffDate && messageTimestamp < cutoffDate) {
-        console.log(`⏭️ [${requestId}] Skipping old message (${messageTimestamp.toISOString()}) - older than configured period (cutoff: ${cutoffDate.toISOString()})`);
-        processedData = {
-          skipped: true,
-          reason: 'message_too_old',
-          message_date: messageTimestamp.toISOString(),
-          cutoff_date: cutoffDate.toISOString(),
-          history_recovery: messageConnectionData?.history_recovery,
-          history_days: messageConnectionData?.history_days
-        };
-        
-        // Retornar early, não processar esta mensagem
-        return new Response(
-          JSON.stringify({
-            success: true,
-            event: payload.event,
-            instance: instanceName,
-            workspace_id: workspaceId,
-            message_filtered: true,
-            reason: 'message_too_old',
-            request_id: requestId
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } else if (cutoffDate) {
-        console.log(`✅ [${requestId}] Message within date range (${messageTimestamp.toISOString()}) - keeping`);
-      }
+      // ✅ IMPORTANTE: history_recovery e history_days são APENAS metadados para UI
+      // Evolution API retorna TODAS as mensagens quando syncFullHistory=true
+      // NÃO filtrar mensagens aqui - deixar Evolution API controlar isso
+      console.log(`📋 [${requestId}] Connection history config (metadata only):`, {
+        history_recovery: messageConnectionData?.history_recovery || 'none',
+        history_days: messageConnectionData?.history_days || 0,
+        note: 'These values are stored for UI filtering only, not for processing'
+      });
       
       // Check if this message already exists (prevent duplicates)
       const { data: existingMessage } = await supabase
@@ -975,8 +936,8 @@ serve(async (req) => {
                   const lastMessageTime = new Date(recentMessages[0].created_at).getTime();
                   const timeSinceLastMessage = Date.now() - lastMessageTime;
                   
-                  // Se a última mensagem foi há mais de 2 minutos, considerar sync completo
-                  if (timeSinceLastMessage > 120000) {
+                  // Se a última mensagem foi há mais de 5 minutos, considerar sync completo (Evolution pode demorar)
+                  if (timeSinceLastMessage > 300000) {
                     await supabase
                       .from('connections')
                       .update({

@@ -36,10 +36,13 @@ serve(async (req) => {
     
     console.log('📡 Evolution config found:', { url: evolutionToken.evolution_url });
     
-    // Fazer chamada para Evolution API para forçar sync
+    // ✅ IMPORTANTE: Evolution API não aceita filtro de dias
+    // O parâmetro 'days' e 'historyDays' são ignorados pela API
+    // Ela retorna TUDO quando fullHistory=true
     const syncUrl = `${evolutionToken.evolution_url}/chat/syncHistory/${instanceName}`;
     
     console.log('🌐 Calling Evolution API:', syncUrl);
+    console.log('📋 Note: historyDays is stored in DB for UI filtering only, Evolution will sync ALL messages');
     
     const response = await fetch(syncUrl, {
       method: 'POST',
@@ -48,8 +51,7 @@ serve(async (req) => {
         'apikey': evolutionToken.token
       },
       body: JSON.stringify({
-        days: historyDays || 7,
-        fullHistory: true
+        fullHistory: true  // ✅ Sempre true - Evolution retorna tudo
       })
     });
     
