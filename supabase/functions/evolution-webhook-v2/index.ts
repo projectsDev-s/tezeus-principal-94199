@@ -445,14 +445,19 @@ serve(async (req) => {
       if (state === 'open') {
         console.log(`🔍 [${requestId}] Checking if history sync needed for ${instanceName}`);
         
-        const { data: connection } = await supabase
+        const { data: connection, error: connectionError } = await supabase
           .from('connections')
           .select('history_days, history_recovery, history_sync_status')
           .eq('instance_name', instanceName)
           .eq('workspace_id', workspaceId)
           .single();
         
-        if (connection && connection.history_sync_status === 'pending' && 
+        // Validação segura de erro e existência da conexão
+        if (connectionError) {
+          console.error(`❌ [${requestId}] Error fetching connection:`, connectionError);
+        } else if (!connection) {
+          console.warn(`⚠️ [${requestId}] No connection found for ${instanceName}`);
+        } else if (connection.history_sync_status === 'pending' && 
             (connection.history_days > 0 || connection.history_recovery !== 'none')) {
           
           console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connection.history_days})`);
@@ -477,7 +482,8 @@ serve(async (req) => {
             console.error(`❌ [${requestId}] Exception invoking history sync:`, invokeError);
           }
         } else {
-          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connection?.history_sync_status}, days=${connection?.history_days}`);
+          // Sabemos que connection existe aqui, podemos acessar diretamente
+          console.log(`ℹ️ [${requestId}] No history sync needed: status=${connection.history_sync_status}, days=${connection.history_days}, recovery=${connection.history_recovery}`);
         }
       }
       
