@@ -293,9 +293,6 @@ serve(async (req) => {
 
     console.log("Connection secrets stored");
 
-    // Prepare Evolution API request
-    const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
-
     // Validate API key exists
     if (!evolutionConfig.apiKey) {
       console.error("❌ Missing Evolution API key");
@@ -308,24 +305,33 @@ serve(async (req) => {
 
     console.log("✅ API key found, proceeding with instance creation");
 
+    // Prepare Evolution API request
+    const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
+
     const evolutionPayload = {
-      instanceName: instanceName, // nome da instância
-      token: evolutionConfig.apiKey, // opcional (pode deixar null se não quiser)
-      qrcode: true, // gerar QR Code na criação
-      integration: "WHATSAPP-BAILEYS", // default
-      syncFullHistory: true, // ✅ histórico completo
-      webhookEvents: [
-        // eventos habilitados
-        "MESSAGES_UPDATE",
-        "MESSAGES_UPSERT",
-        "QRCODE_UPDATED",
-        "CONNECTION_UPDATE",
-        "CONTACTS_UPSERT",
-        "CONTACTS_UPDATE",
-      ],
-      webhookUrl: `${supabaseUrl}/functions/v1/evolution-webhook-v2`, // opcional mas recomendado
-      webhookBase64: true, // opcional
-      webhookByEvents: true, // opcional
+      instanceName: instanceName,
+      token: evolutionConfig.apiKey,
+      qrcode: true,
+      integration: "WHATSAPP-BAILEYS",
+      syncFullHistory: true,
+      webhook: {
+        url: webhookUrl,
+        headers: {
+          apikey: token,
+          "Content-Type": "application/json",
+        },
+        events: [
+          "MESSAGES_UPDATE",
+          "MESSAGES_UPSERT",
+          "QRCODE_UPDATED",
+          "CONNECTION_UPDATE",
+          "CONTACTS_UPSERT",
+          "CONTACTS_UPDATE",
+        ],
+      },
+      webhookUrl: webhookUrl,
+      webhookBase64: true,
+      webhookByEvents: true,
     };
 
     // Primeiro fetch descartado, usando só o evolutionPayload abaixo
