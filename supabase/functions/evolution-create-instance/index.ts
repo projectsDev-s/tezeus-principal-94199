@@ -310,9 +310,11 @@ serve(async (req) => {
     const historyDays = historyDaysMap[historyRecovery as keyof typeof historyDaysMap] || 0;
     console.log(`📅 History recovery setting: ${historyRecovery} → sync_full_history: ${historyDays > 0}`);
     
-    // ✅ PAYLOAD CORRETO: config no nível raiz com sync_full_history e webhook dentro
+    // ✅ PAYLOAD CORRETO: integration e qrcode no nível raiz + config com sync_full_history e webhook
     const evolutionPayload = {
       instanceName: instanceName,
+      integration: "WHATSAPP-BAILEYS",
+      qrcode: true,
       config: {
         sync_full_history: historyDays > 0,
         webhook: {
