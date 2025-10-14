@@ -334,10 +334,10 @@ serve(async (req) => {
     let processedData = null;
     
     if (instanceName) {
-      // Get workspace_id from connections table
+      // Get workspace_id and history_days from connections table
       const { data: connection } = await supabase
         .from('connections')
-        .select('workspace_id')
+        .select('workspace_id, history_days, created_at')
         .eq('instance_name', instanceName)
         .single();
 
@@ -423,6 +423,43 @@ serve(async (req) => {
         dataKeys: messageData ? Object.keys(messageData) : [],
         payloadKeys: Object.keys(payload)
       });
+      
+      // ✅ FILTRAR MENSAGENS ANTIGAS BASEADO EM history_days
+      if (connection.history_days && connection.history_days > 0) {
+        const messageTimestamp = messageData.messageTimestamp 
+          ? new Date(messageData.messageTimestamp * 1000) 
+          : new Date();
+        
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - connection.history_days);
+        
+        if (messageTimestamp < cutoffDate) {
+          console.log(`⏭️ [${requestId}] Skipping old message (${messageTimestamp.toISOString()}) - older than ${connection.history_days} days (cutoff: ${cutoffDate.toISOString()})`);
+          processedData = {
+            skipped: true,
+            reason: 'message_too_old',
+            message_date: messageTimestamp.toISOString(),
+            cutoff_date: cutoffDate.toISOString(),
+            history_days: connection.history_days
+          };
+          
+          // Retornar early, não processar esta mensagem
+          return new Response(
+            JSON.stringify({
+              success: true,
+              event: payload.event,
+              instance: instanceName,
+              workspace_id: workspaceId,
+              message_filtered: true,
+              reason: 'message_too_old',
+              request_id: requestId
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          console.log(`✅ [${requestId}] Message within date range (${messageTimestamp.toISOString()}) - keeping (${connection.history_days} days max)`);
+        }
+      }
       
       // Check if this message already exists (prevent duplicates)
       const { data: existingMessage } = await supabase

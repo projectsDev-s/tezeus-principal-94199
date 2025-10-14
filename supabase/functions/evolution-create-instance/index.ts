@@ -428,9 +428,10 @@ serve(async (req) => {
     const evolutionData = await evolutionResponse.json()
     console.log('Evolution API response data:', evolutionData)
 
-    // Update connection with Evolution API response
+    // Update connection with Evolution API response and history_days
     const updateData: any = {
-      metadata: evolutionData // Store Evolution API response only
+      metadata: evolutionData, // Store Evolution API response only
+      history_days: historyDays // ✅ Salvar período de histórico
     }
 
     // Determine status and extract QR code
@@ -454,6 +455,8 @@ serve(async (req) => {
     } else {
       updateData.status = 'creating'
     }
+
+    console.log(`💾 [history_days] Saving to database: ${historyDays} (${historyRecovery})`);
 
     const { error: updateError } = await supabase
       .from('connections')
