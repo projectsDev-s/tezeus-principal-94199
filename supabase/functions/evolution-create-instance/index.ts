@@ -337,13 +337,14 @@ serve(async (req) => {
       instanceName: instanceName,
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
+      syncFullHistory: true,  // ✅ Na raiz do payload (mais confiável)
       settings: {
         rejectCall: false,
         groupsIgnore: false,
         alwaysOnline: false,
         readMessages: false,
         readStatus: false,
-        syncFullHistory: true,
+        syncFullHistory: true,  // ✅ Manter aqui também
       },
       webhook: {
         url: webhookUrl,
@@ -359,8 +360,18 @@ serve(async (req) => {
           "CONTACTS_UPSERT",
           "CONTACTS_UPDATE",
         ],
+        webhookByEvents: true,  // ✅ Garantir que eventos sejam enviados
       },
     };
+    
+    console.log('📦 Evolution payload configuration:', {
+      instanceName,
+      syncFullHistory: true,
+      webhookByEvents: true,
+      historyRecovery,
+      historyDays,
+      webhookEvents: evolutionPayload.webhook.events
+    });
 
     // Primeiro fetch descartado, usando só o evolutionPayload abaixo
 
