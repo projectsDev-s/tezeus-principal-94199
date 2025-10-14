@@ -477,8 +477,23 @@ serve(async (req) => {
         
         if (metaError || !connectionMeta) {
           console.warn(`⚠️ [${requestId}] No connection metadata found for ${instanceName}:`, metaError);
-        } else if (connectionMeta.history_sync_status === 'pending' && 
-            (connectionMeta.history_days > 0 || connectionMeta.history_recovery !== 'none')) {
+        } else if ((connectionMeta.history_sync_status === 'pending' || 
+                    connectionMeta.history_sync_status === 'failed' ||
+                    // Detectar sync travado: syncing há mais de 10 minutos sem progresso
+                    (connectionMeta.history_sync_status === 'syncing' && 
+                     connectionMeta.history_sync_started_at &&
+                     (Date.now() - new Date(connectionMeta.history_sync_started_at).getTime()) > 600000)) &&
+                   (connectionMeta.history_days > 0 || connectionMeta.history_recovery !== 'none')) {
+          
+          // Se estava travado, resetar primeiro
+          if (connectionMeta.history_sync_status === 'syncing') {
+            console.log(`🔄 [${requestId}] Sync stuck detected, resetting status for ${instanceName}`);
+            await supabase
+              .from('connections')
+              .update({ history_sync_status: 'pending' })
+              .eq('instance_name', instanceName)
+              .eq('workspace_id', workspaceId);
+          }
           
           console.log(`🔄 [${requestId}] Triggering history sync for ${instanceName} (days: ${connectionMeta.history_days}, recovery: ${connectionMeta.history_recovery})`);
           

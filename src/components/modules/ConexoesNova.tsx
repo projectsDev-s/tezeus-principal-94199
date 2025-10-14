@@ -428,6 +428,35 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   };
 
+  const forceResyncHistory = async (connection: Connection) => {
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .update({ 
+          history_sync_status: 'pending',
+          history_sync_started_at: null 
+        })
+        .eq('id', connection.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Ressincronização Iniciada',
+        description: 'O histórico será sincronizado novamente em instantes.',
+      });
+      
+      // Reload connections
+      loadConnections();
+    } catch (error) {
+      console.error('Error forcing resync:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao forçar ressincronização',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const connectInstance = async (connection: Connection) => {
     try {
       setIsConnecting(true);
@@ -997,10 +1026,18 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                       <DropdownMenuItem 
                         onClick={() => openDeleteModal(connection)}
                         className="text-destructive"
-                      >
+                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Excluir
                       </DropdownMenuItem>
+                      {connection.history_sync_status === 'syncing' && (
+                        <DropdownMenuItem
+                          onClick={() => forceResyncHistory(connection)}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Forçar Ressincronização
+                        </DropdownMenuItem>
+                      )}
                      </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

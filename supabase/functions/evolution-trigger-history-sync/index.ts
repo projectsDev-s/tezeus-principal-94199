@@ -64,15 +64,37 @@ serve(async (req) => {
     if (response.ok && Array.isArray(responseData)) {
       console.log(`📊 Found ${responseData.length} historical messages to process`);
       
-      // Atualizar status inicial
-      await supabase
-        .from('connections')
-        .update({
-          history_sync_status: 'syncing',
-          history_sync_started_at: new Date().toISOString()
-        })
-        .eq('instance_name', instanceName)
-        .eq('workspace_id', workspaceId);
+      // ✅ SÓ atualiza status DEPOIS de confirmar que API funcionou
+      if (responseData.length > 0) {
+        await supabase
+          .from('connections')
+          .update({
+            history_sync_status: 'syncing',
+            history_sync_started_at: new Date().toISOString()
+          })
+          .eq('instance_name', instanceName)
+          .eq('workspace_id', workspaceId);
+      } else {
+        // Se não há mensagens, marcar como completo imediatamente
+        await supabase
+          .from('connections')
+          .update({
+            history_sync_status: 'completed',
+            history_sync_completed_at: new Date().toISOString(),
+            history_messages_synced: 0
+          })
+          .eq('instance_name', instanceName)
+          .eq('workspace_id', workspaceId);
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: 'No historical messages found',
+          processed: 0,
+          total: 0
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
       
       // Processar cada mensagem retornada
       let processedCount = 0;
@@ -142,6 +164,21 @@ serve(async (req) => {
     
   } catch (error) {
     console.error('❌ Error triggering history sync:', error);
+    
+    // Marcar sync como falho no banco
+    try {
+      await supabase
+        .from('connections')
+        .update({
+          history_sync_status: 'failed',
+          history_sync_completed_at: new Date().toISOString()
+        })
+        .eq('instance_name', instanceName)
+        .eq('workspace_id', workspaceId);
+    } catch (updateError) {
+      console.error('Failed to update error status:', updateError);
+    }
+    
     return new Response(JSON.stringify({ 
       error: error.message,
       success: false
