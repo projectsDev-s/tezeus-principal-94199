@@ -310,46 +310,32 @@ serve(async (req) => {
     const historyDays = historyDaysMap[historyRecovery as keyof typeof historyDaysMap] || 0;
     console.log(`📅 History recovery setting: ${historyRecovery} → sync_full_history: ${historyDays > 0}`);
     
+    // ✅ PAYLOAD CORRETO: config no nível raiz com sync_full_history e webhook dentro
     const evolutionPayload = {
       instanceName: instanceName,
-      qrcode: true,
-      integration: "WHATSAPP-BAILEYS",
-      
-      // Settings for history synchronization (Evolution API v2 format - snake_case)
-      settings: {
-        sync_full_history: historyDays > 0,  // ✅ Correto - snake_case
-        always_online: true,                  // ✅ Correto - snake_case
-        read_messages: false,                 // ✅ Correto - snake_case
-        read_status: false,                   // ✅ Correto - snake_case
-        groups_ignore: false,                 // ✅ Correto - snake_case
-        reject_call: false,                   // ✅ Rejeitar chamadas
-        msg_call: ""                          // ✅ Mensagem ao rejeitar chamada
-      },
-      
-      webhook: {
-        url: webhookUrl,
-        base64: true,
-        byEvents: true,
-        headers: {
-          "apikey": token,
-          "Content-Type": "application/json"
-        },
-        events: [
-          "QRCODE_UPDATED",
-          "CONNECTION_UPDATE",
-          "MESSAGES_UPSERT",
-          "MESSAGES_UPDATE",
-          "CONTACTS_UPSERT",
-          "CONTACTS_UPDATE",
-          "GROUPS_UPSERT",
-          "CHATS_UPDATE"
-        ]
+      config: {
+        sync_full_history: historyDays > 0,
+        webhook: {
+          url: webhookUrl,
+          headers: {
+            "apikey": token,
+            "Content-Type": "application/json"
+          },
+          events: [
+            "MESSAGE_UPDATE",
+            "MESSAGE_UPSERT",
+            "QRCODE_UPDATE",
+            "CONNECTION_UPDATE",
+            "CONTACTS_UPSERT",
+            "CONTACTS_UPDATE"
+          ]
+        }
       }
     }
 
     console.log('🚀 Calling Evolution API to create instance');
-    console.log('📋 Evolution API Payload (v2 format):', JSON.stringify(evolutionPayload, null, 2));
-    console.log('✅ Using snake_case for settings parameters as required by Evolution API v2');
+    console.log('📋 Evolution API Payload (corrected structure):', JSON.stringify(evolutionPayload, null, 2));
+    console.log('✅ Using config object with sync_full_history and webhook inside');
     
     // Normalize URL to avoid double slashes
     const baseUrl = evolutionConfig.url.endsWith('/') 
@@ -465,92 +451,6 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Error updating connection:', updateError)
-    }
-
-    // ✅ PASSO 2: Configurar settings via endpoint /settings/set/{instance}
-    console.log('🔧 Configuring instance settings via /settings/set endpoint...');
-    
-    const settingsPayload = {
-      reject_call: false,
-      msg_call: "",
-      groups_ignore: false,
-      always_online: true,
-      read_messages: false,
-      read_status: false,
-      sync_full_history: historyDays > 0 // ✅ Aplicar configuração de histórico
-    };
-    
-    console.log('📋 Settings payload:', JSON.stringify(settingsPayload, null, 2));
-    
-    try {
-      // ✅ ENDPOINT CORRETO: /settings/set/{instance} (instance no PATH, não no body)
-      const settingsUrl = `${baseUrl}/settings/set/${instanceName}`;
-      console.log('🔗 Settings URL:', settingsUrl);
-      
-      const settingsResponse = await fetch(settingsUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': evolutionConfig.apiKey
-        },
-        body: JSON.stringify(settingsPayload) // Apenas settings, sem instanceName
-      });
-      
-      if (settingsResponse.ok) {
-        const settingsData = await settingsResponse.json();
-        console.log('✅ Settings configured successfully:', settingsData);
-        
-        // ✅ Salvar confirmação no metadata
-        await supabase
-          .from('connections')
-          .update({
-            metadata: {
-              ...connectionData.metadata,
-              ...evolutionData,
-              settings_configured: true,
-              settings_response: settingsData
-            }
-          })
-          .eq('id', connectionData.id);
-          
-      } else {
-        const errorText = await settingsResponse.text();
-        console.error('❌ Failed to configure settings:', settingsResponse.status, errorText);
-      }
-    } catch (settingsError) {
-      console.error('❌ Error calling settings endpoint:', settingsError);
-      // Não falhar a criação da instância se settings falhar
-    }
-    
-    // ✅ PASSO 3: Verificar se settings foi aplicado
-    console.log('🔍 Verifying settings configuration...');
-    try {
-      const verifyUrl = `${baseUrl}/settings/find/${instanceName}`;
-      const verifyResponse = await fetch(verifyUrl, {
-        headers: {
-          'apikey': evolutionConfig.apiKey
-        }
-      });
-      
-      if (verifyResponse.ok) {
-        const currentSettings = await verifyResponse.json();
-        console.log('🔍 Current settings from Evolution API:', currentSettings);
-        
-        const expectedSyncHistory = historyDays > 0;
-        const actualSyncHistory = currentSettings.settings?.sync_full_history;
-        
-        if (actualSyncHistory !== expectedSyncHistory) {
-          console.error('⚠️ Settings verification FAILED!');
-          console.error(`   Expected sync_full_history: ${expectedSyncHistory}`);
-          console.error(`   Got sync_full_history: ${actualSyncHistory}`);
-        } else {
-          console.log('✅ Settings verified successfully - sync_full_history:', actualSyncHistory);
-        }
-      } else {
-        console.error('❌ Failed to verify settings:', verifyResponse.status);
-      }
-    } catch (verifyError) {
-      console.error('❌ Error verifying settings:', verifyError);
     }
 
     console.log('Instance created successfully:', {
