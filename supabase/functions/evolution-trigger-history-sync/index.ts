@@ -36,31 +36,36 @@ serve(async (req) => {
     
     console.log('📡 Evolution config found:', { url: evolutionToken.evolution_url });
     
-    // ✅ IMPORTANTE: Evolution API não aceita filtro de dias
-    // O parâmetro 'days' e 'historyDays' são ignorados pela API
-    // Ela retorna TUDO quando fullHistory=true
-    const syncUrl = `${evolutionToken.evolution_url}/chat/syncHistory/${instanceName}`;
+    // ✅ Evolution API usa /chat/findMessages para buscar histórico completo
+    // historyDays/historyRecovery são APENAS para metadata no banco (uso no frontend)
+    const findMessagesUrl = `${evolutionToken.evolution_url}/chat/findMessages/${instanceName}`;
     
-    console.log('🌐 Calling Evolution API:', syncUrl);
-    console.log('📋 Note: historyDays is stored in DB for UI filtering only, Evolution will sync ALL messages');
+    console.log('🌐 Calling Evolution API (findMessages):', findMessagesUrl);
+    console.log('📋 Note: historyDays is stored in DB for UI filtering only');
     
-    const response = await fetch(syncUrl, {
+    // Buscar TODAS as mensagens (sem filtro de data)
+    const response = await fetch(findMessagesUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': evolutionToken.token
       },
       body: JSON.stringify({
-        fullHistory: true  // ✅ Sempre true - Evolution retorna tudo
+        where: {}  // ✅ Sem filtro = retorna tudo
       })
     });
     
-    const responseText = await response.text();
-    console.log('📥 Evolution API response:', { status: response.status, body: responseText });
+    const responseData = await response.json();
+    console.log('📥 Evolution API response:', { 
+      status: response.status, 
+      messageCount: Array.isArray(responseData) ? responseData.length : 0 
+    });
     
-    if (response.ok) {
-      // Atualizar status
-      const { error: updateError } = await supabase
+    if (response.ok && Array.isArray(responseData)) {
+      console.log(`📊 Found ${responseData.length} historical messages to process`);
+      
+      // Atualizar status inicial
+      await supabase
         .from('connections')
         .update({
           history_sync_status: 'syncing',
@@ -69,22 +74,71 @@ serve(async (req) => {
         .eq('instance_name', instanceName)
         .eq('workspace_id', workspaceId);
       
-      if (updateError) {
-        console.error('❌ Error updating connection status:', updateError);
-      } else {
-        console.log('✅ Connection status updated to syncing');
+      // Processar cada mensagem retornada
+      let processedCount = 0;
+      let errorCount = 0;
+      
+      for (const message of responseData) {
+        try {
+          // Chamar evolution-webhook-v2 para processar cada mensagem histórica
+          const webhookResponse = await supabase.functions.invoke('evolution-webhook-v2', {
+            body: {
+              event: 'messages.upsert',
+              instance: instanceName,
+              data: {
+                key: message.key,
+                message: message.message,
+                messageTimestamp: message.messageTimestamp,
+                pushName: message.pushName,
+                // ✅ Marcar explicitamente como histórico
+                isHistorical: true
+              }
+            }
+          });
+          
+          if (webhookResponse.error) {
+            console.error(`❌ Error processing message ${message.key?.id}:`, webhookResponse.error);
+            errorCount++;
+          } else {
+            processedCount++;
+            
+            // Log progresso a cada 10 mensagens
+            if (processedCount % 10 === 0) {
+              console.log(`⏳ Progress: ${processedCount}/${responseData.length} messages processed`);
+            }
+          }
+          
+        } catch (error) {
+          console.error(`❌ Error processing historical message:`, error);
+          errorCount++;
+        }
       }
+      
+      console.log(`✅ History sync completed: ${processedCount} processed, ${errorCount} errors`);
+      
+      // Atualizar status final
+      await supabase
+        .from('connections')
+        .update({
+          history_sync_status: 'completed',
+          history_sync_completed_at: new Date().toISOString(),
+          history_messages_synced: processedCount
+        })
+        .eq('instance_name', instanceName)
+        .eq('workspace_id', workspaceId);
       
       return new Response(JSON.stringify({ 
         success: true,
-        message: 'History sync triggered successfully',
-        evolutionResponse: responseText
+        message: 'History sync completed',
+        processed: processedCount,
+        errors: errorCount,
+        total: responseData.length
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    throw new Error(`Failed to trigger sync: ${response.status} - ${responseText}`);
+    throw new Error(`Failed to fetch messages: ${response.status} - ${JSON.stringify(responseData)}`);
     
   } catch (error) {
     console.error('❌ Error triggering history sync:', error);

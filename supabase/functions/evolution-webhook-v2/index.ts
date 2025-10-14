@@ -562,29 +562,25 @@ serve(async (req) => {
       const messageTimestamp = messageData.messageTimestamp 
         ? new Date(messageData.messageTimestamp * 1000) 
         : new Date();
-      // ✅ Detectar mensagens históricas:
-      // 1. Se Evolution marca como histórico (payload.data?.isHistorical)
-      // 2. OU se a mensagem é mais antiga que 5 minutos (considerar delay de rede)
-      const isHistoricalSync = messageData.messageTimestamp && (
-        payload.data?.isHistorical === true ||
-        (Date.now() - messageData.messageTimestamp * 1000) > 300000 // 5 minutos
-      );
+      // ✅ Detectar mensagens históricas enviadas pelo trigger de sincronização
+      const isHistoricalSync = payload.data?.isHistorical === true;
       
       if (isHistoricalSync) {
         console.log(`📜 [${requestId}] Processing historical message from ${messageTimestamp.toISOString()}`);
         
-        // Update sync status if not started yet
-        if (messageConnectionData?.history_sync_status === 'pending') {
-          await supabase
-            .from('connections')
-            .update({
-              history_sync_status: 'syncing',
-              history_sync_started_at: new Date().toISOString()
-            })
-            .eq('instance_name', instanceName)
-            .eq('workspace_id', workspaceId);
-          
-          console.log(`🔄 [${requestId}] History sync started for instance ${instanceName}`);
+        // Incrementar contador de mensagens históricas sincronizadas
+        const { error: historyCountError } = await supabase
+          .from('connections')
+          .update({
+            history_messages_synced: supabase.sql`COALESCE(history_messages_synced, 0) + 1`
+          })
+          .eq('instance_name', instanceName)
+          .eq('workspace_id', workspaceId);
+        
+        if (historyCountError) {
+          console.error(`❌ [${requestId}] Error updating history count:`, historyCountError);
+        } else {
+          console.log(`✅ [${requestId}] History message count incremented`);
         }
       }
       
