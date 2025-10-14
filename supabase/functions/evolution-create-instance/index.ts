@@ -106,6 +106,7 @@ async function getEvolutionConfig(workspaceId: string, supabase: any) {
 }
 
 serve(async (req) => {
+  console.log("🔥 EVOLUTION CREATE INSTANCE - BUILD 2025-10-14-16:45 UTC");
   console.log("🔥 EVOLUTION CREATE INSTANCE STARTED");
   console.log("🔥 Method:", req.method);
   console.log("🔥 URL:", req.url);
