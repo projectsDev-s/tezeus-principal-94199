@@ -145,15 +145,10 @@ serve(async (req) => {
     }
 
     console.log("📋 Parsed request body:", requestBody);
-    const { instanceName, historyRecovery = "none", workspaceId, autoCreateCrmCard, defaultPipelineId } = requestBody;
-    
-    // Calcular history_days com base no historyRecovery
-    const historyDays = historyRecovery === "month" ? 30 : historyRecovery === "week" ? 7 : 0;
+    const { instanceName, workspaceId, autoCreateCrmCard, defaultPipelineId } = requestBody;
     
     console.log("📋 Request params:", {
       instanceName,
-      historyRecovery,
-      historyDays,
       workspaceId,
       autoCreateCrmCard,
       defaultPipelineId,
@@ -259,7 +254,6 @@ serve(async (req) => {
       .from("connections")
       .insert({
         instance_name: instanceName,
-        history_recovery: historyRecovery,
         workspace_id: workspaceId,
         status: "creating",
         auto_create_crm_card: autoCreateCrmCard || false,
@@ -411,35 +405,15 @@ serve(async (req) => {
     const evolutionData = await evolutionResponse.json();
     console.log("Evolution API response data:", evolutionData);
 
-    // Update connection with Evolution API response and history_days
+    // Update connection with Evolution API response
     const updateData: any = {
-      metadata: evolutionData, // Store Evolution API response only
-      history_days: historyDays, // ✅ Salvar período de histórico
+      metadata: evolutionData,
     };
 
     // Determine status and extract QR code
-    if (evolutionData.instance?.qrcode?.base64) {
-      updateData.status = "qr";
-      updateData.qr_code = `data:image/png;base64,${evolutionData.instance.qrcode.base64}`;
-    } else if (evolutionData.instance?.qrcode?.code) {
-      updateData.status = "qr";
-      updateData.qr_code = evolutionData.instance.qrcode.code;
-    } else if (evolutionData.qrcode?.base64) {
-      updateData.status = "qr";
-      updateData.qr_code = `data:image/png;base64,${evolutionData.qrcode.base64}`;
-    } else if (evolutionData.qrcode?.code) {
-      updateData.status = "qr";
-      updateData.qr_code = evolutionData.qrcode.code;
-    } else if (evolutionData.instance?.state === "open") {
-      updateData.status = "connected";
-      if (evolutionData.instance?.owner) {
-        updateData.phone_number = evolutionData.instance.owner;
-      }
-    } else {
+...
       updateData.status = "creating";
     }
-
-    console.log(`💾 [history_days] Saving to database: ${historyDays} (${historyRecovery})`);
 
     const { error: updateError } = await supabase.from("connections").update(updateData).eq("id", connectionData.id);
 
@@ -451,7 +425,6 @@ serve(async (req) => {
       id: connectionData.id,
       instance_name: instanceName,
       status: updateData.status,
-      sync_full_history: historyDays > 0,
     });
 
     return new Response(
