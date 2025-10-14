@@ -1,4 +1,5 @@
 // Evolution Webhook V2 - Safe connection handling
+// Force redeploy: 2025-10-14 - Fixed connectionData reference errors
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
