@@ -11,6 +11,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import { Login } from "./pages/Login";
 import { SystemCustomizationProvider } from "./contexts/SystemCustomizationContext";
+import { RealtimeNotificationProvider } from "./components/RealtimeNotificationProvider";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,8 @@ const App = () => (
       <AuthProvider>
         <SystemCustomizationProvider>
           <WorkspaceProvider>
-            <BrowserRouter>
+            <RealtimeNotificationProvider>
+              <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -55,6 +57,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
             </BrowserRouter>
+            </RealtimeNotificationProvider>
           </WorkspaceProvider>
         </SystemCustomizationProvider>
       </AuthProvider>

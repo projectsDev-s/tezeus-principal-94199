@@ -27,7 +27,7 @@ import { EditarContatoModal } from "@/components/modals/EditarContatoModal";
 import { VincularProdutoModal } from "@/components/modals/VincularProdutoModal";
 import { VincularResponsavelModal } from "@/components/modals/VincularResponsavelModal";
 import { DeleteDealModal } from "@/components/modals/DeleteDealModal";
-import { usePipelinesContext } from "@/contexts/PipelinesContext";
+import { usePipelinesContext, PipelinesProvider } from "@/contexts/PipelinesContext";
 import { usePipelineActiveUsers } from "@/hooks/usePipelineActiveUsers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -444,7 +444,9 @@ function DraggableDeal({
 interface CRMNegociosProps {
   isDarkMode?: boolean;
 }
-export function CRMNegocios({
+
+// Componente interno que usa o context
+function CRMNegociosContent({
   isDarkMode = false
 }: CRMNegociosProps) {
   const {
@@ -1342,4 +1344,13 @@ export function CRMNegocios({
       }
     }} dealName={selectedCardForDeletion?.name} />
     </DndContext>;
+}
+
+// Componente exportado com Provider
+export function CRMNegocios(props: CRMNegociosProps) {
+  return (
+    <PipelinesProvider>
+      <CRMNegociosContent {...props} />
+    </PipelinesProvider>
+  );
 }
