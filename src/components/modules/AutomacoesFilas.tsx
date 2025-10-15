@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AdicionarFilaModal } from "@/components/modals/AdicionarFilaModal";
 import { EditarFilaModal } from "@/components/modals/EditarFilaModal";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface Fila {
   id: string;
@@ -23,6 +24,7 @@ interface Fila {
 }
 
 export function AutomacoesFilas() {
+  const { selectedWorkspace } = useWorkspace();
   const [filas, setFilas] = useState<Fila[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -30,10 +32,13 @@ export function AutomacoesFilas() {
   const [selectedFila, setSelectedFila] = useState<Fila | null>(null);
 
   const loadFilas = async () => {
+    if (!selectedWorkspace?.workspace_id) return;
+
     try {
       const { data, error } = await supabase
         .from('queues')
         .select('*')
+        .eq('workspace_id', selectedWorkspace.workspace_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -72,7 +77,7 @@ export function AutomacoesFilas() {
 
   useEffect(() => {
     loadFilas();
-  }, []);
+  }, [selectedWorkspace?.workspace_id]);
 
   if (loading) {
     return (

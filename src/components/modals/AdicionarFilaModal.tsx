@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Palette, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+
 interface AdicionarFilaModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +41,7 @@ export function AdicionarFilaModal({
   onOpenChange,
   onSuccess
 }: AdicionarFilaModalProps) {
+  const { selectedWorkspace } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
@@ -79,6 +82,12 @@ export function AdicionarFilaModal({
       toast.error("Nome é obrigatório");
       return;
     }
+
+    if (!selectedWorkspace?.workspace_id) {
+      toast.error("Nenhum workspace selecionado");
+      return;
+    }
+
     setShowError(false);
     setLoading(true);
     try {
@@ -92,6 +101,7 @@ export function AdicionarFilaModal({
         distribution_type: distribuicao || 'aleatoria',
         ai_agent_id: agenteId || null,
         greeting_message: mensagemSaudacao.trim() || null,
+        workspace_id: selectedWorkspace.workspace_id,
         is_active: true
       });
       if (error) throw error;
