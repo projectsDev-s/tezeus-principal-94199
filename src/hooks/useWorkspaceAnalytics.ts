@@ -44,6 +44,16 @@ export const useWorkspaceAnalytics = () => {
     try {
       const workspaceId = selectedWorkspace.workspace_id;
       const isUser = userRole === 'user';
+      
+      // Get headers - if fail, return early
+      let headers;
+      try {
+        headers = getHeaders();
+      } catch (error) {
+        console.error('❌ Analytics: Failed to get headers', error);
+        setIsLoading(false);
+        return;
+      }
 
       // ETAPA 2: Buscar conversas e pipelines
       let conversationQuery = supabase
@@ -71,7 +81,7 @@ export const useWorkspaceAnalytics = () => {
       const { data: pipelinesResponse, error: pipelinesError } = await supabase.functions.invoke(
         'pipeline-management/pipelines',
         {
-          headers: getHeaders()
+          headers
         }
       );
 
@@ -107,7 +117,7 @@ export const useWorkspaceAnalytics = () => {
         const { data: cardsData, error: cardsError } = await supabase.functions.invoke(
           `pipeline-management/cards?pipeline_id=${pipelineId}`,
           {
-            headers: getHeaders()
+            headers
           }
         );
 
@@ -134,7 +144,7 @@ export const useWorkspaceAnalytics = () => {
         const { data: columnsData } = await supabase.functions.invoke(
           `pipeline-management/columns?pipeline_id=${pipelineId}`,
           {
-            headers: getHeaders()
+            headers
           }
         );
         
