@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe, X } from "lucide-react";
+import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -735,74 +735,78 @@ export function ContactSidePanel({
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      {deals.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-3">
-                          {deals.map(deal => (
+              <CardContent>
+                {cardsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : deals.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {deals.map(deal => (
+                      <div 
+                        key={deal.id} 
+                        className="p-4 bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="space-y-2">
+                          {editingDealId === deal.id ? (
+                            <input
+                              type="text"
+                              value={editingDealTitle}
+                              onChange={(e) => setEditingDealTitle(e.target.value)}
+                              onBlur={async () => {
+                                await handleSaveDealTitle(deal.id);
+                                setEditingDealId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              autoFocus
+                              className="w-full font-bold text-sm bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                            />
+                          ) : (
                             <div 
-                              key={deal.id} 
-                              className="p-4 bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                              className="flex items-center gap-2"
+                              onDoubleClick={() => {
+                                setEditingDealId(deal.id);
+                                setEditingDealTitle(deal.pipeline);
+                              }}
                             >
-                              <div className="space-y-2">
-                                {editingDealId === deal.id ? (
-                                  <input
-                                    type="text"
-                                    value={editingDealTitle}
-                                    onChange={(e) => setEditingDealTitle(e.target.value)}
-                                    onBlur={async () => {
-                                      await handleSaveDealTitle(deal.id);
-                                      setEditingDealId(null);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.currentTarget.blur();
-                                      }
-                                    }}
-                                    autoFocus
-                                    className="w-full font-bold text-sm bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
-                                  />
-                                ) : (
-                                  <div 
-                                    className="flex items-center gap-2"
-                                    onDoubleClick={() => {
-                                      setEditingDealId(deal.id);
-                                      setEditingDealTitle(deal.pipeline);
-                                    }}
-                                  >
-                                    <Briefcase className="h-4 w-4 text-primary flex-shrink-0" />
-                                    <h4 className="font-bold text-sm cursor-pointer" title="Clique duas vezes para editar">
-                                      {deal.pipeline}
-                                    </h4>
-                                  </div>
-                                )}
-
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-2 w-2 rounded-full bg-primary/60" />
-                                  <p className="text-xs text-muted-foreground">
-                                    {deal.column_name}
-                                  </p>
-                                </div>
-
-                                <div className="pt-1 border-t border-border/30">
-                                  <p className="text-sm font-normal text-muted-foreground">
-                                    {formatCurrency(deal.value)}
-                                  </p>
-                                </div>
-                              </div>
+                              <Briefcase className="h-4 w-4 text-primary flex-shrink-0" />
+                              <h4 className="font-bold text-sm cursor-pointer" title="Clique duas vezes para editar">
+                                {deal.pipeline}
+                              </h4>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center py-8">
-                          <div className="text-center space-y-2">
-                            <Briefcase className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-                            <p className="text-sm text-muted-foreground">
-                              Nenhum negócio vinculado
+                          )}
+
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-2 w-2 rounded-full bg-primary/60" />
+                            <p className="text-xs text-muted-foreground">
+                              {deal.column_name}
+                            </p>
+                          </div>
+
+                          <div className="pt-1 border-t border-border/30">
+                            <p className="text-sm font-normal text-muted-foreground">
+                              {formatCurrency(deal.value)}
                             </p>
                           </div>
                         </div>
-                      )}
-                    </CardContent>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center space-y-2">
+                      <Briefcase className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum negócio vinculado
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
                   </Card>
 
                   {/* BLOCO 3: Observações */}
