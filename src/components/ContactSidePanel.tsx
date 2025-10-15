@@ -477,13 +477,13 @@ export function ContactSidePanel({
                   } : undefined}
                 >
                   {/* Overlay com blur e gradiente pastel */}
-                  <div 
-                    className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-purple-50/80 to-pink-50/80"
-                    style={{
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)'
-                    }}
-                  />
+              <div 
+                className="absolute inset-0 bg-black/40"
+                style={{
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)'
+                }}
+              />
                   
                   {/* Conteúdo com z-index elevado */}
                   <div className="relative z-10">
