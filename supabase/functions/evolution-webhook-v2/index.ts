@@ -989,24 +989,82 @@ serve(async (req) => {
         }
       }
       } // ✅ FIM DO BLOCO: PROCESSAR APENAS MENSAGENS INDIVIDUAIS
-    } else if (workspaceId && payload.data?.key?.fromMe === true) {
-      console.log(`📤 [${requestId}] Outbound message detected, capturing IDs for N8N`);
+    } else if (workspaceId && payload.data?.key?.fromMe === true && event === 'messages_upsert') {
+      console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), capturing evolution_short_key_id`);
       
-      // Capturar IDs para mensagens enviadas pelo sistema
-      const evolutionMessageId = payload.data?.key?.id; // 22 chars
-      const evolutionKeyId = payload.data?.keyId; // 40 chars
+      // Capturar o shortKeyId (22 chars) do evento messages.upsert
+      const shortKeyId = payload.data?.key?.id; // 22 chars
+      const remoteJid = payload.data?.key?.remoteJid;
+      const sanitizedPhone = remoteJid ? extractPhoneFromRemoteJid(remoteJid) : null;
+      
+      console.log(`🔑 [${requestId}] Outbound message shortKeyId: ${shortKeyId}`);
+      
+      if (shortKeyId && workspaceId) {
+        // Buscar mensagem enviada recentemente pelo evolution_key_id ou external_id
+        // O evolution_key_id de 40 chars contém o shortKeyId de 22 chars no final
+        const { data: existingMessages } = await supabase
+          .from('messages')
+          .select('id, evolution_key_id, evolution_short_key_id, conversation_id, created_at')
+          .eq('workspace_id', workspaceId)
+          .eq('sender_type', 'agent')
+          .is('evolution_short_key_id', null) // Buscar apenas mensagens sem short_key_id
+          .order('created_at', { ascending: false })
+          .limit(10); // Buscar nas últimas 10 mensagens
+        
+        if (existingMessages && existingMessages.length > 0) {
+          // Tentar encontrar pelo evolution_key_id que contenha o shortKeyId
+          let targetMessage = existingMessages.find(m => 
+            m.evolution_key_id?.includes(shortKeyId)
+          );
+          
+          // Se não encontrar, pegar a mensagem mais recente sem evolution_short_key_id
+          if (!targetMessage && sanitizedPhone) {
+            // Buscar por phone na conversation
+            const { data: conversations } = await supabase
+              .from('conversations')
+              .select('id, contact_id')
+              .eq('workspace_id', workspaceId)
+              .in('id', existingMessages.map(m => m.conversation_id));
+            
+            if (conversations) {
+              const { data: contacts } = await supabase
+                .from('contacts')
+                .select('id, phone')
+                .eq('workspace_id', workspaceId)
+                .in('id', conversations.map(c => c.contact_id));
+              
+              const contactId = contacts?.find(c => c.phone === sanitizedPhone)?.id;
+              if (contactId) {
+                const conversationId = conversations?.find(c => c.contact_id === contactId)?.id;
+                targetMessage = existingMessages.find(m => m.conversation_id === conversationId);
+              }
+            }
+          }
+          
+          if (targetMessage) {
+            console.log(`💾 [${requestId}] Saving evolution_short_key_id for message ${targetMessage.id}`);
+            
+            const { error: updateError } = await supabase
+              .from('messages')
+              .update({ evolution_short_key_id: shortKeyId })
+              .eq('id', targetMessage.id);
+            
+            if (updateError) {
+              console.error(`❌ [${requestId}] Failed to save evolution_short_key_id:`, updateError);
+            } else {
+              console.log(`✅ [${requestId}] evolution_short_key_id saved successfully!`);
+            }
+          } else {
+            console.log(`⚠️ [${requestId}] No matching message found for shortKeyId ${shortKeyId}`);
+          }
+        }
+      }
       
       processedData = {
         message_sent: true,
-        external_id: evolutionMessageId,
-        evolution_key_id: evolutionKeyId,
-        phone_number: payload.data?.key?.remoteJid ? extractPhoneFromRemoteJid(payload.data.key.remoteJid) : null
+        external_id: shortKeyId,
+        phone_number: sanitizedPhone
       };
-      
-      console.log(`🔑 [${requestId}] Outbound message IDs:`, {
-        external_id: evolutionMessageId,
-        evolution_key_id: evolutionKeyId
-      });
     }
 
     // Forward to N8N with processed data
