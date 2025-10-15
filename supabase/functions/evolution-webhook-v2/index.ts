@@ -271,20 +271,25 @@ serve(async (req) => {
       
       // ✅ ENVIAR PAYLOAD LEAN PARA O N8N (UMA ÚNICA VEZ)
       if (webhookUrl && updatedMessage) {
-        const updatePayload = {
-          event: "MESSAGES_UPDATE",
-          event_type: "update",
-          workspace_id: workspaceId,
-          conversation_id: updatedMessage.conversation_id,
-          request_id: requestId,
-          external_id: updatedMessage.external_id,
-          evolution_key_id: messageKeyId,
-          ack_level: ackLevel,
-          status: updatedMessage.status,
-          delivered_at: updatedMessage.delivered_at || null,
-          read_at: updatedMessage.read_at || null,
-          timestamp: new Date().toISOString()
-        };
+    const updatePayload = {
+      event: "MESSAGES_UPDATE",
+      event_type: "update",
+      workspace_id: workspaceId,
+      conversation_id: updatedMessage.conversation_id,
+      request_id: requestId,
+      external_id: updatedMessage.external_id,
+      evolution_key_id: messageKeyId,
+      ack_level: ackLevel,
+      status: updatedMessage.status,
+      delivered_at: updatedMessage.delivered_at || null,
+      read_at: updatedMessage.read_at || null,
+      timestamp: new Date().toISOString(),
+      
+      // ✅ Campos adicionados para melhor rastreabilidade
+      instance: instanceName,
+      remoteJid: payload.data?.key?.remoteJid || null,
+      messageId: messageId || null
+    };
         
         console.log(`🚀 [${requestId}] Sending LEAN update payload to N8N:`, updatePayload);
         
