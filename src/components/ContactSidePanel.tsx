@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe, X, Loader2 } from "lucide-react";
+import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -45,14 +46,9 @@ interface ContactSidePanelProps {
   contact: Contact | null;
   onContactUpdated?: () => void;
 }
-const getInitials = (name: string) => {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-};
-const getAvatarColor = (name: string) => {
-  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
-  const hash = name.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-  return colors[hash % colors.length];
-};
+
+// Funções de avatar importadas de avatarUtils para consistência
+
 export function ContactSidePanel({
   isOpen,
   onClose,

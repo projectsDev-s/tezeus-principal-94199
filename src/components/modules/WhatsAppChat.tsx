@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getConnectionColor } from '@/lib/utils';
+import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -627,17 +628,7 @@ export function WhatsAppChat({
     }
   };
 
-  // Obter iniciais do nome
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  // Obter cor do avatar baseada no nome
-  const getAvatarColor = (name: string) => {
-    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#f97316'];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
+  // Importadas de avatarUtils para consistência
 
   // Gerenciar agente IA
   const handleToggleAgent = () => {
