@@ -300,11 +300,11 @@ function DraggableDeal({
         
         {/* Área central para tags do contato */}
         <div className="mb-2 min-h-[24px] flex items-center justify-between gap-2">
-          <div className="flex items-start flex-wrap gap-1 flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-1 flex-1 min-w-0">
           {contactTags.map(tag => (
             <div
               key={tag.id}
-              className="relative cursor-pointer"
+              className="relative cursor-pointer flex items-center"
               onMouseEnter={() => {
                 if (hideTimeout) {
                   clearTimeout(hideTimeout);
@@ -337,14 +337,14 @@ function DraggableDeal({
                   }, 1000);
                   setHideTimeout(timeout);
                 }}
-                className={`absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 ${
+                className={`absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-1.5 py-0.5 rounded-full z-[9999] flex items-center gap-0.5 text-xs ${
                   visibleTagId === tag.id ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none"
                 }`}
                 style={{ 
                   backgroundColor: 'white',
                   borderColor: tag.color,
                   color: tag.color,
-                  border: `2px solid ${tag.color}`
+                  border: `1px solid ${tag.color}`
                 }}
               >
                 {tag.name}
@@ -360,7 +360,7 @@ function DraggableDeal({
                   }}
                   className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0 pointer-events-auto"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-2.5 h-2.5" />
                 </button>
               </span>
             </div>
