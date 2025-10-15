@@ -235,13 +235,6 @@ export function DealDetailsModal({
     }
   }, [selectedPipelineId]);
 
-  // CRÍTICO: Limpar ações quando o modal fechar
-  useEffect(() => {
-    if (!isOpen) {
-      setPipelineActions([]);
-    }
-  }, [isOpen]);
-
   const fetchPipelineActions = async (pipelineId: string) => {
     try {
       const { data, error } = await supabase
