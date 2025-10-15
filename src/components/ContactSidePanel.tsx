@@ -544,7 +544,7 @@ export function ContactSidePanel({
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {/* Lista de campos existentes - Cards compactos */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
                         {customFields.map((field, index) => (
                           <div 
                             key={index} 
@@ -557,10 +557,37 @@ export function ContactSidePanel({
                               </div>
                               
                               <div className="flex-1 space-y-1 min-w-0">
-                                {/* Label do campo - NÃO editável */}
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide truncate">
-                                  {field.key}
-                                </p>
+                                {/* Label do campo - EDITÁVEL com double-click */}
+                                {editingFieldIndex === index && editingFieldType === 'key' ? (
+                                  <input
+                                    type="text"
+                                    value={field.key}
+                                    onChange={(e) => updateCustomField(index, 'key', e.target.value)}
+                                    onBlur={async () => {
+                                      setEditingFieldIndex(null);
+                                      setEditingFieldType(null);
+                                      await handleSaveCustomFields();
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    autoFocus
+                                    className="w-full text-xs font-bold uppercase tracking-wide bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                                  />
+                                ) : (
+                                  <p 
+                                    className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer"
+                                    onDoubleClick={() => {
+                                      setEditingFieldIndex(index);
+                                      setEditingFieldType('key');
+                                    }}
+                                    title="Clique duas vezes para editar"
+                                  >
+                                    {field.key}
+                                  </p>
+                                )}
                                 
                                 {/* Valor editável com underline inline */}
                                 {editingFieldIndex === index && editingFieldType === 'value' ? (
@@ -579,7 +606,7 @@ export function ContactSidePanel({
                                       }
                                     }}
                                     autoFocus
-                                    className="w-full text-sm font-medium bg-transparent border-none outline-none border-b-2 border-primary pb-0.5 focus:border-primary"
+                                    className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
                                   />
                                 ) : (
                                   <p
@@ -587,8 +614,8 @@ export function ContactSidePanel({
                                       setEditingFieldIndex(index);
                                       setEditingFieldType('value');
                                     }}
-                                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate"
-                                    title={`${field.value} - Clique duas vezes para editar`}
+                                    className="text-sm font-normal text-muted-foreground cursor-pointer truncate"
+                                    title="Clique duas vezes para editar"
                                   >
                                     {field.value || 'Clique para adicionar'}
                                   </p>
