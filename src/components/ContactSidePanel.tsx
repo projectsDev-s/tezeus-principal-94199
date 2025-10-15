@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe } from "lucide-react";
+import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe, X } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -629,7 +629,7 @@ export function ContactSidePanel({
                                 className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                                 onClick={() => handleRemoveCustomField(index)}
                               >
-                                <Trash2 className="h-3 w-3 text-red-500" />
+                                <X className="h-3 w-3 text-muted-foreground" />
                               </Button>
                             </div>
                           </div>
