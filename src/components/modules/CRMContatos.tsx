@@ -759,16 +759,22 @@ export function CRMContatos() {
                 </Select>
                 <Input 
                   value={editingContact?.phone || ""} 
-                  readOnly
-                  disabled
-                  className="bg-muted cursor-not-allowed"
-                  title="O telefone não pode ser alterado após a criação do contato"
-                  placeholder="(55) 2 1981-5490" 
+                  onChange={isCreateMode ? (e => setEditingContact(prev => prev ? {
+                    ...prev,
+                    phone: e.target.value
+                  } : null)) : undefined}
+                  readOnly={!isCreateMode}
+                  disabled={!isCreateMode}
+                  className={!isCreateMode ? "bg-muted cursor-not-allowed" : ""}
+                  title={!isCreateMode ? "O telefone não pode ser alterado após a criação do contato" : ""}
+                  placeholder={isCreateMode ? "Digite o telefone" : "(55) 2 1981-5490"}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                ⚠️ O número não pode ser alterado para preservar o histórico de conversas
-              </p>
+              {!isCreateMode && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  ⚠️ O número não pode ser alterado para preservar o histórico de conversas
+                </p>
+              )}
             </div>
             
             <div>
