@@ -1023,7 +1023,6 @@ serve(async (req) => {
         }
       }
     }
-    }
 
     // Forward to N8N with processed data
     console.log(`🔍 [${requestId}] Pre-send check:`, {
