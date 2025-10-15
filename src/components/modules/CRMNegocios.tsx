@@ -144,6 +144,8 @@ function DraggableDeal({
   } = useToast();
   const [isTagPopoverOpen, setIsTagPopoverOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [visibleTagId, setVisibleTagId] = React.useState<string | null>(null);
+  const [hideTimeout, setHideTimeout] = React.useState<NodeJS.Timeout | null>(null);
   const {
     contactTags,
     availableTags,
@@ -299,74 +301,70 @@ function DraggableDeal({
         {/* Área central para tags do contato */}
         <div className="mb-2 min-h-[24px] flex items-center justify-between gap-2">
           <div className="flex items-start flex-wrap gap-1 flex-1 min-w-0">
-          {contactTags.map(tag => {
-            const [visibleTagId, setVisibleTagId] = React.useState<string | null>(null);
-            const [hideTimeout, setHideTimeout] = React.useState<NodeJS.Timeout | null>(null);
-
-            const handleMouseEnter = () => {
-              if (hideTimeout) {
-                clearTimeout(hideTimeout);
-                setHideTimeout(null);
-              }
-              setVisibleTagId(tag.id);
-            };
-
-            const handleMouseLeave = () => {
-              const timeout = setTimeout(() => {
-                setVisibleTagId(null);
-              }, 1000);
-              setHideTimeout(timeout);
-            };
-
-            return (
-              <div
-                key={tag.id}
-                className="relative cursor-pointer"
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
+          {contactTags.map(tag => (
+            <div
+              key={tag.id}
+              className="relative cursor-pointer"
+              onMouseEnter={() => {
+                if (hideTimeout) {
+                  clearTimeout(hideTimeout);
+                  setHideTimeout(null);
+                }
+                setVisibleTagId(tag.id);
+              }}
+              onMouseLeave={() => {
+                const timeout = setTimeout(() => {
+                  setVisibleTagId(null);
+                }, 1000);
+                setHideTimeout(timeout);
+              }}
+            >
+              <Tag 
+                className="w-3 h-3 flex-shrink-0" 
+                style={{ color: tag.color }} 
+                fill={tag.color}
+              />
+              <span 
+                onMouseEnter={() => {
+                  if (hideTimeout) {
+                    clearTimeout(hideTimeout);
+                    setHideTimeout(null);
+                  }
+                }}
+                onMouseLeave={() => {
+                  const timeout = setTimeout(() => {
+                    setVisibleTagId(null);
+                  }, 1000);
+                  setHideTimeout(timeout);
+                }}
+                className={`absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 ${
+                  visibleTagId === tag.id ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none"
+                }`}
+                style={{ 
+                  backgroundColor: 'white',
+                  borderColor: tag.color,
+                  color: tag.color,
+                  border: `2px solid ${tag.color}`
+                }}
               >
-                <Tag 
-                  className="w-3 h-3 flex-shrink-0" 
-                  style={{ color: tag.color }} 
-                  fill={tag.color}
-                />
-                <span 
-                  onMouseEnter={() => {
-                    if (hideTimeout) {
-                      clearTimeout(hideTimeout);
-                      setHideTimeout(null);
+                {tag.name}
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
+                      await refreshTags();
+                    } catch (error) {
+                      console.error('Erro ao remover tag:', error);
                     }
                   }}
-                  onMouseLeave={handleMouseLeave}
-                  className={`absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 ${
-                    visibleTagId === tag.id ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none"
-                  }`}
-                  style={{ 
-                    backgroundColor: 'white',
-                    borderColor: tag.color,
-                    color: tag.color,
-                    border: `2px solid ${tag.color}`
-                  }}
+                  className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0 pointer-events-auto"
                 >
-                  {tag.name}
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
-                        await refreshTags();
-                      } catch (error) {
-                        console.error('Erro ao remover tag:', error);
-                      }
-                    }}
-                    className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0 pointer-events-auto"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              </div>
-            );
-          })}
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          ))}
           <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
             <PopoverTrigger asChild onClick={e => e.stopPropagation()}>
               <Button variant="outline" size="sm" className="h-5 px-1.5 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary">
