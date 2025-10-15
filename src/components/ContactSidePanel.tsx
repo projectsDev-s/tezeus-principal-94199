@@ -22,7 +22,6 @@ import { ImageModal } from './chat/ImageModal';
 import { PdfModal } from './chat/PdfModal';
 import { VideoModal } from './chat/VideoModal';
 import { supabase } from "@/integrations/supabase/client";
-
 interface Contact {
   id: string;
   name: string;
@@ -31,7 +30,6 @@ interface Contact {
   profile_image_url?: string;
   extra_info?: Record<string, any>;
 }
-
 interface Deal {
   id: string;
   title: string;
@@ -41,24 +39,20 @@ interface Deal {
   pipeline: string;
   column_name: string;
 }
-
 interface ContactSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
   contact: Contact | null;
   onContactUpdated?: () => void;
 }
-
 const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 };
-
 const getAvatarColor = (name: string) => {
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
   const hash = name.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
   return colors[hash % colors.length];
 };
-
 export function ContactSidePanel({
   isOpen,
   onClose,
@@ -66,8 +60,14 @@ export function ContactSidePanel({
   onContactUpdated
 }: ContactSidePanelProps) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [customFields, setCustomFields] = useState<Array<{ key: string; value: string }>>([]);
-  const [newCustomField, setNewCustomField] = useState({ key: '', value: '' });
+  const [customFields, setCustomFields] = useState<Array<{
+    key: string;
+    value: string;
+  }>>([]);
+  const [newCustomField, setNewCustomField] = useState({
+    key: '',
+    value: ''
+  });
   const [newObservation, setNewObservation] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
@@ -77,20 +77,53 @@ export function ContactSidePanel({
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [viewingMedia, setViewingMedia] = useState<{ url: string; type: string; name: string } | null>(null);
+  const [viewingMedia, setViewingMedia] = useState<{
+    url: string;
+    type: string;
+    name: string;
+  } | null>(null);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
   const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
-  const [stats, setStats] = useState({ messages: 0, activeDeals: 0, closedDeals: 0 });
-
-  const { pipelines } = usePipelines();
-  const { columns, fetchColumns } = usePipelineColumns(null);
-  const { cards: contactCards, currentPipeline, transferToPipeline, isLoading: cardsLoading } = useContactPipelineCards(contact?.id || null);
-  const { createCard } = usePipelineCards(null);
-  const { toast } = useToast();
-  const { selectedWorkspace } = useWorkspace();
-  const { observations: realObservations, addObservation, updateObservation, deleteObservation, downloadFile, getFileIcon, isUploading } = useContactObservations(contact?.id || "");
-  const { fields: extraFields, saveFields: saveExtraFields } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
-
+  const [stats, setStats] = useState({
+    messages: 0,
+    activeDeals: 0,
+    closedDeals: 0
+  });
+  const {
+    pipelines
+  } = usePipelines();
+  const {
+    columns,
+    fetchColumns
+  } = usePipelineColumns(null);
+  const {
+    cards: contactCards,
+    currentPipeline,
+    transferToPipeline,
+    isLoading: cardsLoading
+  } = useContactPipelineCards(contact?.id || null);
+  const {
+    createCard
+  } = usePipelineCards(null);
+  const {
+    toast
+  } = useToast();
+  const {
+    selectedWorkspace
+  } = useWorkspace();
+  const {
+    observations: realObservations,
+    addObservation,
+    updateObservation,
+    deleteObservation,
+    downloadFile,
+    getFileIcon,
+    isUploading
+  } = useContactObservations(contact?.id || "");
+  const {
+    fields: extraFields,
+    saveFields: saveExtraFields
+  } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
   const deals: Deal[] = contactCards.map(card => ({
     id: card.id,
     title: card.title,
@@ -100,21 +133,18 @@ export function ContactSidePanel({
     pipeline: card.pipeline_name,
     column_name: card.column_name
   }));
-
   useEffect(() => {
     if (isOpen && contact?.id) {
       const loadFreshData = async () => {
         try {
-          const { data, error } = await supabase
-            .from('contacts')
-            .select('id, name, phone, email, profile_image_url, workspace_id, created_at, updated_at')
-            .eq('id', contact.id)
-            .single();
-
+          const {
+            data,
+            error
+          } = await supabase.from('contacts').select('id, name, phone, email, profile_image_url, workspace_id, created_at, updated_at').eq('id', contact.id).single();
           if (error) throw error;
           if (data) {
             setEditingContact(data as Contact);
-            
+
             // Carregar estatísticas
             if (selectedWorkspace?.workspace_id) {
               getContactStats(contact.id, selectedWorkspace.workspace_id);
@@ -127,7 +157,6 @@ export function ContactSidePanel({
       loadFreshData();
     }
   }, [isOpen, contact?.id, selectedWorkspace?.workspace_id]);
-
   useEffect(() => {
     if (extraFields.length > 0) {
       const fields = extraFields.map(field => ({
@@ -139,39 +168,29 @@ export function ContactSidePanel({
       setCustomFields([]);
     }
   }, [extraFields]);
-
   const handleSaveContact = async () => {
     if (!editingContact) return;
-    
     try {
       const updateData = {
         name: editingContact.name?.trim() || '',
         email: editingContact.email?.trim() || ''
       };
-
-      const { data: updatedData, error: updateError } = await supabase
-        .from('contacts')
-        .update(updateData)
-        .eq('id', editingContact.id)
-        .select()
-        .single();
-
+      const {
+        data: updatedData,
+        error: updateError
+      } = await supabase.from('contacts').update(updateData).eq('id', editingContact.id).select().single();
       if (updateError) throw updateError;
-
       const fieldsToSave = customFields.map(f => ({
         field_name: f.key,
         field_value: f.value
       }));
-
       const saveSuccess = await saveExtraFields(fieldsToSave);
-      
       if (saveSuccess) {
         toast({
           title: "Sucesso",
           description: "Dados salvos com sucesso!"
         });
       }
-
       if (updatedData) {
         setEditingContact(updatedData as Contact);
         if (onContactUpdated) {
@@ -187,7 +206,6 @@ export function ContactSidePanel({
       });
     }
   };
-
   const handleAddCustomField = async () => {
     if (!newCustomField.key.trim() || !newCustomField.value.trim()) {
       toast({
@@ -197,7 +215,6 @@ export function ContactSidePanel({
       });
       return;
     }
-
     const fieldExists = customFields.some(field => field.key.toLowerCase() === newCustomField.key.trim().toLowerCase());
     if (fieldExists) {
       toast({
@@ -207,50 +224,43 @@ export function ContactSidePanel({
       });
       return;
     }
-
     const newFields = [...customFields, {
       key: newCustomField.key.trim(),
       value: newCustomField.value.trim()
     }];
-
     setCustomFields(newFields);
-
     const fieldsToSave = newFields.map(f => ({
       field_name: f.key,
       field_value: f.value
     }));
-
     await saveExtraFields(fieldsToSave);
-    setNewCustomField({ key: '', value: '' });
+    setNewCustomField({
+      key: '',
+      value: ''
+    });
   };
-
   const handleRemoveCustomField = async (index: number) => {
     const newFields = customFields.filter((_, i) => i !== index);
     setCustomFields(newFields);
-
     const fieldsToSave = newFields.map(f => ({
       field_name: f.key,
       field_value: f.value
     }));
-
     await saveExtraFields(fieldsToSave);
   };
-
   const updateCustomField = (index: number, key: string, value: string) => {
-    setCustomFields(customFields.map((field, i) => 
-      i === index ? { ...field, [key]: value } : field
-    ));
+    setCustomFields(customFields.map((field, i) => i === index ? {
+      ...field,
+      [key]: value
+    } : field));
   };
-
   const handleSaveCustomFields = async () => {
     const fieldsToSave = customFields.map(f => ({
       field_name: f.key,
       field_value: f.value
     }));
-
     await saveExtraFields(fieldsToSave);
   };
-
   const handleAddObservation = async () => {
     if (!newObservation.trim()) return;
     const success = await addObservation(newObservation, selectedFile || undefined);
@@ -262,7 +272,6 @@ export function ContactSidePanel({
       }
     }
   };
-
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -277,12 +286,10 @@ export function ContactSidePanel({
       setSelectedFile(file);
     }
   };
-
   const handleEditObservation = (obs: ContactObservation) => {
     setEditingObservationId(obs.id);
     setEditingContent(obs.content);
   };
-
   const handleSaveEdit = async () => {
     if (!editingObservationId) return;
     const success = await updateObservation(editingObservationId, editingContent);
@@ -291,25 +298,21 @@ export function ContactSidePanel({
       setEditingContent('');
     }
   };
-
   const handleCancelEdit = () => {
     setEditingObservationId(null);
     setEditingContent('');
   };
-
   const handleConfirmDelete = async () => {
     if (!deletingObservationId) return;
     await deleteObservation(deletingObservationId);
     setDeletingObservationId(null);
   };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -319,41 +322,39 @@ export function ContactSidePanel({
       minute: '2-digit'
     });
   };
-
   const getContactStats = async (contactId: string, workspaceId: string) => {
     try {
       // 1. Contar mensagens trocadas (da conversa do contato)
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('contact_id', contactId)
-        .eq('workspace_id', workspaceId);
-
+      const {
+        data: conversations
+      } = await supabase.from('conversations').select('id').eq('contact_id', contactId).eq('workspace_id', workspaceId);
       const conversationIds = conversations?.map(c => c.id) || [];
-      
       let messagesCount = 0;
       if (conversationIds.length > 0) {
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .in('conversation_id', conversationIds);
+        const {
+          count
+        } = await supabase.from('messages').select('*', {
+          count: 'exact',
+          head: true
+        }).in('conversation_id', conversationIds);
         messagesCount = count || 0;
       }
 
       // 2. Contar negócios ativos (status = 'aberto')
-      const { count: activeDeals } = await supabase
-        .from('pipeline_cards')
-        .select('*', { count: 'exact', head: true })
-        .eq('contact_id', contactId)
-        .eq('status', 'aberto');
+      const {
+        count: activeDeals
+      } = await supabase.from('pipeline_cards').select('*', {
+        count: 'exact',
+        head: true
+      }).eq('contact_id', contactId).eq('status', 'aberto');
 
       // 3. Contar negócios fechados (status = 'ganho')
-      const { count: closedDeals } = await supabase
-        .from('pipeline_cards')
-        .select('*', { count: 'exact', head: true })
-        .eq('contact_id', contactId)
-        .eq('status', 'ganho');
-
+      const {
+        count: closedDeals
+      } = await supabase.from('pipeline_cards').select('*', {
+        count: 'exact',
+        head: true
+      }).eq('contact_id', contactId).eq('status', 'ganho');
       setStats({
         messages: messagesCount,
         activeDeals: activeDeals || 0,
@@ -361,10 +362,13 @@ export function ContactSidePanel({
       });
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
-      setStats({ messages: 0, activeDeals: 0, closedDeals: 0 });
+      setStats({
+        messages: 0,
+        activeDeals: 0,
+        closedDeals: 0
+      });
     }
   };
-
   const handleFileClick = (fileUrl: string, fileName: string, fileType?: string) => {
     setViewingMedia({
       url: fileUrl,
@@ -372,10 +376,8 @@ export function ContactSidePanel({
       name: fileName
     });
   };
-
   const getFileType = (fileName: string, fileType?: string): 'image' | 'pdf' | 'video' | 'audio' | 'other' => {
     const extension = fileName.split('.').pop()?.toLowerCase();
-    
     if (fileType?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
       return 'image';
     }
@@ -390,11 +392,8 @@ export function ContactSidePanel({
     }
     return 'other';
   };
-
   if (!contact) return null;
-
-  return (
-    <>
+  return <>
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="right" className="w-[500px] sm:w-[540px] p-0">
           <div className="flex flex-col h-full">
@@ -405,48 +404,24 @@ export function ContactSidePanel({
                   <div className="flex flex-col items-center">
                     {/* Avatar grande com borda e sombra */}
                     <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
-                      {editingContact?.profile_image_url && (
-                        <AvatarImage 
-                          src={editingContact.profile_image_url} 
-                          alt={editingContact.name || 'Contato'}
-                          className="object-cover"
-                        />
-                      )}
-                      <AvatarFallback 
-                        className="text-2xl font-semibold"
-                        style={{ 
-                          backgroundColor: getAvatarColor(editingContact?.name || 'Contato')
-                        }}
-                      >
+                      {editingContact?.profile_image_url && <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name || 'Contato'} className="object-cover" />}
+                      <AvatarFallback className="text-2xl font-semibold" style={{
+                      backgroundColor: getAvatarColor(editingContact?.name || 'Contato')
+                    }}>
                         {getInitials(editingContact?.name || 'Contato')}
                       </AvatarFallback>
                     </Avatar>
                     
                     {/* Nome - editável ao duplo clique */}
-                    {isEditingName ? (
-                      <Input 
-                        type="text"
-                        value={editingContact?.name || ''} 
-                        onChange={(e) => setEditingContact(prev => prev ? {
-                          ...prev,
-                          name: e.target.value
-                        } : null)}
-                        onBlur={async () => {
-                          setIsEditingName(false);
-                          await handleSaveContact();
-                        }}
-                        autoFocus
-                        className="text-xl font-bold text-center border rounded px-3 py-1 mt-3 max-w-xs bg-white shadow-sm"
-                      />
-                    ) : (
-                      <h2
-                        onDoubleClick={() => setIsEditingName(true)}
-                        className="text-xl font-bold text-gray-900 mt-3 cursor-pointer hover:text-gray-700 transition-colors"
-                        title="Clique duas vezes para editar"
-                      >
+                    {isEditingName ? <Input type="text" value={editingContact?.name || ''} onChange={e => setEditingContact(prev => prev ? {
+                    ...prev,
+                    name: e.target.value
+                  } : null)} onBlur={async () => {
+                    setIsEditingName(false);
+                    await handleSaveContact();
+                  }} autoFocus className="text-xl font-bold text-center border rounded px-3 py-1 mt-3 max-w-xs bg-white shadow-sm" /> : <h2 onDoubleClick={() => setIsEditingName(true)} className="text-xl font-bold text-gray-900 mt-3 cursor-pointer hover:text-gray-700 transition-colors" title="Clique duas vezes para editar">
                         {editingContact?.name || 'Nome do contato'}
-                      </h2>
-                    )}
+                      </h2>}
                     
                     {/* Telefone - somente leitura */}
                     <p className="text-sm text-gray-600 mt-1">
@@ -454,30 +429,15 @@ export function ContactSidePanel({
                     </p>
                     
                     {/* Email - editável ao duplo clique */}
-                    {isEditingEmail ? (
-                      <Input 
-                        type="email"
-                        value={editingContact?.email || ''} 
-                        onChange={(e) => setEditingContact(prev => prev ? {
-                          ...prev,
-                          email: e.target.value
-                        } : null)}
-                        onBlur={async () => {
-                          setIsEditingEmail(false);
-                          await handleSaveContact();
-                        }}
-                        autoFocus
-                        className="text-sm text-center border rounded px-3 py-1 mt-1 max-w-xs bg-white shadow-sm"
-                      />
-                    ) : (
-                      <p
-                        onDoubleClick={() => setIsEditingEmail(true)}
-                        className="text-sm text-blue-600 mt-1 cursor-pointer hover:underline transition-colors"
-                        title="Clique duas vezes para editar"
-                      >
+                    {isEditingEmail ? <Input type="email" value={editingContact?.email || ''} onChange={e => setEditingContact(prev => prev ? {
+                    ...prev,
+                    email: e.target.value
+                  } : null)} onBlur={async () => {
+                    setIsEditingEmail(false);
+                    await handleSaveContact();
+                  }} autoFocus className="text-sm text-center border rounded px-3 py-1 mt-1 max-w-xs bg-white shadow-sm" /> : <p onDoubleClick={() => setIsEditingEmail(true)} className="text-sm text-blue-600 mt-1 cursor-pointer hover:underline transition-colors" title="Clique duas vezes para editar">
                         {editingContact?.email || 'Adicionar email'}
-                      </p>
-                    )}
+                      </p>}
                   </div>
                 </div>
 
@@ -499,7 +459,7 @@ export function ContactSidePanel({
                         <Briefcase className="h-5 w-5 text-amber-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.activeDeals}</p>
-                      <p className="text-xs text-gray-500 font-medium">Ativos</p>
+                      <p className="text-xs text-gray-500 font-medium">Negócios</p>
                     </div>
 
                     {/* Negócios Fechados */}
@@ -526,85 +486,47 @@ export function ContactSidePanel({
                     <CardContent className="space-y-3">
                       {/* Lista de campos existentes */}
                       <div className="grid grid-cols-2 gap-3">
-                        {customFields.map((field, index) => (
-                          <div key={index} className="space-y-1">
+                        {customFields.map((field, index) => <div key={index} className="space-y-1">
                             {/* Título do campo - EDITÁVEL */}
-                            {editingFieldIndex === index && editingFieldType === 'key' ? (
-                              <Input
-                                value={field.key}
-                                onChange={(e) => updateCustomField(index, 'key', e.target.value)}
-                                onBlur={async () => {
-                                  setEditingFieldIndex(null);
-                                  setEditingFieldType(null);
-                                  await handleSaveCustomFields();
-                                }}
-                                autoFocus
-                                className="text-xs uppercase tracking-wide font-medium"
-                              />
-                            ) : (
-                              <Label 
-                                onDoubleClick={() => {
-                                  setEditingFieldIndex(index);
-                                  setEditingFieldType('key');
-                                }}
-                                className="text-xs text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-blue-600 transition-colors"
-                                title="Clique duas vezes para editar"
-                              >
+                            {editingFieldIndex === index && editingFieldType === 'key' ? <Input value={field.key} onChange={e => updateCustomField(index, 'key', e.target.value)} onBlur={async () => {
+                          setEditingFieldIndex(null);
+                          setEditingFieldType(null);
+                          await handleSaveCustomFields();
+                        }} autoFocus className="text-xs uppercase tracking-wide font-medium" /> : <Label onDoubleClick={() => {
+                          setEditingFieldIndex(index);
+                          setEditingFieldType('key');
+                        }} className="text-xs text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-blue-600 transition-colors" title="Clique duas vezes para editar">
                                 {field.key}
-                              </Label>
-                            )}
+                              </Label>}
                             
                             {/* Valor do campo - EDITÁVEL */}
                             <div className="flex items-center gap-2">
-                              <Input
-                                value={field.value}
-                                onChange={(e) => updateCustomField(index, 'value', e.target.value)}
-                                onBlur={async () => {
-                                  await handleSaveCustomFields();
-                                }}
-                                onDoubleClick={() => {
-                                  setEditingFieldIndex(index);
-                                  setEditingFieldType('value');
-                                }}
-                                className="text-sm font-medium flex-1"
-                                title="Edite e pressione Enter ou clique fora para salvar"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-700"
-                                onClick={() => handleRemoveCustomField(index)}
-                              >
+                              <Input value={field.value} onChange={e => updateCustomField(index, 'value', e.target.value)} onBlur={async () => {
+                            await handleSaveCustomFields();
+                          }} onDoubleClick={() => {
+                            setEditingFieldIndex(index);
+                            setEditingFieldType('value');
+                          }} className="text-sm font-medium flex-1" title="Edite e pressione Enter ou clique fora para salvar" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => handleRemoveCustomField(index)}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
-                          </div>
-                        ))}
+                          </div>)}
                       </div>
 
                       {/* Adicionar novo campo */}
                       <div className="border-t pt-3 space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Nome do campo"
-                            value={newCustomField.key}
-                            onChange={e => setNewCustomField(prev => ({ ...prev, key: e.target.value }))}
-                            className="text-sm"
-                          />
-                          <Input
-                            placeholder="Valor"
-                            value={newCustomField.value}
-                            onChange={e => setNewCustomField(prev => ({ ...prev, value: e.target.value }))}
-                            className="text-sm"
-                          />
+                          <Input placeholder="Nome do campo" value={newCustomField.key} onChange={e => setNewCustomField(prev => ({
+                          ...prev,
+                          key: e.target.value
+                        }))} className="text-sm" />
+                          <Input placeholder="Valor" value={newCustomField.value} onChange={e => setNewCustomField(prev => ({
+                          ...prev,
+                          value: e.target.value
+                        }))} className="text-sm" />
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={handleAddCustomField}
-                          disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}
-                        >
+                        <Button variant="outline" size="sm" className="w-full" onClick={handleAddCustomField} disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}>
                           <Plus className="h-3 w-3 mr-1" /> Adicionar campo
                         </Button>
                       </div>
@@ -619,25 +541,18 @@ export function ContactSidePanel({
                           <Briefcase className="h-4 w-4 text-green-500" />
                           Pipeline
                         </CardTitle>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setIsCreateDealModalOpen(true)}
-                          className="h-8"
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setIsCreateDealModalOpen(true)} className="h-8">
                           <Plus className="h-3 w-3 mr-1" /> Vincular
                         </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {deals.length > 0 ? (
-                        deals.map(deal => (
-                          <div key={deal.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                      {deals.length > 0 ? deals.map(deal => <div key={deal.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                             <Avatar className="h-10 w-10">
-                              {editingContact?.profile_image_url && (
-                                <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />
-                              )}
-                              <AvatarFallback className="text-white font-medium" style={{ backgroundColor: getAvatarColor(editingContact?.name || '') }}>
+                              {editingContact?.profile_image_url && <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />}
+                              <AvatarFallback className="text-white font-medium" style={{
+                          backgroundColor: getAvatarColor(editingContact?.name || '')
+                        }}>
                                 {getInitials(editingContact?.name || '')}
                               </AvatarFallback>
                             </Avatar>
@@ -645,13 +560,9 @@ export function ContactSidePanel({
                               <p className="text-sm font-medium">{deal.pipeline} - {deal.column_name}</p>
                               <p className="text-xs text-muted-foreground">{formatCurrency(deal.value)}</p>
                             </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-2">
+                          </div>) : <p className="text-sm text-muted-foreground text-center py-2">
                           Nenhum negócio vinculado
-                        </p>
-                      )}
+                        </p>}
                     </CardContent>
                   </Card>
 
@@ -667,15 +578,9 @@ export function ContactSidePanel({
                       {/* Lista de observações */}
                       <ScrollArea className="max-h-48">
                         <div className="space-y-3 pr-2">
-                          {realObservations.map(obs => (
-                            <div key={obs.id} className="p-3 bg-muted/30 rounded-lg group">
-                              {editingObservationId === obs.id ? (
-                                <div className="space-y-2">
-                                  <Textarea
-                                    value={editingContent}
-                                    onChange={e => setEditingContent(e.target.value)}
-                                    className="min-h-[80px]"
-                                  />
+                          {realObservations.map(obs => <div key={obs.id} className="p-3 bg-muted/30 rounded-lg group">
+                              {editingObservationId === obs.id ? <div className="space-y-2">
+                                  <Textarea value={editingContent} onChange={e => setEditingContent(e.target.value)} className="min-h-[80px]" />
                                   <div className="flex gap-2">
                                     <Button size="sm" onClick={handleSaveEdit}>
                                       Salvar
@@ -684,100 +589,51 @@ export function ContactSidePanel({
                                       Cancelar
                                     </Button>
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-start justify-between gap-2">
+                                </div> : <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
                                     <p className="text-sm">{obs.content}</p>
-                                    {obs.file_name && obs.file_url && (
-                                      <div className="mt-2">
-                                        <button
-                                          onClick={() => handleFileClick(obs.file_url!, obs.file_name!, obs.file_type)}
-                                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                                        >
+                                    {obs.file_name && obs.file_url && <div className="mt-2">
+                                        <button onClick={() => handleFileClick(obs.file_url!, obs.file_name!, obs.file_type)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
                                           <Paperclip className="h-3 w-3" />
                                           {obs.file_name}
                                         </button>
-                                      </div>
-                                    )}
+                                      </div>}
                                     <span className="text-xs text-muted-foreground block mt-1">
                                       {formatDate(obs.created_at)}
                                     </span>
                                   </div>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-7 w-7"
-                                      onClick={() => handleEditObservation(obs)}
-                                    >
+                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEditObservation(obs)}>
                                       <Pencil className="h-3 w-3" />
                                     </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-7 w-7 text-red-600 hover:text-red-700"
-                                      onClick={() => setDeletingObservationId(obs.id)}
-                                    >
+                                    <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => setDeletingObservationId(obs.id)}>
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {realObservations.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-4">
+                                </div>}
+                            </div>)}
+                          {realObservations.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
                               Nenhuma observação encontrada
-                            </p>
-                          )}
+                            </p>}
                         </div>
                       </ScrollArea>
 
                       {/* Campo para nova observação */}
                       <div className="space-y-2 border-t pt-3">
-                        <Textarea
-                          placeholder="Digite uma observação..."
-                          value={newObservation}
-                          onChange={e => setNewObservation(e.target.value)}
-                          className="min-h-[60px] text-sm"
-                        />
-                        {selectedFile && (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-2 rounded">
+                        <Textarea placeholder="Digite uma observação..." value={newObservation} onChange={e => setNewObservation(e.target.value)} className="min-h-[60px] text-sm" />
+                        {selectedFile && <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-2 rounded">
                             <span>{getFileIcon(selectedFile.type)}</span>
                             <span>{selectedFile.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedFile(null)}
-                              className="h-4 w-4 p-0 ml-auto"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)} className="h-4 w-4 p-0 ml-auto">
                               ✕
                             </Button>
-                          </div>
-                        )}
+                          </div>}
                         <div className="flex gap-2">
-                          <input
-                            type="file"
-                            ref={setFileInputRef}
-                            onChange={handleFileSelect}
-                            className="hidden"
-                            accept="*/*"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fileInputRef?.click()}
-                            disabled={isUploading}
-                          >
+                          <input type="file" ref={setFileInputRef} onChange={handleFileSelect} className="hidden" accept="*/*" />
+                          <Button variant="outline" size="sm" onClick={() => fileInputRef?.click()} disabled={isUploading}>
                             <Paperclip className="h-3 w-3 mr-1" /> Anexar
                           </Button>
-                          <Button
-                            size="sm"
-                            className="flex-1"
-                            onClick={handleAddObservation}
-                            disabled={!newObservation.trim() || isUploading}
-                          >
+                          <Button size="sm" className="flex-1" onClick={handleAddObservation} disabled={!newObservation.trim() || isUploading}>
                             {isUploading ? "Enviando..." : "Adicionar"}
                           </Button>
                         </div>
@@ -786,10 +642,7 @@ export function ContactSidePanel({
                   </Card>
 
                   {/* Botão Salvar */}
-                  <Button
-                    onClick={handleSaveContact}
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                  >
+                  <Button onClick={handleSaveContact} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
                     Salvar
                   </Button>
                 </div>
@@ -810,10 +663,7 @@ export function ContactSidePanel({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -821,40 +671,13 @@ export function ContactSidePanel({
       </AlertDialog>
 
       {/* Modal de Criar Negócio */}
-      <CriarNegocioModal
-        open={isCreateDealModalOpen}
-        onOpenChange={setIsCreateDealModalOpen}
-        preSelectedContactId={contact.id}
-        preSelectedContactName={contact.name}
-      />
+      <CriarNegocioModal open={isCreateDealModalOpen} onOpenChange={setIsCreateDealModalOpen} preSelectedContactId={contact.id} preSelectedContactName={contact.name} />
 
       {/* Modais de visualização de mídia */}
-      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'image' && (
-        <ImageModal
-          isOpen={true}
-          onClose={() => setViewingMedia(null)}
-          imageUrl={viewingMedia.url}
-          fileName={viewingMedia.name}
-        />
-      )}
+      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'image' && <ImageModal isOpen={true} onClose={() => setViewingMedia(null)} imageUrl={viewingMedia.url} fileName={viewingMedia.name} />}
 
-      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'pdf' && (
-        <PdfModal
-          isOpen={true}
-          onClose={() => setViewingMedia(null)}
-          pdfUrl={viewingMedia.url}
-          fileName={viewingMedia.name}
-        />
-      )}
+      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'pdf' && <PdfModal isOpen={true} onClose={() => setViewingMedia(null)} pdfUrl={viewingMedia.url} fileName={viewingMedia.name} />}
 
-      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'video' && (
-        <VideoModal
-          isOpen={true}
-          onClose={() => setViewingMedia(null)}
-          videoUrl={viewingMedia.url}
-          fileName={viewingMedia.name}
-        />
-      )}
-    </>
-  );
+      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'video' && <VideoModal isOpen={true} onClose={() => setViewingMedia(null)} videoUrl={viewingMedia.url} fileName={viewingMedia.name} />}
+    </>;
 }
