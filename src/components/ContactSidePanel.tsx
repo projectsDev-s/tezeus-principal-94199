@@ -491,7 +491,7 @@ export function ContactSidePanel({
                         </h2>}
                       
                       {/* Telefone - somente leitura */}
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm mt-1 text-slate-300">
                         {editingContact?.phone || 'Sem telefone'}
                       </p>
                       
