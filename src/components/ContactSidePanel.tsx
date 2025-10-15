@@ -450,7 +450,7 @@ export function ContactSidePanel({
             <ScrollArea className="flex-1">
               <div className="space-y-0">
                 {/* ===== HEADER: Topo com gradiente pastel ===== */}
-                <div className="relative overflow-hidden pb-10 pt-8 -mx-6 px-6" style={editingContact?.profile_image_url ? {
+                <div className="relative overflow-hidden pb-10 pt-8 -ml-6 -mr-6 pl-6 pr-6" style={editingContact?.profile_image_url ? {
                 backgroundImage: `url(${editingContact.profile_image_url})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
