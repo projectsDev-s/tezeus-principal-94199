@@ -18,6 +18,9 @@ import { CriarNegocioModal } from './modals/CriarNegocioModal';
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ImageModal } from './chat/ImageModal';
+import { PdfModal } from './chat/PdfModal';
+import { VideoModal } from './chat/VideoModal';
 import { supabase } from "@/integrations/supabase/client";
 
 interface Contact {
@@ -74,6 +77,7 @@ export function ContactSidePanel({
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [viewingMedia, setViewingMedia] = useState<{ url: string; type: string; name: string } | null>(null);
 
   const { pipelines } = usePipelines();
   const { columns, fetchColumns } = usePipelineColumns(null);
@@ -280,6 +284,32 @@ export function ContactSidePanel({
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleFileClick = (fileUrl: string, fileName: string, fileType?: string) => {
+    setViewingMedia({
+      url: fileUrl,
+      type: fileType || '',
+      name: fileName
+    });
+  };
+
+  const getFileType = (fileName: string, fileType?: string): 'image' | 'pdf' | 'video' | 'audio' | 'other' => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    if (fileType?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return 'image';
+    }
+    if (fileType?.includes('pdf') || extension === 'pdf') {
+      return 'pdf';
+    }
+    if (fileType?.startsWith('video/') || ['mp4', 'webm', 'ogg', 'mov'].includes(extension || '')) {
+      return 'video';
+    }
+    if (fileType?.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a'].includes(extension || '')) {
+      return 'audio';
+    }
+    return 'other';
   };
 
   if (!contact) return null;
@@ -519,7 +549,7 @@ export function ContactSidePanel({
                                     {obs.file_name && obs.file_url && (
                                       <div className="mt-2">
                                         <button
-                                          onClick={() => downloadFile(obs.file_url!, obs.file_name!)}
+                                          onClick={() => handleFileClick(obs.file_url!, obs.file_name!, obs.file_type)}
                                           className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                                         >
                                           <Paperclip className="h-3 w-3" />
@@ -654,6 +684,34 @@ export function ContactSidePanel({
         preSelectedContactId={contact.id}
         preSelectedContactName={contact.name}
       />
+
+      {/* Modais de visualização de mídia */}
+      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'image' && (
+        <ImageModal
+          isOpen={true}
+          onClose={() => setViewingMedia(null)}
+          imageUrl={viewingMedia.url}
+          fileName={viewingMedia.name}
+        />
+      )}
+
+      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'pdf' && (
+        <PdfModal
+          isOpen={true}
+          onClose={() => setViewingMedia(null)}
+          pdfUrl={viewingMedia.url}
+          fileName={viewingMedia.name}
+        />
+      )}
+
+      {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'video' && (
+        <VideoModal
+          isOpen={true}
+          onClose={() => setViewingMedia(null)}
+          videoUrl={viewingMedia.url}
+          fileName={viewingMedia.name}
+        />
+      )}
     </>
   );
 }
