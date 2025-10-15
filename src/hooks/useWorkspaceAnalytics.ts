@@ -190,8 +190,11 @@ export const useWorkspaceAnalytics = () => {
         dealTrends,
       };
       
-      // Analytics calculation completed
+      console.log('✅ Analytics: Data fetched successfully', finalAnalytics);
+      
+      // Update state BEFORE marking as not loading
       setAnalytics(finalAnalytics);
+      setIsLoading(false);
 
     } catch (error) {
       console.error('❌ Analytics: Error fetching workspace analytics:', error);
@@ -217,7 +220,6 @@ export const useWorkspaceAnalytics = () => {
       
       console.log('📊 Analytics: Using default values due to error', defaultAnalytics);
       setAnalytics(defaultAnalytics);
-    } finally {
       setIsLoading(false);
     }
   };
