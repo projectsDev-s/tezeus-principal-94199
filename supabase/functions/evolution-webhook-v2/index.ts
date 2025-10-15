@@ -98,31 +98,90 @@ serve(async (req) => {
     // Extract instance name from payload
     const instanceName = payload.instance || payload.instanceName;
     
+    // ✅ FASE 1.2: Buscar dados da conexão UMA ÚNICA VEZ (consolidação de queries)
+    let connectionData = null;
+    let workspaceId = null;
+    let webhookUrl = null;
+    let webhookSecret = null;
+    
+    if (instanceName) {
+      console.log(`🔍 [${requestId}] Fetching connection data for instance: ${instanceName}`);
+      const { data: conn } = await supabase
+        .from('connections')
+        .select(`
+          id,
+          workspace_id,
+          history_days,
+          history_recovery,
+          history_sync_status,
+          history_sync_started_at,
+          auto_create_crm_card,
+          default_pipeline_id,
+          created_at
+        `)
+        .eq('instance_name', instanceName)
+        .single();
+      
+      if (conn) {
+        connectionData = conn;
+        workspaceId = conn.workspace_id;
+        
+        // Get webhook settings for this workspace
+        const { data: webhookSettings } = await supabase
+          .from('workspace_webhook_settings')
+          .select('webhook_url, webhook_secret')
+          .eq('workspace_id', workspaceId)
+          .single();
+
+        if (webhookSettings) {
+          webhookUrl = webhookSettings.webhook_url;
+          webhookSecret = webhookSettings.webhook_secret;
+        }
+        
+        // Fallback to environment variables if no workspace webhook configured
+        if (!webhookUrl) {
+          webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
+          webhookSecret = Deno.env.get('N8N_WEBHOOK_TOKEN');
+        }
+        
+        console.log(`🔧 [${requestId}] Connection data loaded:`, {
+          workspace_id: workspaceId,
+          webhook_url: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NOT FOUND',
+          has_secret: !!webhookSecret,
+          auto_create_crm_card: conn.auto_create_crm_card,
+          default_pipeline_id: conn.default_pipeline_id
+        });
+      } else {
+        console.warn(`⚠️ [${requestId}] Connection not found for instance: ${instanceName}`);
+      }
+    }
+    
     // ✅ FASE 1.1: Normalizar evento para processamento consistente
     const event = (payload.event || "").toLowerCase().replace(/\./g, '_');
     console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: "${payload.event}" → normalized: "${event}"`);
     
-    // Debug: verificar evento recebido
-    console.log(`🔍 [${requestId}] Event check: payload.event="${payload.event}", normalized="${event}", has_ack=${payload.data?.ack !== undefined}, has_status=${payload.data?.status !== undefined}, status="${payload.data?.status}"`);
+    let processedData = null;
     
-    // HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - Evolution API v2 (case-insensitive)
+    // ✅ FASE 1.1: HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - CONSOLIDADO
     if (event === 'messages_update' && (payload.data?.ack !== undefined || payload.data?.status)) {
       console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}, status=${payload.data.status}`);
       
-      const messageKey = payload.data.key;
-      // Para messages.update, usar keyId (ID real da mensagem que foi salvo como external_id)
-      // Para messages.upsert, usar key.id
-      const evolutionMessageId = payload.data.keyId || messageKey?.id;
+      const messageKeyId = payload.data.keyId; // 40 chars
+      const messageId = payload.data.messageId;
+      const status = payload.data.status;
       
-      console.log(`🔍 [${requestId}] Message ID detection: keyId=${payload.data.keyId}, messageId=${payload.data.messageId}, key.id=${messageKey?.id}, final=${evolutionMessageId}`);
+      console.log(`🔑 [${requestId}] Update event IDs:`);
+      console.log(`   - keyId (40 chars): "${messageKeyId}"`);
+      console.log(`   - messageId: "${messageId}"`);
+      console.log(`   - status: "${status}"`);
       
       // Obter ack level do campo ack (numérico) ou mapear do campo status (string)
       let ackLevel = payload.data.ack;
       
-      if (ackLevel === undefined && payload.data.status) {
-        console.log(`🔄 [${requestId}] Mapping status "${payload.data.status}" to ack level`);
+      if (ackLevel === undefined && status) {
+        console.log(`🔄 [${requestId}] Mapping status "${status}" to ack level`);
         
-        switch (payload.data.status) {
+        switch (status) {
           case 'PENDING':
             ackLevel = 0;
             break;
@@ -139,116 +198,91 @@ serve(async (req) => {
             ackLevel = 4;
             break;
           default:
-            console.warn(`⚠️ [${requestId}] Unknown status: ${payload.data.status}`);
+            console.warn(`⚠️ [${requestId}] Unknown status: ${status}`);
         }
       }
       
-      // Get workspace_id from instance
-      let workspaceId = null;
-      if (instanceName) {
-        const { data: connection } = await supabase
-          .from('connections')
-          .select('workspace_id')
-          .eq('instance_name', instanceName)
-          .single();
-        
-        if (connection) {
-          workspaceId = connection.workspace_id;
-        }
-      }
+      // ✅ ESTRATÉGIA DE BUSCA INTELIGENTE CONSOLIDADA
+      let updatedMessage = null;
       
-      // ✅ Declarar updatedMessage1 ANTES do if para estar acessível em todo o escopo
-      let updatedMessage1 = null;
-      
-      if (evolutionMessageId) {
-        // Map Evolution ACK levels to our message status
-        let newStatus: string | undefined;
-        let timestampField: string | null = null;
+      if (messageKeyId && status) {
+        console.log(`🔍 [${requestId}] Starting intelligent message lookup`);
         
-        switch (ackLevel) {
-          case 1:
-            newStatus = 'sent';
-            break;
-          case 2:
-            newStatus = 'delivered';
-            timestampField = 'delivered_at';
-            break;
-          case 3:
-            newStatus = 'read';
-            timestampField = 'read_at';
-            break;
-          default:
-            console.log(`⚠️ [${requestId}] Unknown ACK level: ${ackLevel}`);
-            break;
+        // ESTRATÉGIA 1: Buscar por evolution_key_id
+        let { data: msg, error } = await supabase
+          .from('messages')
+          .select('id, external_id, evolution_key_id, status, conversation_id, workspace_id')
+          .eq('evolution_key_id', messageKeyId)
+          .limit(1)
+          .maybeSingle();
+        
+        let searchStrategy = 'evolution_key_id';
+        
+        // ESTRATÉGIA 2: Buscar por external_id (fallback)
+        if (error || !msg) {
+          console.log(`🔄 [${requestId}] Trying fallback search by external_id`);
+          const result = await supabase
+            .from('messages')
+            .select('id, external_id, evolution_key_id, status, conversation_id, workspace_id')
+            .eq('external_id', messageKeyId)
+            .limit(1)
+            .maybeSingle();
+          
+          msg = result.data;
+          error = result.error;
+          searchStrategy = 'external_id';
         }
         
-        if (newStatus) {
-          // Update message status in database
-          const updateData: any = { status: newStatus };
-          if (timestampField) {
-            updateData[timestampField] = new Date().toISOString();
+        if (msg) {
+          console.log(`✅ [${requestId}] Found message via ${searchStrategy}`);
+          
+          // Mapear status da Evolution para nosso schema
+          const newStatus = status === 'READ' ? 'read' : 
+                           status === 'DELIVERY_ACK' ? 'delivered' : 
+                           status === 'SERVER_ACK' ? 'sent' : msg.status;
+          
+          const updateFields: any = { status: newStatus };
+          
+          // Garantir que evolution_key_id está preenchido
+          if (!msg.evolution_key_id) {
+            updateFields.evolution_key_id = messageKeyId;
           }
           
-          const { data: updatedMessage, error: updateError } = await supabase
+          // Atualizar timestamps conforme o status
+          if (status === 'DELIVERY_ACK') updateFields.delivered_at = new Date().toISOString();
+          if (status === 'READ') updateFields.read_at = new Date().toISOString();
+          
+          // Executar update no banco
+          const { error: updateError } = await supabase
             .from('messages')
-            .update(updateData)
-            .eq('evolution_key_id', evolutionMessageId)
-            .select('id, conversation_id, workspace_id, external_id')
-            .maybeSingle();
-            
+            .update(updateFields)
+            .eq('id', msg.id);
+          
           if (updateError) {
-            console.error(`❌ [${requestId}] Error updating message status:`, updateError);
-          } else if (updatedMessage) {
-            updatedMessage1 = updatedMessage; // Salvar para uso no payload N8N
-            console.log(`✅ [${requestId}] Message ${evolutionMessageId} status updated to: ${newStatus}`);
-            console.log(`📊 [${requestId}] Updated message data:`, updatedMessage);
+            console.error(`❌ [${requestId}] Error updating message:`, updateError);
           } else {
-            console.log(`⚠️ [${requestId}] Message not found for ACK update: ${evolutionMessageId}`);
+            updatedMessage = { ...msg, ...updateFields };
+            console.log(`✅ [${requestId}] Message updated: ${msg.status} → ${newStatus}`);
           }
+        } else {
+          console.log(`⚠️ [${requestId}] Message NOT found: ${messageKeyId}`);
         }
       }
       
-      // Get webhook URL for N8N
-      let webhookUrl = null;
-      let webhookSecret = null;
-      
-      if (workspaceId) {
-        const { data: webhookSettings } = await supabase
-          .from('workspace_webhook_settings')
-          .select('webhook_url, webhook_secret')
-          .eq('workspace_id', workspaceId)
-          .single();
-
-        if (webhookSettings) {
-          webhookUrl = webhookSettings.webhook_url;
-          webhookSecret = webhookSettings.webhook_secret;
-        }
-      }
-      
-      // Fallback to environment variables if no workspace webhook configured
-      if (!webhookUrl) {
-        webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
-      }
-      
-      // ✅ FASE 1.4: Validar webhookUrl antes do fetch
-      if (!webhookUrl) {
-        console.error(`❌ [${requestId}] CRITICAL: webhookUrl is null/undefined - N8N webhook will NOT be sent! workspace_id=${workspaceId}`);
-      }
-      
-      // Send LEAN payload to N8N for status update
-      if (webhookUrl) {
+      // ✅ ENVIAR PAYLOAD LEAN PARA O N8N (UMA ÚNICA VEZ)
+      if (webhookUrl && updatedMessage) {
         const updatePayload = {
           event: "MESSAGES_UPDATE",
           event_type: "update",
           workspace_id: workspaceId,
-          conversation_id: updatedMessage1?.conversation_id,
+          conversation_id: updatedMessage.conversation_id,
           request_id: requestId,
-          external_id: updatedMessage1?.external_id,
-          evolution_key_id: evolutionMessageId,
+          external_id: updatedMessage.external_id,
+          evolution_key_id: messageKeyId,
           ack_level: ackLevel,
-          status: ackLevel === 1 ? 'sent' : ackLevel === 2 ? 'delivered' : ackLevel === 3 ? 'read' : 'unknown',
-          delivered_at: ackLevel === 2 ? new Date().toISOString() : null,
-          read_at: ackLevel === 3 ? new Date().toISOString() : null,
+          status: updatedMessage.status,
+          delivered_at: updatedMessage.delivered_at || null,
+          read_at: updatedMessage.read_at || null,
           timestamp: new Date().toISOString()
         };
         
@@ -275,114 +309,20 @@ serve(async (req) => {
         }
       }
       
-      // 🔄 PROCESSAR MESSAGES.UPDATE (ACKs) LOCALMENTE
-      console.log(`🔄 [${requestId}] Processing messages.update event`);
+      console.log(`✅ [${requestId}] ACK processing complete`);
       
-      const updateData = payload.data;
-      const messageKeyId = updateData.keyId; // 40 chars
-      const messageId = updateData.messageId;
-      const status = updateData.status;
-      
-      console.log(`🔑 [${requestId}] Update event IDs:`);
-      console.log(`   - keyId (40 chars): "${messageKeyId}"`);
-      console.log(`   - messageId: "${messageId}"`);
-      console.log(`   - status: "${status}"`);
-      
-      if (messageKeyId && status) {
-        console.log(`🔍 [${requestId}] Starting intelligent message lookup`);
-        
-        // ESTRATÉGIA 1: evolution_key_id
-        let { data: msg, error } = await supabase
-          .from('messages')
-          .select('id, external_id, evolution_key_id, status')
-          .eq('evolution_key_id', messageKeyId)
-          .limit(1)
-          .single();
-        
-        let searchStrategy = 'evolution_key_id';
-        
-        // ESTRATÉGIA 2: external_id direto
-        if (error || !msg) {
-          const result = await supabase
-            .from('messages')
-            .select('id, external_id, evolution_key_id, status')
-            .eq('external_id', messageKeyId)
-            .limit(1)
-            .single();
-          
-          msg = result.data;
-          error = result.error;
-          searchStrategy = 'external_id_exact';
-        }
-        
-        if (msg) {
-          console.log(`✅ [${requestId}] Found message via ${searchStrategy}`);
-          
-          const newStatus = status === 'READ' ? 'read' : 
-                           status === 'DELIVERY_ACK' ? 'delivered' : 'sent';
-          
-          const updateFields: any = { status: newStatus };
-          
-          if (!msg.evolution_key_id) {
-            updateFields.evolution_key_id = messageKeyId;
-          }
-          
-          if (status === 'DELIVERY_ACK') updateFields.delivered_at = new Date().toISOString();
-          if (status === 'READ') updateFields.read_at = new Date().toISOString();
-          
-          await supabase.from('messages').update(updateFields).eq('id', msg.id);
-          
-          console.log(`✅ [${requestId}] Message updated: ${msg.status} → ${newStatus}`);
-        } else {
-          console.log(`❌ [${requestId}] Message NOT found: ${messageKeyId}`);
-        }
-      }
-      
-      // Continuar para enviar ao N8N
-      console.log(`✅ [${requestId}] ACK processed, continuing to N8N forward...`);
-    }
-    
-    // Get workspace_id and webhook details from database
-    let workspaceId = null;
-    let webhookUrl = null;
-    let webhookSecret = null;
-    let processedData = null;
-    
-    if (instanceName) {
-      // Get workspace_id and history_days from connections table
-      const { data: connectionData } = await supabase
-        .from('connections')
-        .select('workspace_id, history_days, history_recovery, history_sync_status, created_at')
-        .eq('instance_name', instanceName)
-        .single();
-
-      if (connectionData) {
-        workspaceId = connectionData.workspace_id;
-        
-        // Get webhook settings for this workspace
-        const { data: webhookSettings } = await supabase
-          .from('workspace_webhook_settings')
-          .select('webhook_url, webhook_secret')
-          .eq('workspace_id', workspaceId)
-          .single();
-
-        if (webhookSettings) {
-          webhookUrl = webhookSettings.webhook_url;
-          webhookSecret = webhookSettings.webhook_secret;
-        }
-        
-        console.log(`🔧 [${requestId}] Webhook configuration loaded:`, {
-          workspace_id: workspaceId,
-          webhook_url: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NOT FOUND',
-          has_secret: !!webhookSecret
-        });
-      }
-    }
-
-    // If no webhook configured, use fallback
-    if (!webhookUrl) {
-      webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
-      webhookSecret = Deno.env.get('N8N_WEBHOOK_TOKEN');
+      // ✅ RETORNAR IMEDIATAMENTE após processar messages_update (não continuar para o final)
+      return new Response(JSON.stringify({
+        success: true,
+        action: 'message_update_processed',
+        message_id: updatedMessage?.id,
+        workspace_id: workspaceId,
+        conversation_id: updatedMessage?.conversation_id,
+        requestId
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // 👥 PROCESS CONTACTS SYNC (CONTACTS_UPSERT / CONTACTS_UPDATE)
@@ -1075,114 +1015,9 @@ serve(async (req) => {
           messageKeys: payload.data?.message ? Object.keys(payload.data.message) : []
         });
 
-        // For MESSAGES_UPDATE events, fetch message UUID and full data from database
-        let dbMessageId = null;
-        let fullMessageData = null;
-        if (payload.event?.toLowerCase() === 'messages.update') {
-          const evolutionKeyId = payload.data?.keyId || payload.data?.key?.id;
-          const evolutionMessageId = payload.data?.messageId;
-          
-          console.log(`🔍 [${requestId}] Searching for message - evolution_key_id: "${evolutionKeyId}", messageId: "${evolutionMessageId}"`);
-          
-          if (evolutionKeyId || evolutionMessageId) {
-            // Try to find message by evolution_key_id first, then by external_id
-            let query = supabase
-              .from('messages')
-              .select(`
-                id,
-                content,
-                message_type,
-                status,
-                conversation_id,
-                evolution_key_id,
-                external_id,
-                conversation:conversations!fk_messages_conversation_id (
-                  id,
-                  status,
-                  contact:contacts (
-                    id,
-                    name,
-                    phone
-                  )
-                )
-              `)
-              .limit(1);
-            
-            if (evolutionKeyId) {
-              console.log(`🔎 [${requestId}] Query 1: Searching by evolution_key_id = "${evolutionKeyId}"`);
-              query = query.eq('evolution_key_id', evolutionKeyId);
-            } else if (evolutionMessageId) {
-              console.log(`🔎 [${requestId}] Query 2: Searching by external_id = "${evolutionMessageId}"`);
-              query = query.eq('external_id', evolutionMessageId);
-            }
-            
-            const { data: msgData, error: msgError } = await query.maybeSingle();
-            
-            if (msgError) {
-              console.error(`❌ [${requestId}] Database query error:`, msgError);
-            }
-            
-            if (msgData) {
-              dbMessageId = msgData.id;
-              fullMessageData = msgData;
-              console.log(`🔑 [${requestId}] Found message UUID from DB: ${dbMessageId} (conversation: ${msgData.conversation_id})`);
-              console.log(`📊 [${requestId}] Current message status in DB: "${msgData.status}"`);
-              
-              // ✅ Atualizar status no banco quando for messages.update
-              if (payload.event === 'messages.update' && payload.data?.status) {
-                const evolutionStatus = payload.data.status;
-                console.log(`🔄 [${requestId}] Processing status update - Evolution status: "${evolutionStatus}"`);
-                
-                // Mapear status da Evolution para nosso schema
-                let newStatus = null;
-                let updateData: any = {};
-                
-                if (evolutionStatus === 'DELIVERY_ACK') {
-                  newStatus = 'delivered';
-                  updateData.delivered_at = new Date().toISOString();
-                  console.log(`✅ [${requestId}] Will update to DELIVERED`);
-                } else if (evolutionStatus === 'READ') {
-                  newStatus = 'read';
-                  updateData.read_at = new Date().toISOString();
-                  console.log(`✅ [${requestId}] Will update to READ`);
-                } else if (evolutionStatus === 'SERVER_ACK') {
-                  // Ignorar SERVER_ACK - é um status intermediário
-                  console.log(`ℹ️ [${requestId}] Ignoring SERVER_ACK status (intermediate)`);
-                }
-                
-                // Só atualizar se não for SERVER_ACK
-                if (newStatus) {
-                  console.log(`💾 [${requestId}] Attempting to update message status: ${msgData.status} → ${newStatus}`);
-                  
-                  const { error: updateError } = await supabase
-                    .from('messages')
-                    .update({ 
-                      status: newStatus,
-                      ...updateData
-                    })
-                    .eq('id', dbMessageId);
-                  
-                  if (updateError) {
-                    console.error(`❌ [${requestId}] Failed to update message status:`, updateError);
-                  } else {
-                    console.log(`✅ [${requestId}] Message status updated successfully: ${msgData.status} → ${newStatus}`);
-                  }
-                } else {
-                  console.log(`⏭️ [${requestId}] Skipping status update (SERVER_ACK ignored)`);
-                }
-              }
-              
-              console.log(`📧 [${requestId}] Full message data retrieved for N8N:`, {
-                content: msgData.content,
-                message_type: msgData.message_type,
-                contact_name: msgData.conversation?.contact?.name,
-                contact_phone: msgData.conversation?.contact?.phone
-              });
-            } else {
-              console.log(`⚠️ [${requestId}] Message not found in DB - keyId: ${evolutionKeyId}, messageId: ${evolutionMessageId}`);
-            }
-          }
-        }
+        // ✅ FASE 1.1: Removido bloco duplicado de MESSAGES_UPDATE
+        // O processamento de ACKs agora é feito apenas no bloco principal (linhas 109-343)
+        let dbMessageId = processedData?.message_id || null;
 
         // Prepare N8N payload with ORIGINAL Evolution data structure + context
         const n8nPayload = {
