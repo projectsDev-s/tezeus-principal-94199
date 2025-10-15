@@ -559,6 +559,54 @@ serve(async (req) => {
             
             console.log('✅ Card updated successfully:', card);
             
+            // ✅ Se o responsável foi atualizado E o card tem conversa associada, sincronizar
+            if (body.responsible_user_id !== undefined && card.conversation_id) {
+              console.log(`🔄 Syncing conversation ${card.conversation_id} with responsible user ${body.responsible_user_id}`);
+              
+              // Buscar estado atual da conversa
+              const { data: currentConversation } = await supabaseClient
+                .from('conversations')
+                .select('assigned_user_id, workspace_id')
+                .eq('id', card.conversation_id)
+                .single();
+              
+              if (currentConversation) {
+                // Atualizar a conversa com o novo responsável
+                const { error: convUpdateError } = await supabaseClient
+                  .from('conversations')
+                  .update({
+                    assigned_user_id: body.responsible_user_id,
+                    assigned_at: new Date().toISOString(),
+                    status: 'open'
+                  })
+                  .eq('id', card.conversation_id);
+                
+                if (convUpdateError) {
+                  console.error('❌ Error updating conversation:', convUpdateError);
+                } else {
+                  // Determinar se é aceite ou transferência
+                  const action = currentConversation.assigned_user_id ? 'transfer' : 'accept';
+                  
+                  // Registrar no log de auditoria
+                  const { error: logError } = await supabaseClient
+                    .from('conversation_assignments')
+                    .insert({
+                      conversation_id: card.conversation_id,
+                      from_assigned_user_id: currentConversation.assigned_user_id,
+                      to_assigned_user_id: body.responsible_user_id,
+                      changed_by: systemUserId,
+                      action: action
+                    });
+                  
+                  if (logError) {
+                    console.error('❌ Error logging assignment:', logError);
+                  }
+                  
+                  console.log(`✅ Conversa ${action === 'accept' ? 'aceita' : 'transferida'} automaticamente para ${body.responsible_user_id}`);
+                }
+              }
+            }
+            
             return new Response(JSON.stringify(card), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
