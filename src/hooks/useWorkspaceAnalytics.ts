@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
+import { useRetry } from './useRetry';
 
 export interface WorkspaceAnalytics {
   activeConversations: number;
@@ -32,6 +33,8 @@ export const useWorkspaceAnalytics = () => {
   const { selectedWorkspace } = useWorkspace();
   const { user, userRole } = useAuth();
   const { getHeaders } = useWorkspaceHeaders();
+  const { retry } = useRetry();
+  const hasFetched = useRef(false);
 
   const fetchAnalytics = async () => {
     setIsLoading(true); // Skeleton imediato
@@ -257,6 +260,9 @@ export const useWorkspaceAnalytics = () => {
   };
 
   useEffect(() => {
+    if (hasFetched.current) return;
+    if (!selectedWorkspace) return;
+    hasFetched.current = true;
     fetchAnalytics();
   }, [selectedWorkspace, user, userRole]);
 

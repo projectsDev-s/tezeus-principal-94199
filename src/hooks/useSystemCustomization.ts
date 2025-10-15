@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCache } from './useCache';
+import { useRetry } from './useRetry';
 
 interface SystemCustomization {
   id?: string;
@@ -23,6 +25,9 @@ export function useSystemCustomization() {
   const [customization, setCustomization] = useState<SystemCustomization>(defaultCustomization);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getCache, setCache, isExpired } = useCache<SystemCustomization>(10); // 10 min cache
+  const { retry } = useRetry();
+  const hasFetched = useRef(false);
 
   // Convert hex to HSL for CSS variables with validation
   const hexToHsl = (hex: string): string => {
@@ -116,6 +121,16 @@ export function useSystemCustomization() {
 
   // Load customization settings
   const loadCustomization = async () => {
+    // Check cache first
+    const cached = getCache();
+    if (cached && !isExpired()) {
+      console.log('✅ Usando customização em cache');
+      setCustomization(cached);
+      applyCustomization(cached);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -124,24 +139,34 @@ export function useSystemCustomization() {
       setCustomization(defaultCustomization);
       applyCustomization(defaultCustomization);
 
-      const { data, error } = await supabase.functions.invoke('get-system-customization');
-
-      if (error) {
-        console.error('❌ Error loading system customization:', error);
-        throw error;
-      }
+      const data = await retry(async () => {
+        const { data, error } = await supabase.functions.invoke('get-system-customization');
+        if (error) throw error;
+        return data;
+      });
 
       if (data) {
         const config = { ...defaultCustomization, ...data };
         setCustomization(config);
+        setCache(config);
         applyCustomization(config);
+      } else {
+        setCache(defaultCustomization);
       }
     } catch (err: any) {
       console.error('❌ Error in loadCustomization:', err);
       setError(err.message);
-      // Keep defaults if loading fails
-      setCustomization(defaultCustomization);
-      applyCustomization(defaultCustomization);
+      
+      // Use expired cache if available
+      const cached = getCache();
+      if (cached) {
+        console.log('⚠️ Usando cache expirado devido ao erro');
+        setCustomization(cached);
+        applyCustomization(cached);
+      } else {
+        setCustomization(defaultCustomization);
+        applyCustomization(defaultCustomization);
+      }
     } finally {
       setLoading(false);
     }
@@ -208,6 +233,8 @@ export function useSystemCustomization() {
 
   // Load on mount
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
     loadCustomization();
   }, []);
 

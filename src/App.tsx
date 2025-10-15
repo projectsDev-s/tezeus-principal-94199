@@ -7,11 +7,9 @@ import { TezeusCRM } from "@/components/TezeusCRM";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./components/AuthProvider";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
-import { PipelinesProvider } from "./contexts/PipelinesContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import { Login } from "./pages/Login";
-import { RealtimeNotificationProvider } from "./components/RealtimeNotificationProvider";
 import { SystemCustomizationProvider } from "./contexts/SystemCustomizationContext";
 
 const queryClient = new QueryClient();
@@ -24,9 +22,7 @@ const App = () => (
       <AuthProvider>
         <SystemCustomizationProvider>
           <WorkspaceProvider>
-            <PipelinesProvider>
-              <RealtimeNotificationProvider>
-                <BrowserRouter>
+            <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -58,9 +54,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-                </BrowserRouter>
-              </RealtimeNotificationProvider>
-            </PipelinesProvider>
+            </BrowserRouter>
           </WorkspaceProvider>
         </SystemCustomizationProvider>
       </AuthProvider>

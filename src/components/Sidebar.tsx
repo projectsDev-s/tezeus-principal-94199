@@ -43,8 +43,9 @@ export function Sidebar({
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [impersonateOpen, setImpersonateOpen] = useState(false);
+  const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
 
-  // Hooks para notificações e autenticação
+  // Hooks para notificações - só carrega quando abrir o popover
   const {
     notifications,
     totalUnread,
@@ -62,13 +63,12 @@ export function Sidebar({
     logout
   } = useAuth();
   const { canView, canViewAnyIn } = useCargoPermissions();
-  const {
-    workspaces,
-    isLoading
-  } = useWorkspaces();
+  // Usar workspaces do contexto (que já tem cache)
   const {
     selectedWorkspace,
-    setSelectedWorkspace
+    setSelectedWorkspace,
+    workspaces,
+    isLoadingWorkspaces: isLoading
   } = useWorkspace();
   const {
     customization

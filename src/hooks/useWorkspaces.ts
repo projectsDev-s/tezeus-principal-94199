@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace, type Workspace } from '@/contexts/WorkspaceContext';
+import { useCache } from './useCache';
+import { useRetry } from './useRetry';
 
 export function useWorkspaces() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -10,6 +12,9 @@ export function useWorkspaces() {
   const { toast } = useToast();
   const { user, userRole } = useAuth();
   const { setWorkspaces: setContextWorkspaces, setIsLoadingWorkspaces } = useWorkspace();
+  const { getCache, setCache, isExpired } = useCache<Workspace[]>(5); // 5 min cache
+  const { retry } = useRetry();
+  const hasFetched = useRef(false);
 
   const fetchWorkspaces = async () => {
     if (!user) {
@@ -19,23 +24,29 @@ export function useWorkspaces() {
       return;
     }
 
+    // Check cache first
+    const cached = getCache();
+    if (cached && !isExpired()) {
+      console.log('✅ Usando workspaces em cache');
+      setWorkspaces(cached);
+      setContextWorkspaces(cached);
+      setIsLoadingWorkspaces(false);
+      return;
+    }
+
     setIsLoading(true);
     setIsLoadingWorkspaces(true);
     try {
-      // Always use the Edge function to bypass RLS issues
-      // Fetching workspaces via Edge function
-      
-      const { data, error } = await supabase.functions.invoke('list-user-workspaces', {
-        headers: {
-          'x-system-user-id': user.id,
-          'x-system-user-email': user.email || ''
-        }
+      const data = await retry(async () => {
+        const { data, error } = await supabase.functions.invoke('list-user-workspaces', {
+          headers: {
+            'x-system-user-id': user.id,
+            'x-system-user-email': user.email || ''
+          }
+        });
+        if (error) throw error;
+        return data;
       });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
 
       // Transform the data to match expected format
       const workspaceData = data?.workspaces?.map((w: any) => ({
@@ -51,6 +62,7 @@ export function useWorkspaces() {
       // Workspaces fetched
       setWorkspaces(workspaceData);
       setContextWorkspaces(workspaceData);
+      setCache(workspaceData);
 
       // Fallback: buscar connections_count diretamente se não veio da Edge function
       if (workspaceData.some((w: any) => !w.connections_count && w.connections_count !== 0)) {
@@ -80,8 +92,14 @@ export function useWorkspaces() {
       }
     } catch (error) {
       console.error('Error fetching workspaces:', error);
-      // Só mostrar erro se realmente falhou em buscar workspaces
-      if (!workspaces.length) {
+      
+      // Use expired cache if available
+      const cached = getCache();
+      if (cached) {
+        console.log('⚠️ Usando cache expirado devido ao erro');
+        setWorkspaces(cached);
+        setContextWorkspaces(cached);
+      } else if (!workspaces.length) {
         toast({
           title: "Erro",
           description: "Falha ao carregar empresas",
@@ -95,7 +113,9 @@ export function useWorkspaces() {
   };
 
   useEffect(() => {
+    if (hasFetched.current) return;
     if (user) {
+      hasFetched.current = true;
       fetchWorkspaces();
     }
   }, [user, userRole]);
