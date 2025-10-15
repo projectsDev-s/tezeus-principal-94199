@@ -471,32 +471,74 @@ export function ContactSidePanel({
                       </AvatarFallback>
                     </Avatar>
                     
-                    {/* Nome - editável ao duplo clique */}
-                    {isEditingName ? <Input type="text" value={editingContact?.name || ''} onChange={e => setEditingContact(prev => prev ? {
-                    ...prev,
-                    name: e.target.value
-                  } : null)} onBlur={async () => {
-                    setIsEditingName(false);
-                    await handleSaveContact();
-                  }} autoFocus className="text-xl font-bold text-center border rounded px-3 py-1 mt-3 max-w-xs bg-white shadow-sm" /> : <h2 onDoubleClick={() => setIsEditingName(true)} className="text-xl font-bold text-gray-900 mt-3 cursor-pointer hover:text-gray-700 transition-colors" title="Clique duas vezes para editar">
+                    {/* Nome - editável ao duplo clique com underline */}
+                    {isEditingName ? (
+                      <input
+                        type="text"
+                        value={editingContact?.name || ''}
+                        onChange={(e) => setEditingContact(prev => prev ? {
+                          ...prev,
+                          name: e.target.value
+                        } : null)}
+                        onBlur={async () => {
+                          setIsEditingName(false);
+                          await handleSaveContact();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            setIsEditingName(false);
+                            handleSaveContact();
+                          }
+                        }}
+                        autoFocus
+                        className="text-xl font-bold text-center bg-transparent border-none outline-none border-b-2 border-primary mt-3 pb-0.5 text-gray-900"
+                      />
+                    ) : (
+                      <h2
+                        onDoubleClick={() => setIsEditingName(true)}
+                        className="text-xl font-bold text-gray-900 mt-3 cursor-pointer hover:text-gray-700 transition-colors"
+                        title="Clique duas vezes para editar"
+                      >
                         {editingContact?.name || 'Nome do contato'}
-                      </h2>}
+                      </h2>
+                    )}
                     
                     {/* Telefone - somente leitura */}
                     <p className="text-sm text-gray-600 mt-1">
                       {editingContact?.phone || 'Sem telefone'}
                     </p>
                     
-                    {/* Email - editável ao duplo clique */}
-                    {isEditingEmail ? <Input type="email" value={editingContact?.email || ''} onChange={e => setEditingContact(prev => prev ? {
-                    ...prev,
-                    email: e.target.value
-                  } : null)} onBlur={async () => {
-                    setIsEditingEmail(false);
-                    await handleSaveContact();
-                  }} autoFocus className="text-sm text-center border rounded px-3 py-1 mt-1 max-w-xs bg-white shadow-sm" /> : <p onDoubleClick={() => setIsEditingEmail(true)} className="text-sm text-blue-600 mt-1 cursor-pointer hover:underline transition-colors" title="Clique duas vezes para editar">
+                    {/* Email - editável ao duplo clique com underline */}
+                    {isEditingEmail ? (
+                      <input
+                        type="email"
+                        value={editingContact?.email || ''}
+                        onChange={(e) => setEditingContact(prev => prev ? {
+                          ...prev,
+                          email: e.target.value
+                        } : null)}
+                        onBlur={async () => {
+                          setIsEditingEmail(false);
+                          await handleSaveContact();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            setIsEditingEmail(false);
+                            handleSaveContact();
+                          }
+                        }}
+                        autoFocus
+                        className="text-sm text-center bg-transparent border-none outline-none border-b-2 border-primary mt-1 pb-0.5 text-gray-900"
+                      />
+                    ) : (
+                      <p
+                        onDoubleClick={() => setIsEditingEmail(true)}
+                        className="text-sm text-gray-900 mt-1 cursor-pointer hover:text-gray-700 transition-colors"
+                        title="Clique duas vezes para editar"
+                      >
                         {editingContact?.email || 'Adicionar email'}
-                      </p>}
+                      </p>
+                    )}
                   </div>
                 </div>
 
