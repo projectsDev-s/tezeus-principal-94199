@@ -62,6 +62,7 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
           value={analytics.activeConversations}
           subtitle={`${analytics.totalConversations} conversas no total`}
           icon={MessageCircle}
+          isLoading={isLoading}
         />
         
         <AnalyticsKPICard
@@ -69,6 +70,7 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
           value={analytics.dealsInProgress}
           subtitle="Negócios em pipeline"
           icon={Users}
+          isLoading={isLoading}
         />
         
         <AnalyticsKPICard
@@ -76,6 +78,7 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
           value={analytics.completedDeals}
           subtitle="Deals fechados"
           icon={TrendingUp}
+          isLoading={isLoading}
         />
         
         <AnalyticsKPICard
@@ -83,6 +86,7 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
           value={`${analytics.conversionRate.toFixed(1)}%`}
           subtitle="Vendas vs. Total de closes"
           icon={Target}
+          isLoading={isLoading}
         />
       </div>
 

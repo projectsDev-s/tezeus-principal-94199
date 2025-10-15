@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
 
 interface AnalyticsKPICardProps {
@@ -11,6 +12,7 @@ interface AnalyticsKPICardProps {
     isPositive: boolean;
   };
   className?: string;
+  isLoading?: boolean;
 }
 
 export function AnalyticsKPICard({ 
@@ -19,8 +21,24 @@ export function AnalyticsKPICard({
   subtitle, 
   icon: Icon, 
   trend,
-  className 
+  className,
+  isLoading = false
 }: AnalyticsKPICardProps) {
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-4 rounded" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-8 w-16 mb-2" />
+          <Skeleton className="h-3 w-32" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

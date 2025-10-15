@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCircle, Wifi, AlertTriangle, Users } from "lucide-react";
 import { DashboardStats } from "@/hooks/useDashboardStats";
 import { WorkspaceConnection } from "@/hooks/useWorkspaceConnections";
@@ -14,6 +15,24 @@ interface DashboardHighlightCardsProps {
 export function DashboardHighlightCards({ stats, connections, isLoading }: DashboardHighlightCardsProps) {
   const connectedInstances = connections.filter(c => c.status === 'connected').length;
   const hasConnectionIssues = connections.some(c => c.status === 'disconnected' || c.status === 'error');
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-12 mb-2" />
+              <Skeleton className="h-3 w-40" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
