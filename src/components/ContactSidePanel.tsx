@@ -209,21 +209,13 @@ export function ContactSidePanel({
 
     setCustomFields(newFields);
 
-    // Salvar imediatamente no banco
     const fieldsToSave = newFields.map(f => ({
       field_name: f.key,
       field_value: f.value
     }));
 
-    const success = await saveExtraFields(fieldsToSave);
-
-    if (success) {
-      toast({
-        title: "Sucesso",
-        description: "Campo adicionado com sucesso!"
-      });
-      setNewCustomField({ key: '', value: '' });
-    }
+    await saveExtraFields(fieldsToSave);
+    setNewCustomField({ key: '', value: '' });
   };
 
   const handleRemoveCustomField = async (index: number) => {
@@ -235,14 +227,7 @@ export function ContactSidePanel({
       field_value: f.value
     }));
 
-    const success = await saveExtraFields(fieldsToSave);
-
-    if (success) {
-      toast({
-        title: "Sucesso",
-        description: "Campo removido com sucesso!"
-      });
-    }
+    await saveExtraFields(fieldsToSave);
   };
 
   const updateCustomField = (index: number, key: string, value: string) => {
@@ -257,14 +242,7 @@ export function ContactSidePanel({
       field_value: f.value
     }));
 
-    const success = await saveExtraFields(fieldsToSave);
-
-    if (success) {
-      toast({
-        title: "Sucesso",
-        description: "Campo atualizado com sucesso!"
-      });
-    }
+    await saveExtraFields(fieldsToSave);
   };
 
   const handleAddObservation = async () => {
