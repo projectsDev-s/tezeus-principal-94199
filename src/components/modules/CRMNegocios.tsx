@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X } from "lucide-react";
+import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
@@ -299,25 +299,74 @@ function DraggableDeal({
         {/* Área central para tags do contato */}
         <div className="mb-2 min-h-[24px] flex items-center justify-between gap-2">
           <div className="flex items-start flex-wrap gap-1 flex-1 min-w-0">
-          {contactTags.map(tag => <Badge key={tag.id} variant="outline" style={{
-            backgroundColor: `${tag.color}15`,
-            borderColor: tag.color,
-            color: tag.color
-          }} className="text-[10px] md:text-xs px-1.5 py-0 h-auto rounded-full font-medium flex items-center gap-1">
-              <span>{tag.name}</span>
-              <button onClick={async e => {
-              e.stopPropagation();
-              try {
-                // Remove tag from contact
-                await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
-                await refreshTags();
-              } catch (error) {
-                console.error('Erro ao remover tag:', error);
+          {contactTags.map(tag => {
+            const [visibleTagId, setVisibleTagId] = React.useState<string | null>(null);
+            const [hideTimeout, setHideTimeout] = React.useState<NodeJS.Timeout | null>(null);
+
+            const handleMouseEnter = () => {
+              if (hideTimeout) {
+                clearTimeout(hideTimeout);
+                setHideTimeout(null);
               }
-            }} className="hover:bg-black/10 rounded-full p-0.5 transition-colors">
-                <X className="w-2 h-2 md:w-2.5 md:h-2.5" />
-              </button>
-            </Badge>)}
+              setVisibleTagId(tag.id);
+            };
+
+            const handleMouseLeave = () => {
+              const timeout = setTimeout(() => {
+                setVisibleTagId(null);
+              }, 1000);
+              setHideTimeout(timeout);
+            };
+
+            return (
+              <div
+                key={tag.id}
+                className="relative cursor-pointer"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                <Tag 
+                  className="w-3 h-3 flex-shrink-0" 
+                  style={{ color: tag.color }} 
+                  fill={tag.color}
+                />
+                <span 
+                  onMouseEnter={() => {
+                    if (hideTimeout) {
+                      clearTimeout(hideTimeout);
+                      setHideTimeout(null);
+                    }
+                  }}
+                  onMouseLeave={handleMouseLeave}
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-2 py-0.5 rounded-full z-[9999] flex items-center gap-1 ${
+                    visibleTagId === tag.id ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none"
+                  }`}
+                  style={{ 
+                    backgroundColor: 'white',
+                    borderColor: tag.color,
+                    color: tag.color,
+                    border: `2px solid ${tag.color}`
+                  }}
+                >
+                  {tag.name}
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
+                        await refreshTags();
+                      } catch (error) {
+                        console.error('Erro ao remover tag:', error);
+                      }
+                    }}
+                    className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0 pointer-events-auto"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              </div>
+            );
+          })}
           <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
             <PopoverTrigger asChild onClick={e => e.stopPropagation()}>
               <Button variant="outline" size="sm" className="h-5 px-1.5 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary">
