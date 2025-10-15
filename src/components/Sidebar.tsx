@@ -270,16 +270,16 @@ export function Sidebar({
     console.log('🔔 Sidebar - Clique na notificação:', conversationId);
     setIsNotificationOpen(false);
 
-    // ✅ CORREÇÃO 1: Navegar PRIMEIRO, depois marcar como lida
+    // ✅ Navegar usando location.state em vez de URL params
     if (onNavigateToConversation) {
-      console.log('🚀 Navegando para conversa:', conversationId);
+      console.log('🚀 Navegando para conversa via state:', conversationId);
       onNavigateToConversation(conversationId);
-
-      // Marcar como lida após uma pequena pausa para garantir que a navegação aconteceu
+      
+      // Marcar como lida após navegação
       setTimeout(() => {
         console.log('✅ Marcando conversa como lida:', conversationId);
         markAsRead(conversationId);
-      }, 500);
+      }, 300);
     }
   };
   const handleMarkAllAsRead = () => {

@@ -70,8 +70,6 @@ export function TezeusCRM() {
   });
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [canNavigateFreely, setCanNavigateFreely] = useState(true);
-  const [isNotificationNavigation, setIsNotificationNavigation] = useState(false);
 
   // Handle dark mode changes
   useEffect(() => {
@@ -102,29 +100,18 @@ export function TezeusCRM() {
   const activeModule = getModuleFromPath(location.pathname);
   const editingAgentId = params.agentId || null;
 
-  // Handle conversation selection from URL search params OR location state
+  // Handle conversation selection from location state (notificações)
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const conversationIdFromParams = searchParams.get('id');
     const conversationIdFromState = (location.state as any)?.selectedConversationId;
     
-    const conversationId = conversationIdFromParams || conversationIdFromState;
-    
-    if (conversationId && conversationId !== selectedConversationId) {
-      setSelectedConversationId(conversationId);
+    if (conversationIdFromState && conversationIdFromState !== selectedConversationId) {
+      console.log('📍 TezeusCRM: Recebeu conversa via state:', conversationIdFromState);
+      setSelectedConversationId(conversationIdFromState);
       
-      // Se veio do state, atualizar URL também para manter consistência
-      if (conversationIdFromState && !conversationIdFromParams) {
-        navigate(`/conversas?id=${conversationId}`, { replace: true });
-      }
-      
-      // ✅ Navegação via notificação NUNCA bloqueia
-      setCanNavigateFreely(true);
-    } else if (!conversationId && selectedConversationId) {
-      setSelectedConversationId(null);
-      setCanNavigateFreely(true);
+      // ✅ Limpar o state após processar para permitir navegação livre
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.search, location.state, selectedConversationId, navigate]);
+  }, [location.state, selectedConversationId, navigate, location.pathname]);
 
   // Listener para navegação via toast
   useEffect(() => {
@@ -209,15 +196,14 @@ export function TezeusCRM() {
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
         onNavigateToConversation={(conversationId) => {
-          setIsNotificationNavigation(true);
+          console.log('🚀 TezeusCRM: Navegando para conversa:', conversationId);
           setSelectedConversationId(conversationId);
-          navigate(`/conversas?id=${conversationId}`);
           
-          // ✅ CORREÇÃO 3: Resetar flags após navegação
-          setTimeout(() => {
-            setCanNavigateFreely(true);
-            setIsNotificationNavigation(false);
-          }, 100);
+          // ✅ Usar location.state em vez de URL params
+          navigate('/conversas', { 
+            state: { selectedConversationId: conversationId },
+            replace: true 
+          });
         }}
       />
       <div className={`flex-1 flex flex-col max-h-screen ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'p-4' : ''}`}>
