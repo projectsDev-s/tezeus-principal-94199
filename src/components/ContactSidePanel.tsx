@@ -230,13 +230,8 @@ export function ContactSidePanel({
         field_name: f.key,
         field_value: f.value
       }));
-      const saveSuccess = await saveExtraFields(fieldsToSave);
-      if (saveSuccess) {
-        toast({
-          title: "Sucesso",
-          description: "Dados salvos com sucesso!"
-        });
-      }
+      await saveExtraFields(fieldsToSave);
+      
       if (updatedData) {
         setEditingContact(updatedData as Contact);
         if (onContactUpdated) {
