@@ -992,79 +992,37 @@ serve(async (req) => {
     } else if (workspaceId && payload.data?.key?.fromMe === true && event === 'messages_upsert') {
       console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), capturing evolution_short_key_id`);
       
-      // Capturar o shortKeyId (22 chars) do evento messages.upsert
       const shortKeyId = payload.data?.key?.id; // 22 chars
-      const remoteJid = payload.data?.key?.remoteJid;
-      const sanitizedPhone = remoteJid ? extractPhoneFromRemoteJid(remoteJid) : null;
-      
-      console.log(`🔑 [${requestId}] Outbound message shortKeyId: ${shortKeyId}`);
       
       if (shortKeyId && workspaceId) {
-        // Buscar mensagem enviada recentemente pelo evolution_key_id ou external_id
-        // O evolution_key_id de 40 chars contém o shortKeyId de 22 chars no final
-        const { data: existingMessages } = await supabase
+        // Buscar mensagem enviada nos últimos 30 segundos sem evolution_short_key_id
+        const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+        
+        const { data: recentMessage } = await supabase
           .from('messages')
-          .select('id, evolution_key_id, evolution_short_key_id, conversation_id, created_at')
+          .select('id, evolution_key_id, external_id')
           .eq('workspace_id', workspaceId)
           .eq('sender_type', 'agent')
-          .is('evolution_short_key_id', null) // Buscar apenas mensagens sem short_key_id
+          .is('evolution_short_key_id', null)
+          .gte('created_at', thirtySecondsAgo)
           .order('created_at', { ascending: false })
-          .limit(10); // Buscar nas últimas 10 mensagens
+          .limit(1)
+          .maybeSingle();
         
-        if (existingMessages && existingMessages.length > 0) {
-          // Tentar encontrar pelo evolution_key_id que contenha o shortKeyId
-          let targetMessage = existingMessages.find(m => 
-            m.evolution_key_id?.includes(shortKeyId)
-          );
+        if (recentMessage) {
+          console.log(`💾 [${requestId}] Saving evolution_short_key_id: ${shortKeyId} for message ${recentMessage.id}`);
           
-          // Se não encontrar, pegar a mensagem mais recente sem evolution_short_key_id
-          if (!targetMessage && sanitizedPhone) {
-            // Buscar por phone na conversation
-            const { data: conversations } = await supabase
-              .from('conversations')
-              .select('id, contact_id')
-              .eq('workspace_id', workspaceId)
-              .in('id', existingMessages.map(m => m.conversation_id));
-            
-            if (conversations) {
-              const { data: contacts } = await supabase
-                .from('contacts')
-                .select('id, phone')
-                .eq('workspace_id', workspaceId)
-                .in('id', conversations.map(c => c.contact_id));
-              
-              const contactId = contacts?.find(c => c.phone === sanitizedPhone)?.id;
-              if (contactId) {
-                const conversationId = conversations?.find(c => c.contact_id === contactId)?.id;
-                targetMessage = existingMessages.find(m => m.conversation_id === conversationId);
-              }
-            }
-          }
+          await supabase
+            .from('messages')
+            .update({ evolution_short_key_id: shortKeyId })
+            .eq('id', recentMessage.id);
           
-          if (targetMessage) {
-            console.log(`💾 [${requestId}] Saving evolution_short_key_id for message ${targetMessage.id}`);
-            
-            const { error: updateError } = await supabase
-              .from('messages')
-              .update({ evolution_short_key_id: shortKeyId })
-              .eq('id', targetMessage.id);
-            
-            if (updateError) {
-              console.error(`❌ [${requestId}] Failed to save evolution_short_key_id:`, updateError);
-            } else {
-              console.log(`✅ [${requestId}] evolution_short_key_id saved successfully!`);
-            }
-          } else {
-            console.log(`⚠️ [${requestId}] No matching message found for shortKeyId ${shortKeyId}`);
-          }
+          console.log(`✅ [${requestId}] evolution_short_key_id saved successfully!`);
+        } else {
+          console.log(`⚠️ [${requestId}] No recent message found to update with shortKeyId`);
         }
       }
-      
-      processedData = {
-        message_sent: true,
-        external_id: shortKeyId,
-        phone_number: sanitizedPhone
-      };
+    }
     }
 
     // Forward to N8N with processed data

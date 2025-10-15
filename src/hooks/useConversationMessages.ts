@@ -367,28 +367,24 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           if (updatedMessage.workspace_id === selectedWorkspace.workspace_id) {
           // Para mensagens de agente, evitar duplicação
           if (updatedMessage.sender_type === 'agent') {
-            // Tentar encontrar mensagem existente (temporária ou real)
-            const existingMessageIndex = messages.findIndex(m => 
-              m.id === updatedMessage.id || // Mensagem real
-              (m.id.startsWith('temp-') && // Mensagem temporária
-               m.conversation_id === updatedMessage.conversation_id &&
-               m.sender_type === 'agent' &&
-               m.message_type === updatedMessage.message_type &&
-               Math.abs(new Date(m.created_at).getTime() - new Date(updatedMessage.created_at).getTime()) < 5000)
-            );
-
-            if (existingMessageIndex !== -1) {
-              // Atualizar mensagem existente (substituir temporária ou atualizar real)
-              console.log('🔄 Atualizando mensagem existente:', updatedMessage.id);
+            // Verificar se mensagem JÁ existe no state
+            const existingIndex = messages.findIndex(m => m.id === updatedMessage.id);
+            
+            if (existingIndex !== -1) {
+              // ✅ Mensagem existe → APENAS ATUALIZAR
+              console.log(`🔄 Atualizando mensagem agent existente: ${updatedMessage.id}`);
               setMessages(prev => {
                 const updated = [...prev];
-                updated[existingMessageIndex] = updatedMessage;
+                updated[existingIndex] = updatedMessage;
                 return updated;
               });
             } else if (updatedMessage.status === 'sent') {
-              // Adicionar apenas se NÃO existe e status é 'sent'
-              console.log('✅ Adicionando nova mensagem agent:', updatedMessage.id);
+              // ✅ Mensagem NÃO existe E status=sent → ADICIONAR UMA VEZ
+              console.log(`✅ Adicionando nova mensagem agent: ${updatedMessage.id}`);
               addMessage(updatedMessage);
+            } else {
+              // ⏭️ Ignorar outros casos (status=sending, etc)
+              console.log(`⏭️ Ignorando UPDATE de mensagem agent: ${updatedMessage.id} (status: ${updatedMessage.status})`);
             }
           } else {
             // Para mensagens de contato, apenas atualizar
