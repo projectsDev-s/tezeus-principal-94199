@@ -134,24 +134,84 @@ export function ContactSidePanel({
     column_name: card.column_name
   }));
   useEffect(() => {
-    if (isOpen && contact?.id) {
+    if (isOpen && contact?.id && selectedWorkspace?.workspace_id) {
       const loadFreshData = async () => {
         try {
-          const {
-            data,
-            error
-          } = await supabase.from('contacts').select('id, name, phone, email, profile_image_url, workspace_id, created_at, updated_at').eq('id', contact.id).single();
+          // Query única que carrega contato + estatísticas em um único payload
+          const { data, error } = await supabase
+            .from('contacts')
+            .select(`
+              id, 
+              name, 
+              phone, 
+              email, 
+              profile_image_url, 
+              workspace_id, 
+              created_at, 
+              updated_at
+            `)
+            .eq('id', contact.id)
+            .single();
+
           if (error) throw error;
+          
           if (data) {
             setEditingContact(data as Contact);
 
-            // Carregar estatísticas
-            if (selectedWorkspace?.workspace_id) {
-              getContactStats(contact.id, selectedWorkspace.workspace_id);
-            }
+            // Carregar estatísticas em uma única chamada com Promise.all
+            const [messagesResult, activeDealsResult, closedDealsResult] = await Promise.all([
+              // 1. Contar mensagens via conversas do contato
+              supabase
+                .from('conversations')
+                .select('id', { count: 'exact', head: true })
+                .eq('contact_id', contact.id)
+                .eq('workspace_id', selectedWorkspace.workspace_id)
+                .then(async (convResult) => {
+                  if (!convResult.data || convResult.count === 0) return 0;
+                  const { data: conversations } = await supabase
+                    .from('conversations')
+                    .select('id')
+                    .eq('contact_id', contact.id)
+                    .eq('workspace_id', selectedWorkspace.workspace_id);
+                  
+                  const conversationIds = conversations?.map(c => c.id) || [];
+                  if (conversationIds.length === 0) return 0;
+                  
+                  const { count } = await supabase
+                    .from('messages')
+                    .select('*', { count: 'exact', head: true })
+                    .in('conversation_id', conversationIds);
+                  
+                  return count || 0;
+                }),
+              
+              // 2. Contar negócios ativos
+              supabase
+                .from('pipeline_cards')
+                .select('*', { count: 'exact', head: true })
+                .eq('contact_id', contact.id)
+                .eq('status', 'aberto')
+                .then(result => result.count || 0),
+              
+              // 3. Contar negócios fechados
+              supabase
+                .from('pipeline_cards')
+                .select('*', { count: 'exact', head: true })
+                .eq('contact_id', contact.id)
+                .eq('status', 'ganho')
+                .then(result => result.count || 0)
+            ]);
+
+            // Atualizar estado com estatísticas carregadas
+            setStats({
+              messages: messagesResult,
+              activeDeals: activeDealsResult,
+              closedDeals: closedDealsResult
+            });
           }
         } catch (error) {
           console.error('❌ Erro ao recarregar dados do contato:', error);
+          setStats({ messages: 0, activeDeals: 0, closedDeals: 0 });
         }
       };
       loadFreshData();
@@ -321,53 +381,6 @@ export function ContactSidePanel({
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-  const getContactStats = async (contactId: string, workspaceId: string) => {
-    try {
-      // 1. Contar mensagens trocadas (da conversa do contato)
-      const {
-        data: conversations
-      } = await supabase.from('conversations').select('id').eq('contact_id', contactId).eq('workspace_id', workspaceId);
-      const conversationIds = conversations?.map(c => c.id) || [];
-      let messagesCount = 0;
-      if (conversationIds.length > 0) {
-        const {
-          count
-        } = await supabase.from('messages').select('*', {
-          count: 'exact',
-          head: true
-        }).in('conversation_id', conversationIds);
-        messagesCount = count || 0;
-      }
-
-      // 2. Contar negócios ativos (status = 'aberto')
-      const {
-        count: activeDeals
-      } = await supabase.from('pipeline_cards').select('*', {
-        count: 'exact',
-        head: true
-      }).eq('contact_id', contactId).eq('status', 'aberto');
-
-      // 3. Contar negócios fechados (status = 'ganho')
-      const {
-        count: closedDeals
-      } = await supabase.from('pipeline_cards').select('*', {
-        count: 'exact',
-        head: true
-      }).eq('contact_id', contactId).eq('status', 'ganho');
-      setStats({
-        messages: messagesCount,
-        activeDeals: activeDeals || 0,
-        closedDeals: closedDeals || 0
-      });
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
-      setStats({
-        messages: 0,
-        activeDeals: 0,
-        closedDeals: 0
-      });
-    }
   };
   const handleFileClick = (fileUrl: string, fileName: string, fileType?: string) => {
     setViewingMedia({
