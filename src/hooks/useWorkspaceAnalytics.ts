@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 
 export interface WorkspaceAnalytics {
   activeConversations: number;
@@ -30,6 +31,7 @@ export const useWorkspaceAnalytics = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { selectedWorkspace } = useWorkspace();
   const { user, userRole } = useAuth();
+  const { getHeaders } = useWorkspaceHeaders();
 
   const fetchAnalytics = async () => {
     setIsLoading(true); // Skeleton imediato
@@ -67,7 +69,10 @@ export const useWorkspaceAnalytics = () => {
 
       // Buscar pipelines via edge function (RLS-safe)
       const { data: pipelinesResponse, error: pipelinesError } = await supabase.functions.invoke(
-        'pipeline-management/pipelines'
+        'pipeline-management/pipelines',
+        {
+          headers: getHeaders()
+        }
       );
 
       if (pipelinesError) {
@@ -100,7 +105,10 @@ export const useWorkspaceAnalytics = () => {
       
       for (const pipelineId of pipelineIds) {
         const { data: cardsData, error: cardsError } = await supabase.functions.invoke(
-          `pipeline-management/cards?pipeline_id=${pipelineId}`
+          `pipeline-management/cards?pipeline_id=${pipelineId}`,
+          {
+            headers: getHeaders()
+          }
         );
 
         if (cardsError) {
@@ -124,7 +132,10 @@ export const useWorkspaceAnalytics = () => {
       const columnsMap = new Map();
       for (const pipelineId of pipelineIds) {
         const { data: columnsData } = await supabase.functions.invoke(
-          `pipeline-management/columns?pipeline_id=${pipelineId}`
+          `pipeline-management/columns?pipeline_id=${pipelineId}`,
+          {
+            headers: getHeaders()
+          }
         );
         
         if (columnsData && Array.isArray(columnsData)) {
