@@ -1062,6 +1062,15 @@ serve(async (req) => {
         // ✅ FASE 1.1: Removido bloco duplicado de MESSAGES_UPDATE
         // O processamento de ACKs agora é feito apenas no bloco principal (linhas 109-343)
 
+        // ✅ CORREÇÃO 3: Debug N8N payload antes de preparar
+        console.log(`🔍 [${requestId}] Pre-send N8N payload check:`, {
+          has_processed_data: !!processedData,
+          event: payload.event,
+          has_original_message: !!payload.data?.message,
+          has_key: !!payload.data?.key,
+          processed_data_keys: processedData ? Object.keys(processedData) : null
+        });
+
         // Prepare N8N payload with ORIGINAL Evolution data structure + context
         const n8nPayload = {
           // Original Evolution API payload (preserving ALL data from Evolution)

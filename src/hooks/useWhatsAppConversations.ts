@@ -554,6 +554,12 @@ export const useWhatsAppConversations = () => {
             return;
           }
           
+          // ✅ CORREÇÃO 1: Ignorar mensagens de agent no INSERT (elas vêm via UPDATE)
+          if (newMessage.sender_type === 'agent') {
+            console.log('⏭️ [INSERT] Ignorando mensagem de agent (será adicionada via UPDATE):', newMessage.id);
+            return;
+          }
+          
           console.log('📨 Realtime: Nova mensagem', {
             id: newMessage.id,
             conversation_id: newMessage.conversation_id,
@@ -628,30 +634,68 @@ export const useWhatsAppConversations = () => {
           console.log('✏️ Mensagem atualizada:', {
             id: updatedMessage.id,
             status: updatedMessage.status,
+            sender_type: updatedMessage.sender_type,
+            conversation_id: updatedMessage.conversation_id,
             message_type: updatedMessage.message_type,
             file_url: updatedMessage.file_url,
             file_name: updatedMessage.file_name,
           });
           
+          // ✅ CORREÇÃO 2: UPDATE deve ADICIONAR mensagens de agent se não existirem
           setConversations(prev => prev.map(conv => {
-            // Só atualiza a conversa que contém a mensagem
-            if (!conv.messages.some(m => m.id === updatedMessage.id)) return conv;
-            return {
-              ...conv,
-              messages: conv.messages.map(msg => 
-                msg.id === updatedMessage.id 
-                  ? {
-                      ...msg,
-                      status: updatedMessage.status ?? msg.status,
-                      read_at: updatedMessage.read_at ?? msg.read_at,
-                      message_type: (updatedMessage.message_type as any) ?? msg.message_type,
-                      file_url: updatedMessage.file_url ?? msg.file_url,
-                      file_name: updatedMessage.file_name ?? msg.file_name,
-                      content: updatedMessage.content ?? msg.content,
-                    }
-                  : msg
-              )
-            };
+            if (conv.id === updatedMessage.conversation_id) {
+              const existingMsgIndex = conv.messages.findIndex(m => m.id === updatedMessage.id);
+              
+              if (existingMsgIndex === -1) {
+                // ✅ Mensagem NÃO existe → ADICIONAR (especialmente para mensagens de agent!)
+                console.log('✅ [UPDATE] Adicionando nova mensagem agent:', updatedMessage.id);
+                
+                const messageObj = {
+                  id: updatedMessage.id,
+                  content: updatedMessage.content,
+                  sender_type: updatedMessage.sender_type,
+                  created_at: updatedMessage.created_at,
+                  read_at: updatedMessage.read_at,
+                  status: updatedMessage.status,
+                  message_type: updatedMessage.message_type,
+                  file_url: updatedMessage.file_url,
+                  file_name: updatedMessage.file_name,
+                  origem_resposta: updatedMessage.origem_resposta || 'manual',
+                };
+                
+                return {
+                  ...conv,
+                  messages: [...conv.messages, messageObj],
+                  last_message: [{
+                    content: updatedMessage.content,
+                    message_type: updatedMessage.message_type,
+                    sender_type: updatedMessage.sender_type,
+                    created_at: updatedMessage.created_at
+                  }],
+                  last_activity_at: updatedMessage.created_at
+                };
+              } else {
+                // ✅ Mensagem JÁ existe → ATUALIZAR status e outros campos
+                console.log('🔄 [UPDATE] Atualizando mensagem existente:', updatedMessage.id);
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg => 
+                    msg.id === updatedMessage.id 
+                      ? {
+                          ...msg,
+                          status: updatedMessage.status ?? msg.status,
+                          read_at: updatedMessage.read_at ?? msg.read_at,
+                          message_type: updatedMessage.message_type ?? msg.message_type,
+                          file_url: updatedMessage.file_url ?? msg.file_url,
+                          file_name: updatedMessage.file_name ?? msg.file_name,
+                          content: updatedMessage.content ?? msg.content,
+                        }
+                      : msg
+                  )
+                };
+              }
+            }
+            return conv;
           }));
         }
       )
