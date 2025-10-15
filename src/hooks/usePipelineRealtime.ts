@@ -27,11 +27,8 @@ export function usePipelineRealtime({
 
     console.log('🔌 [Realtime] Conectando ao pipeline:', pipelineId);
 
-    // IMPORTANTE: Usar um nome de canal único por cliente/sessão
-    // Isso evita conflitos de subscrição entre múltiplos usuários
-    const channelName = `pipeline-updates-${pipelineId}-${Math.random().toString(36).substring(7)}`;
-    
-    console.log('📡 [Realtime] Nome do canal:', channelName);
+    // Canal único e estável para este pipeline
+    const channelName = `pipeline-${pipelineId}`;
 
     // Canal único para este pipeline
     const channel: RealtimeChannel = supabase
@@ -122,19 +119,11 @@ export function usePipelineRealtime({
           onColumnDelete?.(payload.old.id);
         }
       )
-      .subscribe((status, err) => {
-        console.log(`📡 [Realtime] Status da conexão: ${status}`);
-        if (err) {
-          console.error('❌ [Realtime] Erro na subscrição:', err);
-        }
+      .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime] Canal subscrito com sucesso!');
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [Realtime] Erro no canal');
-        }
-        if (status === 'TIMED_OUT') {
-          console.error('⏱️ [Realtime] Timeout na conexão');
+          console.log('✅ [Realtime] Canal subscrito:', channelName);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn(`⚠️ [Realtime] Status: ${status} - Canal: ${channelName}`);
         }
       });
 
@@ -143,13 +132,5 @@ export function usePipelineRealtime({
       console.log('🔌 [Realtime] Desconectando do pipeline:', pipelineId);
       supabase.removeChannel(channel);
     };
-  }, [
-    pipelineId,
-    onCardInsert,
-    onCardUpdate,
-    onCardDelete,
-    onColumnInsert,
-    onColumnUpdate,
-    onColumnDelete,
-  ]);
+  }, [pipelineId]); // Simplificado: só reconecta se pipeline mudar
 }
