@@ -78,6 +78,8 @@ export function ContactSidePanel({
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [viewingMedia, setViewingMedia] = useState<{ url: string; type: string; name: string } | null>(null);
+  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
+  const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
 
   const { pipelines } = usePipelines();
   const { columns, fetchColumns } = usePipelineColumns(null);
@@ -180,7 +182,7 @@ export function ContactSidePanel({
     }
   };
 
-  const handleAddCustomField = () => {
+  const handleAddCustomField = async () => {
     if (!newCustomField.key.trim() || !newCustomField.value.trim()) {
       toast({
         title: "Erro",
@@ -200,21 +202,69 @@ export function ContactSidePanel({
       return;
     }
 
-    setCustomFields([...customFields, {
+    const newFields = [...customFields, {
       key: newCustomField.key.trim(),
       value: newCustomField.value.trim()
-    }]);
-    setNewCustomField({ key: '', value: '' });
+    }];
+
+    setCustomFields(newFields);
+
+    // Salvar imediatamente no banco
+    const fieldsToSave = newFields.map(f => ({
+      field_name: f.key,
+      field_value: f.value
+    }));
+
+    const success = await saveExtraFields(fieldsToSave);
+
+    if (success) {
+      toast({
+        title: "Sucesso",
+        description: "Campo adicionado com sucesso!"
+      });
+      setNewCustomField({ key: '', value: '' });
+    }
   };
 
-  const handleRemoveCustomField = (index: number) => {
-    setCustomFields(customFields.filter((_, i) => i !== index));
+  const handleRemoveCustomField = async (index: number) => {
+    const newFields = customFields.filter((_, i) => i !== index);
+    setCustomFields(newFields);
+
+    const fieldsToSave = newFields.map(f => ({
+      field_name: f.key,
+      field_value: f.value
+    }));
+
+    const success = await saveExtraFields(fieldsToSave);
+
+    if (success) {
+      toast({
+        title: "Sucesso",
+        description: "Campo removido com sucesso!"
+      });
+    }
   };
 
   const updateCustomField = (index: number, key: string, value: string) => {
     setCustomFields(customFields.map((field, i) => 
       i === index ? { ...field, [key]: value } : field
     ));
+  };
+
+  const handleSaveCustomFields = async () => {
+    const fieldsToSave = customFields.map(f => ({
+      field_name: f.key,
+      field_value: f.value
+    }));
+
+    const success = await saveExtraFields(fieldsToSave);
+
+    if (success) {
+      toast({
+        title: "Sucesso",
+        description: "Campo atualizado com sucesso!"
+      });
+    }
   };
 
   const handleAddObservation = async () => {
@@ -417,14 +467,46 @@ export function ContactSidePanel({
                       <div className="grid grid-cols-2 gap-3">
                         {customFields.map((field, index) => (
                           <div key={index} className="space-y-1">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                              {field.key}
-                            </Label>
+                            {/* Título do campo - EDITÁVEL */}
+                            {editingFieldIndex === index && editingFieldType === 'key' ? (
+                              <Input
+                                value={field.key}
+                                onChange={(e) => updateCustomField(index, 'key', e.target.value)}
+                                onBlur={async () => {
+                                  setEditingFieldIndex(null);
+                                  setEditingFieldType(null);
+                                  await handleSaveCustomFields();
+                                }}
+                                autoFocus
+                                className="text-xs uppercase tracking-wide font-medium"
+                              />
+                            ) : (
+                              <Label 
+                                onDoubleClick={() => {
+                                  setEditingFieldIndex(index);
+                                  setEditingFieldType('key');
+                                }}
+                                className="text-xs text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-blue-600 transition-colors"
+                                title="Clique duas vezes para editar"
+                              >
+                                {field.key}
+                              </Label>
+                            )}
+                            
+                            {/* Valor do campo - EDITÁVEL */}
                             <div className="flex items-center gap-2">
                               <Input
                                 value={field.value}
                                 onChange={(e) => updateCustomField(index, 'value', e.target.value)}
+                                onBlur={async () => {
+                                  await handleSaveCustomFields();
+                                }}
+                                onDoubleClick={() => {
+                                  setEditingFieldIndex(index);
+                                  setEditingFieldType('value');
+                                }}
                                 className="text-sm font-medium flex-1"
+                                title="Edite e pressione Enter ou clique fora para salvar"
                               />
                               <Button
                                 variant="ghost"
