@@ -85,7 +85,7 @@ export function ContactSidePanel({
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
   const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
   const [stats, setStats] = useState({
-    messages: 0,
+    activeConversations: 0,
     activeDeals: 0,
     closedDeals: 0
   });
@@ -159,31 +159,15 @@ export function ContactSidePanel({
             setEditingContact(data as Contact);
 
             // Carregar estatísticas em uma única chamada com Promise.all
-            const [messagesResult, activeDealsResult, closedDealsResult] = await Promise.all([
-              // 1. Contar mensagens via conversas do contato
+            const [activeConversationsResult, activeDealsResult, closedDealsResult] = await Promise.all([
+              // 1. Contar conversas ativas
               supabase
                 .from('conversations')
-                .select('id', { count: 'exact', head: true })
+                .select('*', { count: 'exact', head: true })
                 .eq('contact_id', contact.id)
                 .eq('workspace_id', selectedWorkspace.workspace_id)
-                .then(async (convResult) => {
-                  if (!convResult.data || convResult.count === 0) return 0;
-                  const { data: conversations } = await supabase
-                    .from('conversations')
-                    .select('id')
-                    .eq('contact_id', contact.id)
-                    .eq('workspace_id', selectedWorkspace.workspace_id);
-                  
-                  const conversationIds = conversations?.map(c => c.id) || [];
-                  if (conversationIds.length === 0) return 0;
-                  
-                  const { count } = await supabase
-                    .from('messages')
-                    .select('*', { count: 'exact', head: true })
-                    .in('conversation_id', conversationIds);
-                  
-                  return count || 0;
-                }),
+                .eq('status', 'open')
+                .then(result => result.count || 0),
               
               // 2. Contar negócios ativos
               supabase
@@ -203,15 +187,15 @@ export function ContactSidePanel({
             ]);
 
             // Atualizar estado com estatísticas carregadas
-            setStats({
-              messages: messagesResult,
-              activeDeals: activeDealsResult,
-              closedDeals: closedDealsResult
-            });
+        setStats({
+          activeConversations: activeConversationsResult,
+          activeDeals: activeDealsResult,
+          closedDeals: closedDealsResult
+        });
           }
         } catch (error) {
           console.error('❌ Erro ao recarregar dados do contato:', error);
-          setStats({ messages: 0, activeDeals: 0, closedDeals: 0 });
+          setStats({ activeConversations: 0, activeDeals: 0, closedDeals: 0 });
         }
       };
       loadFreshData();
@@ -457,13 +441,13 @@ export function ContactSidePanel({
                 {/* ===== ESTATÍSTICAS: 3 colunas lado a lado ===== */}
                 <div className="border-b bg-white px-6 py-4">
                   <div className="grid grid-cols-3 gap-4">
-                    {/* Mensagens Trocadas */}
+                    {/* Conversas Ativas */}
                     <div className="flex flex-col items-center justify-center space-y-1">
                       <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
                         <MessageCircle className="h-5 w-5 text-blue-600" />
                       </div>
-                      <p className="text-2xl font-bold text-gray-900">{stats.messages}</p>
-                      <p className="text-xs text-gray-500 font-medium">Mensagens</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.activeConversations}</p>
+                      <p className="text-xs text-gray-500 font-medium">Conversas Ativas</p>
                     </div>
 
                     {/* Negócios Ativos */}
@@ -472,7 +456,7 @@ export function ContactSidePanel({
                         <Briefcase className="h-5 w-5 text-amber-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.activeDeals}</p>
-                      <p className="text-xs text-gray-500 font-medium">Negócios</p>
+                      <p className="text-xs text-gray-500 font-medium">Negócios Ativos</p>
                     </div>
 
                     {/* Negócios Fechados */}
@@ -481,7 +465,7 @@ export function ContactSidePanel({
                         <Trophy className="h-5 w-5 text-green-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.closedDeals}</p>
-                      <p className="text-xs text-gray-500 font-medium">Fechados</p>
+                      <p className="text-xs text-gray-500 font-medium">Negócios Fechados</p>
                     </div>
                   </div>
                 </div>
