@@ -91,29 +91,19 @@ export function AdicionarFilaModal({
     setShowError(false);
     setLoading(true);
     try {
-      const systemUserId = localStorage.getItem('system_user_id');
-      const systemUserEmail = localStorage.getItem('system_user_email');
-
-      const { error } = await supabase.functions.invoke('manage-queues', {
-        body: {
-          action: 'create',
-          data: {
-            name: nome.trim(),
-            description: mensagemSaudacao.trim() || null,
-            color: cor,
-            order_position: ordem ? parseInt(ordem) : 0,
-            distribution_type: distribuicao || 'aleatoria',
-            ai_agent_id: agenteId || null,
-            greeting_message: mensagemSaudacao.trim() || null,
-            workspace_id: selectedWorkspace.workspace_id,
-            is_active: true
-          }
-        },
-        headers: {
-          'x-system-user-id': systemUserId || '',
-          'x-system-user-email': systemUserEmail || ''
-        }
-      });
+      const { error } = await supabase
+        .from('queues')
+        .insert({
+          name: nome.trim(),
+          description: mensagemSaudacao.trim() || null,
+          color: cor,
+          order_position: ordem ? parseInt(ordem) : 0,
+          distribution_type: distribuicao || 'aleatoria',
+          ai_agent_id: agenteId || null,
+          greeting_message: mensagemSaudacao.trim() || null,
+          workspace_id: selectedWorkspace.workspace_id,
+          is_active: true
+        });
 
       if (error) throw error;
       toast.success("Fila criada com sucesso!");
