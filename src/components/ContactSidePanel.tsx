@@ -801,8 +801,8 @@ export function ContactSidePanel({
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {/* Lista de observações */}
-                      <ScrollArea className="max-h-48">
-                        <div className="space-y-3 pr-2">
+                      <ScrollArea className="h-48">
+                        <div className="space-y-3 pr-4">
                           {realObservations.map(obs => <div key={obs.id} className="p-3 bg-muted/30 rounded-lg group">
                               {editingObservationId === obs.id ? <div className="space-y-2">
                                   <Textarea value={editingContent} onChange={e => setEditingContent(e.target.value)} className="min-h-[80px]" />
@@ -841,6 +841,7 @@ export function ContactSidePanel({
                               Nenhuma observação encontrada
                             </p>}
                         </div>
+                        <ScrollBar orientation="vertical" />
                       </ScrollArea>
 
                       {/* Campo para nova observação */}
