@@ -1,5 +1,5 @@
 // Evolution Webhook V2 - Safe connection handling
-// Force redeploy: 2025-10-14 19:45 - Forcing persistent connectionData error fix
+// Force redeploy: 2025-10-15 - Forcing deployment with cleaned dbMessageId removal
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
