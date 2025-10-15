@@ -287,7 +287,7 @@ serve(async (req) => {
       
       // ✅ Campos adicionados para melhor rastreabilidade
       instance: instanceName,
-      remoteJid: payload.data?.key?.remoteJid || null,
+      remoteJid: payload.data?.remoteJid || null,
       messageId: messageId || null
     };
         
