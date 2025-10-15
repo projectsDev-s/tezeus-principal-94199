@@ -901,10 +901,10 @@ function CRMNegociosContent({
       </div>;
   }
   return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
-      <main className="min-h-screen flex flex-col max-w-[78vw]">
+      <main className="min-h-screen flex flex-col w-full">
         
         {/* CARD DE FILTROS */}
-        <div className="sticky top-0 z-10 p-4">
+        <div className="sticky top-0 z-10 px-2 py-2">
           <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white border-gray-200")}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Settings Button */}
@@ -986,8 +986,8 @@ function CRMNegociosContent({
         </div>
 
         {/* CONTAINER DO PIPELINE */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto p-2">
-          {isLoading ? <div className="flex gap-2 sm:gap-4 h-full min-w-full">
+        <div className="flex-1 overflow-x-auto overflow-y-auto px-2">
+          {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                     <div className="p-4 pb-3">
@@ -1023,7 +1023,7 @@ function CRMNegociosContent({
               </div>
             </div> : isLoadingColumns ?
         // Skeleton loading para colunas
-        <div className="flex gap-2 sm:gap-4 h-full min-w-full">
+        <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0">
                   <div className="bg-card rounded-lg border border-t-4 h-[600px] max-h-[80vh] flex flex-col">
                     <div className="p-4 pb-3 flex-shrink-0">
@@ -1061,7 +1061,7 @@ function CRMNegociosContent({
                     </div>
                   </div>
                 </div>)}
-            </div> : <div className="flex gap-2 sm:gap-4 h-full min-w-full">
+            </div> : <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
