@@ -911,7 +911,7 @@ export function ContactSidePanel({
                                       <Pencil className="h-3 w-3" />
                                     </Button>
                                     <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={() => setDeletingObservationId(obs.id)}>
-                                      <Trash2 className="h-3 w-3" />
+                                      <X className="h-3 w-3" />
                                     </Button>
                                   </div>
                                 </div>
