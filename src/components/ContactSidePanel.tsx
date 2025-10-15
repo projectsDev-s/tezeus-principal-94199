@@ -192,7 +192,7 @@ export function ContactSidePanel({
       };
       loadFreshData();
     }
-  }, [isOpen, contact?.id, selectedWorkspace?.workspace_id]);
+  }, [isOpen, contact?.id, selectedWorkspace?.workspace_id, contactCards.length]);
   useEffect(() => {
     if (extraFields.length > 0) {
       const fields = extraFields.map(field => ({
