@@ -1061,7 +1061,6 @@ serve(async (req) => {
 
         // ✅ FASE 1.1: Removido bloco duplicado de MESSAGES_UPDATE
         // O processamento de ACKs agora é feito apenas no bloco principal (linhas 109-343)
-        let dbMessageId = processedData?.message_id || null;
 
         // Prepare N8N payload with ORIGINAL Evolution data structure + context
         const n8nPayload = {
@@ -1073,9 +1072,6 @@ serve(async (req) => {
           processed_data: processedData,
           timestamp: new Date().toISOString(),
           request_id: requestId,
-          
-          // Include message UUID from database if available (for N8N to anchor updates)
-          ...(dbMessageId && { message_id: dbMessageId }),
           
           // Event type identification for N8N processing (based on original event)
           event_type: (() => {
