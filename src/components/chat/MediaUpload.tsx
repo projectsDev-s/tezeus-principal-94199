@@ -8,6 +8,28 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Formatos permitidos por tipo de mídia
+const ALLOWED_FORMATS = {
+  image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  video: ['video/mp4', 'video/quicktime'], // .mp4 e .mov
+  audio: ['audio/mpeg', 'audio/wav', 'audio/webm'],
+  document: ['application/pdf', 'application/octet-stream']
+};
+
+// Nomes amigáveis para exibir ao usuário
+const FORMAT_NAMES: Record<string, string> = {
+  'video/mp4': 'MP4',
+  'video/quicktime': 'MOV',
+  'image/jpeg': 'JPG',
+  'image/png': 'PNG',
+  'image/gif': 'GIF',
+  'image/webp': 'WEBP',
+  'audio/mpeg': 'MP3',
+  'audio/wav': 'WAV',
+  'audio/webm': 'WebM (áudio)',
+  'application/pdf': 'PDF'
+};
+
 interface MediaUploadProps {
   onFileSelect: (file: File, type: 'image' | 'video' | 'audio' | 'document', fileUrl: string, caption?: string) => void;
   disabled?: boolean;
@@ -24,9 +46,42 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
   const [caption, setCaption] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const validateFileType = (file: File, mediaType: 'image' | 'video' | 'audio' | 'document'): boolean => {
+    const allowedTypes = ALLOWED_FORMATS[mediaType];
+    
+    if (!allowedTypes.includes(file.type)) {
+      // Obter lista de formatos permitidos em formato amigável
+      const allowedNames = allowedTypes
+        .map(type => FORMAT_NAMES[type] || type)
+        .join(', ');
+      
+      const mediaTypeLabel = mediaType === 'video' ? 'vídeo' : 
+                              mediaType === 'image' ? 'imagem' : 
+                              mediaType === 'audio' ? 'áudio' : 'documento';
+      
+      toast.error('Formato não suportado', {
+        description: `Formatos de ${mediaTypeLabel} permitidos: ${allowedNames}`,
+        duration: 5000
+      });
+      
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>, mediaType: 'image' | 'video' | 'audio' | 'document') => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // ✅ VALIDAR FORMATO ANTES DO UPLOAD
+    if (!validateFileType(file, mediaType)) {
+      // Resetar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return; // Parar aqui se formato não for válido
+    }
 
     console.log('📤 MediaUpload - Iniciando upload:', { 
       mediaType, 
@@ -147,7 +202,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,audio/mpeg,audio/wav,audio/webm,.pdf"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
