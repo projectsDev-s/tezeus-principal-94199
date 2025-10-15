@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy } from "lucide-react";
+import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -389,6 +389,34 @@ export function ContactSidePanel({
     }
     return 'other';
   };
+
+  const getFieldIcon = (fieldKey: string) => {
+    const key = fieldKey.toLowerCase();
+    
+    if (key.includes('email') || key.includes('e-mail')) {
+      return <Mail className="h-4 w-4" />;
+    }
+    if (key.includes('telefone') || key.includes('phone') || key.includes('celular')) {
+      return <Phone className="h-4 w-4" />;
+    }
+    if (key.includes('cep') || key.includes('zip')) {
+      return <MapPin className="h-4 w-4" />;
+    }
+    if (key.includes('endereço') || key.includes('address') || key.includes('rua')) {
+      return <Home className="h-4 w-4" />;
+    }
+    if (key.includes('perfil') || key.includes('tipo') || key.includes('categoria')) {
+      return <User className="h-4 w-4" />;
+    }
+    if (key.includes('país') || key.includes('country') || key.includes('estado')) {
+      return <Globe className="h-4 w-4" />;
+    }
+    if (key.includes('cpf') || key.includes('cnpj') || key.includes('documento')) {
+      return <FileText className="h-4 w-4" />;
+    }
+    
+    return <FileText className="h-4 w-4" />;
+  };
   if (!contact) return null;
   return <>
       <Sheet open={isOpen} onOpenChange={onClose}>
@@ -481,49 +509,101 @@ export function ContactSidePanel({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {/* Lista de campos existentes */}
-                      <div className="grid grid-cols-2 gap-3">
-                        {customFields.map((field, index) => <div key={index} className="space-y-1">
-                            {/* Título do campo - EDITÁVEL */}
-                            {editingFieldIndex === index && editingFieldType === 'key' ? <Input value={field.key} onChange={e => updateCustomField(index, 'key', e.target.value)} onBlur={async () => {
-                          setEditingFieldIndex(null);
-                          setEditingFieldType(null);
-                          await handleSaveCustomFields();
-                        }} autoFocus className="text-xs uppercase tracking-wide font-medium" /> : <Label onDoubleClick={() => {
-                          setEditingFieldIndex(index);
-                          setEditingFieldType('key');
-                        }} className="text-xs text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-blue-600 transition-colors" title="Clique duas vezes para editar">
-                                {field.key}
-                              </Label>}
-                            
-                            {/* Valor do campo - EDITÁVEL */}
-                            <div className="flex items-center gap-2">
-                              <Input value={field.value} onChange={e => updateCustomField(index, 'value', e.target.value)} onBlur={async () => {
-                            await handleSaveCustomFields();
-                          }} onDoubleClick={() => {
-                            setEditingFieldIndex(index);
-                            setEditingFieldType('value');
-                          }} className="text-sm font-medium flex-1" title="Edite e pressione Enter ou clique fora para salvar" />
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => handleRemoveCustomField(index)}>
-                                <Trash2 className="h-3 w-3" />
+                      {/* Lista de campos existentes - Cards compactos */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {customFields.map((field, index) => (
+                          <div 
+                            key={index} 
+                            className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all"
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Ícone dinâmico */}
+                              <div className="mt-0.5 text-muted-foreground">
+                                {getFieldIcon(field.key)}
+                              </div>
+                              
+                              <div className="flex-1 space-y-1 min-w-0">
+                                {/* Label do campo - NÃO editável */}
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide truncate">
+                                  {field.key}
+                                </p>
+                                
+                                {/* Valor editável com underline inline */}
+                                {editingFieldIndex === index && editingFieldType === 'value' ? (
+                                  <input
+                                    type="text"
+                                    value={field.value}
+                                    onChange={(e) => updateCustomField(index, 'value', e.target.value)}
+                                    onBlur={async () => {
+                                      setEditingFieldIndex(null);
+                                      setEditingFieldType(null);
+                                      await handleSaveCustomFields();
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    autoFocus
+                                    className="w-full text-sm font-medium bg-transparent border-none outline-none border-b-2 border-primary pb-0.5 focus:border-primary"
+                                  />
+                                ) : (
+                                  <p
+                                    onDoubleClick={() => {
+                                      setEditingFieldIndex(index);
+                                      setEditingFieldType('value');
+                                    }}
+                                    className="text-sm font-medium cursor-pointer hover:text-primary transition-colors truncate"
+                                    title={`${field.value} - Clique duas vezes para editar`}
+                                  >
+                                    {field.value || 'Clique para adicionar'}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {/* Botão delete - visível apenas no hover */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                onClick={() => handleRemoveCustomField(index)}
+                              >
+                                <Trash2 className="h-3 w-3 text-red-500" />
                               </Button>
                             </div>
-                          </div>)}
+                          </div>
+                        ))}
                       </div>
 
                       {/* Adicionar novo campo */}
                       <div className="border-t pt-3 space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <Input placeholder="Nome do campo" value={newCustomField.key} onChange={e => setNewCustomField(prev => ({
-                          ...prev,
-                          key: e.target.value
-                        }))} className="text-sm" />
-                          <Input placeholder="Valor" value={newCustomField.value} onChange={e => setNewCustomField(prev => ({
-                          ...prev,
-                          value: e.target.value
-                        }))} className="text-sm" />
+                          <Input 
+                            placeholder="Nome do campo" 
+                            value={newCustomField.key} 
+                            onChange={e => setNewCustomField(prev => ({
+                              ...prev,
+                              key: e.target.value
+                            }))} 
+                            className="text-sm h-9" 
+                          />
+                          <Input 
+                            placeholder="Valor" 
+                            value={newCustomField.value} 
+                            onChange={e => setNewCustomField(prev => ({
+                              ...prev,
+                              value: e.target.value
+                            }))} 
+                            className="text-sm h-9" 
+                          />
                         </div>
-                        <Button variant="outline" size="sm" className="w-full" onClick={handleAddCustomField} disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full" 
+                          onClick={handleAddCustomField} 
+                          disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}
+                        >
                           <Plus className="h-3 w-3 mr-1" /> Adicionar campo
                         </Button>
                       </div>
