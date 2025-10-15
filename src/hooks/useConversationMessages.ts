@@ -226,11 +226,20 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, toast, getHeaders]);
 
   const addMessage = useCallback((message: WhatsAppMessage) => {
-    // ✅ DEDUP: Verificar se já processamos essa mensagem
-    const dedupKey = (message as any).evolution_key_id || (message as any).evolution_short_key_id || message.external_id || message.id;
+    console.log('📨 [addMessage] Tentando adicionar mensagem:', {
+      id: message.id,
+      sender_type: message.sender_type,
+      conversation_id: message.conversation_id,
+      evolution_key_id: (message as any).evolution_key_id,
+      evolution_short_key_id: (message as any).evolution_short_key_id,
+      external_id: message.external_id
+    });
+    
+    // ✅ DEDUP: Usar conversation_id + message_id como chave única
+    const dedupKey = `${message.conversation_id}_${message.id}`;
     
     if (seenRef.current.has(dedupKey)) {
-      console.log(`⏭️ Mensagem duplicada ignorada: ${dedupKey}`);
+      console.log(`⏭️ Mensagem duplicada ignorada (conversation+id): ${dedupKey}`);
       return;
     }
     
@@ -240,20 +249,21 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     setTimeout(() => seenRef.current.delete(dedupKey), 30000);
     
     setMessages(prevMessages => {
-      // Verificar se já existe por ID, external_id ou evolution_key_id
-      const exists = prevMessages.some(m => 
-        m.id === message.id || 
-        (message.external_id && m.external_id === message.external_id) ||
-        ((message as any).evolution_key_id && (m as any).evolution_key_id === (message as any).evolution_key_id) ||
-        ((message as any).evolution_short_key_id && (m as any).evolution_short_key_id === (message as any).evolution_short_key_id)
-      );
+      // Verificar se já existe apenas por ID (mais simples e confiável)
+      const exists = prevMessages.some(m => m.id === message.id);
       
       if (exists) {
-        console.log(`⚠️ Mensagem já existe: ${message.id}`);
+        console.log(`⚠️ [addMessage] Mensagem já existe no state: ${message.id}`);
         return prevMessages;
       }
 
-      console.log('📨 Adicionando nova mensagem:', message.id);
+      console.log('✅ [addMessage] Mensagem nova, adicionando ao state:', {
+        id: message.id,
+        sender_type: message.sender_type,
+        content_preview: message.content?.substring(0, 30),
+        total_messages_after: prevMessages.length + 1
+      });
+      
       // Adicionar no final (mensagem mais recente) e ordenar por created_at
       return [...prevMessages, message].sort((a, b) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -350,16 +360,28 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const newMessage = payload.new as WhatsAppMessage;
           
+          console.log('📨 [INSERT] Nova mensagem recebida via Realtime:', {
+            id: newMessage.id,
+            sender_type: newMessage.sender_type,
+            workspace_id: newMessage.workspace_id,
+            current_workspace: selectedWorkspace.workspace_id,
+            conversation_id: newMessage.conversation_id,
+            content_preview: newMessage.content?.substring(0, 30)
+          });
+          
           // ✅ IGNORAR mensagens de agente no INSERT
           // Elas serão adicionadas via UPDATE quando status = 'sent'
           if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ Ignorando INSERT de mensagem agent (será adicionada via UPDATE):', newMessage.id);
+            console.log('⏭️ [INSERT] Ignorando mensagem de agent (será adicionada via UPDATE)');
             return;
           }
           
           // Verificar se é do workspace atual
           if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
+            console.log('✅ [INSERT] Workspace correto, chamando addMessage...');
             addMessage(newMessage);
+          } else {
+            console.log('❌ [INSERT] Workspace diferente, ignorando mensagem');
           }
         }
       )

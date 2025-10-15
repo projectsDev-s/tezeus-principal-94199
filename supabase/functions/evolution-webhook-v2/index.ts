@@ -1077,19 +1077,6 @@ serve(async (req) => {
           // Include message UUID from database if available (for N8N to anchor updates)
           ...(dbMessageId && { message_id: dbMessageId }),
           
-          // Include full message data if this is a status update event
-          ...(fullMessageData && {
-            message_data: {
-              id: fullMessageData.id,
-              content: fullMessageData.content,
-              message_type: fullMessageData.message_type,
-              status: fullMessageData.status,
-              conversation_id: fullMessageData.conversation_id,
-              contact_name: fullMessageData.conversation?.contact?.name,
-              contact_phone: fullMessageData.conversation?.contact?.phone
-            }
-          }),
-          
           // Event type identification for N8N processing (based on original event)
           event_type: (() => {
             const eventLower = payload.event?.toLowerCase() || '';
