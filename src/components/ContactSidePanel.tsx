@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { usePipelines } from "@/hooks/usePipelines";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { usePipelineCards } from "@/hooks/usePipelineCards";
@@ -543,23 +543,61 @@ export function ContactSidePanel({
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      {deals.length > 0 ? deals.map(deal => <div key={deal.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                            <Avatar className="h-10 w-10">
-                              {editingContact?.profile_image_url && <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />}
-                              <AvatarFallback className="text-white font-medium" style={{
-                          backgroundColor: getAvatarColor(editingContact?.name || '')
-                        }}>
-                                {getInitials(editingContact?.name || '')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{deal.pipeline} - {deal.column_name}</p>
-                              <p className="text-xs text-muted-foreground">{formatCurrency(deal.value)}</p>
+                    <CardContent>
+                      {deals.length > 0 ? (
+                        <div className="relative">
+                          <ScrollArea className="w-full">
+                            <div className="flex gap-3 pb-2">
+                              {deals.map(deal => (
+                                <div 
+                                  key={deal.id} 
+                                  className="flex-shrink-0 w-[200px] p-4 bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                                >
+                                  <div className="space-y-2">
+                                    {/* Pipeline - Título Principal */}
+                                    <div className="flex items-center gap-2">
+                                      <Briefcase className="h-4 w-4 text-primary flex-shrink-0" />
+                                      <h4 className="font-semibold text-sm truncate" title={deal.pipeline}>
+                                        {deal.pipeline}
+                                      </h4>
+                                    </div>
+
+                                    {/* Coluna - Subtítulo */}
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="h-2 w-2 rounded-full bg-primary/60" />
+                                      <p className="text-xs text-muted-foreground truncate" title={deal.column_name}>
+                                        {deal.column_name}
+                                      </p>
+                                    </div>
+
+                                    {/* Valor - Destaque Monetário */}
+                                    <div className="pt-1 border-t border-border/30">
+                                      <p className="text-sm font-medium text-primary/90">
+                                        {formatCurrency(deal.value)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          </div>) : <p className="text-sm text-muted-foreground text-center py-2">
-                          Nenhum negócio vinculado
-                        </p>}
+                            <ScrollBar orientation="horizontal" className="h-1.5" />
+                          </ScrollArea>
+                          
+                          {/* Indicador visual de scroll */}
+                          {deals.length > 3 && (
+                            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-center space-y-2">
+                            <Briefcase className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                            <p className="text-sm text-muted-foreground">
+                              Nenhum negócio vinculado
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
