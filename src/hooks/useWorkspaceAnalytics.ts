@@ -43,7 +43,7 @@ export const useWorkspaceAnalytics = () => {
       const workspaceId = selectedWorkspace.workspace_id;
       const isUser = userRole === 'user';
 
-      // ETAPA 2: Queries paralelas - Primeira rodada (conversations + pipelines)
+      // ETAPA 2: Buscar conversas e pipelines
       let conversationQuery = supabase
         .from('conversations')
         .select('id, status, created_at')
@@ -53,31 +53,32 @@ export const useWorkspaceAnalytics = () => {
         conversationQuery = conversationQuery.eq('assigned_user_id', user.id);
       }
 
-      const [
-        { data: conversations, error: conversationsError },
-        { data: pipelines, error: pipelinesError }
-      ] = await Promise.all([
-        conversationQuery,
-        supabase
-          .from('pipelines')
-          .select('id')
-          .eq('workspace_id', workspaceId)
-      ]);
+      const { data: conversations, error: conversationsError } = await conversationQuery;
       
       if (conversationsError) {
         console.error('❌ Analytics: Conversations error', conversationsError);
         throw conversationsError;
       }
 
+      const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
+      const totalConversations = conversations?.length || 0;
+
+      console.log('✅ Analytics: Conversations loaded', { activeConversations, totalConversations });
+
+      // Buscar pipelines via edge function (RLS-safe)
+      const { data: pipelinesResponse, error: pipelinesError } = await supabase.functions.invoke(
+        'pipeline-management/pipelines'
+      );
+
       if (pipelinesError) {
         console.error('❌ Analytics: Pipelines error', pipelinesError);
         throw pipelinesError;
       }
 
-      const activeConversations = conversations?.filter(c => c.status === 'open').length || 0;
-      const totalConversations = conversations?.length || 0;
-
-      const pipelineIds = pipelines?.map(p => p.id) || [];
+      const pipelines = pipelinesResponse || [];
+      const pipelineIds = pipelines.map((p: any) => p.id);
+      
+      console.log('✅ Analytics: Pipelines loaded', { count: pipelines.length, pipelineIds });
 
       if (pipelineIds.length === 0) {
         setAnalytics({
@@ -94,43 +95,48 @@ export const useWorkspaceAnalytics = () => {
         return;
       }
 
-      // ETAPA 3: Query otimizada com JOIN (cards + columns em uma query)
-      let cardsQuery = supabase
-        .from('pipeline_cards')
-        .select(`
-          id,
-          column_id,
-          value,
-          created_at,
-          updated_at,
-          pipeline_columns!inner(
-            id,
-            name,
-            pipeline_id
-          )
-        `)
-        .in('pipeline_columns.pipeline_id', pipelineIds);
-
-      if (isUser) {
-        cardsQuery = cardsQuery.eq('responsible_user_id', user.id);
-      }
-
-      const { data: cardsWithColumns, error: cardsError } = await cardsQuery;
+      // ETAPA 3: Buscar cards via edge function para cada pipeline
+      let allCards: any[] = [];
       
-      if (cardsError) {
-        console.error('❌ Analytics: Cards error', cardsError);
-        throw cardsError;
+      for (const pipelineId of pipelineIds) {
+        const { data: cardsData, error: cardsError } = await supabase.functions.invoke(
+          `pipeline-management/cards?pipeline_id=${pipelineId}`
+        );
+
+        if (cardsError) {
+          console.error(`❌ Analytics: Cards error for pipeline ${pipelineId}`, cardsError);
+          continue; // Pula este pipeline mas continua com os outros
+        }
+
+        if (cardsData && Array.isArray(cardsData)) {
+          allCards = [...allCards, ...cardsData];
+        }
       }
 
-      // Processar cards com dados da coluna já embutidos
+      console.log('✅ Analytics: Cards loaded', { totalCards: allCards.length });
+
+      // Processar cards - buscar informações das colunas
       let completedDealsCount = 0;
       let lostDealsCount = 0;
       let dealsInProgressCount = 0;
 
-      cardsWithColumns?.forEach(card => {
-        const columnName = (card.pipeline_columns as any)?.name?.toLowerCase() || '';
+      // Buscar todas as colunas dos pipelines
+      const columnsMap = new Map();
+      for (const pipelineId of pipelineIds) {
+        const { data: columnsData } = await supabase.functions.invoke(
+          `pipeline-management/columns?pipeline_id=${pipelineId}`
+        );
         
-        if (columnName.includes('concluído') || columnName.includes('ganho') || columnName.includes('fechado')) {
+        if (columnsData && Array.isArray(columnsData)) {
+          columnsData.forEach((col: any) => columnsMap.set(col.id, col));
+        }
+      }
+
+      allCards.forEach(card => {
+        const column = columnsMap.get(card.column_id);
+        const columnName = column?.name?.toLowerCase() || '';
+        
+        if (columnName.includes('concluído') || columnName.includes('ganho') || columnName.includes('fechado') || columnName.includes('comprou')) {
           completedDealsCount++;
         } else if (columnName.includes('perdido') || columnName.includes('cancelado') || columnName.includes('recusado')) {
           lostDealsCount++;
@@ -161,17 +167,19 @@ export const useWorkspaceAnalytics = () => {
 
       // Deal trends
       const dealTrends = last7Days.map(date => {
-        const dayCards = cardsWithColumns?.filter(card => 
+        const dayCards = allCards.filter(card => 
           card.updated_at?.startsWith(date)
-        ) || [];
+        );
 
         const completed = dayCards.filter(card => {
-          const columnName = (card.pipeline_columns as any)?.name?.toLowerCase() || '';
-          return columnName.includes('concluído') || columnName.includes('ganho');
+          const column = columnsMap.get(card.column_id);
+          const columnName = column?.name?.toLowerCase() || '';
+          return columnName.includes('concluído') || columnName.includes('ganho') || columnName.includes('comprou');
         }).length;
 
         const lost = dayCards.filter(card => {
-          const columnName = (card.pipeline_columns as any)?.name?.toLowerCase() || '';
+          const column = columnsMap.get(card.column_id);
+          const columnName = column?.name?.toLowerCase() || '';
           return columnName.includes('perdido') || columnName.includes('cancelado');
         }).length;
 
