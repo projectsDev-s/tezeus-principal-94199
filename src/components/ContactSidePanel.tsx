@@ -537,7 +537,7 @@ export function ContactSidePanel({
                         <Trophy className="h-5 w-5 text-green-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.closedDeals}</p>
-                      <p className="text-xs text-gray-500 font-medium">Negócios Fechados</p>
+                      <p className="text-xs text-gray-500 font-medium text-center">Negócios Fechados</p>
                     </div>
                   </div>
                 </div>
