@@ -21,6 +21,7 @@ import { useWorkspaceLimits } from '@/hooks/useWorkspaceLimits';
 import { useWorkspaceRole } from '@/hooks/useWorkspaceRole';
 import { usePipelinesContext } from '@/contexts/PipelinesContext';
 import { useNavigate } from 'react-router-dom';
+import { useQueues } from '@/hooks/useQueues';
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -59,6 +60,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { usage, refreshLimits } = useWorkspaceLimits(workspaceId);
   const { canCreateConnections } = useWorkspaceRole();
   const navigate = useNavigate();
+  const { queues } = useQueues();
 
   // Função para carregar pipelines do workspace específico
   const loadWorkspacePipelines = async () => {
@@ -131,6 +133,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [createCrmCard, setCreateCrmCard] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<string>('');
+  const [selectedQueueId, setSelectedQueueId] = useState<string>('');
 
   // Load connections on component mount
   useEffect(() => {
@@ -238,6 +241,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         workspaceId,
         autoCreateCrmCard: createCrmCard,
         defaultPipelineId: selectedPipeline || undefined,
+        queueId: selectedQueueId || undefined,
         phoneNumber: phoneNumber?.trim() || undefined,
         metadata: {
           border_color: connectionColor
@@ -369,6 +373,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setHistoryRecovery('none');
     setCreateCrmCard(false);
     setSelectedPipeline('');
+    setSelectedQueueId('');
     setIsEditMode(false);
     setEditingConnection(null);
     setIsCreateModalOpen(false);
@@ -887,6 +892,28 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                       <SelectItem value="quarter">Três meses</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="queue" className="text-sm font-medium text-foreground">
+                    Fila (Opcional)
+                  </Label>
+                  <Select value={selectedQueueId} onValueChange={setSelectedQueueId}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Selecione uma fila" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nenhuma fila</SelectItem>
+                      {queues.map((queue) => (
+                        <SelectItem key={queue.id} value={queue.id}>
+                          {queue.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    As novas conversas seguirão as regras da fila selecionada
+                  </p>
                 </div>
               </div>
 

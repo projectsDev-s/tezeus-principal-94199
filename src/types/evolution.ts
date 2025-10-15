@@ -33,6 +33,7 @@ export interface CreateConnectionRequest {
   workspaceId: string;
   autoCreateCrmCard?: boolean;
   defaultPipelineId?: string;
+  queueId?: string;
   phoneNumber?: string;
 }
 

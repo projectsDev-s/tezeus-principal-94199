@@ -383,6 +383,7 @@ export type Database = {
           metadata: Json | null
           phone_number: string | null
           qr_code: string | null
+          queue_id: string | null
           status: string
           updated_at: string | null
           use_workspace_default: boolean | null
@@ -405,6 +406,7 @@ export type Database = {
           metadata?: Json | null
           phone_number?: string | null
           qr_code?: string | null
+          queue_id?: string | null
           status?: string
           updated_at?: string | null
           use_workspace_default?: boolean | null
@@ -427,6 +429,7 @@ export type Database = {
           metadata?: Json | null
           phone_number?: string | null
           qr_code?: string | null
+          queue_id?: string | null
           status?: string
           updated_at?: string | null
           use_workspace_default?: boolean | null
@@ -438,6 +441,13 @@ export type Database = {
             columns: ["default_pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
             referencedColumns: ["id"]
           },
           {

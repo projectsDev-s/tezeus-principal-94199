@@ -281,6 +281,7 @@ serve(async (req) => {
         phone_number: phoneNumber || null,
         auto_create_crm_card: autoCreateCrmCard || false,
         default_pipeline_id: defaultPipelineId || null,
+        queue_id: requestBody.queueId || null,
       })
       .select()
       .single();
