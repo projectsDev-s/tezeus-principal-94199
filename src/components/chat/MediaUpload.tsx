@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Paperclip, Image, FileText, Music, Video, Upload, X, Check } from 'lucide-react';
+import { Paperclip, Image, FileText, Music, Video, Upload, X, Check, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -316,7 +316,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
                 >
                   {uploading ? (
                     <>
-                      <Upload className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Enviando...
                     </>
                   ) : (
@@ -336,7 +336,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
       {uploading && (
         <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-background p-6 rounded-lg flex items-center gap-3">
-            <Upload className="h-6 w-6 animate-spin" />
+            <Loader2 className="h-6 w-6 animate-spin" />
             <span>Enviando arquivo...</span>
           </div>
         </div>
