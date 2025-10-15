@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
-import contactBackground from "@/assets/contact-background.png";
-import { X, Upload, FileText, Paperclip, Pencil, Trash2, Star, Plus, Pin } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { usePipelines } from "@/hooks/usePipelines";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { usePipelineCards } from "@/hooks/usePipelineCards";
@@ -24,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+
 interface Contact {
   id: string;
   name: string;
@@ -32,6 +28,7 @@ interface Contact {
   profile_image_url?: string;
   extra_info?: Record<string, any>;
 }
+
 interface Deal {
   id: string;
   title: string;
@@ -41,13 +38,7 @@ interface Deal {
   pipeline: string;
   column_name: string;
 }
-interface Observation {
-  id: string;
-  content: string;
-  created_at: string;
-  attachment_url?: string;
-  attachment_name?: string;
-}
+
 interface ContactSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -55,17 +46,16 @@ interface ContactSidePanelProps {
   onContactUpdated?: () => void;
 }
 
-// Função auxiliar para obter iniciais
 const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 };
 
-// Função auxiliar para cor do avatar
 const getAvatarColor = (name: string) => {
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
   const hash = name.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
   return colors[hash % colors.length];
 };
+
 export function ContactSidePanel({
   isOpen,
   onClose,
@@ -73,17 +63,9 @@ export function ContactSidePanel({
   onContactUpdated
 }: ContactSidePanelProps) {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [customFields, setCustomFields] = useState<Array<{
-    key: string;
-    value: string;
-  }>>([]);
-  const [newCustomField, setNewCustomField] = useState({
-    key: '',
-    value: ''
-  });
-  const [pinnedFields, setPinnedFields] = useState<string[]>([]);
+  const [customFields, setCustomFields] = useState<Array<{ key: string; value: string }>>([]);
+  const [newCustomField, setNewCustomField] = useState({ key: '', value: '' });
   const [newObservation, setNewObservation] = useState('');
-  const [selectedCardId, setSelectedCardId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
   const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
@@ -93,59 +75,15 @@ export function ContactSidePanel({
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // Hook para buscar pipelines reais
-  const {
-    pipelines,
-    isLoading: pipelinesLoading
-  } = usePipelines();
+  const { pipelines } = usePipelines();
+  const { columns, fetchColumns } = usePipelineColumns(null);
+  const { cards: contactCards, currentPipeline, transferToPipeline, isLoading: cardsLoading } = useContactPipelineCards(contact?.id || null);
+  const { createCard } = usePipelineCards(null);
+  const { toast } = useToast();
+  const { selectedWorkspace } = useWorkspace();
+  const { observations: realObservations, addObservation, updateObservation, deleteObservation, downloadFile, getFileIcon, isUploading } = useContactObservations(contact?.id || "");
+  const { fields: extraFields, saveFields: saveExtraFields } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
 
-  // Hook para buscar colunas do pipeline selecionado
-  const {
-    columns,
-    fetchColumns
-  } = usePipelineColumns(null);
-
-  // Hook para buscar cards do contato
-  const {
-    cards: contactCards,
-    currentPipeline,
-    transferToPipeline,
-    isLoading: cardsLoading
-  } = useContactPipelineCards(contact?.id || null);
-
-  // Hook para criar cards
-  const {
-    createCard
-  } = usePipelineCards(null);
-
-  // Hook para toast
-  const {
-    toast
-  } = useToast();
-
-  // Hook para workspace
-  const {
-    selectedWorkspace
-  } = useWorkspace();
-
-  // Hook para observações
-  const {
-    observations: realObservations,
-    addObservation,
-    updateObservation,
-    deleteObservation,
-    downloadFile,
-    getFileIcon,
-    isUploading
-  } = useContactObservations(contact?.id || "");
-
-  // 🆕 Hook para informações extras do contato
-  const {
-    fields: extraFields,
-    saveFields: saveExtraFields
-  } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
-
-  // Dados mockados de deals baseados nos cards do contato
   const deals: Deal[] = contactCards.map(card => ({
     id: card.id,
     title: card.title,
@@ -155,7 +93,7 @@ export function ContactSidePanel({
     pipeline: card.pipeline_name,
     column_name: card.column_name
   }));
-  // Recarregar dados frescos do banco ao abrir o painel
+
   useEffect(() => {
     if (isOpen && contact?.id) {
       const loadFreshData = async () => {
@@ -167,24 +105,19 @@ export function ContactSidePanel({
             .single();
 
           if (error) throw error;
-
           if (data) {
-            console.log('✅ Dados frescos carregados:', data);
             setEditingContact(data as Contact);
           }
         } catch (error) {
           console.error('❌ Erro ao recarregar dados do contato:', error);
         }
       };
-
       loadFreshData();
     }
   }, [isOpen, contact?.id]);
 
-  // 🆕 useEffect separado para converter extraFields em customFields
   useEffect(() => {
     if (extraFields.length > 0) {
-      console.log('📋 Convertendo extraFields para customFields:', extraFields);
       const fields = extraFields.map(field => ({
         key: field.field_name,
         value: field.field_value
@@ -194,89 +127,53 @@ export function ContactSidePanel({
       setCustomFields([]);
     }
   }, [extraFields]);
-  const handleSaveContact = async () => {
-    console.log('🚀 handleSaveContact CHAMADA!');
-    if (!editingContact) {
-      console.log('⚠️ editingContact é null/undefined');
-      return;
-    }
-    console.log('🔍 Estado editingContact antes de salvar:', editingContact);
-    try {
-      const {
-        supabase
-      } = await import('@/integrations/supabase/client');
 
-      // 1️⃣ Salvar dados básicos do contato
+  const handleSaveContact = async () => {
+    if (!editingContact) return;
+    
+    try {
       const updateData = {
         name: editingContact.name?.trim() || '',
         email: editingContact.email?.trim() || ''
-        // phone removido - não pode ser alterado para preservar histórico
       };
-      console.log('📤 Salvando dados básicos:', updateData);
-      const {
-        data: updatedData,
-        error: updateError
-      } = await supabase.from('contacts').update(updateData).eq('id', editingContact.id).select().single();
-      if (updateError) {
-        console.error('❌ Erro ao atualizar contato:', updateError);
-        toast({
-          title: "Erro",
-          description: "Erro ao salvar dados do contato",
-          variant: "destructive"
-        });
-        throw updateError;
-      }
-      console.log('✅ Dados básicos salvos:', updatedData);
 
-      // 2️⃣ Salvar informações extras usando a nova tabela
+      const { data: updatedData, error: updateError } = await supabase
+        .from('contacts')
+        .update(updateData)
+        .eq('id', editingContact.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
       const fieldsToSave = customFields.map(f => ({
         field_name: f.key,
         field_value: f.value
       }));
-      console.log('📤 Salvando informações extras:', fieldsToSave);
+
       const saveSuccess = await saveExtraFields(fieldsToSave);
-      if (!saveSuccess) {
-        toast({
-          title: "Aviso",
-          description: "Dados do contato salvos, mas houve erro ao salvar informações adicionais"
-        });
-      } else {
+      
+      if (saveSuccess) {
         toast({
           title: "Sucesso",
-          description: "Todos os dados salvos com sucesso!"
+          description: "Dados salvos com sucesso!"
         });
       }
 
-      // Atualizar estado local
       if (updatedData) {
         setEditingContact(updatedData as Contact);
-        
-        // Notificar componente pai para recarregar lista
         if (onContactUpdated) {
           onContactUpdated();
         }
       }
     } catch (error) {
-      console.error('❌ Erro geral ao salvar contato:', error);
+      console.error('❌ Erro ao salvar contato:', error);
       toast({
         title: "Erro",
         description: "Erro ao salvar alterações",
         variant: "destructive"
       });
     }
-  };
-  const handlePinField = () => {
-    if (!newCustomField.key.trim()) return;
-    setPinnedFields(prev => [...prev, newCustomField.key.trim()]);
-    setNewCustomField({ key: '', value: '' });
-    toast({
-      title: "Campo fixado",
-      description: "Agora você pode preencher o valor quando precisar"
-    });
-  };
-
-  const removePinnedField = (index: number) => {
-    setPinnedFields(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddCustomField = () => {
@@ -289,7 +186,6 @@ export function ContactSidePanel({
       return;
     }
 
-    // Verificar se o campo já existe
     const fieldExists = customFields.some(field => field.key.toLowerCase() === newCustomField.key.trim().toLowerCase());
     if (fieldExists) {
       toast({
@@ -299,22 +195,24 @@ export function ContactSidePanel({
       });
       return;
     }
+
     setCustomFields([...customFields, {
       key: newCustomField.key.trim(),
       value: newCustomField.value.trim()
     }]);
-    setNewCustomField({
-      key: '',
-      value: ''
-    });
-    toast({
-      title: "Sucesso",
-      description: "Campo adicionado com sucesso!"
-    });
+    setNewCustomField({ key: '', value: '' });
   };
+
   const handleRemoveCustomField = (index: number) => {
     setCustomFields(customFields.filter((_, i) => i !== index));
   };
+
+  const updateCustomField = (index: number, key: string, value: string) => {
+    setCustomFields(customFields.map((field, i) => 
+      i === index ? { ...field, [key]: value } : field
+    ));
+  };
+
   const handleAddObservation = async () => {
     if (!newObservation.trim()) return;
     const success = await addObservation(newObservation, selectedFile || undefined);
@@ -326,10 +224,10 @@ export function ContactSidePanel({
       }
     }
   };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "Erro",
@@ -341,13 +239,12 @@ export function ContactSidePanel({
       setSelectedFile(file);
     }
   };
-  const triggerFileSelect = () => {
-    fileInputRef?.click();
-  };
+
   const handleEditObservation = (obs: ContactObservation) => {
     setEditingObservationId(obs.id);
     setEditingContent(obs.content);
   };
+
   const handleSaveEdit = async () => {
     if (!editingObservationId) return;
     const success = await updateObservation(editingObservationId, editingContent);
@@ -356,21 +253,25 @@ export function ContactSidePanel({
       setEditingContent('');
     }
   };
+
   const handleCancelEdit = () => {
     setEditingObservationId(null);
     setEditingContent('');
   };
+
   const handleConfirmDelete = async () => {
     if (!deletingObservationId) return;
     await deleteObservation(deletingObservationId);
     setDeletingObservationId(null);
   };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -380,30 +281,21 @@ export function ContactSidePanel({
       minute: '2-digit'
     });
   };
+
   if (!contact) return null;
-  return <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-[500px] sm:w-[540px] p-0">
-        <div className="flex flex-col h-full">
-          {/* Cabeçalho removido - card ocupa todo espaço */}
 
-          <ScrollArea className="flex-1">
-            <div className="space-y-6">
-              {/* Seção: Negócios - Movido para o topo */}
-              {deals.length > 0}
-
-              {/* Seção: Dados do contato */}
-            <Card className="border-0 shadow-none rounded-none overflow-hidden">
-              <CardContent className="p-0">
-    {/* Banner Header com todas informações dentro */}
-    <div className="relative h-48 bg-cover bg-center" 
-         style={{ backgroundImage: `url(${contactBackground})` }}>
-                  {/* Overlay para legibilidade */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/50" />
-                  
-                  {/* Conteúdo sobre o banner */}
-                  <div className="relative z-10 flex flex-col items-center pt-4">
-                    {/* Avatar */}
-                    <Avatar className="h-20 w-20 border-2 border-white shadow-lg">
+  return (
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-[500px] sm:w-[540px] p-0">
+          <div className="flex flex-col h-full">
+            <ScrollArea className="flex-1">
+              <div className="space-y-0">
+                {/* ===== HEADER: Topo com gradiente pastel ===== */}
+                <div className="relative bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-8 pt-6">
+                  <div className="flex flex-col items-center">
+                    {/* Avatar grande com borda e sombra */}
+                    <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
                       {editingContact?.profile_image_url && (
                         <AvatarImage 
                           src={editingContact.profile_image_url} 
@@ -412,7 +304,7 @@ export function ContactSidePanel({
                         />
                       )}
                       <AvatarFallback 
-                        className="text-lg font-semibold"
+                        className="text-2xl font-semibold"
                         style={{ 
                           backgroundColor: getAvatarColor(editingContact?.name || 'Contato')
                         }}
@@ -421,17 +313,38 @@ export function ContactSidePanel({
                       </AvatarFallback>
                     </Avatar>
                     
-        {/* Nome */}
-        <h2 className="text-white text-lg font-semibold drop-shadow-lg mt-2">
-          {editingContact?.name || 'Nome do contato'}
-        </h2>
-        
-        {/* Telefone */}
-        <p className="text-white/80 text-sm drop-shadow-md mt-0.5">
-          {editingContact?.phone || 'Sem telefone'}
-        </p>
+                    {/* Nome - editável ao duplo clique */}
+                    {isEditingName ? (
+                      <Input 
+                        type="text"
+                        value={editingContact?.name || ''} 
+                        onChange={(e) => setEditingContact(prev => prev ? {
+                          ...prev,
+                          name: e.target.value
+                        } : null)}
+                        onBlur={async () => {
+                          setIsEditingName(false);
+                          await handleSaveContact();
+                        }}
+                        autoFocus
+                        className="text-xl font-bold text-center border rounded px-3 py-1 mt-3 max-w-xs bg-white shadow-sm"
+                      />
+                    ) : (
+                      <h2
+                        onDoubleClick={() => setIsEditingName(true)}
+                        className="text-xl font-bold text-gray-900 mt-3 cursor-pointer hover:text-gray-700 transition-colors"
+                        title="Clique duas vezes para editar"
+                      >
+                        {editingContact?.name || 'Nome do contato'}
+                      </h2>
+                    )}
                     
-                    {/* Email editável */}
+                    {/* Telefone - somente leitura */}
+                    <p className="text-sm text-gray-600 mt-1">
+                      {editingContact?.phone || 'Sem telefone'}
+                    </p>
+                    
+                    {/* Email - editável ao duplo clique */}
                     {isEditingEmail ? (
                       <Input 
                         type="email"
@@ -445,12 +358,12 @@ export function ContactSidePanel({
                           await handleSaveContact();
                         }}
                         autoFocus
-                        className="text-sm text-center border rounded px-2 py-1 max-w-xs bg-white/90 mt-0.5"
+                        className="text-sm text-center border rounded px-3 py-1 mt-1 max-w-xs bg-white shadow-sm"
                       />
                     ) : (
                       <p
                         onDoubleClick={() => setIsEditingEmail(true)}
-                        className="text-white/90 text-sm drop-shadow-md cursor-pointer hover:underline mt-0.5"
+                        className="text-sm text-blue-600 mt-1 cursor-pointer hover:underline transition-colors"
                         title="Clique duas vezes para editar"
                       >
                         {editingContact?.email || 'Adicionar email'}
@@ -459,231 +372,259 @@ export function ContactSidePanel({
                   </div>
                 </div>
 
-                  {/* Informações adicionais integradas */}
-                  <div className="space-y-3 pt-2 px-6">
-                    <h4 className="text-sm font-semibold">Informações adicionais</h4>
-                    
-                    {/* Lista de campos fixados (só nome, sem valor) */}
-                    {pinnedFields.map((fieldName, index) => (
-                      <div key={`pinned-${index}`} className="flex gap-2 items-center">
-                        <Pin className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                        <Input 
-                          value={fieldName} 
-                          readOnly
-                          className="flex-1 font-medium bg-muted text-sm"
-                        />
-                        <Input 
-                          placeholder="Preencher valor..." 
-                          className="flex-1 text-sm"
-                        />
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removePinnedField(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    {/* Lista de campos completos (nome + valor) */}
-                    {customFields.map((field, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <Pin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <Input 
-                          value={field.key} 
-                          readOnly 
-                          className="flex-1 text-sm font-medium border-0 bg-transparent px-0"
-                        />
-                        <Input 
-                          value={field.value} 
-                          readOnly 
-                          className="flex-1 text-sm border-0 bg-transparent px-0"
-                        />
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveCustomField(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    {/* Inputs para adicionar novo campo */}
-                    <div className="flex gap-2 items-center pt-2 border-t">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={handlePinField}
-                        disabled={!newCustomField.key.trim()}
-                        className="text-yellow-500 hover:text-yellow-600 h-8 w-8"
-                        title="Fixar apenas o nome do campo"
-                      >
-                        <Pin className="h-4 w-4" />
-                      </Button>
-                      <Input 
-                        placeholder="Nome do campo" 
-                        value={newCustomField.key}
-                        onChange={e => setNewCustomField(prev => ({...prev, key: e.target.value}))}
-                        className="flex-1 text-sm"
-                      />
-                      <Input 
-                        placeholder="Valor" 
-                        value={newCustomField.value}
-                        onChange={e => setNewCustomField(prev => ({...prev, value: e.target.value}))}
-                        className="flex-1 text-sm"
-                      />
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={handleAddCustomField}
-                        disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}
-                        className="text-green-600 hover:text-green-700 h-8 w-8"
-                        title="Adicionar campo completo"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Lista de Negócios */}
-                  {deals.length > 0 ? <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Negócios</Label>
-                        <Button size="sm" variant="outline" onClick={() => setIsCreateDealModalOpen(true)}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Novo negócio
-                        </Button>
-                      </div>
-
-                      {/* Lista de todos os negócios */}
-                      <div className="space-y-3">
-                        {deals.map(deal => (
-                          <div key={deal.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                            {/* Avatar do cliente */}
-                            <Avatar className="h-10 w-10 flex-shrink-0">
-                              <AvatarImage src={editingContact?.profile_image_url} alt={editingContact?.name} className="object-cover" />
-                              <AvatarFallback className="text-white font-medium" style={{
-                                backgroundColor: getAvatarColor(editingContact?.name || '')
-                              }}>
-                                {getInitials(editingContact?.name || '')}
-                              </AvatarFallback>
-                            </Avatar>
-                            
-                            {/* Informações do negócio */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">
-                                {deal.pipeline} - {deal.column_name}
-                              </p>
-                              <p className="text-sm font-semibold text-primary">
-                                {formatCurrency(deal.value)}
-                              </p>
+                {/* ===== CORPO: Blocos organizados ===== */}
+                <div className="p-4 space-y-4">
+                  {/* BLOCO 1: Informações Adicionais */}
+                  <Card className="border rounded-xl shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-500" />
+                        Informações Adicionais
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {/* Lista de campos existentes */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {customFields.map((field, index) => (
+                          <div key={index} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                              {field.key}
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={field.value}
+                                onChange={(e) => updateCustomField(index, 'value', e.target.value)}
+                                className="text-sm font-medium flex-1"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-700"
+                                onClick={() => handleRemoveCustomField(index)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                           </div>
                         ))}
                       </div>
-                    </div> : <div className="space-y-2">
-                      <Label htmlFor="pipeline" className="text-sm font-medium">Pipeline</Label>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                          Nenhum pipeline vinculado
+
+                      {/* Adicionar novo campo */}
+                      <div className="border-t pt-3 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Nome do campo"
+                            value={newCustomField.key}
+                            onChange={e => setNewCustomField(prev => ({ ...prev, key: e.target.value }))}
+                            className="text-sm"
+                          />
+                          <Input
+                            placeholder="Valor"
+                            value={newCustomField.value}
+                            onChange={e => setNewCustomField(prev => ({ ...prev, value: e.target.value }))}
+                            className="text-sm"
+                          />
                         </div>
-                        <Button size="icon" variant="outline" className="h-9 w-9 flex-shrink-0" onClick={() => setIsCreateDealModalOpen(true)}>
-                          <Plus className="h-4 w-4" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleAddCustomField}
+                          disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Adicionar campo
                         </Button>
                       </div>
-                    </div>}
+                    </CardContent>
+                  </Card>
+
+                  {/* BLOCO 2: Pipeline / Negócios */}
+                  <Card className="border rounded-xl shadow-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-green-500" />
+                          Pipeline
+                        </CardTitle>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsCreateDealModalOpen(true)}
+                          className="h-8"
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Vincular
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {deals.length > 0 ? (
+                        deals.map(deal => (
+                          <div key={deal.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                            <Avatar className="h-10 w-10">
+                              {editingContact?.profile_image_url && (
+                                <AvatarImage src={editingContact.profile_image_url} alt={editingContact.name} className="object-cover" />
+                              )}
+                              <AvatarFallback className="text-white font-medium" style={{ backgroundColor: getAvatarColor(editingContact?.name || '') }}>
+                                {getInitials(editingContact?.name || '')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{deal.pipeline} - {deal.column_name}</p>
+                              <p className="text-xs text-muted-foreground">{formatCurrency(deal.value)}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          Nenhum negócio vinculado
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* BLOCO 3: Observações */}
+                  <Card className="border rounded-xl shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-amber-500" />
+                        Observações
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Lista de observações */}
+                      <ScrollArea className="max-h-48">
+                        <div className="space-y-3 pr-2">
+                          {realObservations.map(obs => (
+                            <div key={obs.id} className="p-3 bg-muted/30 rounded-lg group">
+                              {editingObservationId === obs.id ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    value={editingContent}
+                                    onChange={e => setEditingContent(e.target.value)}
+                                    className="min-h-[80px]"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button size="sm" onClick={handleSaveEdit}>
+                                      Salvar
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <p className="text-sm">{obs.content}</p>
+                                    {obs.file_name && obs.file_url && (
+                                      <div className="mt-2">
+                                        <button
+                                          onClick={() => downloadFile(obs.file_url!, obs.file_name!)}
+                                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                        >
+                                          <Paperclip className="h-3 w-3" />
+                                          {obs.file_name}
+                                        </button>
+                                      </div>
+                                    )}
+                                    <span className="text-xs text-muted-foreground block mt-1">
+                                      {formatDate(obs.created_at)}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      onClick={() => handleEditObservation(obs)}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-red-600 hover:text-red-700"
+                                      onClick={() => setDeletingObservationId(obs.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {realObservations.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhuma observação encontrada
+                            </p>
+                          )}
+                        </div>
+                      </ScrollArea>
+
+                      {/* Campo para nova observação */}
+                      <div className="space-y-2 border-t pt-3">
+                        <Textarea
+                          placeholder="Digite uma observação..."
+                          value={newObservation}
+                          onChange={e => setNewObservation(e.target.value)}
+                          className="min-h-[60px] text-sm"
+                        />
+                        {selectedFile && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-2 rounded">
+                            <span>{getFileIcon(selectedFile.type)}</span>
+                            <span>{selectedFile.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedFile(null)}
+                              className="h-4 w-4 p-0 ml-auto"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <input
+                            type="file"
+                            ref={setFileInputRef}
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            accept="*/*"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef?.click()}
+                            disabled={isUploading}
+                          >
+                            <Paperclip className="h-3 w-3 mr-1" /> Anexar
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={handleAddObservation}
+                            disabled={!newObservation.trim() || isUploading}
+                          >
+                            {isUploading ? "Enviando..." : "Adicionar"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Botão Salvar */}
-                  <Button type="button" onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('🔴 BOTÃO CLICADO!');
-                  handleSaveContact();
-                }} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
+                  <Button
+                    onClick={handleSaveContact}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                  >
                     Salvar
                   </Button>
-                </CardContent>
-              </Card>
-
-              {/* Seção: Negócios */}
-              {deals.length > 0}
-
-              {/* Seção: Observações */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Observações</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Lista de observações */}
-                  <ScrollArea className="max-h-32">
-                    <div className="space-y-3 pr-4">
-                      {realObservations.map(obs => <div key={obs.id} className="p-3 bg-muted rounded-lg group">
-                          {editingObservationId === obs.id ?
-                      // Modo de edição
-                      <div className="space-y-2">
-                              <Textarea value={editingContent} onChange={e => setEditingContent(e.target.value)} className="min-h-[80px] border-yellow-500 focus:border-yellow-600" />
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={handleSaveEdit} className="text-xs">
-                                  Salvar
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={handleCancelEdit} className="text-xs">
-                                  Cancelar
-                                </Button>
-                              </div>
-                            </div> :
-                      // Modo de visualização
-                      <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <p className="text-sm">{obs.content}</p>
-                                {obs.file_name && obs.file_url && <div className="mt-2">
-                                    <button onClick={() => downloadFile(obs.file_url!, obs.file_name!)} className="text-xs text-muted-foreground cursor-pointer hover:text-primary flex items-center gap-1">
-                                      <span>{getFileIcon(obs.file_type)}</span>
-                                      {obs.file_name}
-                                    </button>
-                                  </div>}
-                                <span className="text-xs text-muted-foreground block mt-1">
-                                  {formatDate(obs.created_at)}
-                                </span>
-                              </div>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50" onClick={() => handleEditObservation(obs)}>
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeletingObservationId(obs.id)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>}
-                        </div>)}
-                      {realObservations.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
-                          Nenhuma observação encontrada
-                        </p>}
-                     </div>
-                  </ScrollArea>
-
-                  {/* Adicionar nova observação */}
-                  <div className="space-y-2">
-                    <Textarea placeholder="Digite uma observação..." value={newObservation} onChange={e => setNewObservation(e.target.value)} className="min-h-[80px]" />
-                    
-                    {/* Preview do arquivo selecionado */}
-                    {selectedFile && <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted p-2 rounded">
-                        <span>{getFileIcon(selectedFile.type)}</span>
-                        <span>{selectedFile.name}</span>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)} className="h-4 w-4 p-0">
-                          ✕
-                        </Button>
-                      </div>}
-                    
-                    <div className="flex gap-2">
-                      <input type="file" ref={setFileInputRef} onChange={handleFileSelect} className="hidden" accept="*/*" />
-                      <Button variant="outline" size="sm" className="text-xs" onClick={triggerFileSelect} disabled={isUploading}>
-                        📎 Anexar arquivo
-                      </Button>
-                      <Button size="sm" onClick={handleAddObservation} className="text-xs" disabled={!newObservation.trim() || isUploading}>
-                        {isUploading ? "Enviando..." : "Adicionar"}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </ScrollArea>
-        </div>
-      </SheetContent>
+                </div>
+              </div>
+            </ScrollArea>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Modal de confirmação de exclusão */}
       <AlertDialog open={!!deletingObservationId} onOpenChange={() => setDeletingObservationId(null)}>
@@ -696,7 +637,10 @@ export function ContactSidePanel({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -704,6 +648,12 @@ export function ContactSidePanel({
       </AlertDialog>
 
       {/* Modal de Criar Negócio */}
-      <CriarNegocioModal open={isCreateDealModalOpen} onOpenChange={setIsCreateDealModalOpen} preSelectedContactId={contact.id} preSelectedContactName={contact.name} />
-    </Sheet>;
+      <CriarNegocioModal
+        open={isCreateDealModalOpen}
+        onOpenChange={setIsCreateDealModalOpen}
+        preSelectedContactId={contact.id}
+        preSelectedContactName={contact.name}
+      />
+    </>
+  );
 }
