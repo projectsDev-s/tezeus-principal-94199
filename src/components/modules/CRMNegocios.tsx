@@ -1307,7 +1307,7 @@ function CRMNegociosContent({
 
       <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
 
-      <CriarNegocioModal isOpen={isCriarNegocioModalOpen} onClose={() => setIsCriarNegocioModalOpen(false)} onCreateBusiness={handleCreateBusiness} isDarkMode={isDarkMode} columns={columns} onResponsibleUpdated={() => {
+      <CriarNegocioModal isOpen={isCriarNegocioModalOpen} onClose={() => setIsCriarNegocioModalOpen(false)} onCreateBusiness={handleCreateBusiness} isDarkMode={isDarkMode} onResponsibleUpdated={() => {
       console.log('🔄 Negócio criado com responsável, refreshing active users...');
       refreshActiveUsers();
     }} />

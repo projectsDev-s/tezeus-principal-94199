@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceUsers } from "@/hooks/useWorkspaceUsers";
 import { useProducts } from "@/hooks/useProducts";
+import { usePipelines } from "@/hooks/usePipelines";
+import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 
 interface CriarNegocioModalProps {
   isOpen?: boolean;
@@ -20,7 +22,6 @@ interface CriarNegocioModalProps {
   preSelectedContactId?: string;
   preSelectedContactName?: string;
   onResponsibleUpdated?: () => void;
-  columns?: Array<{ id: string; name: string }>;
 }
 
 export function CriarNegocioModal({ 
@@ -32,8 +33,7 @@ export function CriarNegocioModal({
   isDarkMode = false,
   preSelectedContactId,
   preSelectedContactName,
-  onResponsibleUpdated,
-  columns = []
+  onResponsibleUpdated
 }: CriarNegocioModalProps) {
   const modalOpen = open ?? isOpen ?? false;
   const handleClose = () => {
@@ -43,12 +43,15 @@ export function CriarNegocioModal({
 
   const [selectedLead, setSelectedLead] = useState(preSelectedContactId || "");
   const [selectedResponsible, setSelectedResponsible] = useState("");
+  const [selectedPipeline, setSelectedPipeline] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
-  const [selectedColumn, setSelectedColumn] = useState(columns[0]?.id || "");
+  const [selectedColumn, setSelectedColumn] = useState("");
   const [value, setValue] = useState("");
   const [contacts, setContacts] = useState<any[]>([]);
   
   const { selectedWorkspace } = useWorkspace();
+  const { pipelines } = usePipelines();
+  const { columns, fetchColumns } = usePipelineColumns(selectedPipeline || null);
   
   // Estabilizar o array de filtros para evitar loop infinito
   const profileFilters = useMemo<('user' | 'admin' | 'master')[]>(() => ['user', 'admin'], []);
@@ -103,15 +106,22 @@ export function CriarNegocioModal({
     }
   }, [selectedProduct, products]);
 
-  // Atualizar coluna quando colunas mudarem
+  // Carregar colunas quando pipeline for selecionado
+  useEffect(() => {
+    if (selectedPipeline) {
+      fetchColumns();
+    }
+  }, [selectedPipeline]);
+
+  // Atualizar primeira coluna quando colunas mudarem
   useEffect(() => {
     if (columns.length > 0 && !selectedColumn) {
       setSelectedColumn(columns[0].id);
     }
-  }, [columns, selectedColumn]);
+  }, [columns]);
 
   // Validar se pode habilitar botão criar
-  const canCreate = selectedLead && selectedResponsible && selectedColumn && value;
+  const canCreate = selectedLead && selectedResponsible && selectedPipeline && selectedColumn && value;
 
   const handleSubmit = async () => {
     if (!canCreate) return;
@@ -119,6 +129,7 @@ export function CriarNegocioModal({
     const newBusiness = {
       lead: selectedLead,
       responsible: selectedResponsible,
+      pipeline: selectedPipeline,
       product: selectedProduct || null,
       column: selectedColumn,
       value: parseFloat(value)
@@ -135,8 +146,9 @@ export function CriarNegocioModal({
     // Reset form
     setSelectedLead(preSelectedContactId || "");
     setSelectedResponsible("");
+    setSelectedPipeline("");
     setSelectedProduct("");
-    setSelectedColumn(columns[0]?.id || "");
+    setSelectedColumn("");
     setValue("");
     
     handleClose();
@@ -200,19 +212,47 @@ export function CriarNegocioModal({
             </Select>
           </div>
 
-          {/* Seleção de coluna */}
+          {/* Seleção de pipeline */}
           <div>
-            <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+            <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
               <SelectTrigger className="border-input">
-                <SelectValue placeholder="Selecione a coluna" />
+                <SelectValue placeholder="Selecione o pipeline" />
               </SelectTrigger>
               <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
-                {columns.map((column) => (
-                  <SelectItem key={column.id} value={column.id}>
-                    {column.name}
+                {pipelines.map((pipeline) => (
+                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
                   </SelectItem>
                 ))}
               </SelectContent>
+            </Select>
+          </div>
+
+          {/* Seleção de coluna */}
+          <div>
+            <Select 
+              value={selectedColumn} 
+              onValueChange={setSelectedColumn}
+              disabled={!selectedPipeline || columns.length === 0}
+            >
+              <SelectTrigger className="border-input">
+                <SelectValue placeholder={
+                  !selectedPipeline 
+                    ? "Selecione um pipeline primeiro" 
+                    : columns.length === 0 
+                      ? "Nenhuma coluna disponível" 
+                      : "Selecione a coluna"
+                } />
+              </SelectTrigger>
+              {columns.length > 0 && (
+                <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                  {columns.map((column) => (
+                    <SelectItem key={column.id} value={column.id}>
+                      {column.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              )}
             </Select>
           </div>
 
