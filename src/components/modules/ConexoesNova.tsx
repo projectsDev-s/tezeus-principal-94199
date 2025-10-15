@@ -106,13 +106,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       loadWorkspacePipelines();
     }
   }, [isCreateModalOpen, workspaceId]);
-  
-  // Use the actual usage data from the backend
-  const currentUsage = usage || {
-    current: 0,
-    limit: 1,
-    canCreateMore: false
-  };
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -783,18 +776,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             <Button 
               disabled={
                 !canCreateConnections(workspaceId) || 
-                !currentUsage.canCreateMore
+                !usage?.canCreateMore
               }
               title={
                 !canCreateConnections(workspaceId) 
                   ? 'Você não tem permissão para criar conexões neste workspace' 
-                  : !currentUsage.canCreateMore 
-                    ? `Limite de conexões atingido (${currentUsage.current}/${currentUsage.limit})` 
+                  : !usage?.canCreateMore 
+                    ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` 
+                    : usage === null
+                    ? 'Carregando limites...'
                     : ''
               }
             >
               <Plus className="w-4 h-4 mr-2" />
-              Adicionar Instância ({currentUsage.current}/{currentUsage.limit})
+              {usage === null 
+                ? 'Carregando...' 
+                : `Adicionar Instância (${usage.current}/${usage.limit})`
+              }
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl p-0">
@@ -838,9 +836,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                 {!isEditMode && (
                   <div className="p-3 bg-muted/50 rounded-lg border">
                     <div className="text-sm text-muted-foreground">
-                      Conexões: {currentUsage.current}/{currentUsage.limit}
-                      {currentUsage.current >= currentUsage.limit && (
-                        <span className="text-destructive font-medium ml-1">- Limite atingido</span>
+                      {usage === null ? (
+                        'Carregando limites...'
+                      ) : (
+                        <>
+                          Conexões: {usage.current}/{usage.limit}
+                          {usage.current >= usage.limit && (
+                            <span className="text-destructive font-medium ml-1">- Limite atingido</span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -1000,11 +1004,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                 onClick={isEditMode ? editConnection : () => createInstance()} 
                 disabled={
                   isCreating || 
-                  (!isEditMode && !currentUsage.canCreateMore)
+                  (!isEditMode && !usage?.canCreateMore)
                 }
                 title={
-                  !isEditMode && !currentUsage.canCreateMore 
-                    ? `Limite de conexões atingido (${currentUsage.current}/${currentUsage.limit})` 
+                  !isEditMode && !usage?.canCreateMore 
+                    ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` 
                     : ''
                 }
               >
@@ -1025,11 +1029,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             </p>
             <Button 
               onClick={() => setIsCreateModalOpen(true)}
-              disabled={!currentUsage.canCreateMore}
-              title={!currentUsage.canCreateMore ? `Limite de conexões atingido (${currentUsage.current}/${currentUsage.limit})` : ''}
+              disabled={!usage?.canCreateMore}
+              title={!usage?.canCreateMore ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` : ''}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Adicionar Instância ({currentUsage.current}/{currentUsage.limit})
+              {usage === null 
+                ? 'Carregando...' 
+                : `Adicionar Instância (${usage.current}/${usage.limit})`
+              }
             </Button>
           </CardContent>
         </Card>

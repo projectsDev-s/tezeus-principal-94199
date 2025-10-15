@@ -23,7 +23,10 @@ export function useWorkspaceLimits(workspaceId: string) {
   const { toast } = useToast();
 
   const fetchLimits = async () => {
-    if (!workspaceId) return;
+    if (!workspaceId) {
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -65,6 +68,7 @@ export function useWorkspaceLimits(workspaceId: string) {
         description: "Falha ao carregar limites do workspace",
         variant: "destructive"
       });
+      // Keep previous usage if any to prevent UI flashing
     } finally {
       setIsLoading(false);
     }
