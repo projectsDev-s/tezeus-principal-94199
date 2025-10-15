@@ -790,9 +790,7 @@ export function ContactSidePanel({
                   </Card>
 
                   {/* Botão Salvar */}
-                  <Button onClick={handleSaveContact} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
-                    Salvar
-                  </Button>
+                  
                 </div>
               </div>
             </ScrollArea>
