@@ -124,6 +124,15 @@ serve(async (req) => {
 
     const connectionLimit = limitData?.connection_limit || 1
 
+    // Get user's default channel
+    const { data: userData } = await supabase
+      .from('system_users')
+      .select('default_channel')
+      .eq('id', systemUserId)
+      .single()
+    
+    const defaultChannelId = userData?.default_channel
+
     // Get all connections for the workspace
     const { data: connections, error } = await supabase
       .from('connections')
@@ -188,10 +197,15 @@ serve(async (req) => {
                   status: 'disconnected',
                   updated_at: new Date().toISOString()
                 })
-                .eq('id', connection.id);
+                 .eq('id', connection.id);
             }
 
-            return { ...connection, status: newStatus, phone_number: phoneNumber };
+            return { 
+              ...connection, 
+              status: newStatus, 
+              phone_number: phoneNumber,
+              is_default: connection.id === defaultChannelId 
+            };
           } else {
             console.log(`⚠️ Failed to check status for ${connection.instance_name}: ${statusResponse.status}`);
           }
@@ -199,7 +213,7 @@ serve(async (req) => {
           console.error(`❌ Error checking status for ${connection.instance_name}:`, error);
         }
 
-        return connection;
+        return { ...connection, is_default: connection.id === defaultChannelId };
       })
     );
 
