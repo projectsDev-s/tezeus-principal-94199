@@ -1070,6 +1070,7 @@ export type Database = {
           created_at: string
           delivered_at: string | null
           evolution_key_id: string | null
+          evolution_short_key_id: string | null
           external_id: string | null
           file_name: string | null
           file_url: string | null
@@ -1090,6 +1091,7 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           evolution_key_id?: string | null
+          evolution_short_key_id?: string | null
           external_id?: string | null
           file_name?: string | null
           file_url?: string | null
@@ -1110,6 +1112,7 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           evolution_key_id?: string | null
+          evolution_short_key_id?: string | null
           external_id?: string | null
           file_name?: string | null
           file_url?: string | null

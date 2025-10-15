@@ -202,28 +202,43 @@ serve(async (req) => {
         }
       }
       
-      // ✅ ESTRATÉGIA DE BUSCA INTELIGENTE CONSOLIDADA
+      // ✅ ESTRATÉGIA DE BUSCA INTELIGENTE CONSOLIDADA (PRIORIDADE: SHORT KEY)
       let updatedMessage = null;
       
       if (messageKeyId && status) {
         console.log(`🔍 [${requestId}] Starting intelligent message lookup`);
         
-        // ESTRATÉGIA 1: Buscar por evolution_key_id
+        // ESTRATÉGIA 1: Buscar por evolution_short_key_id (PRIORIDADE MÁXIMA)
         let { data: msg, error } = await supabase
           .from('messages')
-          .select('id, external_id, evolution_key_id, status, conversation_id, workspace_id')
-          .eq('evolution_key_id', messageKeyId)
+          .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
+          .eq('evolution_short_key_id', messageKeyId)
           .limit(1)
           .maybeSingle();
         
-        let searchStrategy = 'evolution_key_id';
+        let searchStrategy = 'evolution_short_key_id';
         
-        // ESTRATÉGIA 2: Buscar por external_id (fallback)
+        // ESTRATÉGIA 2: Buscar por evolution_key_id (fallback 1)
         if (error || !msg) {
-          console.log(`🔄 [${requestId}] Trying fallback search by external_id`);
+          console.log(`🔄 [${requestId}] Trying fallback search by evolution_key_id`);
           const result = await supabase
             .from('messages')
-            .select('id, external_id, evolution_key_id, status, conversation_id, workspace_id')
+            .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
+            .eq('evolution_key_id', messageKeyId)
+            .limit(1)
+            .maybeSingle();
+          
+          msg = result.data;
+          error = result.error;
+          searchStrategy = 'evolution_key_id';
+        }
+        
+        // ESTRATÉGIA 3: Buscar por external_id (fallback 2)
+        if (error || !msg) {
+          console.log(`🔄 [${requestId}] Trying final fallback search by external_id`);
+          const result = await supabase
+            .from('messages')
+            .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
             .eq('external_id', messageKeyId)
             .limit(1)
             .maybeSingle();
@@ -243,9 +258,12 @@ serve(async (req) => {
           
           const updateFields: any = { status: newStatus };
           
-          // Garantir que evolution_key_id está preenchido
+          // Garantir que AMBOS os evolution IDs estejam preenchidos
           if (!msg.evolution_key_id) {
             updateFields.evolution_key_id = messageKeyId;
+          }
+          if (!msg.evolution_short_key_id) {
+            updateFields.evolution_short_key_id = messageKeyId;
           }
           
           // Atualizar timestamps conforme o status

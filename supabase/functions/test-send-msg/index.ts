@@ -390,28 +390,39 @@ serve(async (req) => {
 
       console.log(`✅ [${requestId}] Evolution API success:`, evolutionData);
 
-      // SALVAR evolution_key_id NA MENSAGEM
-      if (evolutionData.key?.id) {
-        console.log(`💾 [${requestId}] Saving evolution_key_id: ${evolutionData.key.id}`);
+      // SALVAR AMBOS evolution_key_id E evolution_short_key_id
+      if (evolutionData.key?.id || evolutionData.keyId) {
+        console.log(`💾 [${requestId}] Saving Evolution IDs:`);
+        console.log(`   - key.id (40 chars): ${evolutionData.key?.id}`);
+        console.log(`   - keyId (22 chars): ${evolutionData.keyId}`);
+        
+        const updateFields: any = {
+          status: 'sent',
+          metadata: {
+            source: 'test-send-msg-direct',
+            request_id: requestId,
+            step: 'after_evolution_success',
+            evolution_response: evolutionData
+          }
+        };
+        
+        if (evolutionData.key?.id) {
+          updateFields.evolution_key_id = evolutionData.key.id;
+        }
+        
+        if (evolutionData.keyId) {
+          updateFields.evolution_short_key_id = evolutionData.keyId;
+        }
         
         const { error: updateError } = await supabase
           .from('messages')
-          .update({ 
-            evolution_key_id: evolutionData.key.id,
-            status: 'sent',
-            metadata: {
-              source: 'test-send-msg-direct',
-              request_id: requestId,
-              step: 'after_evolution_success',
-              evolution_response: evolutionData
-            }
-          })
+          .update(updateFields)
           .eq('external_id', external_id);
 
         if (updateError) {
-          console.error(`⚠️ [${requestId}] Failed to save evolution_key_id:`, updateError);
+          console.error(`⚠️ [${requestId}] Failed to save evolution IDs:`, updateError);
         } else {
-          console.log(`✅ [${requestId}] evolution_key_id saved successfully!`);
+          console.log(`✅ [${requestId}] Both evolution IDs saved successfully!`);
         }
       }
 
