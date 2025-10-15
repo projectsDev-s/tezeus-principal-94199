@@ -96,12 +96,14 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
           dealsInProgress={analytics.dealsInProgress}
           completedDeals={analytics.completedDeals}
           lostDeals={analytics.lostDeals}
+          isLoading={isLoading}
         />
         
         <ConversionChart
           completedDeals={analytics.completedDeals}
           lostDeals={analytics.lostDeals}
           conversionRate={analytics.conversionRate}
+          isLoading={isLoading}
         />
       </div>
 
@@ -109,6 +111,7 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
       <TrendsChart
         conversationTrends={analytics.conversationTrends}
         dealTrends={analytics.dealTrends}
+        isLoading={isLoading}
       />
     </div>
   );

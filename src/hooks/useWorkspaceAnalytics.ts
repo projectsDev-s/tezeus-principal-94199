@@ -28,7 +28,7 @@ export const useWorkspaceAnalytics = () => {
     conversationTrends: [],
     dealTrends: [],
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
   const { user, userRole } = useAuth();
   const { getHeaders } = useWorkspaceHeaders();

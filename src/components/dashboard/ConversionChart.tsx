@@ -1,13 +1,31 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Cell, PieChart, Pie, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 interface ConversionChartProps {
   completedDeals: number;
   lostDeals: number;
   conversionRate: number;
+  isLoading?: boolean;
 }
 
-export function ConversionChart({ completedDeals, lostDeals, conversionRate }: ConversionChartProps) {
+export function ConversionChart({ completedDeals, lostDeals, conversionRate, isLoading = false }: ConversionChartProps) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40 mb-2" />
+          <Skeleton className="h-8 w-20" />
+        </CardHeader>
+        <CardContent>
+          <div className="h-[200px] flex items-center justify-center">
+            <Skeleton className="w-full h-full rounded-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const data = [
     {
       name: 'Vendas Concluídas',

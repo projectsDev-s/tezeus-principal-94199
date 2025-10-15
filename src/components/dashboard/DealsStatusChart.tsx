@@ -1,13 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface DealsStatusChartProps {
   dealsInProgress: number;
   completedDeals: number;
   lostDeals: number;
+  isLoading?: boolean;
 }
 
-export function DealsStatusChart({ dealsInProgress, completedDeals, lostDeals }: DealsStatusChartProps) {
+export function DealsStatusChart({ dealsInProgress, completedDeals, lostDeals, isLoading = false }: DealsStatusChartProps) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-48" />
+        </CardHeader>
+        <CardContent>
+          <div className="h-[250px] flex items-center justify-center">
+            <Skeleton className="w-full h-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const data = [
     {
       name: 'Em Andamento',

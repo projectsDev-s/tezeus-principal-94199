@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,9 +7,25 @@ import { ptBR } from "date-fns/locale";
 interface TrendsChartProps {
   conversationTrends: { date: string; count: number }[];
   dealTrends: { date: string; completed: number; lost: number }[];
+  isLoading?: boolean;
 }
 
-export function TrendsChart({ conversationTrends, dealTrends }: TrendsChartProps) {
+export function TrendsChart({ conversationTrends, dealTrends, isLoading = false }: TrendsChartProps) {
+  if (isLoading) {
+    return (
+      <Card className="col-span-full">
+        <CardHeader>
+          <Skeleton className="h-5 w-64" />
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] flex items-center justify-center">
+            <Skeleton className="w-full h-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Combine conversation and deal trends by date
   const combinedData = conversationTrends.map(conv => {
     const dealData = dealTrends.find(deal => deal.date === conv.date);
