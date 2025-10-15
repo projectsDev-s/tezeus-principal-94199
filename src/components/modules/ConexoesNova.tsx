@@ -900,10 +900,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                   </Label>
                   <Select value={selectedQueueId} onValueChange={setSelectedQueueId}>
                     <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Selecione uma fila" />
+                      <SelectValue placeholder="Nenhuma fila" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma fila</SelectItem>
                       {queues.map((queue) => (
                         <SelectItem key={queue.id} value={queue.id}>
                           {queue.name}
