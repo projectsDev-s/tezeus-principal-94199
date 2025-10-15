@@ -84,6 +84,8 @@ export function ContactSidePanel({
   } | null>(null);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
   const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
+  const [editingDealId, setEditingDealId] = useState<string | null>(null);
+  const [editingDealTitle, setEditingDealTitle] = useState<string>('');
   const [stats, setStats] = useState({
     activeConversations: 0,
     activeDeals: 0,
@@ -345,6 +347,38 @@ export function ContactSidePanel({
   const handleCancelEdit = () => {
     setEditingObservationId(null);
     setEditingContent('');
+  };
+
+  const handleSaveDealTitle = async (dealId: string) => {
+    if (!editingDealTitle.trim()) {
+      toast({
+        title: "Erro",
+        description: "O título não pode estar vazio",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('pipeline_cards')
+        .update({ title: editingDealTitle })
+        .eq('id', dealId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Sucesso",
+        description: "Título atualizado",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar título:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar título",
+        variant: "destructive",
+      });
+    }
   };
   const handleConfirmDelete = async () => {
     if (!deletingObservationId) return;
@@ -625,48 +659,60 @@ export function ContactSidePanel({
                     </CardHeader>
                     <CardContent>
                       {deals.length > 0 ? (
-                        <div className="relative">
-                          <ScrollArea className="w-full">
-                            <div className="flex gap-3 pb-2">
-                              {deals.map(deal => (
-                                <div 
-                                  key={deal.id} 
-                                  className="flex-shrink-0 w-[200px] p-4 bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                                >
-                                  <div className="space-y-2">
-                                    {/* Pipeline - Título Principal */}
-                                    <div className="flex items-center gap-2">
-                                      <Briefcase className="h-4 w-4 text-primary flex-shrink-0" />
-                                      <h4 className="font-semibold text-sm truncate" title={deal.pipeline}>
-                                        {deal.pipeline}
-                                      </h4>
-                                    </div>
-
-                                    {/* Coluna - Subtítulo */}
-                                    <div className="flex items-center gap-1.5">
-                                      <div className="h-2 w-2 rounded-full bg-primary/60" />
-                                      <p className="text-xs text-muted-foreground truncate" title={deal.column_name}>
-                                        {deal.column_name}
-                                      </p>
-                                    </div>
-
-                                    {/* Valor - Destaque Monetário */}
-                                    <div className="pt-1 border-t border-border/30">
-                                      <p className="text-sm font-medium text-primary/90">
-                                        {formatCurrency(deal.value)}
-                                      </p>
-                                    </div>
+                        <div className="space-y-3">
+                          {deals.map(deal => (
+                            <div 
+                              key={deal.id} 
+                              className="p-4 bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <div className="space-y-2">
+                                {editingDealId === deal.id ? (
+                                  <input
+                                    type="text"
+                                    value={editingDealTitle}
+                                    onChange={(e) => setEditingDealTitle(e.target.value)}
+                                    onBlur={async () => {
+                                      await handleSaveDealTitle(deal.id);
+                                      setEditingDealId(null);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    autoFocus
+                                    className="w-full font-bold text-sm bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                                  />
+                                ) : (
+                                  <div 
+                                    className="flex items-center gap-2"
+                                    onDoubleClick={() => {
+                                      setEditingDealId(deal.id);
+                                      setEditingDealTitle(deal.pipeline);
+                                    }}
+                                  >
+                                    <Briefcase className="h-4 w-4 text-primary flex-shrink-0" />
+                                    <h4 className="font-bold text-sm cursor-pointer" title="Clique duas vezes para editar">
+                                      {deal.pipeline}
+                                    </h4>
                                   </div>
+                                )}
+
+                                <div className="flex items-center gap-1.5">
+                                  <div className="h-2 w-2 rounded-full bg-primary/60" />
+                                  <p className="text-xs text-muted-foreground">
+                                    {deal.column_name}
+                                  </p>
                                 </div>
-                              ))}
+
+                                <div className="pt-1 border-t border-border/30">
+                                  <p className="text-sm font-normal text-muted-foreground">
+                                    {formatCurrency(deal.value)}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <ScrollBar orientation="horizontal" className="h-1.5" />
-                          </ScrollArea>
-                          
-                          {/* Indicador visual de scroll */}
-                          {deals.length > 3 && (
-                            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-                          )}
+                          ))}
                         </div>
                       ) : (
                         <div className="flex items-center justify-center py-8">
