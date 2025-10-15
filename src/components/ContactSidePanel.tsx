@@ -723,7 +723,7 @@ export function ContactSidePanel({
                     </CardHeader>
                     <CardContent>
                       {deals.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
                           {deals.map(deal => (
                             <div 
                               key={deal.id} 
