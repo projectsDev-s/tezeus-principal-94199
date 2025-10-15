@@ -108,19 +108,29 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('queues')
-        .update({
-          name: nome.trim(),
-          description: mensagemSaudacao.trim() || null,
-          color: cor,
-          order_position: ordem ? parseInt(ordem) : 0,
-          distribution_type: distribuicao || 'aleatoria',
-          ai_agent_id: agenteId || null,
-          greeting_message: mensagemSaudacao.trim() || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', fila.id);
+      const systemUserId = localStorage.getItem('system_user_id');
+      const systemUserEmail = localStorage.getItem('system_user_email');
+
+      const { error } = await supabase.functions.invoke('manage-queues', {
+        body: {
+          action: 'update',
+          data: {
+            id: fila.id,
+            name: nome.trim(),
+            description: mensagemSaudacao.trim() || null,
+            color: cor,
+            order_position: ordem ? parseInt(ordem) : 0,
+            distribution_type: distribuicao || 'aleatoria',
+            ai_agent_id: agenteId || null,
+            greeting_message: mensagemSaudacao.trim() || null,
+            updated_at: new Date().toISOString()
+          }
+        },
+        headers: {
+          'x-system-user-id': systemUserId || '',
+          'x-system-user-email': systemUserEmail || ''
+        }
+      });
 
       if (error) throw error;
 

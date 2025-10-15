@@ -55,10 +55,19 @@ export function AutomacoesFilas() {
     if (!confirm('Tem certeza que deseja excluir esta fila?')) return;
 
     try {
-      const { error } = await supabase
-        .from('queues')
-        .delete()
-        .eq('id', filaId);
+      const systemUserId = localStorage.getItem('system_user_id');
+      const systemUserEmail = localStorage.getItem('system_user_email');
+
+      const { error } = await supabase.functions.invoke('manage-queues', {
+        body: {
+          action: 'delete',
+          data: { id: filaId }
+        },
+        headers: {
+          'x-system-user-id': systemUserId || '',
+          'x-system-user-email': systemUserEmail || ''
+        }
+      });
 
       if (error) throw error;
       
