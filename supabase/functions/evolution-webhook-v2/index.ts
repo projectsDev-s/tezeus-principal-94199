@@ -393,7 +393,7 @@ serve(async (req) => {
     }
     
     // 📞 PROCESS CONNECTION UPDATE (phone number from QR scan)
-    if (event === 'connection_update' && workspaceId && instanceName) {
+    if (EVENT === 'CONNECTION_UPDATE' && workspaceId && instanceName) {
       console.log(`📞 [${requestId}] Processing connection update event`);
       
       // ✅ FASE 1.2: Renomear connectionData local para connectionUpdate (evitar conflito)
@@ -488,7 +488,7 @@ serve(async (req) => {
 
     // PROCESS MESSAGE LOCALLY FIRST (Only for inbound messages from contacts)
     // ✅ FASE 3: Melhorar filtro de mensagens para processar mesmo sem .message
-    if (workspaceId && payload.data && (payload.data.message || event.includes('message')) && payload.data?.key?.fromMe === false) {
+    if (workspaceId && payload.data && (payload.data.message || EVENT.includes('MESSAGE')) && payload.data?.key?.fromMe === false) {
       console.log(`📝 [${requestId}] Processing inbound message locally before forwarding`);
       
       // ✅ CRITICAL: Load connectionData for message processing context (needed for history filtering)
@@ -984,7 +984,7 @@ serve(async (req) => {
         }
       }
       } // ✅ FIM DO BLOCO: PROCESSAR APENAS MENSAGENS INDIVIDUAIS
-    } else if (workspaceId && payload.data?.key?.fromMe === true && event === 'messages_upsert') {
+    } else if (workspaceId && payload.data?.key?.fromMe === true && EVENT === 'MESSAGES_UPSERT') {
       console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), capturing evolution_short_key_id`);
       
       const shortKeyId = payload.data?.key?.id; // 22 chars
