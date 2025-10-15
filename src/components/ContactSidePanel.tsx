@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin } from "lucide-react";
+import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,7 @@ export function ContactSidePanel({
   const [viewingMedia, setViewingMedia] = useState<{ url: string; type: string; name: string } | null>(null);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
   const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
+  const [stats, setStats] = useState({ messages: 0, activeDeals: 0, closedDeals: 0 });
 
   const { pipelines } = usePipelines();
   const { columns, fetchColumns } = usePipelineColumns(null);
@@ -113,6 +114,11 @@ export function ContactSidePanel({
           if (error) throw error;
           if (data) {
             setEditingContact(data as Contact);
+            
+            // Carregar estatísticas
+            if (selectedWorkspace?.workspace_id) {
+              getContactStats(contact.id, selectedWorkspace.workspace_id);
+            }
           }
         } catch (error) {
           console.error('❌ Erro ao recarregar dados do contato:', error);
@@ -120,7 +126,7 @@ export function ContactSidePanel({
       };
       loadFreshData();
     }
-  }, [isOpen, contact?.id]);
+  }, [isOpen, contact?.id, selectedWorkspace?.workspace_id]);
 
   useEffect(() => {
     if (extraFields.length > 0) {
@@ -314,6 +320,51 @@ export function ContactSidePanel({
     });
   };
 
+  const getContactStats = async (contactId: string, workspaceId: string) => {
+    try {
+      // 1. Contar mensagens trocadas (da conversa do contato)
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('contact_id', contactId)
+        .eq('workspace_id', workspaceId);
+
+      const conversationIds = conversations?.map(c => c.id) || [];
+      
+      let messagesCount = 0;
+      if (conversationIds.length > 0) {
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', conversationIds);
+        messagesCount = count || 0;
+      }
+
+      // 2. Contar negócios ativos (status = 'aberto')
+      const { count: activeDeals } = await supabase
+        .from('pipeline_cards')
+        .select('*', { count: 'exact', head: true })
+        .eq('contact_id', contactId)
+        .eq('status', 'aberto');
+
+      // 3. Contar negócios fechados (status = 'ganho')
+      const { count: closedDeals } = await supabase
+        .from('pipeline_cards')
+        .select('*', { count: 'exact', head: true })
+        .eq('contact_id', contactId)
+        .eq('status', 'ganho');
+
+      setStats({
+        messages: messagesCount,
+        activeDeals: activeDeals || 0,
+        closedDeals: closedDeals || 0
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+      setStats({ messages: 0, activeDeals: 0, closedDeals: 0 });
+    }
+  };
+
   const handleFileClick = (fileUrl: string, fileName: string, fileType?: string) => {
     setViewingMedia({
       url: fileUrl,
@@ -350,7 +401,7 @@ export function ContactSidePanel({
             <ScrollArea className="flex-1">
               <div className="space-y-0">
                 {/* ===== HEADER: Topo com gradiente pastel ===== */}
-                <div className="relative bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-8 pt-6">
+                <div className="relative bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-10 pt-8">
                   <div className="flex flex-col items-center">
                     {/* Avatar grande com borda e sombra */}
                     <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
@@ -427,6 +478,38 @@ export function ContactSidePanel({
                         {editingContact?.email || 'Adicionar email'}
                       </p>
                     )}
+                  </div>
+                </div>
+
+                {/* ===== ESTATÍSTICAS: 3 colunas lado a lado ===== */}
+                <div className="border-b bg-white px-6 py-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Mensagens Trocadas */}
+                    <div className="flex flex-col items-center justify-center space-y-1">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
+                        <MessageCircle className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{stats.messages}</p>
+                      <p className="text-xs text-gray-500 font-medium">Mensagens</p>
+                    </div>
+
+                    {/* Negócios Ativos */}
+                    <div className="flex flex-col items-center justify-center space-y-1 border-x border-gray-200">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100">
+                        <Briefcase className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{stats.activeDeals}</p>
+                      <p className="text-xs text-gray-500 font-medium">Ativos</p>
+                    </div>
+
+                    {/* Negócios Fechados */}
+                    <div className="flex flex-col items-center justify-center space-y-1">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
+                        <Trophy className="h-5 w-5 text-green-600" />
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{stats.closedDeals}</p>
+                      <p className="text-xs text-gray-500 font-medium">Fechados</p>
+                    </div>
                   </div>
                 </div>
 
