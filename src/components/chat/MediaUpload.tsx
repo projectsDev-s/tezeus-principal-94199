@@ -76,70 +76,31 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // ✅ VALIDAR FORMATO ANTES DO UPLOAD
+    // ✅ VALIDAR FORMATO
     if (!validateFileType(file, mediaType)) {
-      // Resetar input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      return; // Parar aqui se formato não for válido
+      return;
     }
 
-    console.log('📤 MediaUpload - Iniciando upload:', { 
-      mediaType, 
-      fileName: file.name, 
-      fileSize: file.size,
-      fileType: file.type 
+    // ✅ Criar preview LOCAL (SEM upload ainda)
+    const previewUrl = URL.createObjectURL(file);
+
+    // ✅ Preparar estado para preview
+    setPendingMedia({
+      file,
+      type: mediaType,
+      url: '', // URL será preenchida após upload
+      previewUrl
     });
 
-    setUploading(true);
-    try {
-      // Upload diretamente para o bucket whatsapp-media/messages/
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `messages/${fileName}`;
-
-      console.log('📦 MediaUpload - Uploading to bucket:', filePath);
-
-      const { error: uploadError } = await supabase.storage
-        .from('whatsapp-media')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error('❌ MediaUpload - Upload error:', uploadError);
-        throw uploadError;
-      }
-
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('whatsapp-media')
-        .getPublicUrl(filePath);
-
-      console.log('✅ MediaUpload - Upload concluído:', publicUrl);
-
-      // Criar preview URL local
-      const previewUrl = URL.createObjectURL(file);
-
-      // Abrir modal de preview ao invés de enviar diretamente
-      setPendingMedia({
-        file,
-        type: mediaType,
-        url: publicUrl,
-        previewUrl
-      });
-      
-      console.log('✅ MediaUpload - Preview preparado');
-      
-    } catch (error) {
-      console.error('❌ MediaUpload - Erro geral:', error);
-      toast.error('Erro ao fazer upload do arquivo');
-    } finally {
-      setUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
+
+    console.log('✅ MediaUpload - Preview preparado (sem upload ainda)');
   };
 
   const getFileIcon = (file: File) => {
@@ -149,19 +110,55 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
     return <FileText className="h-8 w-8" />;
   };
 
-  const handleConfirmSend = () => {
+  const handleConfirmSend = async () => {
     if (!pendingMedia) return;
     
-    // Limpar preview
-    URL.revokeObjectURL(pendingMedia.previewUrl);
+    setUploading(true);
     
-    // Chamar callback SEM caption (sempre usa placeholder)
-    onFileSelect(pendingMedia.file, pendingMedia.type, pendingMedia.url);
-    
-    setPendingMedia(null);
-    setCaption('');
-    
-    toast.success('Arquivo enviado com sucesso!');
+    try {
+      // 📤 FAZER UPLOAD AGORA (ao confirmar)
+      const fileExt = pendingMedia.file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `messages/${fileName}`;
+
+      console.log('📤 MediaUpload - Iniciando upload:', filePath);
+
+      const { error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(filePath, pendingMedia.file);
+
+      if (uploadError) {
+        console.error('❌ MediaUpload - Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      // ✅ Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(filePath);
+
+      console.log('✅ MediaUpload - Upload concluído:', publicUrl);
+
+      // ✅ Enviar para callback
+      onFileSelect(pendingMedia.file, pendingMedia.type, publicUrl, caption || undefined);
+
+      // ✅ Limpar estados
+      URL.revokeObjectURL(pendingMedia.previewUrl);
+      setPendingMedia(null);
+      setCaption('');
+
+      toast.success('Arquivo enviado com sucesso!');
+    } catch (error) {
+      console.error('❌ MediaUpload - Erro ao enviar:', error);
+      toast.error('Erro ao enviar arquivo', {
+        description: 'Tente novamente',
+        duration: 4000,
+        dismissible: true,
+        closeButton: true
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleCancelPreview = () => {
@@ -221,7 +218,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
 
       {/* Modal de preview */}
       {pendingMedia && (
-        <Dialog open={!!pendingMedia} onOpenChange={handleCancelPreview}>
+        <Dialog open={!!pendingMedia} onOpenChange={uploading ? undefined : handleCancelPreview}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -277,13 +274,26 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
                 <Button 
                   variant="outline" 
                   onClick={handleCancelPreview}
+                  disabled={uploading}
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button onClick={handleConfirmSend}>
-                  <Check className="h-4 w-4 mr-2" />
-                  Enviar
+                <Button 
+                  onClick={handleConfirmSend}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <Upload className="h-4 w-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Enviar
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
