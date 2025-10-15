@@ -177,9 +177,6 @@ verify_jwt = false
 [functions.manage-evolution-connections]
 verify_jwt = false
 
-[functions.evolution-provisioning]
-verify_jwt = false
-
 [functions.test-evolution-connection]
 verify_jwt = false
 

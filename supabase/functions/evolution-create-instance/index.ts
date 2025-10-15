@@ -358,14 +358,16 @@ serve(async (req) => {
           "QRCODE_UPDATED",
           "CONNECTION_UPDATE",
         ],
-        webhookByEvents: true,  // ✅ Garantir que eventos sejam enviados
+        webhook_by_events: true,  // ✅ snake_case conforme Evolution API v2
+        webhook_base64: true,     // ✅ Habilita recebimento de mídias em base64
       },
     };
     
     console.log('📦 Evolution payload configuration:', {
       instanceName,
       syncFullHistory: true,
-      webhookByEvents: true,
+      webhook_by_events: true,
+      webhook_base64: true,
       historyRecovery,
       historyDays,
       webhookEvents: evolutionPayload.webhook.events
