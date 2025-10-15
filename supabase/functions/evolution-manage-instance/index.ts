@@ -235,13 +235,20 @@ serve(async (req) => {
         break
 
       case 'status':
+        console.log(`🔍 Checking status for connection: ${connection.id}, instance: ${connection.instance_name}`);
+        
         response = await fetch(`${evolutionConfig.url}/instance/connectionState/${connection.instance_name}`, {
           headers: { 'apikey': evolutionConfig.apiKey }
         })
         
+        console.log(`📡 Evolution API response status: ${response.status}`);
+        
         if (response.ok) {
           const statusData = await response.json()
+          console.log(`📊 Evolution API status data:`, JSON.stringify(statusData, null, 2));
+          
           const currentStatus = statusData.instance?.state
+          console.log(`🎯 Current status from Evolution: "${currentStatus}"`);
           
           if (currentStatus === 'open') {
             newStatus = 'connected'
@@ -250,6 +257,8 @@ serve(async (req) => {
           } else {
             newStatus = 'connecting'
           }
+          
+          console.log(`✅ Mapped status: "${newStatus}"`);
           
           await supabase
             .from('connections')
@@ -260,13 +269,32 @@ serve(async (req) => {
             })
             .eq('id', connection.id)
 
+          console.log(`💾 Database updated with status: "${newStatus}"`);
+          
+          const responsePayload = { 
+            success: true, 
+            status: newStatus, 
+            evolutionData: statusData 
+          };
+          
+          console.log(`📤 Returning to client:`, JSON.stringify(responsePayload, null, 2));
+
+          return new Response(
+            JSON.stringify(responsePayload),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        } else {
+          console.error(`❌ Evolution API status check failed: ${response.status}`);
+          const errorText = await response.text();
+          console.error(`❌ Error details:`, errorText);
+          
           return new Response(
             JSON.stringify({ 
-              success: true, 
-              status: newStatus, 
-              evolutionData: statusData 
+              success: false, 
+              error: `Failed to get status: ${response.statusText}`,
+              details: errorText
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           )
         }
         break
