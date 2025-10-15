@@ -345,8 +345,32 @@ export const useWhatsAppConversations = () => {
         throw new Error(errorMessage);
       }
 
-      // ✅ NÃO adicionar mensagem otimista - deixar o Realtime fazer o trabalho
-      console.log('✅ Mensagem enviada com sucesso, aguardando webhook/realtime');
+      console.log('✅ Mensagem enviada com sucesso');
+
+      // ⚠️ TEMPORÁRIO: Adicionar mensagem otimista até Realtime estabilizar
+      const tempMessage: WhatsAppMessage = {
+        id: `temp-${clientMessageId}`,
+        content,
+        message_type: (messageType || 'text') as 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker',
+        sender_type: 'agent',
+        created_at: new Date().toISOString(),
+        status: 'sending',
+        file_url: fileUrl,
+        file_name: fileName,
+        origem_resposta: 'manual',
+        read_at: null
+      };
+
+      setConversations(prev => prev.map(conv =>
+        conv.id === conversationId
+          ? {
+              ...conv,
+              messages: [...(conv.messages || []), tempMessage],
+              last_message: [{ content, message_type: messageType, sender_type: 'agent' as const, created_at: tempMessage.created_at }],
+              last_activity_at: tempMessage.created_at
+            }
+          : conv
+      ));
       
     } catch (error) {
       console.error('❌ Erro ao enviar mensagem:', error);

@@ -24,65 +24,7 @@ export function useNotifications() {
   // ✅ Rastrear mensagens já notificadas por message_id único
   const notifiedMessagesRef = useRef<Set<string>>(new Set());
 
-  // ✅ NOVO: Subscription de realtime para notificações instantâneas
-  useEffect(() => {
-    if (!selectedWorkspace?.workspace_id) {
-      console.log('⚠️ Notificações: Aguardando workspace');
-      return;
-    }
-
-    console.log('🔔 Iniciando subscription de notificações para workspace:', selectedWorkspace.workspace_id);
-
-    // Canal de realtime para conversas e mensagens
-    const channel = supabase
-      .channel(`realtime-notifications-${selectedWorkspace.workspace_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'conversations',
-          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-        },
-        (payload) => {
-          console.log('🔔 Conversa atualizada:', payload);
-          const newConv = payload.new as any;
-          
-          // Se unread_count aumentou, recarregar conversas
-          if (newConv.unread_count > 0) {
-            console.log('📬 Nova mensagem não lida detectada, atualizando...');
-            fetchConversations();
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-        },
-        (payload) => {
-          console.log('💬 Nova mensagem detectada:', payload);
-          const newMsg = payload.new as any;
-          
-          // Se é mensagem de contato, recarregar conversas
-          if (newMsg.sender_type === 'contact') {
-            console.log('📬 Nova mensagem de contato, atualizando conversas...');
-            fetchConversations();
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔔 Status da subscription de notificações:', status);
-      });
-
-    return () => {
-      console.log('🔕 Desconectando subscription de notificações');
-      supabase.removeChannel(channel);
-    };
-  }, [selectedWorkspace?.workspace_id, fetchConversations]);
+  // ✅ REMOVIDO: Subscription duplicada - useWhatsAppConversations já faz isso
 
   // Calcular notificações com useMemo para otimização
   const { notifications, totalUnread } = useMemo(() => {
