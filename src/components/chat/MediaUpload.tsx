@@ -61,7 +61,9 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
       
       toast.error('Formato não suportado', {
         description: `Formatos de ${mediaTypeLabel} permitidos: ${allowedNames}`,
-        duration: 5000
+        duration: 4000,
+        dismissible: true,
+        closeButton: true
       });
       
       return false;
