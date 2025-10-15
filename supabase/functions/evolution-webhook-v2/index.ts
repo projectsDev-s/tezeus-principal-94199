@@ -18,6 +18,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-secret',
 };
 
+// ✅ DEDUP LOCAL - Prevenir processamento duplicado de eventos
+const recentEvents = new Set<string>();
+
+function checkDedup(key: string): boolean {
+  if (recentEvents.has(key)) return true;
+  recentEvents.add(key);
+  setTimeout(() => recentEvents.delete(key), 10000); // TTL de 10s
+  return false;
+}
+
 function generateRequestId(): string {
   return `evo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -157,13 +167,27 @@ serve(async (req) => {
     }
     
     // ✅ FASE 1.1: Normalizar evento para processamento consistente
-    const event = (payload.event || "").toLowerCase().replace(/\./g, '_');
-    console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: "${payload.event}" → normalized: "${event}"`);
+    const EVENT = String(payload.event || '').toUpperCase().replace(/\./g, '_');
+    console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: "${payload.event}" → normalized: "${EVENT}"`);
+    
+    // ✅ DEDUP: Verificar se já processamos esse evento recentemente
+    const dedupKey = `${EVENT}:${payload.data?.keyId || payload.data?.messageId || payload.data?.key?.id || Date.now()}`;
+    if (checkDedup(dedupKey)) {
+      console.log(`⏭️ [${requestId}] Event duplicado ignorado: ${dedupKey}`);
+      return new Response(JSON.stringify({
+        code: 'DUPLICATE_EVENT',
+        message: 'Event already processed recently',
+        requestId
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     let processedData = null;
     
     // ✅ FASE 1.1: HANDLE MESSAGE ACKNOWLEDGMENT (read receipts) - CONSOLIDADO
-    if (event === 'messages_update' && (payload.data?.ack !== undefined || payload.data?.status)) {
+    if (EVENT === 'MESSAGES_UPDATE' && (payload.data?.ack !== undefined || payload.data?.status)) {
       console.log(`📬 [${requestId}] Processing message update acknowledgment: ack=${payload.data.ack}, status=${payload.data.status}`);
       
       const messageKeyId = payload.data.keyId; // 40 chars
@@ -208,45 +232,16 @@ serve(async (req) => {
       if (messageKeyId && status) {
         console.log(`🔍 [${requestId}] Starting intelligent message lookup`);
         
-        // ESTRATÉGIA 1: Buscar por evolution_short_key_id (PRIORIDADE MÁXIMA)
-        let { data: msg, error } = await supabase
+        // ✅ BUSCA IDEMPOTENTE COM OR - Buscar em uma única query
+        console.log(`🔍 [${requestId}] Searching message with idempotent OR query`);
+        const { data: msg, error } = await supabase
           .from('messages')
           .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
-          .eq('evolution_short_key_id', messageKeyId)
+          .or(`evolution_short_key_id.eq.${messageKeyId},evolution_key_id.eq.${messageKeyId},external_id.eq.${messageKeyId}`)
           .limit(1)
           .maybeSingle();
         
-        let searchStrategy = 'evolution_short_key_id';
-        
-        // ESTRATÉGIA 2: Buscar por evolution_key_id (fallback 1)
-        if (error || !msg) {
-          console.log(`🔄 [${requestId}] Trying fallback search by evolution_key_id`);
-          const result = await supabase
-            .from('messages')
-            .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
-            .eq('evolution_key_id', messageKeyId)
-            .limit(1)
-            .maybeSingle();
-          
-          msg = result.data;
-          error = result.error;
-          searchStrategy = 'evolution_key_id';
-        }
-        
-        // ESTRATÉGIA 3: Buscar por external_id (fallback 2)
-        if (error || !msg) {
-          console.log(`🔄 [${requestId}] Trying final fallback search by external_id`);
-          const result = await supabase
-            .from('messages')
-            .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
-            .eq('external_id', messageKeyId)
-            .limit(1)
-            .maybeSingle();
-          
-          msg = result.data;
-          error = result.error;
-          searchStrategy = 'external_id';
-        }
+        let searchStrategy = 'idempotent_or';
         
         if (msg) {
           console.log(`✅ [${requestId}] Found message via ${searchStrategy}`);
@@ -1024,16 +1019,27 @@ serve(async (req) => {
       }
     }
 
-    // Forward to N8N with processed data
+    // ✅ FORWARD OBRIGATÓRIO AO N8N - Com fallback
+    const finalWebhookUrl = webhookUrl || Deno.env.get('N8N_FALLBACK_URL');
+    
+    if (!finalWebhookUrl) {
+      console.error(`❌ [${requestId}] NO WEBHOOK URL - MESSAGE LOST!`, {
+        event: EVENT,
+        workspace_id: workspaceId,
+        instance: instanceName
+      });
+    }
+    
     console.log(`🔍 [${requestId}] Pre-send check:`, {
-      has_webhookUrl: !!webhookUrl,
-      webhookUrl_value: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NULL',
+      has_webhookUrl: !!finalWebhookUrl,
+      webhookUrl_value: finalWebhookUrl ? finalWebhookUrl.substring(0, 50) + '...' : 'NULL',
       has_processedData: !!processedData
     });
     
-    if (webhookUrl) {
-      console.log(`🚀 [${requestId}] Forwarding to N8N: ${webhookUrl}`);
+    if (finalWebhookUrl) {
+      console.log(`🚀 [${requestId}] Forwarding to N8N: ${finalWebhookUrl}`);
       
+      // ✅ HEADERS PADRONIZADOS - Sempre consistentes
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -1109,14 +1115,14 @@ serve(async (req) => {
         };
 
         console.log(`🚀 [${requestId}] Sending to N8N:`, {
-          url: webhookUrl,
+          url: finalWebhookUrl,
           original_event: payload.event,
           event_type: n8nPayload.event_type,
           processed_locally: n8nPayload.processed_locally,
           has_processed_data: !!n8nPayload.processed_data
         });
 
-        const response = await fetch(webhookUrl, {
+        const response = await fetch(finalWebhookUrl, {
           method: 'POST',
           headers,
           body: JSON.stringify(n8nPayload)

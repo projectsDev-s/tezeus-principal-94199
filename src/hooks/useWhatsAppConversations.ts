@@ -69,6 +69,9 @@ export const useWhatsAppConversations = () => {
   
   // ✅ Rastrear último update processado para evitar duplicatas
   const lastUpdateProcessed = useRef<Map<string, number>>(new Map());
+  
+  // ✅ MUTEX: Prevenir envio duplicado de mensagens
+  const sendingRef = useRef<Map<string, boolean>>(new Map());
 
   const fetchConversations = async () => {
     const DEBUG_CONVERSATIONS = true; // Ativado para debug
@@ -273,12 +276,15 @@ export const useWhatsAppConversations = () => {
     fileUrl?: string, 
     fileName?: string
   ) => {
-    const DEBUG_CONVERSATIONS = false; // Logs condicionais
+    // ✅ MUTEX: Prevenir duplo envio
+    if (sendingRef.current.get(conversationId)) {
+      console.log('⚠️ Mensagem já sendo enviada, ignorando...');
+      return;
+    }
+    
+    sendingRef.current.set(conversationId, true);
+    
     try {
-      if (DEBUG_CONVERSATIONS) {
-        console.log('📤 Enviando mensagem:', { conversationId, content, messageType });
-      }
-
       // Obter dados do usuário logado
       const userData = localStorage.getItem('currentUser');
       const currentUserData = userData ? JSON.parse(userData) : null;
@@ -287,7 +293,7 @@ export const useWhatsAppConversations = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      // Verificar se há workspace selecionado ou usar fallback
+      // Verificar se há workspace selecionado
       let workspaceId = selectedWorkspace?.workspace_id;
       
       if (!workspaceId) {
@@ -295,7 +301,11 @@ export const useWhatsAppConversations = () => {
         return;
       }
 
-      // Montar payload conforme novo contrato da função (workspace_id é opcional)
+      // ✅ GERAR clientMessageId ÚNICO
+      const clientMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('📤 Enviando mensagem com clientMessageId:', clientMessageId);
+
+      // Montar payload com clientMessageId
       const payload = {
         conversation_id: conversationId,
         content: content,
@@ -303,7 +313,8 @@ export const useWhatsAppConversations = () => {
         sender_id: currentUserData.id,
         sender_type: "agent",
         file_url: fileUrl,
-        file_name: fileName
+        file_name: fileName,
+        clientMessageId // ✅ ENVIAR clientMessageId
       };
 
       const headers: Record<string, string> = {
@@ -311,15 +322,12 @@ export const useWhatsAppConversations = () => {
         'x-system-user-email': currentUserData.email || ''
       };
 
-      // Add workspace context if available (send-message-simple version)
+      // Add workspace context if available
       if (selectedWorkspace?.workspace_id) {
         headers['x-workspace-id'] = selectedWorkspace.workspace_id;
       }
 
-      if (DEBUG_CONVERSATIONS) {
-        console.log('🚀 Chamando send-message-simple com payload:', payload);
-        console.log('🚀 Headers enviados:', headers);
-      }
+      console.log('🚀 Chamando test-send-msg com payload:', payload);
       const { data: sendResult, error: apiError } = await supabase.functions.invoke('test-send-msg', {
         body: payload,
         headers
@@ -337,36 +345,9 @@ export const useWhatsAppConversations = () => {
         throw new Error(errorMessage);
       }
 
-      // Atualizar estado local com a mensagem enviada
-      const messageId = sendResult.message?.id;
-      if (messageId) {
-        setConversations(prev => prev.map(conv => {
-          if (conv.id === conversationId) {
-            const messageExists = conv.messages.some(msg => msg.id === messageId);
-            if (!messageExists) {
-              return {
-                ...conv,
-                messages: [...conv.messages, {
-                  id: messageId,
-                  content,
-                  sender_type: 'agent',
-                  created_at: sendResult.message.created_at || new Date().toISOString(),
-                  status: 'sending',
-                  message_type: messageType as 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker',
-                  file_url: fileUrl,
-                  file_name: fileName,
-                  origem_resposta: 'manual'
-                }]
-              };
-            }
-          }
-          return conv;
-        }));
-      }
-
-      if (DEBUG_CONVERSATIONS) {
-        // Message sent successfully
-      }
+      // ✅ NÃO adicionar mensagem otimista - deixar o Realtime fazer o trabalho
+      console.log('✅ Mensagem enviada com sucesso, aguardando webhook/realtime');
+      
     } catch (error) {
       console.error('❌ Erro ao enviar mensagem:', error);
       
@@ -377,8 +358,11 @@ export const useWhatsAppConversations = () => {
       });
       
       throw error;
+    } finally {
+      // ✅ SEMPRE limpar mutex
+      sendingRef.current.set(conversationId, false);
     }
-  }, [setConversations]);
+  }, [selectedWorkspace, toast]);
 
   // Assumir atendimento (desativar IA)
   const assumirAtendimento = useCallback(async (conversationId: string) => {
@@ -558,9 +542,7 @@ export const useWhatsAppConversations = () => {
     const workspaceId = selectedWorkspace.workspace_id; // ✅ Capturar workspace_id no closure
     console.log('🔌 Iniciando subscription de realtime para workspace:', workspaceId);
 
-    // Subscription para novas mensagens  
-    // Setting up realtime subscriptions
-    
+    // ✅ GARANTIR SUBSCRIPTION ÚNICA
     const messagesChannel = supabase
       .channel(`whatsapp-messages-${workspaceId}`) // ✅ Canal único por workspace
       .on('postgres_changes', 
@@ -892,12 +874,13 @@ export const useWhatsAppConversations = () => {
     // Monitor subscription status
     messagesChannel.subscribe();
 
+    // ✅ CLEANUP: Garantir remoção adequada dos canais
     return () => {
-      // Cleaning up realtime subscriptions
+      console.log('🔕 Removendo subscriptions do workspace:', workspaceId);
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id]); // ✅ CORREÇÃO: Adicionar dependency para recriar subscriptions quando workspace muda
+  }, [selectedWorkspace?.workspace_id]); // ✅ Recriar subscriptions quando workspace muda
 
   return {
     conversations,

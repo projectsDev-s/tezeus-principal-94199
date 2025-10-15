@@ -33,6 +33,16 @@ interface UseConversationMessagesReturn {
   clearMessages: () => void;
 }
 
+// ✅ MAPEAMENTO DE ACK PARA STATUS
+function mapAckToStatus(ack?: number): string {
+  switch(ack) {
+    case 1: return 'sent';
+    case 2: return 'delivered';
+    case 3: return 'read';
+    default: return 'sent';
+  }
+}
+
 export function useConversationMessages(): UseConversationMessagesReturn {
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,6 +58,9 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   // Cache em memória para evitar re-fetch desnecessário
   const cacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; timestamp: number }>>(new Map());
   const CACHE_TTL = 2000; // 2 segundos
+  
+  // ✅ DEDUP: Prevenir processamento duplicado de mensagens
+  const seenRef = useRef<Set<string>>(new Set());
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -213,40 +226,38 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, toast, getHeaders]);
 
   const addMessage = useCallback((message: WhatsAppMessage) => {
+    // ✅ DEDUP: Verificar se já processamos essa mensagem
+    const dedupKey = (message as any).evolution_key_id || (message as any).evolution_short_key_id || message.external_id || message.id;
+    
+    if (seenRef.current.has(dedupKey)) {
+      console.log(`⏭️ Mensagem duplicada ignorada: ${dedupKey}`);
+      return;
+    }
+    
+    seenRef.current.add(dedupKey);
+    
+    // Limpar Set após 30s para liberar memória
+    setTimeout(() => seenRef.current.delete(dedupKey), 30000);
+    
     setMessages(prevMessages => {
-      // Verificar duplicação por ID
-      if (prevMessages.some(m => m.id === message.id)) {
-        console.log('📄 Mensagem já existe com ID:', message.id);
-        return prevMessages;
-      }
+      // Verificar se já existe por ID, external_id ou evolution_key_id
+      const exists = prevMessages.some(m => 
+        m.id === message.id || 
+        (message.external_id && m.external_id === message.external_id) ||
+        ((message as any).evolution_key_id && (m as any).evolution_key_id === (message as any).evolution_key_id) ||
+        ((message as any).evolution_short_key_id && (m as any).evolution_short_key_id === (message as any).evolution_short_key_id)
+      );
       
-      // Verificar duplicação por external_id se existir
-      if (message.external_id && prevMessages.some(m => m.external_id === message.external_id)) {
-        console.log('📄 Mensagem já existe com external_id:', message.external_id);
+      if (exists) {
+        console.log(`⚠️ Mensagem já existe: ${message.id}`);
         return prevMessages;
-      }
-
-      // Se for uma mensagem do real-time com external_id, verificar se há mensagem temporária correspondente
-      if (message.external_id && message.sender_type === 'agent') {
-        const tempMessageIndex = prevMessages.findIndex(m => 
-          m.id.startsWith('temp-') && 
-          m.conversation_id === message.conversation_id &&
-          m.content === message.content &&
-          m.sender_type === message.sender_type &&
-          m.message_type === message.message_type
-        );
-        
-        if (tempMessageIndex !== -1) {
-          console.log('🔄 Substituindo mensagem temporária pela definitiva:', message.id);
-          const updatedMessages = [...prevMessages];
-          updatedMessages[tempMessageIndex] = message;
-          return updatedMessages;
-        }
       }
 
       console.log('📨 Adicionando nova mensagem:', message.id);
-      // Adicionar no final (mensagem mais recente)
-      return [...prevMessages, message];
+      // Adicionar no final (mensagem mais recente) e ordenar por created_at
+      return [...prevMessages, message].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
     });
 
     // Invalidar cache para forçar refresh na próxima carga

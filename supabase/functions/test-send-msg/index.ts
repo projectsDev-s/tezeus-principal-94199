@@ -32,7 +32,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log(`📨 [${requestId}] Received body:`, JSON.stringify(body, null, 2));
     
-    const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name } = body;
+    const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name, clientMessageId } = body;
 
     // Para mensagens de mídia, ignorar placeholders como [IMAGE], [VIDEO], etc
     const isMediaMessage = message_type && message_type !== 'text';
@@ -254,11 +254,34 @@ serve(async (req) => {
     console.log(`✅ [${requestId}] Evolution config found: ${evolutionUrl}`);
 
 
-    // Generate external_id for tracking
-    const external_id = crypto.randomUUID();
+    // ✅ VERIFICAR DUPLICAÇÃO POR clientMessageId
+    if (clientMessageId) {
+      console.log(`🔍 [${requestId}] Checking for duplicate clientMessageId: ${clientMessageId}`);
+      const { data: existing } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('external_id', clientMessageId)
+        .maybeSingle();
+      
+      if (existing) {
+        console.log(`⚠️ [${requestId}] Duplicate message detected: ${clientMessageId}`);
+        return new Response(JSON.stringify({
+          success: true,
+          message_id: existing.id,
+          status: 'duplicate',
+          message: 'Message already sent'
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
     
-    // CRÍTICO: Salvar a mensagem ANTES de chamar o N8N para evitar race condition
-    console.log(`💾 [${requestId}] Saving message to database BEFORE calling N8N`);
+    // Generate external_id for tracking (usar clientMessageId se fornecido)
+    const external_id = clientMessageId || crypto.randomUUID();
+    
+    // CRÍTICO: Salvar a mensagem ANTES de chamar Evolution para evitar race condition
+    console.log(`💾 [${requestId}] Saving message to database BEFORE calling Evolution`);
     
     try {
       const messageData = {
@@ -273,11 +296,12 @@ serve(async (req) => {
         file_name: file_name || null,
         status: 'sending',
         origem_resposta: 'manual',
-        external_id: external_id,
+        external_id: external_id, // ✅ Salvar clientMessageId como external_id
         metadata: {
           source: 'test-send-msg-pre-save',
           request_id: requestId,
-          step: 'before_n8n'
+          step: 'before_evolution',
+          client_message_id: clientMessageId
         }
       };
 
