@@ -1068,7 +1068,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                       className="h-6 w-6 p-0"
                       title="Definir como conexão padrão"
                     >
-                      <Star className="w-3 h-3" />
+                      <Star 
+                        className={`w-3 h-3 transition-colors ${
+                          connection.is_default 
+                            ? 'fill-yellow-500 text-yellow-500' 
+                            : 'text-muted-foreground'
+                        }`} 
+                      />
                     </Button>
                   </div>
                   
