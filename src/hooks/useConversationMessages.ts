@@ -365,39 +365,30 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           
           // Verificar se é do workspace atual
           if (updatedMessage.workspace_id === selectedWorkspace.workspace_id) {
-          // Para mensagens de agente, sempre tentar ATUALIZAR primeiro (pela mensagem otimista)
+          // Para mensagens de agente, evitar duplicação
           if (updatedMessage.sender_type === 'agent') {
-            // Tentar encontrar mensagem temporária pelo external_id
-            const hasTempMessage = messages.some(m => 
-              m.id.startsWith('temp-') && 
-              m.conversation_id === updatedMessage.conversation_id &&
-              m.sender_type === 'agent' &&
-              m.message_type === updatedMessage.message_type &&
-              Math.abs(new Date(m.created_at).getTime() - new Date(updatedMessage.created_at).getTime()) < 5000 // 5 segundos de diferença
+            // Tentar encontrar mensagem existente (temporária ou real)
+            const existingMessageIndex = messages.findIndex(m => 
+              m.id === updatedMessage.id || // Mensagem real
+              (m.id.startsWith('temp-') && // Mensagem temporária
+               m.conversation_id === updatedMessage.conversation_id &&
+               m.sender_type === 'agent' &&
+               m.message_type === updatedMessage.message_type &&
+               Math.abs(new Date(m.created_at).getTime() - new Date(updatedMessage.created_at).getTime()) < 5000)
             );
 
-            if (hasTempMessage) {
-              // Substituir mensagem temporária pela real
-              console.log('🔄 Substituindo mensagem otimista pela real:', updatedMessage.id);
+            if (existingMessageIndex !== -1) {
+              // Atualizar mensagem existente (substituir temporária ou atualizar real)
+              console.log('🔄 Atualizando mensagem existente:', updatedMessage.id);
               setMessages(prev => {
-                // Remover mensagem temporária
-                const filtered = prev.filter(m => 
-                  !(m.id.startsWith('temp-') && 
-                    m.conversation_id === updatedMessage.conversation_id &&
-                    m.sender_type === 'agent' &&
-                    m.message_type === updatedMessage.message_type &&
-                    Math.abs(new Date(m.created_at).getTime() - new Date(updatedMessage.created_at).getTime()) < 5000)
-                );
-                // Adicionar mensagem real no lugar
-                return [...filtered, updatedMessage];
+                const updated = [...prev];
+                updated[existingMessageIndex] = updatedMessage;
+                return updated;
               });
             } else if (updatedMessage.status === 'sent') {
-              // Se não há mensagem temporária e status é 'sent', adicionar normalmente
-              console.log('✅ Adicionando mensagem agent enviada (sem otimista):', updatedMessage.id);
+              // Adicionar apenas se NÃO existe e status é 'sent'
+              console.log('✅ Adicionando nova mensagem agent:', updatedMessage.id);
               addMessage(updatedMessage);
-            } else {
-              // Caso padrão: apenas atualizar status
-              updateMessage(updatedMessage.id, updatedMessage);
             }
           } else {
             // Para mensagens de contato, apenas atualizar
