@@ -125,20 +125,68 @@ export const useContactObservations = (contactId: string) => {
     }
   };
 
-  const updateObservation = async (id: string, content: string) => {
+  const updateObservation = async (id: string, content: string, file?: File | null) => {
     if (!contactId || !currentWorkspace?.workspace_id || !content.trim()) return false;
 
+    setIsUploading(true);
     try {
+      let fileData: { name?: string | null; url?: string | null; type?: string | null } = {};
+
+      // Se um novo arquivo foi enviado, fazer upload
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${contactId}-${Date.now()}.${fileExt}`;
+        const filePath = `observations/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('workspace-media')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('workspace-media')
+          .getPublicUrl(filePath);
+
+        fileData = {
+          name: file.name,
+          url: publicUrl,
+          type: file.type
+        };
+      }
+
+      // Preparar dados de atualização
+      const updateData: any = { 
+        content: content.trim(), 
+        updated_at: new Date().toISOString() 
+      };
+
+      // Adicionar dados do arquivo se houver
+      if (file) {
+        updateData.file_name = fileData.name;
+        updateData.file_url = fileData.url;
+        updateData.file_type = fileData.type;
+      }
+
       const { error } = await supabase
         .from('contact_observations')
-        .update({ content: content.trim(), updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', id)
         .eq('workspace_id', currentWorkspace.workspace_id);
 
       if (error) throw error;
 
+      // Atualizar estado local
       setObservations(prev => 
-        prev.map(obs => obs.id === id ? { ...obs, content: content.trim() } : obs)
+        prev.map(obs => obs.id === id ? { 
+          ...obs, 
+          content: content.trim(),
+          ...(file && {
+            file_name: fileData.name,
+            file_url: fileData.url,
+            file_type: fileData.type
+          })
+        } : obs)
       );
 
       toast({
@@ -152,6 +200,51 @@ export const useContactObservations = (contactId: string) => {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar a observação",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeObservationFile = async (id: string) => {
+    if (!contactId || !currentWorkspace?.workspace_id) return false;
+
+    try {
+      const { error } = await supabase
+        .from('contact_observations')
+        .update({ 
+          file_name: null,
+          file_url: null,
+          file_type: null,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', id)
+        .eq('workspace_id', currentWorkspace.workspace_id);
+
+      if (error) throw error;
+
+      setObservations(prev => 
+        prev.map(obs => obs.id === id ? { 
+          ...obs, 
+          file_name: undefined,
+          file_url: undefined,
+          file_type: undefined
+        } : obs)
+      );
+
+      toast({
+        title: "Sucesso",
+        description: "Arquivo removido com sucesso"
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao remover arquivo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o arquivo",
         variant: "destructive"
       });
       return false;
@@ -224,6 +317,7 @@ export const useContactObservations = (contactId: string) => {
     addObservation,
     updateObservation,
     deleteObservation,
+    removeObservationFile,
     downloadFile,
     getFileIcon,
     refetch: fetchObservations

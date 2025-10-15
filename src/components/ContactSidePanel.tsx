@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User, Briefcase, FileText, Paperclip, Pencil, Trash2, Plus, Pin, MapPin, MessageCircle, Trophy, Mail, Phone, Home, Globe, X } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -73,6 +73,8 @@ export function ContactSidePanel({
   const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
   const [editingObservationId, setEditingObservationId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
+  const [editingFile, setEditingFile] = useState<File | null>(null);
+  const editingFileInputRef = useRef<HTMLInputElement>(null);
   const [deletingObservationId, setDeletingObservationId] = useState<string | null>(null);
   const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
@@ -118,6 +120,7 @@ export function ContactSidePanel({
     addObservation,
     updateObservation,
     deleteObservation,
+    removeObservationFile,
     downloadFile,
     getFileIcon,
     isUploading
@@ -330,18 +333,29 @@ export function ContactSidePanel({
   const handleEditObservation = (obs: ContactObservation) => {
     setEditingObservationId(obs.id);
     setEditingContent(obs.content);
+    setEditingFile(null);
   };
+  
   const handleSaveEdit = async () => {
     if (!editingObservationId) return;
-    const success = await updateObservation(editingObservationId, editingContent);
+    const success = await updateObservation(editingObservationId, editingContent, editingFile);
     if (success) {
       setEditingObservationId(null);
       setEditingContent('');
+      setEditingFile(null);
+    }
+  };
+
+  const handleRemoveFile = async (observationId: string) => {
+    const success = await removeObservationFile(observationId);
+    if (success && editingObservationId === observationId) {
+      setEditingObservationId(null);
     }
   };
   const handleCancelEdit = () => {
     setEditingObservationId(null);
     setEditingContent('');
+    setEditingFile(null);
   };
 
   const handleSaveDealTitle = async (dealId: string) => {
@@ -804,25 +818,90 @@ export function ContactSidePanel({
                       <ScrollArea className="h-48">
                         <div className="space-y-3 pr-4">
                           {realObservations.map(obs => <div key={obs.id} className="p-3 bg-muted/30 rounded-lg group">
-                              {editingObservationId === obs.id ? <div className="space-y-2">
-                                  <Textarea value={editingContent} onChange={e => setEditingContent(e.target.value)} className="min-h-[80px]" />
+                              {editingObservationId === obs.id ? (
+                                <div className="space-y-2">
+                                  <Textarea 
+                                    value={editingContent} 
+                                    onChange={e => setEditingContent(e.target.value)} 
+                                    className="min-h-[80px]" 
+                                  />
+                                  
+                                  {/* Mostrar arquivo existente */}
+                                  {obs.file_name && obs.file_url && !editingFile && (
+                                    <div className="flex items-center justify-between p-2 bg-muted rounded">
+                                      <button 
+                                        onClick={() => handleFileClick(obs.file_url!, obs.file_name!, obs.file_type)} 
+                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                      >
+                                        <Paperclip className="h-3 w-3" />
+                                        {obs.file_name}
+                                      </button>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-6 w-6 text-red-600" 
+                                        onClick={() => handleRemoveFile(obs.id)}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+
+                                  {/* Input para novo arquivo */}
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      ref={editingFileInputRef}
+                                      type="file"
+                                      onChange={(e) => setEditingFile(e.target.files?.[0] || null)}
+                                      className="hidden"
+                                    />
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => editingFileInputRef.current?.click()}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Paperclip className="h-4 w-4" />
+                                      {editingFile ? editingFile.name : 'Anexar arquivo'}
+                                    </Button>
+                                    
+                                    {editingFile && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={() => setEditingFile(null)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={handleSaveEdit}>
-                                      Salvar
+                                    <Button size="sm" onClick={handleSaveEdit} disabled={isUploading}>
+                                      {isUploading ? 'Salvando...' : 'Salvar'}
                                     </Button>
                                     <Button size="sm" variant="outline" onClick={handleCancelEdit}>
                                       Cancelar
                                     </Button>
                                   </div>
-                                </div> : <div className="flex items-start justify-between gap-2">
+                                </div>
+                              ) : (
+                                <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1">
                                     <p className="text-sm">{obs.content}</p>
-                                    {obs.file_name && obs.file_url && <div className="mt-2">
-                                        <button onClick={() => handleFileClick(obs.file_url!, obs.file_name!, obs.file_type)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                    {obs.file_name && obs.file_url && (
+                                      <div className="mt-2">
+                                        <button 
+                                          onClick={() => handleFileClick(obs.file_url!, obs.file_name!, obs.file_type)} 
+                                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                        >
                                           <Paperclip className="h-3 w-3" />
                                           {obs.file_name}
                                         </button>
-                                      </div>}
+                                      </div>
+                                    )}
                                     <span className="text-xs text-muted-foreground block mt-1">
                                       {formatDate(obs.created_at)}
                                     </span>
@@ -835,7 +914,8 @@ export function ContactSidePanel({
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
                                   </div>
-                                </div>}
+                                </div>
+                              )}
                             </div>)}
                           {realObservations.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">
                               Nenhuma observação encontrada
