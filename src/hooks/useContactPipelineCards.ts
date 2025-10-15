@@ -36,6 +36,8 @@ export function useContactPipelineCards(contactId: string | null) {
       const headers = getHeaders();
       
       // Buscar todos os cards do contato no workspace atual
+      console.log('[useContactPipelineCards] Buscando cards para contactId:', contactId, 'workspace:', selectedWorkspace.workspace_id);
+      
       const { data: cardsData, error: cardsError } = await supabase
         .from('pipeline_cards')
         .select(`
@@ -46,25 +48,38 @@ export function useContactPipelineCards(contactId: string | null) {
           value,
           title,
           description,
-          pipelines!inner(id, name, workspace_id),
-          pipeline_columns!inner(id, name)
+          pipelines(id, name, workspace_id),
+          pipeline_columns(id, name)
         `)
-        .eq('contact_id', contactId)
-        .eq('pipelines.workspace_id', selectedWorkspace.workspace_id);
+        .eq('contact_id', contactId);
 
-      if (cardsError) throw cardsError;
+      console.log('[useContactPipelineCards] Resultado da query:', { cardsData, cardsError });
 
-      const formattedCards = cardsData?.map(card => ({
+      if (cardsError) {
+        console.error('[useContactPipelineCards] Erro na query:', cardsError);
+        throw cardsError;
+      }
+
+      // Filtrar cards que pertencem ao workspace correto
+      const workspaceCards = cardsData?.filter(card => 
+        (card.pipelines as any)?.workspace_id === selectedWorkspace.workspace_id
+      ) || [];
+
+      console.log('[useContactPipelineCards] Cards após filtro de workspace:', workspaceCards);
+
+      const formattedCards = workspaceCards.map(card => ({
         id: card.id,
         pipeline_id: card.pipeline_id,
-        pipeline_name: (card.pipelines as any)?.name || '',
+        pipeline_name: (card.pipelines as any)?.name || 'Pipeline não encontrado',
         column_id: card.column_id,
-        column_name: (card.pipeline_columns as any)?.name || '',
+        column_name: (card.pipeline_columns as any)?.name || 'Coluna não encontrada',
         status: card.status,
         value: card.value,
         title: card.title,
         description: card.description,
-      })) || [];
+      }));
+
+      console.log('[useContactPipelineCards] Cards formatados:', formattedCards);
 
       setCards(formattedCards);
       
