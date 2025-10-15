@@ -1013,11 +1013,10 @@ export function WhatsAppChat({
     if (selectedConversationId && conversations.length > 0) {
       const conversation = conversations.find(conv => conv.id === selectedConversationId);
       if (conversation) {
-        setSelectedConversation(conversation);
-        markAsRead(conversation.id);
+        handleSelectConversation(conversation);
       }
     }
-  }, [selectedConversationId, conversations, markAsRead]);
+  }, [selectedConversationId, conversations]);
 
   // ✅ Scroll para última mensagem APENAS no carregamento inicial da conversa
   useEffect(() => {
