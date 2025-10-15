@@ -24,10 +24,12 @@ export function useWorkspaceLimits(workspaceId: string) {
 
   const fetchLimits = async () => {
     if (!workspaceId) {
+      console.log('🔴 useWorkspaceLimits: workspaceId is null/undefined');
       setIsLoading(false);
       return;
     }
     
+    console.log('🔵 useWorkspaceLimits: Fetching limits for workspace:', workspaceId);
     setIsLoading(true);
     try {
       // Get workspace limits - use maybeSingle to avoid 406 errors
@@ -37,7 +39,10 @@ export function useWorkspaceLimits(workspaceId: string) {
         .eq('workspace_id', workspaceId)
         .maybeSingle();
 
+      console.log('📊 useWorkspaceLimits: Limits data from DB:', limitsData);
+
       if (limitsError && limitsError.code !== 'PGRST116') { // Not found error
+        console.error('❌ useWorkspaceLimits: Error fetching limits:', limitsError);
         throw limitsError;
       }
 
@@ -47,12 +52,17 @@ export function useWorkspaceLimits(workspaceId: string) {
         .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceId);
 
+      console.log('📊 useWorkspaceLimits: Connections count:', connectionCount);
+
       if (countError) {
+        console.error('❌ useWorkspaceLimits: Error counting connections:', countError);
         throw countError;
       }
 
       const currentLimit = limitsData?.connection_limit || 1;
       const currentUsage = connectionCount || 0;
+
+      console.log('✅ useWorkspaceLimits: Final values - current:', currentUsage, 'limit:', currentLimit, 'canCreateMore:', currentUsage < currentLimit);
 
       setLimits(limitsData);
       setUsage({

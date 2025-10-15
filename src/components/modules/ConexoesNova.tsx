@@ -57,10 +57,17 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [workspacePipelines, setWorkspacePipelines] = useState<any[]>([]);
   const [loadingPipelines, setLoadingPipelines] = useState(false);
   
-  const { usage, refreshLimits } = useWorkspaceLimits(workspaceId);
+  const { usage, isLoading: isLoadingLimits, refreshLimits } = useWorkspaceLimits(workspaceId);
   const { canCreateConnections } = useWorkspaceRole();
   const navigate = useNavigate();
   const { queues } = useQueues();
+
+  // Debug: Log usage changes
+  useEffect(() => {
+    console.log('🟢 ConexoesNova: workspaceId:', workspaceId);
+    console.log('🟢 ConexoesNova: usage:', usage);
+    console.log('🟢 ConexoesNova: isLoadingLimits:', isLoadingLimits);
+  }, [usage, workspaceId, isLoadingLimits]);
 
   // Função para carregar pipelines do workspace específico
   const loadWorkspacePipelines = async () => {
@@ -131,7 +138,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   // Load connections on component mount
   useEffect(() => {
     if (workspaceId) {
+      console.log('🔄 ConexoesNova: Loading connections and refreshing limits on mount');
       loadConnections();
+      refreshLimits(); // Force refresh limits when component mounts
     }
     
     return () => {
