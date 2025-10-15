@@ -77,10 +77,11 @@ export const useWorkspaceAnalytics = () => {
 
       console.log('✅ Analytics: Conversations loaded', { activeConversations, totalConversations });
 
-      // Buscar pipelines via edge function (RLS-safe)
+      // Buscar pipelines via edge function (RLS-safe) usando GET
       const { data: pipelinesResponse, error: pipelinesError } = await supabase.functions.invoke(
         'pipeline-management/pipelines',
         {
+          method: 'GET',
           headers
         }
       );
@@ -117,6 +118,7 @@ export const useWorkspaceAnalytics = () => {
         const { data: cardsData, error: cardsError } = await supabase.functions.invoke(
           `pipeline-management/cards?pipeline_id=${pipelineId}`,
           {
+            method: 'GET',
             headers
           }
         );
@@ -144,6 +146,7 @@ export const useWorkspaceAnalytics = () => {
         const { data: columnsData } = await supabase.functions.invoke(
           `pipeline-management/columns?pipeline_id=${pipelineId}`,
           {
+            method: 'GET',
             headers
           }
         );
