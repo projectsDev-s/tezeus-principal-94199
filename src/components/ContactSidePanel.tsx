@@ -507,7 +507,7 @@ export function ContactSidePanel({
                         setIsEditingEmail(false);
                         handleSaveContact();
                       }
-                    }} autoFocus className="text-sm text-center bg-transparent border-none outline-none border-b-2 border-primary mt-1 pb-0.5 text-gray-900" /> : <p onDoubleClick={() => setIsEditingEmail(true)} className="text-sm text-gray-900 mt-1 cursor-pointer hover:text-gray-700 transition-colors" title="Clique duas vezes para editar">
+                    }} autoFocus className="text-sm text-center bg-transparent border-none outline-none border-b-2 border-primary mt-1 pb-0.5 text-white" /> : <p onDoubleClick={() => setIsEditingEmail(true)} className="text-sm text-white mt-1 cursor-pointer hover:text-white/80 transition-colors" title="Clique duas vezes para editar">
                           {editingContact?.email || 'Adicionar email'}
                         </p>}
                     </div>
