@@ -860,6 +860,13 @@ serve(async (req) => {
           }
 
           // Create message with Evolution message ID as external_id
+          // ✅ Use original messageTimestamp for historical messages
+          const messageCreatedAt = messageData.messageTimestamp 
+            ? new Date(messageData.messageTimestamp * 1000).toISOString()
+            : new Date().toISOString();
+          
+          console.log(`🕐 [${requestId}] Message timestamp: original=${messageData.messageTimestamp}, converted=${messageCreatedAt}, isHistorical=${isHistoricalSync}`);
+          
           const messageId = crypto.randomUUID();
           const { data: newMessage } = await supabase
             .from('messages')
@@ -877,6 +884,7 @@ serve(async (req) => {
               origem_resposta: 'automatica',
               external_id: evolutionMessageId, // 22 chars
               evolution_key_id: evolutionKeyId, // 40 chars (nullable)
+              created_at: messageCreatedAt, // ✅ Use original timestamp
               file_url: messageData.message?.audioMessage?.url ||
                        messageData.message?.imageMessage?.url ||
                        messageData.message?.videoMessage?.url ||
@@ -890,6 +898,7 @@ serve(async (req) => {
                 evolution_data: messageData,
                 request_id: requestId,
                 message_flow: 'inbound_original',
+                original_timestamp: messageData.messageTimestamp,
                 duration_seconds: messageData.message?.audioMessage?.seconds || 
                                  messageData.message?.videoMessage?.seconds,
                 waveform: messageData.message?.audioMessage?.waveform,
