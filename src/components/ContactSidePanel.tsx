@@ -519,7 +519,7 @@ export function ContactSidePanel({
                         <MessageCircle className="h-5 w-5 text-blue-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.activeConversations}</p>
-                      <p className="text-xs text-gray-500 font-medium text-center">Conversas Ativas</p>
+                      <p className="text-xs text-gray-500 font-medium text-center whitespace-nowrap">Conversas Ativas</p>
                     </div>
 
                     {/* Negócios Ativos */}
@@ -528,7 +528,7 @@ export function ContactSidePanel({
                         <Briefcase className="h-5 w-5 text-amber-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.activeDeals}</p>
-                      <p className="text-xs text-gray-500 font-medium text-center">Negócios Ativos</p>
+                      <p className="text-xs text-gray-500 font-medium text-center whitespace-nowrap">Negócios Ativos</p>
                     </div>
 
                     {/* Negócios Fechados */}
@@ -537,7 +537,7 @@ export function ContactSidePanel({
                         <Trophy className="h-5 w-5 text-green-600" />
                       </div>
                       <p className="text-2xl font-bold text-gray-900">{stats.closedDeals}</p>
-                      <p className="text-xs text-gray-500 font-medium text-center">Negócios Fechados</p>
+                      <p className="text-xs text-gray-500 font-medium text-center whitespace-nowrap">Negócios Fechados</p>
                     </div>
                   </div>
                 </div>
