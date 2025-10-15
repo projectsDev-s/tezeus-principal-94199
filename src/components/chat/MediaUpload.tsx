@@ -16,6 +16,14 @@ const ALLOWED_FORMATS = {
   document: ['application/pdf', 'application/octet-stream']
 };
 
+// Limites de tamanho por tipo (em bytes)
+const SIZE_LIMITS = {
+  image: 10 * 1024 * 1024,    // 10MB
+  video: 50 * 1024 * 1024,    // 50MB
+  audio: 20 * 1024 * 1024,    // 20MB
+  document: 15 * 1024 * 1024  // 15MB
+};
+
 // Nomes amigáveis para exibir ao usuário
 const FORMAT_NAMES: Record<string, string> = {
   'video/mp4': 'MP4',
@@ -78,6 +86,29 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
 
     // ✅ VALIDAR FORMATO
     if (!validateFileType(file, mediaType)) {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // ✅ VALIDAR TAMANHO
+    const maxSize = SIZE_LIMITS[mediaType];
+    if (file.size > maxSize) {
+      const maxSizeMB = (maxSize / (1024 * 1024)).toFixed(0);
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      
+      const mediaTypeLabel = mediaType === 'video' ? 'vídeo' : 
+                              mediaType === 'image' ? 'imagem' : 
+                              mediaType === 'audio' ? 'áudio' : 'documento';
+      
+      toast.error('Arquivo muito grande', {
+        description: `Tamanho máximo para ${mediaTypeLabel}: ${maxSizeMB}MB. Seu arquivo tem ${fileSizeMB}MB.`,
+        duration: 5000,
+        dismissible: true,
+        closeButton: true
+      });
+      
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
