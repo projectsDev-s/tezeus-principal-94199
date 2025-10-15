@@ -202,12 +202,7 @@ export function AdicionarFilaModal({
         </Tabs>
 
         <div className="flex justify-between items-center pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            Opções
-            <Button variant="ghost" size="sm" className="ml-2 text-yellow-600">
-              + Adicionar
-            </Button>
-          </div>
+          
           
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
