@@ -42,6 +42,7 @@ export function AdicionarFilaModal({
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
+  const [showError, setShowError] = useState(false);
 
   // Form state
   const [nome, setNome] = useState("");
@@ -70,12 +71,15 @@ export function AdicionarFilaModal({
     setAgenteId("");
     setMensagemSaudacao("");
     setActiveTab("dados");
+    setShowError(false);
   };
   const handleSubmit = async () => {
     if (!nome.trim()) {
+      setShowError(true);
       toast.error("Nome é obrigatório");
       return;
     }
+    setShowError(false);
     setLoading(true);
     try {
       const {
@@ -128,8 +132,17 @@ export function AdicionarFilaModal({
                 <Label htmlFor="nome">
                   Nome <span className="text-red-500">*</span>
                 </Label>
-                <Input id="nome" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome da fila" className="border-red-200 focus:border-red-400" />
-                <span className="text-xs text-red-500">Required</span>
+                <Input 
+                  id="nome" 
+                  value={nome} 
+                  onChange={(e) => {
+                    setNome(e.target.value);
+                    setShowError(false);
+                  }} 
+                  placeholder="Nome da fila" 
+                  className={showError ? "border-red-500 focus:border-red-500" : ""} 
+                />
+                {showError && <span className="text-xs text-red-500">Nome é obrigatório</span>}
               </div>
 
               <div className="space-y-2">
