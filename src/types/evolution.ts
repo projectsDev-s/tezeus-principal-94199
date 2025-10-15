@@ -32,6 +32,7 @@ export interface CreateConnectionRequest {
   workspaceId: string;
   autoCreateCrmCard?: boolean;
   defaultPipelineId?: string;
+  phoneNumber?: string;
 }
 
 export interface ProvisionerLog {

@@ -338,6 +338,7 @@ serve(async (req) => {
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
       syncFullHistory: true,  // ✅ Na raiz do payload (mais confiável)
+      number: phoneNumber || undefined,  // ✅ Número de telefone do WhatsApp
       settings: {
         rejectCall: false,
         groupsIgnore: false,
@@ -365,6 +366,7 @@ serve(async (req) => {
     
     console.log('📦 Evolution payload configuration:', {
       instanceName,
+      number: phoneNumber || 'not provided',
       syncFullHistory: true,
       webhook_by_events: true,
       webhook_base64: true,

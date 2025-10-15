@@ -238,6 +238,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         workspaceId,
         autoCreateCrmCard: createCrmCard,
         defaultPipelineId: selectedPipeline || undefined,
+        phoneNumber: phoneNumber?.trim() || undefined,
         metadata: {
           border_color: connectionColor
         }
