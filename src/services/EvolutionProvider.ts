@@ -224,15 +224,29 @@ class EvolutionProvider {
   }
 
   async getConnectionStatus(connectionId: string): Promise<ConnectionResponse> {
-    const { data } = await supabase.functions.invoke('evolution-manage-instance', {
+    const { data, error } = await supabase.functions.invoke('evolution-manage-instance', {
       body: { action: 'status', connectionId }
     });
     
+    // Tratar erro de invocação
+    if (error) {
+      console.error('Error invoking evolution-manage-instance:', error);
+      throw new Error(error.message || 'Failed to invoke status check');
+    }
+    
+    // Validar resposta
     if (!data?.success) {
       throw new Error(data?.error || 'Failed to get connection status');
     }
     
-    return data.connection;
+    // A edge function retorna { success, status, evolutionData }
+    // Construir o objeto ConnectionResponse esperado
+    return {
+      id: connectionId,
+      instance_name: data.evolutionData?.instance?.instanceName || '',
+      status: data.status,
+      phone_number: data.evolutionData?.instance?.owner || undefined,
+    } as ConnectionResponse;
   }
 
   async getQRCode(connectionId: string): Promise<{ qr_code: string }> {
