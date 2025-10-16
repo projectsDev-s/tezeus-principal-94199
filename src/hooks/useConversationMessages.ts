@@ -32,6 +32,7 @@ interface UseConversationMessagesReturn {
   loadMore: () => Promise<void>;
   addMessage: (message: WhatsAppMessage) => void;
   updateMessage: (messageId: string, updates: Partial<WhatsAppMessage>) => void;
+  removeMessage: (messageId: string) => void;
   clearMessages: () => void;
 }
 
@@ -279,6 +280,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     }
   }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
+  const removeMessage = useCallback((messageId: string) => {
+    console.log('🗑️ removeMessage chamado:', messageId);
+    setMessages(prevMessages => prevMessages.filter(m => m.id !== messageId));
+    
+    // Invalidar cache
+    if (selectedWorkspace?.workspace_id && currentConversationId) {
+      const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
+      cacheRef.current.delete(cacheKey);
+    }
+  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
     console.log('🔄 updateMessage chamado:', { messageId, updates });
     
@@ -459,6 +471,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     loadMore,
     addMessage,
     updateMessage,
+    removeMessage,
     clearMessages
   };
 }

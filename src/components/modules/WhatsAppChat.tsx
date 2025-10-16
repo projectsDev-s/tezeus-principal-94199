@@ -71,6 +71,7 @@ export function WhatsAppChat({
     loadMore: loadMoreMessages,
     addMessage,
     updateMessage,
+    removeMessage,
     clearMessages
   } = useConversationMessages();
   const {
@@ -306,31 +307,9 @@ export function WhatsAppChat({
         messageToReplace: messages.find(m => m.id === optimisticMessage.id)
       });
 
-      // ✅ SUBSTITUIR mensagem temporária pelo ID real
-      if (sendResult.message?.id) {
-        console.log('✅ [ETAPA 2] Substituindo mensagem temporária pelo ID real:', {
-          tempId: optimisticMessage.id,
-          realId: sendResult.message.id
-        });
-        
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-
-        // ✅ ETAPA 2: DEBUG - Verificar estado após substituição
-        setTimeout(() => {
-          console.log('📋 [ETAPA 2] Estado após substituição:', {
-            totalMessages: messages.length,
-            temporaryMessages: messages.filter(m => m.id.startsWith('temp-')).map(m => ({ id: m.id, content: m.content })),
-            realMessage: messages.find(m => m.id === sendResult.message.id)
-          });
-        }, 100);
-      } else {
-        console.warn('⚠️ [ETAPA 2] Backend não retornou message.id!');
-        updateMessage(optimisticMessage.id, { status: 'sent' });
-      }
+      // ✅ REMOVER mensagem otimista IMEDIATAMENTE (a mensagem real virá via Realtime)
+      console.log('🗑️ [ETAPA 2] Removendo mensagem otimista:', optimisticMessage.id);
+      removeMessage(optimisticMessage.id);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
