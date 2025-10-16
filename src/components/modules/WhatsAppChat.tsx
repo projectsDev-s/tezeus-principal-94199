@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
+import { useNotifications } from "@/hooks/useNotifications";
 import { getConnectionColor } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,20 @@ export function WhatsAppChat({
   isDarkMode = false,
   selectedConversationId
 }: WhatsAppChatProps) {
+  // Usar notificações para saber quais conversas têm mensagens não lidas
+  const { notifications, markContactAsRead } = useNotifications();
+  
+  // Criar mapa de conversas com notificações não lidas
+  const conversationNotifications = useMemo(() => {
+    const map = new Map<string, number>();
+    notifications.forEach(notif => {
+      const currentCount = map.get(notif.conversationId) || 0;
+      map.set(notif.conversationId, currentCount + 1);
+    });
+    console.log('🔔 [WhatsAppChat] Mapa de notificações:', Array.from(map.entries()));
+    return map;
+  }, [notifications]);
+  
   // Usar hook completo de conversas
   const {
     conversations,
@@ -169,7 +184,8 @@ export function WhatsAppChat({
         filtered = conversations.filter(c => !c.assigned_user_id && c.status !== 'closed');
         break;
       case 'unread':
-        filtered = conversations.filter(c => c.unread_count > 0 && c.status !== 'closed');
+        // Filtrar por conversas que TÊM notificações não lidas para este usuário
+        filtered = conversations.filter(c => conversationNotifications.has(c.id) && c.status !== 'closed');
         break;
       default:
         filtered = conversations.filter(c => c.status !== 'closed');
@@ -230,13 +246,13 @@ export function WhatsAppChat({
   // ✅ Estado para desabilitar botão durante envio
   const [isSending, setIsSending] = useState(false);
 
-  // ✅ Marcar como lida automaticamente ao abrir conversa
+  // Marcar como lida automaticamente ao abrir conversa
   useEffect(() => {
-    if (selectedConversation && selectedConversation.unread_count > 0) {
+    if (selectedConversation && conversationNotifications.has(selectedConversation.id)) {
       console.log('📖 Marcando conversa como lida:', selectedConversation.contact.name);
-      markAsRead(selectedConversation.id);
+      markContactAsRead(selectedConversation.id);
     }
-  }, [selectedConversation?.id]); // Apenas quando mudar de conversa
+  }, [selectedConversation?.id]);
 
 
   // ✅ Enviar mensagem usando o hook de mensagens
@@ -597,6 +613,11 @@ export function WhatsAppChat({
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     setSelectedConversation(conversation);
+
+    // Marcar como lida se houver notificações
+    if (conversationNotifications.has(conversation.id)) {
+      markContactAsRead(conversation.id);
+    }
 
     // Limpar modo de seleção ao trocar de conversa
     setSelectionMode(false);
@@ -1248,7 +1269,7 @@ export function WhatsAppChat({
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Não lidas</span>
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
-                          {conversations.filter(c => c.unread_count > 0 && c.status !== 'closed').length}
+                          {conversations.filter(c => conversationNotifications.has(c.id) && c.status !== 'closed').length}
                         </span>
                       </>}
                   </button>
@@ -1403,11 +1424,11 @@ export function WhatsAppChat({
                             </AvatarFallback>
                           </Avatar>
                           
-                          {/* Badge de mensagens não lidas - lido diretamente da conversa */}
-                          {conversation.unread_count > 0 && (
+                          {/* Badge de mensagens não lidas - baseado em notificações */}
+                          {conversationNotifications.has(conversation.id) && (
                             <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
                               <span className="text-white text-xs font-semibold">
-                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                                {conversationNotifications.get(conversation.id)! > 99 ? '99+' : conversationNotifications.get(conversation.id)}
                               </span>
                             </div>
                           )}
@@ -1450,7 +1471,7 @@ export function WhatsAppChat({
                           {conversation.last_message?.[0] ? <>
                               {conversation.last_message[0].sender_type === 'contact' ? '' : 'Você: '}
                               {conversation.last_message[0].message_type === 'text' ? conversation.last_message[0].content : `${conversation.last_message[0].message_type === 'image' ? '📷' : conversation.last_message[0].message_type === 'video' ? '🎥' : conversation.last_message[0].message_type === 'audio' ? '🎵' : '📄'} ${conversation.last_message[0].message_type.charAt(0).toUpperCase() + conversation.last_message[0].message_type.slice(1)}`}
-                            </> : conversation.unread_count > 0 ? `${conversation.unread_count} mensagem${conversation.unread_count > 1 ? 's' : ''} não lida${conversation.unread_count > 1 ? 's' : ''}` : 'Clique para ver mensagens'}
+                            </> : conversationNotifications.has(conversation.id) ? `${conversationNotifications.get(conversation.id)} mensagem${conversationNotifications.get(conversation.id)! > 1 ? 's' : ''} não lida${conversationNotifications.get(conversation.id)! > 1 ? 's' : ''}` : 'Clique para ver mensagens'}
                         </span>
                       </div>
                     </div>
