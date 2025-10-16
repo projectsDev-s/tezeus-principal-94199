@@ -317,11 +317,11 @@ export function WhatsAppChat({
         optimisticId: optimisticMessage.id
       });
 
-      // ✅ NÃO remover mensagem otimista - o INSERT será ignorado pela deduplicação
-      // ✅ O UPDATE vai atualizar a mensagem otimista via external_id
-      if (sendResult.message?.id) {
+      // ✅ Atualizar mensagem otimista IMEDIATAMENTE com ID real e status 'sent'
+      if (sendResult.success && sendResult.evolution_key_id) {
         updateMessage(clientMessageId, {
-          id: sendResult.message.id,
+          id: sendResult.message?.id || optimisticMessage.id,
+          external_id: sendResult.evolution_key_id,
           status: 'sent'
         });
       }
