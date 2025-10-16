@@ -50,11 +50,9 @@ export function WhatsAppChat({
   isDarkMode = false,
   selectedConversationId
 }: WhatsAppChatProps) {
-  // ✅ USAR conversas do Provider (instância única compartilhada)
-  const { conversations: contextConversations } = useRealtimeNotifications();
-  
-  // ✅ Usar hooks locais do useWhatsAppConversations para actions
+  // Usar hook completo de conversas
   const {
+    conversations,
     markAsRead,
     assumirAtendimento,
     reativarIA,
@@ -64,9 +62,6 @@ export function WhatsAppChat({
     loading,
     sendMessage
   } = useWhatsAppConversations();
-  
-  // ✅ Usar conversas do contexto (compartilhadas)
-  const conversations = contextConversations;
 
   // ✅ Hook específico para mensagens (lazy loading)
   const {
