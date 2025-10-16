@@ -290,7 +290,26 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
       const currentMessage = prevMessages[messageIndex];
       
-      // ✅ Atualizar a mensagem (sem lógica de mudança de ID)
+      // ✅ CRÍTICO: Se está mudando o ID (de temporário para real)
+      if (updates.id && updates.id !== messageId) {
+        console.log('🔄 Tentando mudar ID de temporário para real:', { 
+          oldId: messageId, 
+          newId: updates.id 
+        });
+        
+        // Verificar se já existe mensagem com o novo ID
+        const existingIndex = prevMessages.findIndex(m => m.id === updates.id);
+        if (existingIndex !== -1) {
+          console.log('⚠️ JÁ EXISTE mensagem com o ID real, REMOVENDO a temporária:', updates.id);
+          // ✅ Já existe → remover a temporária
+          return prevMessages.filter(m => m.id !== messageId);
+        }
+        
+        // ✅ Se não existe, atualizar o ID da mensagem temporária
+        console.log('✅ Não existe mensagem com ID real, atualizando temporária');
+      }
+      
+      // Atualizar a mensagem
       const updatedMessages = [...prevMessages];
       updatedMessages[messageIndex] = { ...currentMessage, ...updates };
       
