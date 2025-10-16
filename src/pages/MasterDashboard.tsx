@@ -18,6 +18,7 @@ import { EvolutionApiConfigMaster } from '@/components/modules/master/EvolutionA
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspaceRelatorios } from '@/components/modules/WorkspaceRelatorios';
 import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
+import { WorkspaceConfigModal } from '@/components/modals/WorkspaceConfigModal';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ export default function MasterDashboard() {
   const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
   const [usersModalOpen, setUsersModalOpen] = useState(false);
   const [selectedWorkspaceForModal, setSelectedWorkspaceForModal] = useState<Workspace | null>(null);
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [selectedWorkspaceForConfig, setSelectedWorkspaceForConfig] = useState<Workspace | null>(null);
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -64,10 +67,8 @@ export default function MasterDashboard() {
   };
 
   const handleViewConfig = (workspace: Workspace) => {
-    setSelectedWorkspace(workspace);
-    localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
-    // Navega para a página de gerenciamento da empresa (usuários, conexões, etc)
-    navigate(`/workspace/${workspace.workspace_id}/empresas`);
+    setSelectedWorkspaceForConfig(workspace);
+    setConfigModalOpen(true);
   };
 
   const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes') => {
@@ -294,6 +295,16 @@ export default function MasterDashboard() {
           onOpenChange={setUsersModalOpen}
           workspaceId={selectedWorkspaceForModal.workspace_id}
           workspaceName={selectedWorkspaceForModal.name}
+        />
+      )}
+
+      {/* Modal de Configurações */}
+      {selectedWorkspaceForConfig && (
+        <WorkspaceConfigModal
+          open={configModalOpen}
+          onOpenChange={setConfigModalOpen}
+          workspaceId={selectedWorkspaceForConfig.workspace_id}
+          workspaceName={selectedWorkspaceForConfig.name}
         />
       )}
     </div>
