@@ -49,10 +49,11 @@ export default function MasterDashboard() {
     navigate(`/workspace/${workspace.workspace_id}/dashboard`);
   };
 
-  const handleViewReports = (workspace: Workspace) => {
+  const handleViewUsers = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
     localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
-    navigate('/workspace-relatorios');
+    // Navega para a página de usuários da empresa
+    navigate(`/workspace/${workspace.workspace_id}/parceiros/clientes`);
   };
 
   const handleViewWorkspace = (workspace: Workspace) => {
@@ -237,7 +238,7 @@ export default function MasterDashboard() {
                         usersCount={0}
                         conversationsCount={0}
                         onLogin={handleLogin}
-                        onViewReports={handleViewReports}
+                        onViewReports={handleViewUsers}
                         onViewWorkspace={handleViewWorkspace}
                         onViewConfig={handleViewConfig}
                       />
