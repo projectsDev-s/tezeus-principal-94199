@@ -61,6 +61,13 @@ export default function MasterDashboard() {
     navigate(`/workspace/${workspace.workspace_id}/dashboard`);
   };
 
+  const handleViewConfig = (workspace: Workspace) => {
+    setSelectedWorkspace(workspace);
+    localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
+    // Navega para a página de gerenciamento da empresa (usuários, conexões, etc)
+    navigate(`/workspace/${workspace.workspace_id}/empresas`);
+  };
+
   const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes') => {
     setActivePage(page);
   };
@@ -232,6 +239,7 @@ export default function MasterDashboard() {
                         onLogin={handleLogin}
                         onViewReports={handleViewReports}
                         onViewWorkspace={handleViewWorkspace}
+                        onViewConfig={handleViewConfig}
                       />
                     ))}
                   </div>
