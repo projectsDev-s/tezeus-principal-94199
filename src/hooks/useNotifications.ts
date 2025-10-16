@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotificationSound } from './useNotificationSound';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -7,13 +7,13 @@ import { useAuth } from './useAuth';
 export interface NotificationMessage {
   id: string;
   conversationId: string;
+  contactId: string;
   contactName: string;
-  contactPhone: string;
   content: string;
   messageType: string;
   timestamp: Date;
   isMedia: boolean;
-  notificationId: string;
+  status: 'unread' | 'read';
 }
 
 export function useNotifications() {
@@ -22,24 +22,18 @@ export function useNotifications() {
   const { playNotificationSound } = useNotificationSound();
   const { selectedWorkspace } = useWorkspace();
   const { user } = useAuth();
-  
-  // Buscar notificações não lidas do usuário atual
+
+  // Buscar notificações do usuário atual
   const fetchNotifications = async () => {
-    if (!selectedWorkspace?.workspace_id || !user?.id) return;
+    if (!selectedWorkspace?.workspace_id || !user?.id) {
+      console.log('⚠️ Workspace ou user não disponível');
+      return;
+    }
 
     try {
       const { data, error } = await supabase
         .from('notifications')
-        .select(`
-          id,
-          conversation_id,
-          contact_id,
-          title,
-          content,
-          message_type,
-          created_at,
-          contacts!inner(phone)
-        `)
+        .select('*')
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .eq('user_id', user.id)
         .eq('status', 'unread')
@@ -50,53 +44,53 @@ export function useNotifications() {
         return;
       }
 
-      const formattedNotifications: NotificationMessage[] = (data || []).map(n => ({
-        id: n.id,
-        notificationId: n.id,
-        conversationId: n.conversation_id,
-        contactName: n.title,
-        contactPhone: n.contacts?.phone || '',
-        content: n.content,
-        messageType: n.message_type,
-        timestamp: new Date(n.created_at),
-        isMedia: ['image', 'video', 'audio', 'document'].includes(n.message_type)
+      const formattedNotifications: NotificationMessage[] = (data || []).map(notif => ({
+        id: notif.id,
+        conversationId: notif.conversation_id,
+        contactId: notif.contact_id,
+        contactName: notif.title,
+        content: notif.content,
+        messageType: notif.message_type,
+        timestamp: new Date(notif.created_at),
+        isMedia: ['image', 'video', 'audio', 'document'].includes(notif.message_type),
+        status: notif.status as 'unread' | 'read'
       }));
 
-      console.log('🔔 Notificações carregadas:', {
+      console.log('✅ Notificações carregadas:', {
         total: formattedNotifications.length,
         notifications: formattedNotifications
       });
 
       setNotifications(formattedNotifications);
-    } catch (error) {
-      console.error('❌ Erro ao buscar notificações:', error);
+    } catch (err) {
+      console.error('❌ Erro ao processar notificações:', err);
     }
   };
 
-  // Carregar notificações ao montar e quando workspace/user mudar
+  // Carregar notificações iniciais
   useEffect(() => {
     fetchNotifications();
   }, [selectedWorkspace?.workspace_id, user?.id]);
 
-  // Tocar som quando novas notificações chegam
+  // Tocar som quando quantidade de notificações aumenta
   useEffect(() => {
-    const currentCount = notifications.length;
-    if (currentCount > previousUnreadCount && previousUnreadCount > 0) {
-      console.log('🔔 Som de notificação:', { currentCount, previousUnreadCount });
+    const totalUnread = notifications.length;
+    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
       playNotificationSound();
     }
-    setPreviousUnreadCount(currentCount);
+    setPreviousUnreadCount(totalUnread);
   }, [notifications.length, previousUnreadCount, playNotificationSound]);
 
-  // Real-time subscription para novas notificações
+  // Real-time subscriptions para notificações
   useEffect(() => {
     if (!selectedWorkspace?.workspace_id || !user?.id) return;
 
-    const workspaceId = selectedWorkspace.workspace_id;
     const userId = user.id;
     
-    console.log('🔔 Iniciando subscription de notificações para:', { workspaceId, userId });
+    console.log('🔔 Iniciando subscription de notificações para user:', userId);
     
+    // Subscription para novas notificações
     const notificationsChannel = supabase
       .channel(`user-notifications-${userId}`)
       .on('postgres_changes', {
@@ -107,6 +101,7 @@ export function useNotifications() {
       }, (payload) => {
         console.log('🔔 Nova notificação recebida:', payload.new);
         fetchNotifications();
+        playNotificationSound();
       })
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -152,31 +147,35 @@ export function useNotifications() {
   };
 
   const markContactAsRead = async (conversationId: string) => {
+    if (!user?.id) return;
+
     try {
-      // Marcar todas as notificações desta conversa como lidas
+      // Marcar todas as notificações dessa conversa como lidas
       const { error } = await supabase
         .from('notifications')
         .update({ 
           status: 'read',
           read_at: new Date().toISOString()
         })
+        .eq('user_id', user.id)
         .eq('conversation_id', conversationId)
-        .eq('user_id', user?.id)
         .eq('status', 'unread');
 
       if (error) {
-        console.error('❌ Erro ao marcar notificações como lidas:', error);
+        console.error('❌ Erro ao marcar notificação como lida:', error);
         return;
       }
 
       console.log('✅ Notificações marcadas como lidas para conversa:', conversationId);
-      await fetchNotifications();
-    } catch (error) {
-      console.error('❌ Erro ao marcar como lida:', error);
+      fetchNotifications();
+    } catch (err) {
+      console.error('❌ Erro ao processar marcação de lida:', err);
     }
   };
 
   const markAllAsRead = async () => {
+    if (!user?.id || !selectedWorkspace?.workspace_id) return;
+
     try {
       const { error } = await supabase
         .from('notifications')
@@ -184,8 +183,8 @@ export function useNotifications() {
           status: 'read',
           read_at: new Date().toISOString()
         })
-        .eq('workspace_id', selectedWorkspace?.workspace_id)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
+        .eq('workspace_id', selectedWorkspace.workspace_id)
         .eq('status', 'unread');
 
       if (error) {
@@ -194,16 +193,15 @@ export function useNotifications() {
       }
 
       console.log('✅ Todas as notificações marcadas como lidas');
-      await fetchNotifications();
-    } catch (error) {
-      console.error('❌ Erro ao marcar todas como lidas:', error);
+      fetchNotifications();
+    } catch (err) {
+      console.error('❌ Erro ao processar marcação de todas como lidas:', err);
     }
   };
 
   return {
     notifications,
     totalUnread: notifications.length,
-    conversationUnreadMap: new Map(), // Mantido para compatibilidade
     getAvatarInitials,
     getAvatarColor,
     formatTimestamp,
