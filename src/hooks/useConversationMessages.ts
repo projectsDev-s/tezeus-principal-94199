@@ -232,7 +232,8 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       id: message.id,
       sender_type: message.sender_type,
       conversation_id: message.conversation_id,
-      content_preview: message.content?.substring(0, 30)
+      content_preview: message.content?.substring(0, 30),
+      stack_trace: new Error().stack // ✅ CRITICAL: Ver de onde está sendo chamado
     });
     
     // ✅ DEDUP: Usar conversation_id + message_id como chave única
