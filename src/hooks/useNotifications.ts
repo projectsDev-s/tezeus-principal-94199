@@ -147,11 +147,16 @@ export function useNotifications() {
   };
 
   const markContactAsRead = async (conversationId: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('⚠️ [markContactAsRead] User não disponível');
+      return;
+    }
+
+    console.log('🔔 [markContactAsRead] Iniciando marcação para conversa:', conversationId, 'user:', user.id);
 
     try {
       // Marcar todas as notificações dessa conversa como lidas
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .update({ 
           status: 'read',
@@ -159,17 +164,24 @@ export function useNotifications() {
         })
         .eq('user_id', user.id)
         .eq('conversation_id', conversationId)
-        .eq('status', 'unread');
+        .eq('status', 'unread')
+        .select();
 
       if (error) {
-        console.error('❌ Erro ao marcar notificação como lida:', error);
+        console.error('❌ [markContactAsRead] Erro ao marcar notificação como lida:', error);
         return;
       }
 
-      console.log('✅ Notificações marcadas como lidas para conversa:', conversationId);
-      fetchNotifications();
+      console.log('✅ [markContactAsRead] Notificações marcadas como lidas:', {
+        conversationId,
+        count: data?.length || 0,
+        notifications: data
+      });
+      
+      // Forçar recarregamento imediato das notificações
+      await fetchNotifications();
     } catch (err) {
-      console.error('❌ Erro ao processar marcação de lida:', err);
+      console.error('❌ [markContactAsRead] Erro ao processar marcação de lida:', err);
     }
   };
 

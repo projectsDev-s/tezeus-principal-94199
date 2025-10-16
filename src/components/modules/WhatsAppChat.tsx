@@ -614,11 +614,6 @@ export function WhatsAppChat({
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     setSelectedConversation(conversation);
 
-    // Marcar como lida se houver notificações
-    if (conversationNotifications.has(conversation.id)) {
-      markContactAsRead(conversation.id);
-    }
-
     // Limpar modo de seleção ao trocar de conversa
     setSelectionMode(false);
     setSelectedMessages(new Set());
@@ -628,10 +623,10 @@ export function WhatsAppChat({
     isInitialLoadRef.current = true; // Marcar como carregamento inicial
     await loadMessages(conversation.id);
     
-    // Marcar notificações como lidas se houver
-    if (conversationNotifications.has(conversation.id)) {
-      markContactAsRead(conversation.id);
-    }
+    // Marcar notificações como lidas SEMPRE ao abrir conversa
+    // Isso garante que tanto cliques no card quanto nas notificações zerem o contador
+    console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
+    markContactAsRead(conversation.id);
   };
 
   // Funções de seleção e encaminhamento
