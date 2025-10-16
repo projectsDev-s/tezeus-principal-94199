@@ -828,7 +828,7 @@ serve(async (req) => {
           const messageId = crypto.randomUUID();
           const { data: newMessage } = await supabase
             .from('messages')
-            .insert({
+            .upsert({
               id: messageId,
               conversation_id: conversationId,
               workspace_id: workspaceId,
@@ -866,6 +866,9 @@ serve(async (req) => {
                           messageData.message?.videoMessage?.fileLength ||
                           messageData.message?.documentMessage?.fileLength
               }
+            }, {
+              onConflict: 'workspace_id, external_id',
+              ignoreDuplicates: false
             })
             .select('id')
             .single();
@@ -985,7 +988,7 @@ serve(async (req) => {
       }
       } // ✅ FIM DO BLOCO: PROCESSAR APENAS MENSAGENS INDIVIDUAIS
     } else if (workspaceId && payload.data?.key?.fromMe === true && EVENT === 'MESSAGES_UPSERT') {
-      console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), capturing evolution_short_key_id`);
+      console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), updating evolution_short_key_id only`);
       
       const shortKeyId = payload.data?.key?.id; // 22 chars
       
@@ -1005,16 +1008,19 @@ serve(async (req) => {
           .maybeSingle();
         
         if (recentMessage) {
-          console.log(`💾 [${requestId}] Saving evolution_short_key_id: ${shortKeyId} for message ${recentMessage.id}`);
+          console.log(`💾 [${requestId}] Updating evolution_short_key_id: ${shortKeyId} for message ${recentMessage.id}`);
           
           await supabase
             .from('messages')
-            .update({ evolution_short_key_id: shortKeyId })
+            .update({ 
+              evolution_short_key_id: shortKeyId,
+              status: 'sent'
+            })
             .eq('id', recentMessage.id);
           
-          console.log(`✅ [${requestId}] evolution_short_key_id saved successfully!`);
+          console.log(`✅ [${requestId}] evolution_short_key_id updated successfully! No duplicate created.`);
         } else {
-          console.log(`⚠️ [${requestId}] No recent message found to update with shortKeyId`);
+          console.log(`⚠️ [${requestId}] No recent message found to update - ignoring (might be from another device)`);
         }
       }
     }
