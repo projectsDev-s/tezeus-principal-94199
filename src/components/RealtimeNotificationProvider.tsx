@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 
 interface RealtimeNotificationContextType {
@@ -25,10 +25,10 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
     }))
   });
 
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     totalUnread,
     notifications
-  };
+  }), [totalUnread, notifications]);
 
   return (
     <RealtimeNotificationContext.Provider value={contextValue}>
