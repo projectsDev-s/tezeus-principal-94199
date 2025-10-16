@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface Workspace {
   workspace_id: string;
@@ -26,6 +27,7 @@ interface WorkspaceProviderProps {
 }
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
+  const { userRole } = useAuth();
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
@@ -41,6 +43,13 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
     // Executar apenas uma vez após carregar workspaces
     if (hasInitialized) {
+      return;
+    }
+
+    // REGRA MASTER: Usuário master NÃO deve ter workspace auto-selecionado
+    if (userRole === 'master') {
+      console.log('🎩 Usuário master detectado - workspace não será auto-selecionado');
+      setHasInitialized(true);
       return;
     }
 

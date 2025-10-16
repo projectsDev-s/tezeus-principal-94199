@@ -1,13 +1,16 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
+  const { selectedWorkspace } = useWorkspace();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -19,6 +22,15 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Se for master sem workspace selecionado e não está na dashboard master, redirecionar
+  if (
+    userRole === 'master' && 
+    !selectedWorkspace && 
+    location.pathname !== '/master-dashboard'
+  ) {
+    return <Navigate to="/master-dashboard" replace />;
   }
 
   return <>{children}</>;

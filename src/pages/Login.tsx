@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,27 @@ export const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   
-  const { user, login } = useAuth();
+  const { user, userRole, login } = useAuth();
   const navigate = useNavigate();
 
+  // Redirecionar após login bem-sucedido baseado na role
+  useEffect(() => {
+    if (loginSuccess && user && userRole) {
+      if (userRole === 'master') {
+        navigate('/master-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [loginSuccess, user, userRole, navigate]);
+
   // Redirect if already logged in
-  if (user) {
+  if (user && !loading) {
+    if (userRole === 'master') {
+      return <Navigate to="/master-dashboard" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -50,7 +65,7 @@ export const Login = () => {
           title: "Login realizado com sucesso!",
           description: "Redirecionando...",
         });
-        navigate('/dashboard');
+        setLoginSuccess(true);
       }
     } catch (error) {
       toast({

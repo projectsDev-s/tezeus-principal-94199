@@ -10,6 +10,7 @@ import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import { Login } from "./pages/Login";
+import MasterDashboard from "./pages/MasterDashboard";
 import { SystemCustomizationProvider } from "./contexts/SystemCustomizationContext";
 import { RealtimeNotificationProvider } from "./components/RealtimeNotificationProvider";
 
@@ -28,6 +29,13 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/master-dashboard" element={
+              <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['master']}>
+                  <MasterDashboard />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            } />
             <Route path="/dashboard" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/conversas" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/ds-voice" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
