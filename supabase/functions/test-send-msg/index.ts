@@ -431,6 +431,8 @@ serve(async (req) => {
           .update({ 
             status: 'failed',
             metadata: {
+              client_msg_id: clientMessageId, // ✅ CRÍTICO: Preservar clientMessageId
+              request_id: requestId,
               error: evolutionData.error || evolutionData.message,
               step: 'evolution_api_failed'
             }
@@ -460,6 +462,7 @@ serve(async (req) => {
             source: 'test-send-msg-direct',
             request_id: requestId,
             step: 'after_evolution_success',
+            client_msg_id: clientMessageId, // ✅ CRÍTICO: Preservar clientMessageId
             evolution_response: evolutionData
           }
         };
