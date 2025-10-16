@@ -4,6 +4,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 interface RealtimeNotificationContextType {
   totalUnread: number;
   notifications: any[];
+  markContactAsRead: (conversationId: string) => Promise<void>;
 }
 
 const RealtimeNotificationContext = createContext<RealtimeNotificationContextType | undefined>(undefined);
@@ -14,7 +15,7 @@ interface RealtimeNotificationProviderProps {
 
 export function RealtimeNotificationProvider({ children }: RealtimeNotificationProviderProps) {
   // Usar o novo hook de notificações baseado na tabela dedicada
-  const { notifications, totalUnread } = useNotifications();
+  const { notifications, totalUnread, markContactAsRead } = useNotifications();
 
   console.log('🔔 [RealtimeNotificationProvider] Contexto atualizado:', {
     totalUnread,
@@ -27,7 +28,8 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
   const contextValue = {
     totalUnread,
-    notifications
+    notifications,
+    markContactAsRead
   };
 
   return (
@@ -43,7 +45,8 @@ export function useRealtimeNotifications() {
   if (context === undefined) {
     return {
       totalUnread: 0,
-      notifications: []
+      notifications: [],
+      markContactAsRead: async () => {}
     };
   }
 
