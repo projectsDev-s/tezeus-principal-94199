@@ -908,7 +908,7 @@ function CRMNegociosContent({
           <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white border-gray-200")}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Settings Button */}
-              {canManagePipelines(selectedWorkspace?.workspace_id) && <Button size="icon" variant="ghost" className={cn("h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0", isDarkMode ? "text-orange-400 hover:bg-orange-400/10" : "text-orange-500 hover:bg-orange-500/10")} onClick={() => setIsConfigModalOpen(true)} disabled={!selectedPipeline}>
+              {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && <Button size="icon" variant="ghost" className={cn("h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0", isDarkMode ? "text-orange-400 hover:bg-orange-400/10" : "text-orange-500 hover:bg-orange-500/10")} onClick={() => setIsConfigModalOpen(true)} disabled={!selectedPipeline}>
                   <Settings className="w-5 h-5" />
                 </Button>}
               
@@ -979,7 +979,7 @@ function CRMNegociosContent({
             </div>
             
             {/* + Coluna Button - Only show if pipeline exists and user can manage columns */}
-            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id) && <Button size="sm" className={cn("bg-warning text-black hover:bg-warning/90 font-medium ml-4 flex-shrink-0", isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsAddColumnModalOpen(true)}>
+            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && <Button size="sm" className={cn("bg-warning text-black hover:bg-warning/90 font-medium ml-4 flex-shrink-0", isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsAddColumnModalOpen(true)}>
                 + Coluna
               </Button>}
           </div>
