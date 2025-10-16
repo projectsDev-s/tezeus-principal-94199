@@ -12,7 +12,8 @@ function generateRequestId(): string {
 
 serve(async (req) => {
   const requestId = generateRequestId();
-  console.log(`🚀 [${requestId}] SEND MESSAGE FUNCTION STARTED (N8N-ONLY)`);
+  console.log(`🚀 [${requestId}] SEND MESSAGE FUNCTION - ROTA EXCLUSIVA VIA N8N`);
+  console.log(`📋 [${requestId}] Mensagens serão enviadas APENAS via N8N (Evolution será chamado pelo N8N)`);
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -373,57 +374,44 @@ serve(async (req) => {
     // ============================================================
     console.log(`📤 [${requestId}] Sending message directly to Evolution API`);
     
-    // Validar message_type para mídia
-    const validMediaTypes = ['image', 'video', 'document', 'audio'];
-    const mediaType = message_type && validMediaTypes.includes(message_type) 
-      ? message_type 
-      : 'document'; // fallback seguro
+    console.log(`📤 [${requestId}] Enviando mensagem EXCLUSIVAMENTE via N8N`);
 
-    // Construir payload para Evolution baseado no tipo de mensagem
-    const evolutionEndpoint = message_type === 'text'
-      ? `${evolutionUrl}/message/sendText/${instance_name}`
-      : `${evolutionUrl}/message/sendMedia/${instance_name}`;
-
-    let evolutionPayload: any;
-
-    if (message_type === 'text') {
-      evolutionPayload = {
-        number: contact.phone,
-        text: effectiveContent
-      };
-    } else {
-      // Garantir que todos os campos obrigatórios estejam presentes
-      if (!file_url) {
-        throw new Error(`file_url is required for media messages (type: ${message_type})`);
-      }
-
-      evolutionPayload = {
-        number: contact.phone,
-        mediatype: mediaType,  // ✅ Campo no nível raiz, não dentro de mediaMessage
-        media: file_url,
-        caption: effectiveContent || '',
-        fileName: file_name || `media_${Date.now()}`
-      };
-    }
-
-    console.log(`🔍 [${requestId}] Evolution payload constructed:`, JSON.stringify(evolutionPayload, null, 2));
-    console.log(`🌐 [${requestId}] Calling Evolution: ${evolutionEndpoint}`);
-
+    // ✅ CHAMAR APENAS O N8N - Evolution será chamado pelo N8N
     try {
-      const evolutionResponse = await fetch(evolutionEndpoint, {
+      const n8nPayload = {
+        direction: 'outbound',
+        external_id: external_id,
+        phone_number: contact.phone,
+        message_type: message_type,
+        content: effectiveContent,
+        file_url: file_url || null,
+        file_name: file_name || null,
+        mime_type: body.mime_type || null,
+        workspace_id: conversation.workspace_id,
+        connection_id: conversation.connection_id,
+        conversation_id: conversation_id,
+        contact_name: contact.name,
+        instance_name: connection.instance_name,
+        evolution_url: evolutionUrl,
+        evolution_api_key: evolutionApiKey,
+        request_id: requestId
+      };
+
+      console.log(`🌐 [${requestId}] Calling N8N webhook:`, n8nWebhookUrl.substring(0, 50) + '...');
+      console.log(`📦 [${requestId}] N8N payload:`, JSON.stringify(n8nPayload, null, 2));
+
+      const n8nResponse = await fetch(n8nWebhookUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'apikey': evolutionApiKey
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(evolutionPayload),
-        signal: AbortSignal.timeout(20000)
+        body: JSON.stringify(n8nPayload),
+        signal: AbortSignal.timeout(30000) // 30s timeout
       });
 
-      const evolutionData = await evolutionResponse.json();
-
-      if (!evolutionResponse.ok || evolutionData.error) {
-        console.error(`❌ [${requestId}] Evolution API error:`, evolutionData);
+      if (!n8nResponse.ok) {
+        const n8nError = await n8nResponse.text();
+        console.error(`❌ [${requestId}] N8N webhook error (${n8nResponse.status}):`, n8nError);
         
         // Atualizar mensagem como failed
         await supabase
@@ -431,48 +419,51 @@ serve(async (req) => {
           .update({ 
             status: 'failed',
             metadata: {
-              client_msg_id: clientMessageId, // ✅ CRÍTICO: Preservar clientMessageId
+              client_msg_id: clientMessageId,
               request_id: requestId,
-              error: evolutionData.error || evolutionData.message,
-              step: 'evolution_api_failed'
+              error: `N8N webhook failed: ${n8nResponse.status}`,
+              error_details: n8nError,
+              step: 'n8n_webhook_failed'
             }
           })
           .eq('external_id', external_id);
 
         return new Response(JSON.stringify({
-          error: 'Evolution API error',
-          details: evolutionData
+          error: 'N8N webhook failed',
+          status: n8nResponse.status,
+          details: n8nError
         }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      console.log(`✅ [${requestId}] Evolution API success:`, evolutionData);
+      const n8nData = await n8nResponse.json();
+      console.log(`✅ [${requestId}] N8N webhook success:`, n8nData);
 
-      // SALVAR AMBOS evolution_key_id E evolution_short_key_id
-      if (evolutionData.key?.id || evolutionData.keyId) {
-        console.log(`💾 [${requestId}] Saving Evolution IDs:`);
-        console.log(`   - key.id (40 chars): ${evolutionData.key?.id}`);
-        console.log(`   - keyId (22 chars): ${evolutionData.keyId}`);
+      // N8N deve retornar os evolution IDs após processar
+      if (n8nData.success && (n8nData.evolution_key_id || n8nData.key?.id)) {
+        console.log(`💾 [${requestId}] Salvando Evolution IDs retornados pelo N8N`);
         
         const updateFields: any = {
           status: 'sent',
           metadata: {
-            source: 'test-send-msg-direct',
+            source: 'n8n-processed',
             request_id: requestId,
-            step: 'after_evolution_success',
-            client_msg_id: clientMessageId, // ✅ CRÍTICO: Preservar clientMessageId
-            evolution_response: evolutionData
+            step: 'n8n_success',
+            client_msg_id: clientMessageId,
+            n8n_response: n8nData
           }
         };
         
-        if (evolutionData.key?.id) {
-          updateFields.evolution_key_id = evolutionData.key.id;
+        // Aceitar evolution_key_id de múltiplos formatos possíveis
+        const evolutionKeyId = n8nData.evolution_key_id || n8nData.key?.id || n8nData.keyId;
+        if (evolutionKeyId) {
+          updateFields.evolution_key_id = evolutionKeyId;
         }
         
-        if (evolutionData.keyId) {
-          updateFields.evolution_short_key_id = evolutionData.keyId;
+        if (n8nData.evolution_short_key_id) {
+          updateFields.evolution_short_key_id = n8nData.evolution_short_key_id;
         }
         
         const { error: updateError } = await supabase
@@ -481,44 +472,29 @@ serve(async (req) => {
           .eq('external_id', external_id);
 
         if (updateError) {
-          console.error(`⚠️ [${requestId}] Failed to save evolution IDs:`, updateError);
+          console.error(`⚠️ [${requestId}] Failed to save evolution IDs from N8N:`, updateError);
         } else {
-          console.log(`✅ [${requestId}] Both evolution IDs saved successfully!`);
+          console.log(`✅ [${requestId}] Evolution IDs saved successfully from N8N response!`);
         }
-      }
-
-      // Notificar N8N (opcional, para processamento adicional)
-      if (n8nWebhookUrl) {
-        console.log(`📢 [${requestId}] Notifying N8N (post-processing)`);
-        const n8nPayload = {
-          direction: 'outbound',
-          external_id: external_id,
-          phone_number: contact.phone,
-          message_type: message_type,
-          content: effectiveContent,
-          file_url: file_url || null,
-          file_name: file_name || null,
-          evolution_key_id: evolutionData.key?.id,
-          workspace_id: conversation.workspace_id,
-          conversation_id: conversation_id,
-          instance: instance_name,
-          source: 'test-send-msg-notification',
-          timestamp: new Date().toISOString()
-        };
-
-        try {
-          await fetch(n8nWebhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(n8nPayload)
-          });
-          console.log(`✅ [${requestId}] N8N notified`);
-        } catch (n8nErr) {
-          console.warn(`⚠️ [${requestId}] N8N notification failed (non-critical):`, n8nErr);
-        }
-      }
-
-      console.log(`🎉 [${requestId}] SUCCESS - Message sent with evolution_key_id: ${evolutionData.key?.id}`);
+      } else {
+        // Mesmo sem evolution IDs, marcar como sent se N8N retornou sucesso
+        console.log(`⚠️ [${requestId}] N8N retornou sucesso mas sem evolution IDs, marcando como sent`);
+        
+        await supabase
+          .from('messages')
+          .update({ 
+            status: 'sent',
+            metadata: {
+              source: 'n8n-processed',
+              request_id: requestId,
+              step: 'n8n_success_no_ids',
+              client_msg_id: clientMessageId,
+              n8n_response: n8nData
+            }
+          })
+          .eq('external_id', external_id);
+      
+      console.log(`🎉 [${requestId}] SUCCESS - Mensagem enviada via N8N`);
 
       // ✅ Retornar o ID real da mensagem salva
       return new Response(JSON.stringify({
@@ -526,7 +502,7 @@ serve(async (req) => {
         message: {
           id: external_id,
           external_id: external_id,
-          evolution_key_id: evolutionData.key?.id,
+          evolution_key_id: n8nData.evolution_key_id || n8nData.key?.id || null,
           created_at: new Date().toISOString(),
           status: 'sent'
         },
@@ -537,8 +513,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
-    } catch (evolutionError) {
-      console.error(`❌ [${requestId}] Evolution API call failed:`, evolutionError);
+    } catch (n8nError) {
+      console.error(`❌ [${requestId}] N8N webhook call failed:`, n8nError);
       
       // Atualizar mensagem como failed
       await supabase
@@ -546,15 +522,17 @@ serve(async (req) => {
         .update({ 
           status: 'failed',
           metadata: {
-            error: evolutionError.message,
-            step: 'evolution_api_exception'
+            client_msg_id: clientMessageId,
+            request_id: requestId,
+            error: n8nError.message,
+            step: 'n8n_webhook_exception'
           }
         })
         .eq('external_id', external_id);
 
       return new Response(JSON.stringify({
-        error: 'Failed to send message via Evolution API',
-        details: evolutionError.message
+        error: 'Failed to send message via N8N',
+        details: n8nError.message
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
