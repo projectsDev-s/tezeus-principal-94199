@@ -8,6 +8,7 @@ import { ModuleType } from "./TezeusCRM";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { NotificationTooltip } from "@/components/NotificationTooltip";
+import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useWhatsAppConversations } from "@/hooks/useWhatsAppConversations";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,10 +47,14 @@ export function Sidebar({
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
 
-  // Hooks para notificações - usando o hook direto
+  // Hooks para notificações - usando o provider compartilhado
   const {
     notifications,
-    totalUnread,
+    totalUnread
+  } = useRealtimeNotifications();
+  
+  // Funções do hook original
+  const { 
     markContactAsRead,
     markAllAsRead,
     getAvatarInitials,

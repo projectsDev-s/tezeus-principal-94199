@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-
+import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
 import { useNotifications } from "@/hooks/useNotifications";
 import { getConnectionColor } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
@@ -51,8 +51,9 @@ export function WhatsAppChat({
   isDarkMode = false,
   selectedConversationId
 }: WhatsAppChatProps) {
-  // Usar notificações para saber quais conversas têm mensagens não lidas
-  const { notifications, markContactAsRead } = useNotifications();
+  // Usar notificações para saber quais conversas têm mensagens não lidas  
+  const { notifications } = useRealtimeNotifications();
+  const { markContactAsRead } = useNotifications();
   
   useEffect(() => {
     console.log('🔔 [WhatsAppChat] Notificações MUDARAM:', {
