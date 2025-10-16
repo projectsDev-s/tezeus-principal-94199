@@ -501,8 +501,21 @@ function CRMNegociosContent({
   } = useWorkspace();
   const {
     canManagePipelines,
-    canManageColumns
+    canManageColumns,
+    userWorkspaceRole,
+    isMaster
   } = useWorkspaceRole();
+  
+  // Debug logs
+  useEffect(() => {
+    console.log('🔍 CRMNegocios - Role Debug:', {
+      userWorkspaceRole,
+      isMaster,
+      selectedWorkspaceId: selectedWorkspace?.workspace_id,
+      canManagePipelines: canManagePipelines(selectedWorkspace?.workspace_id || undefined),
+      canManageColumns: canManageColumns(selectedWorkspace?.workspace_id || undefined)
+    });
+  }, [userWorkspaceRole, isMaster, selectedWorkspace?.workspace_id, canManagePipelines, canManageColumns]);
   const {
     getHeaders
   } = useWorkspaceHeaders();
