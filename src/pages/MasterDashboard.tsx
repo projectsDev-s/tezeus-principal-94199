@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle } from 'lucide-react';
+import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,7 +68,7 @@ export default function MasterDashboard() {
   return (
     <div className="min-h-screen bg-background flex fixed inset-0">
       {/* Sidebar */}
-      <aside className="w-16 bg-card border-r border-border flex flex-col items-center py-6 gap-6 shrink-0">
+      <aside className="w-16 bg-card border-r border-border flex flex-col items-center py-6 gap-4 shrink-0">
         <button
           onClick={() => setActivePage('workspaces')}
           className={`p-3 rounded-lg transition-colors ${
@@ -80,6 +80,7 @@ export default function MasterDashboard() {
         >
           <Building2 className="h-5 w-5" />
         </button>
+        
         <button
           onClick={() => setActivePage('reports')}
           className={`p-3 rounded-lg transition-colors ${
@@ -91,21 +92,47 @@ export default function MasterDashboard() {
         >
           <BarChart3 className="h-5 w-5" />
         </button>
+        
         <button
-          onClick={() => setActivePage('users')}
+          onClick={() => setActivePage('usuarios')}
           className={`p-3 rounded-lg transition-colors ${
-            activePage === 'users' 
+            activePage === 'usuarios' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
           title="Usuários"
         >
-          <Users className="h-5 w-5" />
+          <UserCircle className="h-5 w-5" />
         </button>
+        
         <button
-          onClick={() => setActivePage('settings')}
+          onClick={() => setActivePage('ds-agent')}
+          className={`p-3 rounded-lg transition-colors ${
+            activePage === 'ds-agent' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+          title="DS Agent"
+        >
+          <BrainCircuit className="h-5 w-5" />
+        </button>
+        
+        <button
+          onClick={() => setActivePage('filas')}
+          className={`p-3 rounded-lg transition-colors ${
+            activePage === 'filas' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+          title="Filas"
+        >
+          <ListOrdered className="h-5 w-5" />
+        </button>
+        
+        <button
+          onClick={() => setActivePage('configuracoes')}
           className={`p-3 rounded-lg transition-colors mt-auto ${
-            activePage === 'settings' 
+            activePage === 'configuracoes' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
@@ -127,10 +154,7 @@ export default function MasterDashboard() {
                 {activePage === 'filas' && 'Filas - Configuração Master'}
                 {activePage === 'usuarios' && 'Usuários - Gestão Master'}
                 {activePage === 'configuracoes' && 'Configurações - Master'}
-                {activePage === 'home' && 'Home'}
-                {activePage === 'users' && 'Usuários'}
                 {activePage === 'reports' && 'Relatórios'}
-                {activePage === 'settings' && 'Configurações'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
@@ -153,40 +177,7 @@ export default function MasterDashboard() {
                 />
               </div>
               
-              {/* Dropdown Menu de Administração */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" title="Menu de Administração">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-background z-50">
-                  <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                    Administração
-                  </div>
-                  <DropdownMenuSeparator />
-                  
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('ds-agent')}>
-                    <BrainCircuit className="w-4 h-4 mr-2" />
-                    DS Agent
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('filas')}>
-                    <Users className="w-4 h-4 mr-2" />
-                    Filas
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('usuarios')}>
-                    <UserCircle className="w-4 h-4 mr-2" />
-                    Usuários
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('configuracoes')}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configurações
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Menu de busca está sempre visível */}
             </div>
           </div>
         </header>
