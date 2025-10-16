@@ -550,36 +550,26 @@ export const useWhatsAppConversations = () => {
     // ✅ GARANTIR SUBSCRIPTION ÚNICA
     const messagesChannel = supabase
       .channel(`whatsapp-messages-${workspaceId}`) // ✅ Canal único por workspace
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          const newMessage = payload.new as any;
-          
-          console.log('📨 [INSERT useWhatsAppConversations] Nova mensagem recebida:', {
-            id: newMessage.id,
-            sender_type: newMessage.sender_type,
-            workspace_id: newMessage.workspace_id
-          });
-          
-          // ✅ IGNORAR mensagens de agente - elas são tratadas otimisticamente
-          if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ [INSERT useWhatsAppConversations] IGNORANDO mensagem de agent (otimista)');
-            return;
-          }
-          
-          // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
-          if (newMessage.workspace_id !== workspaceId) {
-            console.log('⏭️ [INSERT useWhatsAppConversations] Workspace diferente, ignorando');
-            return;
-          }
-          
-          console.log('✅ [INSERT useWhatsAppConversations] Processando mensagem de contact');
-          
-          // ✅ CORREÇÃO 1: Ignorar mensagens de agent no INSERT (elas vêm via UPDATE)
-          if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ [INSERT] Ignorando mensagem de agent (será adicionada via UPDATE):', newMessage.id);
-            return;
-          }
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+      }, (payload) => {
+        const newMessage = payload.new as any;
+        
+        console.log('📨 [INSERT useWhatsAppConversations] Nova mensagem recebida:', {
+          id: newMessage.id,
+          sender_type: newMessage.sender_type,
+          workspace_id: newMessage.workspace_id
+        });
+        
+        // ✅ NÃO ignorar mensagens de agent - processar TODAS
+        console.log('✅ [INSERT useWhatsAppConversations] Processando mensagem:', {
+          sender_type: newMessage.sender_type,
+          is_contact: newMessage.sender_type === 'contact',
+          is_agent: newMessage.sender_type === 'agent'
+        });
           
           console.log('📨 Realtime: Nova mensagem', {
             id: newMessage.id,
@@ -675,96 +665,40 @@ export const useWhatsAppConversations = () => {
           });
         }
       )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages' },
-        (payload) => {
-          const updatedMessage = payload.new as any;
-          
-          console.log('📨 Message updated via realtime:', payload);
-          console.log('✏️ Mensagem atualizada:', {
-            id: updatedMessage.id,
-            status: updatedMessage.status,
-            sender_type: updatedMessage.sender_type,
-            conversation_id: updatedMessage.conversation_id,
-            message_type: updatedMessage.message_type,
-            file_url: updatedMessage.file_url,
-            file_name: updatedMessage.file_name,
-          });
-          
-          // ✅ DEBOUNCE: Ignorar UPDATEs duplicados em menos de 1 segundo
-          const now = Date.now();
-          const lastUpdate = recentUpdates.current.get(updatedMessage.id) || 0;
-          
-          if (now - lastUpdate < 1000) {
-            console.log('⏭️ Ignorando UPDATE duplicado:', updatedMessage.id, `(${now - lastUpdate}ms)`);
-            return;
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+      }, (payload) => {
+        const updatedMessage = payload.new as any;
+        
+        console.log('🔄 [UPDATE messages] Mensagem atualizada via realtime:', {
+          id: updatedMessage.id,
+          status: updatedMessage.status,
+          sender_type: updatedMessage.sender_type
+        });
+        
+        // ✅ APENAS ATUALIZAR STATUS (não adicionar novas mensagens)
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === updatedMessage.conversation_id) {
+            return {
+              ...conv,
+              messages: conv.messages.map(msg => 
+                msg.id === updatedMessage.id 
+                  ? {
+                      ...msg,
+                      status: updatedMessage.status,
+                      read_at: updatedMessage.read_at,
+                      delivered_at: updatedMessage.delivered_at
+                    }
+                  : msg
+              )
+            };
           }
-          
-          recentUpdates.current.set(updatedMessage.id, now);
-          
-          // ✅ REFINAMENTO: Só ADICIONAR se for mensagem de agent E não existir
-          setConversations(prev => prev.map(conv => {
-            if (conv.id === updatedMessage.conversation_id) {
-              const existingMsgIndex = conv.messages.findIndex(m => m.id === updatedMessage.id);
-              
-              // ✅ CASO 1: Mensagem NÃO existe E é de agent → ADICIONAR
-              if (existingMsgIndex === -1 && updatedMessage.sender_type === 'agent') {
-                console.log('✅ [UPDATE] Adicionando nova mensagem agent:', updatedMessage.id);
-                
-                const messageObj = {
-                  id: updatedMessage.id,
-                  content: updatedMessage.content,
-                  sender_type: updatedMessage.sender_type,
-                  created_at: updatedMessage.created_at,
-                  read_at: updatedMessage.read_at,
-                  status: updatedMessage.status,
-                  message_type: updatedMessage.message_type,
-                  file_url: updatedMessage.file_url,
-                  file_name: updatedMessage.file_name,
-                  origem_resposta: updatedMessage.origem_resposta || 'manual',
-                };
-                
-                return {
-                  ...conv,
-                  messages: [...conv.messages, messageObj],
-                  last_message: [{
-                    content: updatedMessage.content,
-                    message_type: updatedMessage.message_type,
-                    sender_type: updatedMessage.sender_type,
-                    created_at: updatedMessage.created_at
-                  }],
-                  last_activity_at: updatedMessage.created_at
-                };
-              }
-              
-              // ✅ CASO 2: Mensagem JÁ existe → ATUALIZAR
-              if (existingMsgIndex !== -1) {
-                console.log('🔄 [UPDATE] Atualizando mensagem existente:', updatedMessage.id);
-                return {
-                  ...conv,
-                  messages: conv.messages.map(msg => 
-                    msg.id === updatedMessage.id 
-                      ? {
-                          ...msg,
-                          status: updatedMessage.status ?? msg.status,
-                          read_at: updatedMessage.read_at ?? msg.read_at,
-                          message_type: updatedMessage.message_type ?? msg.message_type,
-                          file_url: updatedMessage.file_url ?? msg.file_url,
-                          file_name: updatedMessage.file_name ?? msg.file_name,
-                          content: updatedMessage.content ?? msg.content,
-                        }
-                      : msg
-                  )
-                };
-              }
-              
-              // ✅ CASO 3: Mensagem NÃO existe E NÃO é de agent → IGNORAR
-              console.log('⏭️ Ignorando UPDATE de contact que não existe:', updatedMessage.id);
-            }
-            return conv;
-          }));
-        }
-      )
+          return conv;
+        }));
+      })
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'messages' },
         (payload) => {
@@ -784,20 +718,18 @@ export const useWhatsAppConversations = () => {
     // ✅ CORREÇÃO: Subscription única para conversas com canal único por workspace
     const conversationsChannel = supabase
       .channel(`wapp-convs-${workspaceId}`) // ✅ Canal único por workspace
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'conversations' },
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'conversations',
+        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+      },
         async (payload) => {
           // Realtime: New conversation received
           const newConv = payload.new as any;
           
           // Só processar conversas do WhatsApp
           if (newConv.canal !== 'whatsapp') return;
-          
-          // ✅ Filtrar por workspace_id para garantir que apenas conversas do workspace atual sejam processadas
-          if (newConv.workspace_id !== workspaceId) {
-            // Conversation from different workspace - ignored
-            return;
-          }
           
           console.log('🔔 Nova conversa criada:', newConv);
           
@@ -854,9 +786,12 @@ export const useWhatsAppConversations = () => {
           }
         }
       )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'conversations' },
-        (payload) => {
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations',
+        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+      }, (payload) => {
           try {
             console.log('🔄 Realtime: Conversa atualizada (REPLICA IDENTITY FULL):', {
               id: payload.new?.id,
@@ -878,12 +813,6 @@ export const useWhatsAppConversations = () => {
               console.log('⚠️ Payload.new é null - ignorando evento');
               return;
             }
-          
-          // ✅ Filtrar por workspace_id para garantir que apenas conversas do workspace atual sejam processadas
-          if (updatedConv.workspace_id !== workspaceId) {
-            // Conversation update from different workspace - ignored
-            return;
-          }
           
           // ✅ CRÍTICO: Evitar processar updates duplicados em menos de 500ms
           const now = Date.now();

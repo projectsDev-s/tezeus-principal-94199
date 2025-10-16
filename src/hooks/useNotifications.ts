@@ -85,6 +85,54 @@ export function useNotifications() {
     setPreviousUnreadCount(totalUnread);
   }, [totalUnread, previousUnreadCount, playNotificationSound]);
 
+  // ✅ Real-time subscriptions para notificações
+  useEffect(() => {
+    if (!selectedWorkspace?.workspace_id) return;
+
+    const workspaceId = selectedWorkspace.workspace_id;
+    
+    console.log('🔔 Iniciando subscription de notificações para workspace:', workspaceId);
+    
+    // Subscription para novas mensagens e atualizações
+    const notificationsChannel = supabase
+      .channel(`notifications-${workspaceId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `workspace_id=eq.${workspaceId}`
+      }, (payload) => {
+        const newMessage = payload.new;
+        
+        // Apenas processar mensagens de contact (inbound)
+        if (newMessage.sender_type === 'contact') {
+          console.log('🔔 Nova mensagem para notificação:', newMessage.id);
+          // fetchConversations será chamado automaticamente por useWhatsAppConversations
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations',
+        filter: `workspace_id=eq.${workspaceId}`
+      }, (payload) => {
+        const updatedConv = payload.new;
+        
+        console.log('🔔 Conversa atualizada para notificações:', {
+          id: updatedConv.id,
+          unread_count: updatedConv.unread_count
+        });
+        
+        // fetchConversations será chamado automaticamente
+      })
+      .subscribe();
+
+    return () => {
+      console.log('🔕 Removendo subscription de notificações');
+      supabase.removeChannel(notificationsChannel);
+    };
+  }, [selectedWorkspace?.workspace_id]);
+
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
