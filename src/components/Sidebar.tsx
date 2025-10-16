@@ -51,6 +51,15 @@ export function Sidebar({
     notifications,
     totalUnread
   } = useRealtimeNotifications();
+  
+  console.log('🔔 [Sidebar] Dados de notificação:', {
+    totalUnread,
+    num_notifications: notifications.length,
+    notifications: notifications.map((n: any) => ({
+      contact: n.contactName,
+      content: n.content
+    }))
+  });
   const {
     markAsRead
   } = useWhatsAppConversations();

@@ -29,6 +29,15 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   });
 
   useEffect(() => {
+    console.log('🔔 [RealtimeNotificationProvider] Processando conversas:', {
+      total_conversas: conversations.length,
+      conversas: conversations.map(c => ({
+        id: c.id,
+        contact: c.contact?.name,
+        unread_count: c.unread_count
+      }))
+    });
+
     const newNotifications: any[] = [];
     let unreadCount = 0;
 
@@ -54,6 +63,15 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
     newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
+    console.log('🔔 [RealtimeNotificationProvider] Notificações calculadas:', {
+      total_unread: unreadCount,
+      num_notificacoes: newNotifications.length,
+      notificacoes: newNotifications.map(n => ({
+        contact: n.contactName,
+        content: n.content
+      }))
+    });
+
     setNotificationData({
       notifications: newNotifications,
       totalUnread: unreadCount
@@ -61,7 +79,14 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   }, [conversations]);
 
   useEffect(() => {
+    console.log('🔔 [RealtimeNotificationProvider] Verificando som:', {
+      total_unread_atual: notificationData.totalUnread,
+      total_unread_anterior: previousUnreadCount,
+      deve_tocar: notificationData.totalUnread > previousUnreadCount && previousUnreadCount > 0
+    });
+
     if (notificationData.totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+      console.log('🔊 Tocando som de notificação!');
       playNotificationSound();
     }
     setPreviousUnreadCount(notificationData.totalUnread);
@@ -87,6 +112,12 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
     notifications: notificationData.notifications,
     conversations
   };
+
+  console.log('🔔 [RealtimeNotificationProvider] Contexto atualizado:', {
+    totalUnread: contextValue.totalUnread,
+    num_notifications: contextValue.notifications.length,
+    num_conversations: contextValue.conversations.length
+  });
 
   return (
     <RealtimeNotificationContext.Provider value={contextValue}>
