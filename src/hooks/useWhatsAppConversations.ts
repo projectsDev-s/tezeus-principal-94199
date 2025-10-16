@@ -814,16 +814,32 @@ export const useWhatsAppConversations = () => {
               return;
             }
           
-          // ✅ CRÍTICO: Evitar processar updates duplicados em menos de 500ms
-          const now = Date.now();
-          const lastUpdate = lastUpdateProcessed.current.get(updatedConv.id) || 0;
+          // ✅ CRÍTICO: Evitar processar updates duplicados
+          // Comparar com estado anterior para só processar mudanças reais
+          const hasChanged = oldConv && (
+            oldConv.unread_count !== updatedConv.unread_count ||
+            oldConv.last_activity_at !== updatedConv.last_activity_at ||
+            oldConv.status !== updatedConv.status ||
+            oldConv.agente_ativo !== updatedConv.agente_ativo ||
+            oldConv.assigned_user_id !== updatedConv.assigned_user_id
+          );
           
-          if (now - lastUpdate < 500) {
-            console.log('⚠️ [Realtime] Update duplicado ignorado:', updatedConv.id, `(${now - lastUpdate}ms)`);
+          if (!hasChanged) {
+            console.log('⏭️ [Realtime] Update ignorado - sem mudanças:', {
+              id: updatedConv.id,
+              old_unread: oldConv?.unread_count,
+              new_unread: updatedConv.unread_count
+            });
             return;
           }
           
-          lastUpdateProcessed.current.set(updatedConv.id, now);
+          console.log('✅ [Realtime] Mudança detectada:', {
+            id: updatedConv.id,
+            old_unread: oldConv?.unread_count,
+            new_unread: updatedConv.unread_count,
+            old_last_activity: oldConv?.last_activity_at,
+            new_last_activity: updatedConv.last_activity_at
+          });
           
           setConversations(prev => {
             console.log('🔍 Antes da atualização:', {
