@@ -230,16 +230,22 @@ export function WhatsAppChat({
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
     
-    // ✅ MUTEX: Verificar se já está enviando esta mensagem
-    const messageKey = `${selectedConversation.id}-${messageText}-${Date.now()}`;
-    if (sendingRef.current.has(messageKey)) {
-      console.log('⏭️ Ignorando envio duplicado (já em andamento)');
+    // ✅ PROTEÇÃO 1: Verificar se já está enviando IMEDIATAMENTE
+    if (isSending) {
+      console.log('⏭️ Ignorando envio - já está enviando');
       return;
     }
     
-    // ✅ Marcar como "enviando"
-    sendingRef.current.add(messageKey);
+    // ✅ PROTEÇÃO 2: MUTEX com chave idempotente (SEM Date.now())
+    const messageKey = `${selectedConversation.id}-${messageText.trim()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado (MUTEX)');
+      return;
+    }
+    
+    // ✅ Marcar como "enviando" ANTES do try
     setIsSending(true);
+    sendingRef.current.add(messageKey);
     
     try {
       // Criar mensagem local otimista
@@ -305,8 +311,8 @@ export function WhatsAppChat({
   const handleSendQuickMessage = async (content: string, type: 'text') => {
     if (!selectedConversation) return;
     
-    // ✅ MUTEX: Prevenir duplicação
-    const messageKey = `quick-${selectedConversation.id}-${content}-${Date.now()}`;
+    // ✅ MUTEX: Prevenir duplicação (SEM Date.now())
+    const messageKey = `quick-${selectedConversation.id}-${content.trim()}`;
     if (sendingRef.current.has(messageKey)) {
       console.log('⏭️ Ignorando envio duplicado de mensagem rápida');
       return;
@@ -365,8 +371,8 @@ export function WhatsAppChat({
   }, content: string) => {
     if (!selectedConversation) return;
     
-    // ✅ MUTEX: Prevenir duplicação
-    const messageKey = `audio-${selectedConversation.id}-${file.name}-${Date.now()}`;
+    // ✅ MUTEX: Prevenir duplicação (SEM Date.now())
+    const messageKey = `audio-${selectedConversation.id}-${file.url}`;
     if (sendingRef.current.has(messageKey)) {
       console.log('⏭️ Ignorando envio duplicado de áudio');
       return;
@@ -429,8 +435,8 @@ export function WhatsAppChat({
   }, content: string, type: 'image' | 'video') => {
     if (!selectedConversation) return;
     
-    // ✅ MUTEX: Prevenir duplicação
-    const messageKey = `media-${selectedConversation.id}-${file.name}-${Date.now()}`;
+    // ✅ MUTEX: Prevenir duplicação (SEM Date.now())
+    const messageKey = `media-${selectedConversation.id}-${file.url}`;
     if (sendingRef.current.has(messageKey)) {
       console.log('⏭️ Ignorando envio duplicado de mídia');
       return;
@@ -493,8 +499,8 @@ export function WhatsAppChat({
   }, content: string) => {
     if (!selectedConversation) return;
     
-    // ✅ MUTEX: Prevenir duplicação
-    const messageKey = `doc-${selectedConversation.id}-${file.name}-${Date.now()}`;
+    // ✅ MUTEX: Prevenir duplicação (SEM Date.now())
+    const messageKey = `doc-${selectedConversation.id}-${file.url}`;
     if (sendingRef.current.has(messageKey)) {
       console.log('⏭️ Ignorando envio duplicado de documento');
       return;
@@ -1836,7 +1842,7 @@ export function WhatsAppChat({
                     </svg>
                   </Button>
                   <div className="flex-1">
-                    <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyPress={e => {
+                    <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSendMessage();
