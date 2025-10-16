@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useWhatsAppConversations } from './useWhatsAppConversations';
 import { useNotificationSound } from './useNotificationSound';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useAuth } from './useAuth';
 
 export interface NotificationMessage {
   id: string;
@@ -13,117 +13,109 @@ export interface NotificationMessage {
   messageType: string;
   timestamp: Date;
   isMedia: boolean;
+  notificationId: string;
 }
 
 export function useNotifications() {
-  const { conversations, markAsRead, fetchConversations } = useWhatsAppConversations();
+  const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const { playNotificationSound } = useNotificationSound();
   const { selectedWorkspace } = useWorkspace();
+  const { user } = useAuth();
   
-  // ✅ Criar chave de versão baseada nos unread_counts E timestamp para forçar recálculo
-  const conversationsVersion = useMemo(() => {
-    return conversations.map(c => `${c.id}:${c.unread_count || 0}:${c._updated_at || 0}`).join('|');
-  }, [conversations]);
+  // Buscar notificações não lidas do usuário atual
+  const fetchNotifications = async () => {
+    if (!selectedWorkspace?.workspace_id || !user?.id) return;
 
-  // ✅ Calcular notificações diretamente de conversations (sem hash intermediário)
-  const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
-    console.log('🔔 Recalculando notificações...', { 
-      conversationsCount: conversations.length,
-      conversationsData: conversations.map(c => ({ id: c.id, name: c.contact.name, unread: c.unread_count }))
-    });
-    
-    const newNotifications: NotificationMessage[] = [];
-    let unreadCount = 0;
-    const unreadMap = new Map<string, number>();
-    
-    conversations.forEach((conv) => {
-      const actualUnreadCount = conv.unread_count || 0;
-      
-      console.log(`📊 [${conv.contact.name}] unread_count:`, actualUnreadCount);
-      
-      if (actualUnreadCount > 0) {
-        unreadMap.set(conv.id, actualUnreadCount);
-        unreadCount += actualUnreadCount;
-        
-        const lastMsg = conv.last_message?.[0];
-        newNotifications.push({
-          id: conv.id,
-          conversationId: conv.id,
-          contactName: conv.contact.name,
-          contactPhone: conv.contact.phone,
-          content: lastMsg?.content || 'Nova mensagem',
-          messageType: lastMsg?.message_type || 'text',
-          timestamp: new Date(conv.last_activity_at || new Date()),
-          isMedia: ['image', 'video', 'audio', 'document'].includes(lastMsg?.message_type || '')
-        });
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(`
+          id,
+          conversation_id,
+          contact_id,
+          title,
+          content,
+          message_type,
+          created_at,
+          contacts!inner(phone)
+        `)
+        .eq('workspace_id', selectedWorkspace.workspace_id)
+        .eq('user_id', user.id)
+        .eq('status', 'unread')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erro ao buscar notificações:', error);
+        return;
       }
-    });
-    
-    newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    
-    console.log('✅ Total calculado:', { 
-      totalUnread: unreadCount,
-      notificationsCount: newNotifications.length,
-      conversationsWithUnread: unreadMap.size,
-      details: Array.from(unreadMap.entries())
-    });
-    
-    return { 
-      notifications: newNotifications, 
-      totalUnread: unreadCount,
-      conversationUnreadMap: unreadMap
-    };
-  }, [conversations, conversationsVersion]); // ✅ Adicionar conversationsVersion como dependência
 
-  // ✅ Tocar som quando totalUnread aumenta
+      const formattedNotifications: NotificationMessage[] = (data || []).map(n => ({
+        id: n.id,
+        notificationId: n.id,
+        conversationId: n.conversation_id,
+        contactName: n.title,
+        contactPhone: n.contacts?.phone || '',
+        content: n.content,
+        messageType: n.message_type,
+        timestamp: new Date(n.created_at),
+        isMedia: ['image', 'video', 'audio', 'document'].includes(n.message_type)
+      }));
+
+      console.log('🔔 Notificações carregadas:', {
+        total: formattedNotifications.length,
+        notifications: formattedNotifications
+      });
+
+      setNotifications(formattedNotifications);
+    } catch (error) {
+      console.error('❌ Erro ao buscar notificações:', error);
+    }
+  };
+
+  // Carregar notificações ao montar e quando workspace/user mudar
   useEffect(() => {
-    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
-      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
+    fetchNotifications();
+  }, [selectedWorkspace?.workspace_id, user?.id]);
+
+  // Tocar som quando novas notificações chegam
+  useEffect(() => {
+    const currentCount = notifications.length;
+    if (currentCount > previousUnreadCount && previousUnreadCount > 0) {
+      console.log('🔔 Som de notificação:', { currentCount, previousUnreadCount });
       playNotificationSound();
     }
-    setPreviousUnreadCount(totalUnread);
-  }, [totalUnread, previousUnreadCount, playNotificationSound]);
+    setPreviousUnreadCount(currentCount);
+  }, [notifications.length, previousUnreadCount, playNotificationSound]);
 
-  // ✅ Real-time subscriptions para notificações
+  // Real-time subscription para novas notificações
   useEffect(() => {
-    if (!selectedWorkspace?.workspace_id) return;
+    if (!selectedWorkspace?.workspace_id || !user?.id) return;
 
     const workspaceId = selectedWorkspace.workspace_id;
+    const userId = user.id;
     
-    console.log('🔔 Iniciando subscription de notificações para workspace:', workspaceId);
+    console.log('🔔 Iniciando subscription de notificações para:', { workspaceId, userId });
     
-    // Subscription para novas mensagens e atualizações
     const notificationsChannel = supabase
-      .channel(`notifications-${workspaceId}`)
+      .channel(`user-notifications-${userId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'messages',
-        filter: `workspace_id=eq.${workspaceId}`
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
       }, (payload) => {
-        const newMessage = payload.new;
-        
-        // Apenas processar mensagens de contact (inbound)
-        if (newMessage.sender_type === 'contact') {
-          console.log('🔔 Nova mensagem para notificação:', newMessage.id);
-          // fetchConversations será chamado automaticamente por useWhatsAppConversations
-        }
+        console.log('🔔 Nova notificação recebida:', payload.new);
+        fetchNotifications();
       })
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'conversations',
-        filter: `workspace_id=eq.${workspaceId}`
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
       }, (payload) => {
-        const updatedConv = payload.new;
-        
-        console.log('🔔 Conversa atualizada para notificações:', {
-          id: updatedConv.id,
-          unread_count: updatedConv.unread_count
-        });
-        
-        // fetchConversations será chamado automaticamente
+        console.log('🔔 Notificação atualizada:', payload.new);
+        fetchNotifications();
       })
       .subscribe();
 
@@ -131,7 +123,7 @@ export function useNotifications() {
       console.log('🔕 Removendo subscription de notificações');
       supabase.removeChannel(notificationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id]);
+  }, [selectedWorkspace?.workspace_id, user?.id]);
 
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -160,19 +152,58 @@ export function useNotifications() {
   };
 
   const markContactAsRead = async (conversationId: string) => {
-    await markAsRead(conversationId);
+    try {
+      // Marcar todas as notificações desta conversa como lidas
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          status: 'read',
+          read_at: new Date().toISOString()
+        })
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user?.id)
+        .eq('status', 'unread');
+
+      if (error) {
+        console.error('❌ Erro ao marcar notificações como lidas:', error);
+        return;
+      }
+
+      console.log('✅ Notificações marcadas como lidas para conversa:', conversationId);
+      await fetchNotifications();
+    } catch (error) {
+      console.error('❌ Erro ao marcar como lida:', error);
+    }
   };
 
   const markAllAsRead = async () => {
-    const conversationsWithUnread = conversations.filter(conv => conv.unread_count > 0);
-    await Promise.all(conversationsWithUnread.map(conv => markAsRead(conv.id)));
-  };
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          status: 'read',
+          read_at: new Date().toISOString()
+        })
+        .eq('workspace_id', selectedWorkspace?.workspace_id)
+        .eq('user_id', user?.id)
+        .eq('status', 'unread');
 
+      if (error) {
+        console.error('❌ Erro ao marcar todas como lidas:', error);
+        return;
+      }
+
+      console.log('✅ Todas as notificações marcadas como lidas');
+      await fetchNotifications();
+    } catch (error) {
+      console.error('❌ Erro ao marcar todas como lidas:', error);
+    }
+  };
 
   return {
     notifications,
-    totalUnread,
-    conversationUnreadMap, // ✅ Novo: mapa de unread por conversa
+    totalUnread: notifications.length,
+    conversationUnreadMap: new Map(), // Mantido para compatibilidade
     getAvatarInitials,
     getAvatarColor,
     formatTimestamp,
