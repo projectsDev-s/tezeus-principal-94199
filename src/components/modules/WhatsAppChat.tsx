@@ -228,20 +228,32 @@ export function WhatsAppChat({
 
   // ✅ Enviar mensagem usando o hook de mensagens
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedConversation) return;
+    console.log('🔵 handleSendMessage CHAMADO', {
+      timestamp: Date.now(),
+      messageText: messageText.trim(),
+      isSending,
+      conversationId: selectedConversation?.id
+    });
+    
+    if (!messageText.trim() || !selectedConversation) {
+      console.log('⏭️ Retornando: sem texto ou conversa');
+      return;
+    }
     
     // ✅ PROTEÇÃO 1: Verificar se já está enviando IMEDIATAMENTE
     if (isSending) {
-      console.log('⏭️ Ignorando envio - já está enviando');
+      console.log('⏭️ BLOQUEADO: já está enviando (isSending=true)');
       return;
     }
     
     // ✅ PROTEÇÃO 2: MUTEX com chave idempotente (SEM Date.now())
     const messageKey = `${selectedConversation.id}-${messageText.trim()}`;
     if (sendingRef.current.has(messageKey)) {
-      console.log('⏭️ Ignorando envio duplicado (MUTEX)');
+      console.log('⏭️ BLOQUEADO: MUTEX ativo para esta mensagem', messageKey);
       return;
     }
+    
+    console.log('✅ PASSOU pelas proteções - iniciando envio', messageKey);
     
     // ✅ Marcar como "enviando" ANTES do try
     setIsSending(true);
@@ -261,6 +273,13 @@ export function WhatsAppChat({
         workspace_id: selectedWorkspace?.workspace_id || ''
       };
       addMessage(optimisticMessage);
+      
+      console.log('📤 Chamando test-send-msg', {
+        timestamp: Date.now(),
+        conversationId: selectedConversation.id,
+        content: messageText
+      });
+      
       const {
         data: sendResult,
         error
@@ -277,6 +296,12 @@ export function WhatsAppChat({
           'x-system-user-email': user?.email || '',
           'x-workspace-id': selectedWorkspace?.workspace_id || ''
         }
+      });
+      
+      console.log('📥 Resposta test-send-msg', {
+        timestamp: Date.now(),
+        success: sendResult?.success,
+        error: error?.message
       });
       if (error || !sendResult?.success) {
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
@@ -1842,12 +1867,19 @@ export function WhatsAppChat({
                     </svg>
                   </Button>
                   <div className="flex-1">
-                    <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }} className="resize-none" />
+                    <Input 
+                      placeholder="Digite sua mensagem..." 
+                      value={messageText} 
+                      onChange={e => setMessageText(e.target.value)} 
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          console.log('🟢 Enter pressionado no Input', { timestamp: Date.now() });
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }} 
+                      className="resize-none" 
+                    />
                   </div>
                   <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio">
                     <Mic className="w-4 h-4" />
