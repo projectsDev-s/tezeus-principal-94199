@@ -1776,37 +1776,62 @@ export function WhatsAppChat({
                     </Button>
                   </div>
                 </div> : <div className="flex items-end gap-2">
-                  <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
+                  <MediaUpload onFileSelect={async (file, mediaType, fileUrl, caption) => {
               if (!selectedConversation) return;
-              const caption = messageText.trim();
-              const optimisticMessage = {
-                id: `temp-media-${Date.now()}`,
-                conversation_id: selectedConversation.id,
-                content: caption || `[${mediaType.toUpperCase()}]`,
-                message_type: mediaType as any,
-                sender_type: 'agent' as const,
-                sender_id: user?.id,
-                file_url: fileUrl,
-                file_name: file.name,
-                created_at: new Date().toISOString(),
-                status: 'sending' as const,
-                workspace_id: selectedWorkspace?.workspace_id || ''
-              };
-              addMessage(optimisticMessage);
-              if (caption) setMessageText('');
+              
+              // ✅ PROTEÇÃO 1: Verificar se já está enviando
+              if (isSending) {
+                console.log('⏭️ Ignorando envio de mídia - já está enviando');
+                return;
+              }
+              
+              // ✅ PROTEÇÃO 2: MUTEX com chave idempotente
+              const messageKey = `media-${selectedConversation.id}-${fileUrl}`;
+              if (sendingRef.current.has(messageKey)) {
+                console.log('⏭️ Ignorando envio duplicado de mídia (MUTEX)');
+                return;
+              }
+              
+              // ✅ Marcar como "enviando"
+              setIsSending(true);
+              sendingRef.current.add(messageKey);
+              
               try {
-                const {
-                  data: sendResult,
-                  error
-                } = await supabase.functions.invoke('test-send-msg', {
+                // ✅ Gerar clientMessageId
+                const clientMessageId = crypto.randomUUID();
+                
+                // ✅ Usar clientMessageId como ID (não Date.now())
+                const optimisticMessage = {
+                  id: clientMessageId,
+                  conversation_id: selectedConversation.id,
+                  content: caption || messageText.trim() || `[${mediaType.toUpperCase()}]`,
+                  message_type: mediaType as any,
+                  sender_type: 'agent' as const,
+                  sender_id: user?.id,
+                  file_url: fileUrl,
+                  file_name: file.name,
+                  created_at: new Date().toISOString(),
+                  status: 'sending' as const,
+                  workspace_id: selectedWorkspace?.workspace_id || ''
+                };
+                
+                addMessage(optimisticMessage);
+                
+                // Limpar caption se houver
+                if (caption || messageText.trim()) {
+                  setMessageText('');
+                }
+                
+                const { data: sendResult, error } = await supabase.functions.invoke('test-send-msg', {
                   body: {
                     conversation_id: selectedConversation.id,
-                    content: caption || `[${mediaType.toUpperCase()}]`,
+                    content: optimisticMessage.content,
                     message_type: mediaType,
                     sender_id: user?.id,
                     sender_type: 'agent',
                     file_url: fileUrl,
-                    file_name: file.name
+                    file_name: file.name,
+                    clientMessageId: clientMessageId // ✅ Enviar para deduplicação
                   },
                   headers: {
                     'x-system-user-id': user?.id || '',
@@ -1814,37 +1839,37 @@ export function WhatsAppChat({
                     'x-system-user-email': user?.email || ''
                   }
                 });
-                if (error) {
-                  console.error('Erro ao enviar mídia:', error);
-                  toast({
-                    title: "Erro ao enviar mídia",
-                    description: error.message || "Erro desconhecido",
-                    variant: "destructive"
-                  });
-                  updateMessage(optimisticMessage.id, {
-                    status: 'failed',
-                    content: `❌ ${optimisticMessage.content}`
+                
+                if (error || !sendResult?.success) {
+                  throw new Error(sendResult?.error || 'Erro ao enviar mídia');
+                }
+                
+                // ✅ Atualizar com o ID real (se diferente)
+                if (sendResult.message?.id && sendResult.message.id !== clientMessageId) {
+                  updateMessage(clientMessageId, {
+                    id: sendResult.message.id,
+                    status: 'sent',
+                    created_at: sendResult.message.created_at
                   });
                 } else {
-                  console.log('✅ Mídia enviada com sucesso:', sendResult);
-                  updateMessage(optimisticMessage.id, {
-                    status: 'sent',
-                    external_id: sendResult.external_id
+                  updateMessage(clientMessageId, {
+                    status: 'sent'
                   });
                 }
-              } catch (err) {
-                console.error('Erro ao enviar mídia:', err);
+                
+              } catch (error: any) {
+                console.error('Erro ao enviar mídia:', error);
                 toast({
                   title: "Erro ao enviar mídia",
-                  description: "Erro de conexão",
+                  description: error.message || "Erro desconhecido",
                   variant: "destructive"
                 });
-                updateMessage(optimisticMessage.id, {
-                  status: 'failed',
-                  content: `❌ ${optimisticMessage.content}`
-                });
+              } finally {
+                setIsSending(false);
+                setTimeout(() => sendingRef.current.delete(messageKey), 1000);
               }
-            }} />
+            }} 
+            disabled={isSending} />
                   
                   <Button variant="ghost" size="sm" title="Mensagens Rápidas" onClick={() => setQuickItemsModalOpen(true)}>
                     <svg className="w-4 h-4" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
