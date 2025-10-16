@@ -44,7 +44,6 @@ export function Sidebar({
   const navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [impersonateOpen, setImpersonateOpen] = useState(false);
   const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
 
   // Hooks para notificações - só carrega quando abrir o popover
@@ -410,12 +409,6 @@ export function Sidebar({
                     Dashboard Master
                   </DropdownMenuItem>
                 )}
-                {hasRole(['master']) && (
-                  <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Personificar empresa
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem onClick={logout} className="text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sair
@@ -445,12 +438,6 @@ export function Sidebar({
                       Dashboard Master
                     </DropdownMenuItem>
                   )}
-                  {hasRole(['master']) && (
-                    <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
-                      <Building2 className="w-4 h-4 mr-2" />
-                      Personificar empresa
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem onClick={logout} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair
@@ -461,7 +448,5 @@ export function Sidebar({
           )}
         </div>
       </div>
-      
-      <ImpersonateWorkspaceModal open={impersonateOpen} onOpenChange={setImpersonateOpen} />
     </div>;
 }
