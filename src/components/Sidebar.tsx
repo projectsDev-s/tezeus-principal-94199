@@ -316,20 +316,24 @@ export function Sidebar({
       </div>
 
       {/* Workspace Info - Only show for admin/user roles */}
-      {!hasRole(['master']) && selectedWorkspace && !isCollapsed && (
-        <div className="flex-shrink-0 px-4 py-3 bg-muted/50 border-b border-sidebar-border">
+      {!hasRole(['master']) && selectedWorkspace && (
+        <div className={`flex-shrink-0 border-b border-sidebar-border ${
+          isCollapsed ? 'px-2 py-2' : 'px-4 py-3 bg-muted/50'
+        }`}>
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
-                {selectedWorkspace.name}
-              </p>
-              {selectedWorkspace.cnpj && (
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {selectedWorkspace.cnpj}
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">
+                  {selectedWorkspace.name}
                 </p>
-              )}
-            </div>
+                {selectedWorkspace.cnpj && (
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {selectedWorkspace.cnpj}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
