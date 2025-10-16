@@ -493,6 +493,7 @@ serve(async (req) => {
             }
           })
           .eq('external_id', external_id);
+      }
       
       console.log(`🎉 [${requestId}] SUCCESS - Mensagem enviada via N8N`);
 
