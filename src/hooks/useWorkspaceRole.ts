@@ -56,6 +56,12 @@ export function useWorkspaceRole(): WorkspaceRoleHook {
         const backendUserRole = data?.userRole || 'user';
         const memberships = data?.userMemberships || [];
 
+        console.log('🔍 useWorkspaceRole - Data from Edge Function:', {
+          backendUserRole,
+          memberships,
+          userRoleFromAuth: userRole
+        });
+
         if (memberships && memberships.length > 0) {
           setUserWorkspaces(memberships.map((m: any) => ({ workspaceId: m.workspace_id, role: m.role as WorkspaceRole })));
           
@@ -66,7 +72,9 @@ export function useWorkspaceRole(): WorkspaceRoleHook {
           } else {
             // Set the highest role
             const hasAdmin = memberships.some((m: any) => m.role === 'admin');
-            setUserWorkspaceRole(hasAdmin ? 'admin' : 'user');
+            const finalRole = hasAdmin ? 'admin' : 'user';
+            console.log('🔍 useWorkspaceRole - Setting role:', { hasAdmin, finalRole });
+            setUserWorkspaceRole(finalRole);
           }
         } else {
           // Check if user is globally master
