@@ -19,17 +19,15 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   console.log('🔔 [RealtimeNotificationProvider] Contexto atualizado:', {
     totalUnread,
     num_notifications: notifications.length,
-    timestamp: new Date().toISOString(),
     notifications: notifications.map(n => ({
       contact: n.contactName,
       content: n.content
     }))
   });
 
-  // Forçar criação de novo objeto para garantir re-render
   const contextValue = {
     totalUnread,
-    notifications: [...notifications] // Criar novo array
+    notifications
   };
 
   return (
