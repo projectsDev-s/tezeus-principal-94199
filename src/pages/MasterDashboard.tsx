@@ -70,35 +70,13 @@ export default function MasterDashboard() {
       {/* Sidebar */}
       <aside className="w-16 bg-card border-r border-border flex flex-col items-center py-6 gap-6">
         <button
-          onClick={() => setActivePage('home')}
-          className={`p-3 rounded-lg transition-colors ${
-            activePage === 'home' 
-              ? 'bg-primary text-primary-foreground' 
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          }`}
-          title="Home"
-        >
-          <Home className="h-5 w-5" />
-        </button>
-        <button
-          onClick={() => setActivePage('users')}
-          className={`p-3 rounded-lg transition-colors ${
-            activePage === 'users' 
-              ? 'bg-primary text-primary-foreground' 
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          }`}
-          title="Usuários"
-        >
-          <Users className="h-5 w-5" />
-        </button>
-        <button
           onClick={() => setActivePage('workspaces')}
           className={`p-3 rounded-lg transition-colors ${
             activePage === 'workspaces' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="Workspaces"
+          title="Empresas"
         >
           <Building2 className="h-5 w-5" />
         </button>
@@ -112,6 +90,17 @@ export default function MasterDashboard() {
           title="Relatórios"
         >
           <BarChart3 className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => setActivePage('users')}
+          className={`p-3 rounded-lg transition-colors ${
+            activePage === 'users' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+          title="Usuários"
+        >
+          <Users className="h-5 w-5" />
         </button>
         <button
           onClick={() => setActivePage('settings')}
