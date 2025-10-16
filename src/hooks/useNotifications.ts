@@ -87,38 +87,56 @@ export function useNotifications() {
     if (!selectedWorkspace?.workspace_id || !user?.id) return;
 
     const userId = user.id;
+    const workspaceId = selectedWorkspace.workspace_id;
     
-    console.log('🔔 Iniciando subscription de notificações para user:', userId);
+    console.log('🔔 [useNotifications] Iniciando subscription de notificações:', {
+      userId,
+      workspaceId
+    });
     
-    // Subscription para novas notificações
+    // Subscription para novas notificações e atualizações
     const notificationsChannel = supabase
-      .channel(`user-notifications-${userId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        console.log('🔔 Nova notificação recebida:', payload.new);
-        fetchNotifications();
-        playNotificationSound();
+      .channel(`notifications-${workspaceId}-${userId}`, {
+        config: {
+          broadcast: { self: true }
+        }
       })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        console.log('🔔 Notificação atualizada:', payload.new);
-        fetchNotifications();
-      })
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('🔔 [Realtime] Nova notificação recebida:', payload.new);
+          playNotificationSound();
+          fetchNotifications();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('🔔 [Realtime] Notificação atualizada:', payload.new);
+          fetchNotifications();
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔔 [Realtime] Status da subscription:', status);
+      });
 
     return () => {
-      console.log('🔕 Removendo subscription de notificações');
+      console.log('🔕 [useNotifications] Removendo subscription de notificações');
       supabase.removeChannel(notificationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id, user?.id]);
+  }, [selectedWorkspace?.workspace_id, user?.id, playNotificationSound]);
 
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
