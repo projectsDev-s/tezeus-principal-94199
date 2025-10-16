@@ -96,7 +96,7 @@ export function useNotifications() {
     
     // Subscription para novas notificações e atualizações
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel(`notifications-${workspaceId}-${userId}`)
       .on(
         'postgres_changes',
         {
