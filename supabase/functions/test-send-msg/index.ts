@@ -566,3 +566,5 @@ serve(async (req) => {
     });
   }
 });
+
+// Version 2.0.1 - Fixed N8N empty response handling
