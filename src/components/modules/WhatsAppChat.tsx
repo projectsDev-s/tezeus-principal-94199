@@ -299,6 +299,13 @@ export function WhatsAppChat({
         optimisticId: optimisticMessage.id
       });
 
+      // ✅ ETAPA 2: DEBUG - Verificar estado atual das mensagens
+      console.log('📋 [ETAPA 2] Estado atual de mensagens antes da substituição:', {
+        totalMessages: messages.length,
+        temporaryMessages: messages.filter(m => m.id.startsWith('temp-')).map(m => ({ id: m.id, content: m.content })),
+        messageToReplace: messages.find(m => m.id === optimisticMessage.id)
+      });
+
       // ✅ SUBSTITUIR mensagem temporária pelo ID real
       if (sendResult.message?.id) {
         console.log('✅ [ETAPA 2] Substituindo mensagem temporária pelo ID real:', {
@@ -311,6 +318,15 @@ export function WhatsAppChat({
           status: 'sent',
           created_at: sendResult.message.created_at
         });
+
+        // ✅ ETAPA 2: DEBUG - Verificar estado após substituição
+        setTimeout(() => {
+          console.log('📋 [ETAPA 2] Estado após substituição:', {
+            totalMessages: messages.length,
+            temporaryMessages: messages.filter(m => m.id.startsWith('temp-')).map(m => ({ id: m.id, content: m.content })),
+            realMessage: messages.find(m => m.id === sendResult.message.id)
+          });
+        }, 100);
       } else {
         console.warn('⚠️ [ETAPA 2] Backend não retornou message.id!');
         updateMessage(optimisticMessage.id, { status: 'sent' });
