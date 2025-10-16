@@ -110,7 +110,8 @@ export function useNotifications() {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('🔔 [Realtime] Nova notificação recebida:', payload.new);
+          console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA:', payload.new);
+          console.log('🔔 Tocando som e recarregando...');
           playNotificationSound();
           fetchNotifications();
         }
