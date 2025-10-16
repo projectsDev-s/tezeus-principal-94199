@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, ChevronLeft, MoreVertical } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, ChevronRight, ChevronLeft, MoreVertical, ArrowLeft } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ export function Sidebar({
   onToggleCollapse,
   onNavigateToConversation
 }: SidebarProps) {
+  const navigate = useNavigate();
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [impersonateOpen, setImpersonateOpen] = useState(false);
@@ -73,6 +75,14 @@ export function Sidebar({
   const {
     customization
   } = useSystemCustomizationContext();
+
+  const handleBackToMasterDashboard = () => {
+    // Limpar workspace selecionado
+    setSelectedWorkspace(null);
+    localStorage.removeItem('selectedWorkspace');
+    // Redirecionar para dashboard master
+    navigate('/master-dashboard');
+  };
 
   // Auto-select first workspace for master users
   useEffect(() => {
@@ -394,6 +404,12 @@ export function Sidebar({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="z-50 bg-background" side="right" align="end">
+                {hasRole(['master']) && selectedWorkspace && (
+                  <DropdownMenuItem onClick={handleBackToMasterDashboard}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Dashboard Master
+                  </DropdownMenuItem>
+                )}
                 {hasRole(['master']) && (
                   <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
                     <Building2 className="w-4 h-4 mr-2" />
@@ -423,6 +439,12 @@ export function Sidebar({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="z-50 bg-background" align="end">
+                  {hasRole(['master']) && selectedWorkspace && (
+                    <DropdownMenuItem onClick={handleBackToMasterDashboard}>
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Dashboard Master
+                    </DropdownMenuItem>
+                  )}
                   {hasRole(['master']) && (
                     <DropdownMenuItem onClick={() => setImpersonateOpen(true)}>
                       <Building2 className="w-4 h-4 mr-2" />
