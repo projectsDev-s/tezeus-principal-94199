@@ -292,9 +292,16 @@ export function WhatsAppChat({
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
       }
 
+      // ✅ ETAPA 2: DEBUG - Verificar resposta do backend
+      console.log('📨 [ETAPA 2] Resposta do backend:', {
+        sendResult,
+        hasMessageId: !!sendResult.message?.id,
+        optimisticId: optimisticMessage.id
+      });
+
       // ✅ SUBSTITUIR mensagem temporária pelo ID real
       if (sendResult.message?.id) {
-        console.log('✅ Substituindo mensagem temporária pelo ID real:', {
+        console.log('✅ [ETAPA 2] Substituindo mensagem temporária pelo ID real:', {
           tempId: optimisticMessage.id,
           realId: sendResult.message.id
         });
@@ -304,6 +311,9 @@ export function WhatsAppChat({
           status: 'sent',
           created_at: sendResult.message.created_at
         });
+      } else {
+        console.warn('⚠️ [ETAPA 2] Backend não retornou message.id!');
+        updateMessage(optimisticMessage.id, { status: 'sent' });
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
