@@ -41,15 +41,15 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       return;
     }
 
-    // Executar apenas uma vez após carregar workspaces
-    if (hasInitialized) {
-      return;
-    }
-
     // REGRA MASTER: Usuário master NÃO deve ter workspace auto-selecionado
     if (userRole === 'master') {
       console.log('🎩 Usuário master detectado - workspace não será auto-selecionado');
-      setHasInitialized(true);
+      return;
+    }
+
+    // Se já tem workspace selecionado, não fazer nada
+    if (selectedWorkspace) {
+      console.log('✅ Workspace já selecionado:', selectedWorkspace.name);
       return;
     }
 
@@ -65,7 +65,6 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         if (matchingWorkspace) {
           console.log('✅ Restaurando workspace do localStorage:', matchingWorkspace.name);
           setSelectedWorkspaceState(matchingWorkspace);
-          setHasInitialized(true);
           return;
         } else {
           console.log('⚠️ Workspace do localStorage não encontrado na lista, limpando');
@@ -81,29 +80,12 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     if (workspaces.length === 1) {
       console.log('🎯 Auto-selecionando único workspace:', workspaces[0].name);
       setSelectedWorkspace(workspaces[0]);
-      setHasInitialized(true);
       return;
     }
 
     // PRIORIDADE 3: Múltiplos workspaces, aguardar seleção manual
     console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
-    setHasInitialized(true);
-  }, [workspaces, isLoadingWorkspaces]);
-
-  // Reset hasInitialized quando workspaces mudam (detecta mudança no array)
-  useEffect(() => {
-    if (workspaces.length > 0) {
-      const currentWorkspaceIds = workspaces.map(w => w.workspace_id).sort().join(',');
-      const storedIds = sessionStorage.getItem('workspace_ids');
-      
-      if (storedIds && storedIds !== currentWorkspaceIds) {
-        console.log('🔄 Workspaces mudaram, resetando inicialização');
-        setHasInitialized(false);
-      }
-      
-      sessionStorage.setItem('workspace_ids', currentWorkspaceIds);
-    }
-  }, [workspaces]);
+  }, [workspaces, isLoadingWorkspaces, userRole, selectedWorkspace]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);

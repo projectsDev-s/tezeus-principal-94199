@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -67,6 +68,42 @@ export const Login = () => {
           title: "Login realizado com sucesso!",
           description: "Redirecionando...",
         });
+        
+        // ✅ Para Admin/User, salvar workspace antes de redirecionar
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (currentUserStr) {
+          try {
+            const loggedUser = JSON.parse(currentUserStr);
+            const userRole = loggedUser?.profile;
+            
+            if (userRole === 'admin' || userRole === 'user') {
+              const { data, error } = await supabase.functions.invoke('list-user-workspaces', {
+                headers: {
+                  'x-system-user-id': loggedUser.id,
+                  'x-system-user-email': loggedUser.email || ''
+                }
+              });
+              
+              if (!error && data?.workspaces && data.workspaces.length > 0) {
+                const userWorkspace = {
+                  workspace_id: data.workspaces[0].workspace_id || data.workspaces[0].id,
+                  name: data.workspaces[0].name,
+                  slug: data.workspaces[0].slug,
+                  cnpj: data.workspaces[0].cnpj,
+                  created_at: data.workspaces[0].created_at,
+                  updated_at: data.workspaces[0].updated_at,
+                  connections_count: data.workspaces[0].connections_count || 0
+                };
+                
+                console.log('💾 Salvando workspace no login:', userWorkspace.name);
+                localStorage.setItem('selectedWorkspace', JSON.stringify(userWorkspace));
+              }
+            }
+          } catch (error) {
+            console.error('Erro ao buscar workspace no login:', error);
+          }
+        }
+        
         setLoginSuccess(true);
       }
     } catch (error) {

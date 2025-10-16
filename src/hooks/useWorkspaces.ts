@@ -10,11 +10,10 @@ export function useWorkspaces() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const { setWorkspaces: setContextWorkspaces, setIsLoadingWorkspaces } = useWorkspace();
   const { getCache, setCache, isExpired } = useCache<Workspace[]>(5); // 5 min cache
   const { retry } = useRetry();
-  const hasFetched = useRef(false);
 
   const fetchWorkspaces = async () => {
     if (!user) {
@@ -113,12 +112,15 @@ export function useWorkspaces() {
   };
 
   useEffect(() => {
-    if (hasFetched.current) return;
-    if (user) {
-      hasFetched.current = true;
-      fetchWorkspaces();
+    if (!user) {
+      setWorkspaces([]);
+      setContextWorkspaces([]);
+      setIsLoadingWorkspaces(false);
+      return;
     }
-  }, [user, userRole]);
+    
+    fetchWorkspaces();
+  }, [user]);
 
   const createWorkspace = async (name: string, cnpj?: string, connectionLimit?: number) => {
     try {
