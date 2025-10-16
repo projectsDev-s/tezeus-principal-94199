@@ -84,7 +84,17 @@ export function useNotifications() {
 
   // Real-time subscriptions para notificações
   useEffect(() => {
-    if (!selectedWorkspace?.workspace_id || !user?.id) return;
+    console.log('🔔🔔🔔 [useNotifications] Verificando condições para subscription:', {
+      hasWorkspace: !!selectedWorkspace?.workspace_id,
+      hasUser: !!user?.id,
+      workspaceId: selectedWorkspace?.workspace_id,
+      userId: user?.id
+    });
+
+    if (!selectedWorkspace?.workspace_id || !user?.id) {
+      console.log('⚠️ [useNotifications] Workspace ou user não disponível, subscription não será criada');
+      return;
+    }
 
     const userId = user.id;
     const workspaceId = selectedWorkspace.workspace_id;
