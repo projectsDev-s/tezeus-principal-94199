@@ -252,9 +252,12 @@ export function WhatsAppChat({
     setMessageText('');
     
     try {
-      // Criar mensagem otimista com status "sending"
+      // ✅ GERAR UUID ÚNICO (mesmo ID usado no frontend e backend)
+      const messageId = crypto.randomUUID();
+      
+      // Criar mensagem otimista com ID REAL (não temporário)
       const optimisticMessage = {
-        id: `temp-${Date.now()}`,
+        id: messageId, // ✅ Usar UUID real
         conversation_id: selectedConversation.id,
         content: textToSend,
         message_type: 'text' as const,
@@ -275,7 +278,8 @@ export function WhatsAppChat({
           content: textToSend,
           message_type: 'text',
           sender_id: user?.id,
-          sender_type: 'agent'
+          sender_type: 'agent',
+          clientMessageId: messageId // ✅ Enviar o mesmo ID para o backend
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -288,19 +292,10 @@ export function WhatsAppChat({
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
       }
 
-      // ✅ SUBSTITUIR mensagem temporária pelo ID real
-      if (sendResult.message?.id) {
-        console.log('✅ Substituindo mensagem temporária pelo ID real:', {
-          tempId: optimisticMessage.id,
-          realId: sendResult.message.id
-        });
-        
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-      }
+      // ✅ Apenas atualizar status (ID já é o correto)
+      updateMessage(messageId, {
+        status: 'sent'
+      });
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
