@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 
 interface WorkspaceStats {
   workspace_id: string;
@@ -12,15 +13,25 @@ interface WorkspaceStats {
   active_conversations: number;
 }
 
-async function fetchRelatorios(userId: string | undefined, isMaster: boolean, selectedWorkspaceId?: string) {
-  if (!userId) {
+async function fetchRelatorios(
+  userId: string | undefined, 
+  userEmail: string | undefined,
+  isMaster: boolean, 
+  selectedWorkspaceId?: string
+) {
+  if (!userId || !userEmail) {
     throw new Error("Usuário não autenticado");
   }
 
-  console.log('📊 Relatórios: Iniciando fetch', { userId, isMaster, selectedWorkspaceId });
+  console.log('📊 Relatórios: Iniciando fetch', { userId, userEmail, isMaster, selectedWorkspaceId });
 
-  // 1. Buscar workspaces usando a edge function
-  const { data: workspacesResponse, error: workspacesError } = await supabase.functions.invoke('list-user-workspaces');
+  // 1. Buscar workspaces usando a edge function COM HEADERS
+  const { data: workspacesResponse, error: workspacesError } = await supabase.functions.invoke('list-user-workspaces', {
+    headers: {
+      'x-user-id': userId,
+      'x-user-email': userEmail,
+    }
+  });
 
   if (workspacesError) {
     console.error('❌ Relatórios: Erro ao buscar workspaces', workspacesError);
@@ -81,11 +92,16 @@ export function useRelatorios() {
 
   return useQuery<WorkspaceStats[], Error>({
     queryKey: ['relatorios', user?.id, userRole, selectedWorkspace?.workspace_id],
-    queryFn: () => fetchRelatorios(user?.id, userRole === 'master', selectedWorkspace?.workspace_id),
+    queryFn: () => fetchRelatorios(
+      user?.id, 
+      user?.email,
+      userRole === 'master', 
+      selectedWorkspace?.workspace_id
+    ),
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 1000 * 60, // 1 minuto
     refetchOnWindowFocus: false,
-    enabled: !!user?.id, // Só executa se tiver usuário
+    enabled: !!user?.id && !!user?.email, // Só executa se tiver usuário e email
   });
 }
