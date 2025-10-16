@@ -219,10 +219,28 @@ export function WhatsAppChat({
 
   // Estados para controle de carregamento manual
   const isInitialLoadRef = useRef(true);
+  
+  // ✅ MUTEX: Prevenir envio duplicado
+  const sendingRef = useRef<Set<string>>(new Set());
+  
+  // ✅ Estado para desabilitar botão durante envio
+  const [isSending, setIsSending] = useState(false);
 
   // ✅ Enviar mensagem usando o hook de mensagens
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
+    
+    // ✅ MUTEX: Verificar se já está enviando esta mensagem
+    const messageKey = `${selectedConversation.id}-${messageText}-${Date.now()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado (já em andamento)');
+      return;
+    }
+    
+    // ✅ Marcar como "enviando"
+    sendingRef.current.add(messageKey);
+    setIsSending(true);
+    
     try {
       // Criar mensagem local otimista
       const optimisticMessage = {
@@ -269,14 +287,32 @@ export function WhatsAppChat({
       setMessageText("");
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      // Remover mensagem temporária em caso de erro
-      // TODO: implementar removeMessage no hook
+      toast({
+        title: "Erro ao enviar",
+        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      // ✅ CRÍTICO: Remover do MUTEX após 1 segundo
+      setTimeout(() => {
+        sendingRef.current.delete(messageKey);
+      }, 1000);
+      setIsSending(false);
     }
   };
 
   // Funções para enviar itens rápidos
   const handleSendQuickMessage = async (content: string, type: 'text') => {
     if (!selectedConversation) return;
+    
+    // ✅ MUTEX: Prevenir duplicação
+    const messageKey = `quick-${selectedConversation.id}-${content}-${Date.now()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado de mensagem rápida');
+      return;
+    }
+    sendingRef.current.add(messageKey);
+    
     try {
       const optimisticMessage = {
         id: `temp-quick-${Date.now()}`,
@@ -319,6 +355,8 @@ export function WhatsAppChat({
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem rápida:', error);
+    } finally {
+      setTimeout(() => sendingRef.current.delete(messageKey), 1000);
     }
   };
   const handleSendQuickAudio = async (file: {
@@ -326,6 +364,15 @@ export function WhatsAppChat({
     url: string;
   }, content: string) => {
     if (!selectedConversation) return;
+    
+    // ✅ MUTEX: Prevenir duplicação
+    const messageKey = `audio-${selectedConversation.id}-${file.name}-${Date.now()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado de áudio');
+      return;
+    }
+    sendingRef.current.add(messageKey);
+    
     try {
       const optimisticMessage = {
         id: `temp-quick-audio-${Date.now()}`,
@@ -372,6 +419,8 @@ export function WhatsAppChat({
       }
     } catch (error) {
       console.error('Erro ao enviar áudio rápido:', error);
+    } finally {
+      setTimeout(() => sendingRef.current.delete(messageKey), 1000);
     }
   };
   const handleSendQuickMedia = async (file: {
@@ -379,6 +428,15 @@ export function WhatsAppChat({
     url: string;
   }, content: string, type: 'image' | 'video') => {
     if (!selectedConversation) return;
+    
+    // ✅ MUTEX: Prevenir duplicação
+    const messageKey = `media-${selectedConversation.id}-${file.name}-${Date.now()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado de mídia');
+      return;
+    }
+    sendingRef.current.add(messageKey);
+    
     try {
       const optimisticMessage = {
         id: `temp-quick-media-${Date.now()}`,
@@ -425,6 +483,8 @@ export function WhatsAppChat({
       }
     } catch (error) {
       console.error('Erro ao enviar mídia rápida:', error);
+    } finally {
+      setTimeout(() => sendingRef.current.delete(messageKey), 1000);
     }
   };
   const handleSendQuickDocument = async (file: {
@@ -432,6 +492,15 @@ export function WhatsAppChat({
     url: string;
   }, content: string) => {
     if (!selectedConversation) return;
+    
+    // ✅ MUTEX: Prevenir duplicação
+    const messageKey = `doc-${selectedConversation.id}-${file.name}-${Date.now()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado de documento');
+      return;
+    }
+    sendingRef.current.add(messageKey);
+    
     try {
       const optimisticMessage = {
         id: `temp-quick-doc-${Date.now()}`,
@@ -478,6 +547,8 @@ export function WhatsAppChat({
       }
     } catch (error) {
       console.error('Erro ao enviar documento rápido:', error);
+    } finally {
+      setTimeout(() => sendingRef.current.delete(messageKey), 1000);
     }
   };
 
@@ -1775,8 +1846,12 @@ export function WhatsAppChat({
                   <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio">
                     <Mic className="w-4 h-4" />
                   </Button>
-                  <Button onClick={handleSendMessage} disabled={!messageText.trim()} size="icon">
-                    <Send className="w-4 h-4" />
+                  <Button onClick={handleSendMessage} disabled={!messageText.trim() || isSending} size="icon">
+                    {isSending ? (
+                      <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>}
 
