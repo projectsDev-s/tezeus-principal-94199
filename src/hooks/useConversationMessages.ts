@@ -278,33 +278,44 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
+    console.log('🔄 updateMessage chamado:', { messageId, updates });
+    
     setMessages(prevMessages => {
       const messageIndex = prevMessages.findIndex(m => m.id === messageId);
       if (messageIndex === -1) {
+        console.log('⚠️ Mensagem não encontrada para atualizar:', messageId);
         return prevMessages;
       }
 
-      const updatedMessages = [...prevMessages];
-      const currentMessage = updatedMessages[messageIndex];
-      const updatedMessage = { ...currentMessage, ...updates };
+      const currentMessage = prevMessages[messageIndex];
       
-      // Se está mudando o ID (de temporário para real), verificar se já existe mensagem com o novo ID
+      // ✅ CRÍTICO: Se está mudando o ID (de temporário para real)
       if (updates.id && updates.id !== messageId) {
+        console.log('🔄 Tentando mudar ID de temporário para real:', { 
+          oldId: messageId, 
+          newId: updates.id 
+        });
+        
+        // Verificar se já existe mensagem com o novo ID
         const existingMessageWithNewId = prevMessages.find(m => m.id === updates.id);
         if (existingMessageWithNewId) {
-          // Já existe mensagem com o novo ID, remover a temporária
-          console.log('✏️ Removendo mensagem temporária, já existe com ID real:', updates.id);
+          console.log('⚠️ JÁ EXISTE mensagem com o ID real, REMOVENDO a temporária:', updates.id);
+          // Remover apenas a mensagem temporária, manter a real
           return prevMessages.filter(m => m.id !== messageId);
         }
+        
+        // Se não existe, atualizar o ID da mensagem temporária
+        console.log('✅ Não existe mensagem com ID real, atualizando temporária');
       }
       
-      updatedMessages[messageIndex] = updatedMessage;
+      // Atualizar a mensagem
+      const updatedMessages = [...prevMessages];
+      updatedMessages[messageIndex] = { ...currentMessage, ...updates };
+      
       console.log('✏️ Mensagem atualizada:', { 
-        id: updatedMessage.id, 
-        status: updatedMessage.status,
-        message_type: updatedMessage.message_type,
-        file_url: updatedMessage.file_url,
-        file_name: updatedMessage.file_name
+        id: updatedMessages[messageIndex].id, 
+        status: updatedMessages[messageIndex].status,
+        message_type: updatedMessages[messageIndex].message_type
       });
       
       return updatedMessages;
@@ -396,33 +407,58 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const updatedMessage = payload.new as WhatsAppMessage;
           
+          console.log('🔄 [UPDATE] Mensagem atualizada via Realtime:', {
+            id: updatedMessage.id,
+            sender_type: updatedMessage.sender_type,
+            status: updatedMessage.status,
+            content_preview: updatedMessage.content?.substring(0, 30)
+          });
+          
           // Verificar se é do workspace atual
           if (updatedMessage.workspace_id === selectedWorkspace.workspace_id) {
-          // Para mensagens de agente, evitar duplicação
-          if (updatedMessage.sender_type === 'agent') {
-            // Verificar se mensagem JÁ existe no state
-            const existingIndex = messages.findIndex(m => m.id === updatedMessage.id);
-            
-            if (existingIndex !== -1) {
-              // ✅ Mensagem existe → APENAS ATUALIZAR
-              console.log(`🔄 Atualizando mensagem agent existente: ${updatedMessage.id}`);
+            // Para mensagens de agente, evitar duplicação
+            if (updatedMessage.sender_type === 'agent') {
               setMessages(prev => {
-                const updated = [...prev];
-                updated[existingIndex] = updatedMessage;
-                return updated;
+                // ✅ BUSCAR por ID real OU por mensagem temporária com mesmo conteúdo
+                const existingRealIndex = prev.findIndex(m => m.id === updatedMessage.id);
+                const existingTempIndex = prev.findIndex(m => 
+                  m.id.startsWith('temp-') && 
+                  m.conversation_id === updatedMessage.conversation_id &&
+                  m.content === updatedMessage.content &&
+                  m.message_type === updatedMessage.message_type
+                );
+                
+                if (existingRealIndex !== -1) {
+                  // ✅ Já existe com ID real → APENAS ATUALIZAR
+                  console.log(`🔄 Atualizando mensagem agent com ID real: ${updatedMessage.id}`);
+                  const updated = [...prev];
+                  updated[existingRealIndex] = updatedMessage;
+                  return updated;
+                } else if (existingTempIndex !== -1) {
+                  // ✅ Existe mensagem temporária → SUBSTITUIR pela real
+                  console.log(`🔄 Substituindo mensagem temporária pela real:`, {
+                    tempId: prev[existingTempIndex].id,
+                    realId: updatedMessage.id
+                  });
+                  const updated = [...prev];
+                  updated[existingTempIndex] = updatedMessage;
+                  return updated;
+                } else if (updatedMessage.status === 'sent' || updatedMessage.status === 'SENT') {
+                  // ✅ Mensagem NÃO existe → ADICIONAR (caso não tenha sido otimista)
+                  console.log(`✅ Adicionando nova mensagem agent: ${updatedMessage.id}`);
+                  return [...prev, updatedMessage].sort((a, b) => 
+                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                  );
+                } else {
+                  // ⏭️ Ignorar outros casos
+                  console.log(`⏭️ Ignorando UPDATE de mensagem agent: ${updatedMessage.id} (status: ${updatedMessage.status})`);
+                  return prev;
+                }
               });
-            } else if (updatedMessage.status === 'sent') {
-              // ✅ Mensagem NÃO existe E status=sent → ADICIONAR UMA VEZ
-              console.log(`✅ Adicionando nova mensagem agent: ${updatedMessage.id}`);
-              addMessage(updatedMessage);
             } else {
-              // ⏭️ Ignorar outros casos (status=sending, etc)
-              console.log(`⏭️ Ignorando UPDATE de mensagem agent: ${updatedMessage.id} (status: ${updatedMessage.status})`);
+              // Para mensagens de contato, apenas atualizar
+              updateMessage(updatedMessage.id, updatedMessage);
             }
-          } else {
-            // Para mensagens de contato, apenas atualizar
-            updateMessage(updatedMessage.id, updatedMessage);
-          }
           }
         }
       )
