@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useWhatsAppConversations } from './useWhatsAppConversations';
 import { useNotificationSound } from './useNotificationSound';
+import { supabase } from '@/integrations/supabase/client';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 export interface NotificationMessage {
   id: string;
@@ -14,9 +16,10 @@ export interface NotificationMessage {
 }
 
 export function useNotifications() {
-  const { conversations, markAsRead } = useWhatsAppConversations();
+  const { conversations, markAsRead, fetchConversations } = useWhatsAppConversations();
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const { playNotificationSound } = useNotificationSound();
+  const { selectedWorkspace } = useWorkspace();
 
   // ✅ SIMPLIFICADO: Calcular diretamente do backend sem rastreamento complexo
   const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
@@ -68,6 +71,63 @@ export function useNotifications() {
       conversationUnreadMap: unreadMap
     };
   }, [conversations]);
+
+  // ✅ Tocar som quando totalUnread aumenta
+  useEffect(() => {
+    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
+      playNotificationSound();
+    }
+    setPreviousUnreadCount(totalUnread);
+  }, [totalUnread, previousUnreadCount, playNotificationSound]);
+
+  // ✅ REALTIME: Ouvir mudanças em conversas
+  useEffect(() => {
+    if (!selectedWorkspace?.workspace_id) return;
+
+    console.log('🔴 Iniciando subscription realtime para notificações...');
+
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations',
+          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
+        },
+        (payload) => {
+          console.log('📡 [Notifications] Conversa atualizada via realtime:', payload);
+          
+          // Recarregar conversas para atualizar notificações
+          fetchConversations();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
+        },
+        (payload) => {
+          console.log('📡 [Notifications] Nova mensagem via realtime:', payload);
+          
+          // Recarregar conversas para atualizar notificações
+          fetchConversations();
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔴 [Notifications] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔴 [Notifications] Limpando subscription realtime...');
+      supabase.removeChannel(channel);
+    };
+  }, [selectedWorkspace?.workspace_id, fetchConversations]);
 
   // Tocar som quando totalUnread aumenta
   useEffect(() => {
