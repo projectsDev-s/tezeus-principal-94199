@@ -215,89 +215,87 @@ export default function MasterDashboard() {
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-auto">
           {selectedWorkspaceForUsers ? (
-            <div>
+            <div className="space-y-4">
               <Button
                 onClick={() => setSelectedWorkspaceForUsers(null)}
                 variant="outline"
-                className="mb-4"
+                size="sm"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar para Workspaces
+                Voltar para Empresas
               </Button>
               <WorkspaceUsersPage />
             </div>
-          ) : (
+          ) : activePage === 'workspaces' ? (
             <>
-              {activePage === 'workspaces' && (
+              {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <Skeleton key={i} className="h-64 rounded-lg" />
+                  ))}
+                </div>
+              ) : filteredWorkspaces.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    {searchQuery ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery 
+                      ? 'Tente ajustar sua busca ou limpar o filtro.'
+                      : 'Comece criando uma nova empresa no sistema.'}
+                  </p>
+                </div>
+              ) : (
                 <>
-                  {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {[...Array(8)].map((_, i) => (
-                        <Skeleton key={i} className="h-64 rounded-lg" />
-                      ))}
-                    </div>
-                  ) : filteredWorkspaces.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">
-                        {searchQuery ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {searchQuery 
-                          ? 'Tente ajustar sua busca ou limpar o filtro.'
-                          : 'Comece criando uma nova empresa no sistema.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mb-4 text-sm text-muted-foreground">
-                        Exibindo {filteredWorkspaces.length} de {workspaces.length} empresas
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {filteredWorkspaces.map((workspace) => (
-                          <WorkspaceCard
-                            key={workspace.workspace_id}
-                            workspace={workspace}
-                            usersCount={0}
-                            conversationsCount={0}
-                            onLogin={handleLogin}
-                            onViewReports={handleViewUsers}
-                            onViewWorkspace={handleViewWorkspace}
-                            onViewConfig={handleViewConfig}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
+                  <div className="mb-4 text-sm text-muted-foreground">
+                    Exibindo {filteredWorkspaces.length} de {workspaces.length} empresas
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredWorkspaces.map((workspace) => (
+                      <WorkspaceCard
+                        key={workspace.workspace_id}
+                        workspace={workspace}
+                        usersCount={0}
+                        conversationsCount={0}
+                        onLogin={handleLogin}
+                        onViewReports={handleViewUsers}
+                        onViewWorkspace={handleViewWorkspace}
+                        onViewConfig={handleViewConfig}
+                      />
+                    ))}
+                  </div>
                 </>
               )}
-
-              {activePage === 'ds-agent' && <DSAgenteMaster />}
-              {activePage === 'filas' && <AutomacoesFilasMaster />}
-              {activePage === 'usuarios' && <AdministracaoUsuarios />}
-              {activePage === 'reports' && <WorkspaceRelatorios />}
-              {activePage === 'configuracoes' && (
-                <div className="space-y-6">
-                  <Tabs defaultValue="personalizacao">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
-                      <TabsTrigger value="webhooks">Webhooks Evolution</TabsTrigger>
-                      <TabsTrigger value="evolution-api">Evolution API</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="personalizacao">
-                      <AdministracaoConfiguracoes />
-                    </TabsContent>
-                    <TabsContent value="webhooks">
-                      <WebhooksEvolutionConfigMaster />
-                    </TabsContent>
-                    <TabsContent value="evolution-api">
-                      <EvolutionApiConfigMaster />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              )}
             </>
-          )}
+          ) : activePage === 'ds-agent' ? (
+            <DSAgenteMaster />
+          ) : activePage === 'filas' ? (
+            <AutomacoesFilasMaster />
+          ) : activePage === 'usuarios' ? (
+            <AdministracaoUsuarios />
+          ) : activePage === 'reports' ? (
+            <WorkspaceRelatorios />
+          ) : activePage === 'configuracoes' ? (
+            <div className="space-y-6">
+              <Tabs defaultValue="personalizacao">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
+                  <TabsTrigger value="webhooks">Webhooks Evolution</TabsTrigger>
+                  <TabsTrigger value="evolution-api">Evolution API</TabsTrigger>
+                </TabsList>
+                <TabsContent value="personalizacao">
+                  <AdministracaoConfiguracoes />
+                </TabsContent>
+                <TabsContent value="webhooks">
+                  <WebhooksEvolutionConfigMaster />
+                </TabsContent>
+                <TabsContent value="evolution-api">
+                  <EvolutionApiConfigMaster />
+                </TabsContent>
+              </Tabs>
+            </div>
+          ) : null}
         </main>
 
         {/* Footer */}
