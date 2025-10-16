@@ -438,8 +438,22 @@ serve(async (req) => {
         });
       }
 
-      const n8nData = await n8nResponse.json();
-      console.log(`✅ [${requestId}] N8N webhook success:`, n8nData);
+      // Tentar parsear JSON, tratando resposta vazia
+      let n8nData: any = {};
+      const responseText = await n8nResponse.text();
+      
+      if (responseText && responseText.trim()) {
+        try {
+          n8nData = JSON.parse(responseText);
+          console.log(`✅ [${requestId}] N8N webhook success:`, n8nData);
+        } catch (parseError) {
+          console.error(`⚠️ [${requestId}] N8N returned non-JSON response:`, responseText);
+          n8nData = { raw_response: responseText };
+        }
+      } else {
+        console.log(`⚠️ [${requestId}] N8N returned empty response, assuming success`);
+        n8nData = { success: true, empty_response: true };
+      }
 
       // N8N deve retornar os evolution IDs após processar
       if (n8nData.success && (n8nData.evolution_key_id || n8nData.key?.id)) {
