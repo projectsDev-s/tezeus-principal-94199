@@ -21,9 +21,9 @@ export function useNotifications() {
   const { playNotificationSound } = useNotificationSound();
   const { selectedWorkspace } = useWorkspace();
   
-  // ✅ Criar chave de versão baseada nos unread_counts para forçar recálculo
+  // ✅ Criar chave de versão baseada nos unread_counts E timestamp para forçar recálculo
   const conversationsVersion = useMemo(() => {
-    return conversations.map(c => `${c.id}:${c.unread_count || 0}`).join('|');
+    return conversations.map(c => `${c.id}:${c.unread_count || 0}:${c._updated_at || 0}`).join('|');
   }, [conversations]);
 
   // ✅ Calcular notificações diretamente de conversations (sem hash intermediário)

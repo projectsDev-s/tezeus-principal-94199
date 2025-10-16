@@ -59,6 +59,7 @@ export interface WhatsAppConversation {
     created_at: string;
   }>;
   messages: WhatsAppMessage[];
+  _updated_at?: number; // ✅ Timestamp para forçar re-render
 }
 
 export const useWhatsAppConversations = () => {
@@ -639,7 +640,8 @@ export const useWhatsAppConversations = () => {
                   messages: newMessages,
                   unread_count: newUnreadCount,
                   last_message: [lastMessage],
-                  last_activity_at: newMessage.created_at
+                  last_activity_at: newMessage.created_at,
+                  _updated_at: Date.now() // ✅ Força re-render
                 };
 
                 console.log('✅ [INSERT] Unread count atualizado localmente:', {
@@ -671,7 +673,7 @@ export const useWhatsAppConversations = () => {
               }))
             });
             
-            return sorted;
+            return [...sorted]; // ✅ SEMPRE criar novo array
           });
         }
       )

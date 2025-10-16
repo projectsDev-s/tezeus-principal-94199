@@ -366,9 +366,13 @@ export function Sidebar({
               {totalUnread > 0 ? <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
                   <PopoverTrigger asChild>
                     <TooltipTrigger asChild>
-                      <button className="p-2 hover:bg-accent rounded-md relative">
+                       <button className="p-2 hover:bg-accent rounded-md relative">
               <Bell className={cn(isCollapsed ? "w-5 h-5" : "w-5 h-5", "text-muted-foreground")} />
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0">
+                        <Badge 
+                          key={`badge-${totalUnread}-${Date.now()}`}
+                          variant="destructive" 
+                          className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0"
+                        >
                           {totalUnread > 99 ? '99+' : totalUnread}
                         </Badge>
                       </button>
