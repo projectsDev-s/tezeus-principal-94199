@@ -32,7 +32,6 @@ interface UseConversationMessagesReturn {
   loadMore: () => Promise<void>;
   addMessage: (message: WhatsAppMessage) => void;
   updateMessage: (messageId: string, updates: Partial<WhatsAppMessage>) => void;
-  removeMessage: (messageId: string) => void;
   clearMessages: () => void;
 }
 
@@ -280,17 +279,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     }
   }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
-  const removeMessage = useCallback((messageId: string) => {
-    console.log('🗑️ removeMessage chamado:', messageId);
-    setMessages(prevMessages => prevMessages.filter(m => m.id !== messageId));
-    
-    // Invalidar cache
-    if (selectedWorkspace?.workspace_id && currentConversationId) {
-      const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
-      cacheRef.current.delete(cacheKey);
-    }
-  }, [selectedWorkspace?.workspace_id, currentConversationId]);
-
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
     console.log('🔄 updateMessage chamado:', { messageId, updates });
     
@@ -385,7 +373,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const newMessage = payload.new as WhatsAppMessage;
           
-          console.log('📨 [INSERT] Nova mensagem recebida via Realtime:', {
+          console.log('📨 [INSERT useConversationMessages] Nova mensagem recebida via Realtime:', {
             id: newMessage.id,
             sender_type: newMessage.sender_type,
             workspace_id: newMessage.workspace_id,
@@ -394,14 +382,27 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             content_preview: newMessage.content?.substring(0, 30)
           });
           
-          // ✅ Verificar se é do workspace atual
-          if (newMessage.workspace_id !== selectedWorkspace.workspace_id) {
-            console.log('❌ [INSERT] Workspace diferente, ignorando mensagem');
+          // ✅ IGNORAR mensagens de agente no INSERT
+          // Elas serão adicionadas otimisticamente no handleSendMessage
+          console.log('🔍 [INSERT useConversationMessages] Verificando se é mensagem de agente:', {
+            sender_type: newMessage.sender_type,
+            should_ignore: newMessage.sender_type === 'agent'
+          });
+          
+          if (newMessage.sender_type === 'agent') {
+            console.log('⏭️ [INSERT useConversationMessages] IGNORANDO mensagem de agent no INSERT (já foi adicionada otimisticamente)');
             return;
           }
           
-          console.log('✅ [INSERT] Workspace correto, chamando addMessage...');
-          addMessage(newMessage);
+          console.log('✅ [INSERT useConversationMessages] NÃO é mensagem de agente, continuando processamento');
+          
+          // Verificar se é do workspace atual
+          if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
+            console.log('✅ [INSERT useConversationMessages] Workspace correto, chamando addMessage...');
+            addMessage(newMessage);
+          } else {
+            console.log('❌ [INSERT useConversationMessages] Workspace diferente, ignorando mensagem');
+          }
         }
       )
       .on(
@@ -458,7 +459,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     loadMore,
     addMessage,
     updateMessage,
-    removeMessage,
     clearMessages
   };
 }
