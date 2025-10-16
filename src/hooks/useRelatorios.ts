@@ -25,63 +25,32 @@ async function fetchRelatorios(
 
   console.log('📊 Relatórios: Iniciando fetch', { userId, userEmail, isMaster, selectedWorkspaceId });
 
-  // 1. Buscar workspaces usando a edge function COM HEADERS CORRETOS
-  const { data: workspacesResponse, error: workspacesError } = await supabase.functions.invoke('list-user-workspaces', {
+  // Buscar stats usando a edge function que usa service role
+  const { data: response, error } = await supabase.functions.invoke('get-workspace-stats', {
     headers: {
       'x-system-user-id': userId,
       'x-system-user-email': userEmail,
     }
   });
 
-  if (workspacesError) {
-    console.error('❌ Relatórios: Erro ao buscar workspaces', workspacesError);
-    throw workspacesError;
+  if (error) {
+    console.error('❌ Relatórios: Erro ao buscar stats', error);
+    throw error;
   }
 
-  const workspacesList = workspacesResponse?.workspaces || [];
+  const stats = response?.stats || [];
   
-  if (workspacesList.length === 0) {
+  if (stats.length === 0) {
     console.log('⚠️ Relatórios: Nenhum workspace encontrado');
     return [];
   }
 
-  console.log('✅ Relatórios: Workspaces encontrados', { count: workspacesList.length });
+  console.log('✅ Relatórios: Stats carregados com sucesso', { count: stats.length });
 
   // Filtrar workspace se não for master e tiver um selecionado
-  const workspacesData = (!isMaster && selectedWorkspaceId)
-    ? workspacesList.filter((ws: any) => ws.workspace_id === selectedWorkspaceId)
-    : workspacesList;
-
-  // 2. Buscar stats de cada workspace em paralelo
-  const statsPromises = workspacesData.map(async (workspace: any) => {
-    const workspaceId = workspace.workspace_id || workspace.id;
-    
-    const [
-      { count: connectionsCount },
-      { count: conversationsCount },
-      { count: messagesCount },
-      { count: activeConversations }
-    ] = await Promise.all([
-      supabase.from('connections').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-      supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-      supabase.from('messages').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-      supabase.from('conversations').select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .gte('last_activity_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    ]);
-
-    return {
-      workspace_id: workspaceId,
-      workspace_name: workspace.name,
-      connections_count: connectionsCount || 0,
-      conversations_count: conversationsCount || 0,
-      messages_count: messagesCount || 0,
-      active_conversations: activeConversations || 0,
-    };
-  });
-
-  const stats = await Promise.all(statsPromises);
-  console.log('✅ Relatórios: Stats carregados com sucesso', { count: stats.length });
+  if (!isMaster && selectedWorkspaceId) {
+    return stats.filter((stat: any) => stat.workspace_id === selectedWorkspaceId);
+  }
   
   return stats;
 }
