@@ -17,11 +17,14 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   isDarkMode = false,
 }) => {
   const [period, setPeriod] = React.useState<'AM' | 'PM'>('AM');
+  const [selectedHour, setSelectedHour] = React.useState<number | null>(null);
   const hours = Array.from({ length: 12 }, (_, i) => i);
 
   const handleHourSelect = (hour: number) => {
+    const displayHour = hour === 0 ? 12 : hour;
+    setSelectedHour(displayHour);
     // Converter para formato 24h
-    const hour24 = period === 'PM' && hour !== 12 ? hour + 12 : hour === 12 && period === 'AM' ? 0 : hour;
+    const hour24 = period === 'PM' && displayHour !== 12 ? displayHour + 12 : displayHour === 12 && period === 'AM' ? 0 : displayHour;
     onTimeSelect(hour24);
   };
 
@@ -53,7 +56,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   : isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-700"
               )}
             >
-              🌅 AM (Manhã)
+              AM
             </Button>
             <Button
               variant={period === 'PM' ? 'default' : 'outline'}
@@ -61,39 +64,39 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               className={cn(
                 "px-6",
                 period === 'PM' 
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+                  ? "bg-blue-500 hover:bg-blue-600 text-white" 
                   : isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-700"
               )}
             >
-              🌙 PM (Noite)
+              PM
             </Button>
           </div>
 
           {/* Relógio Visual */}
-          <div className="relative w-64 h-64">
+          <div className="relative w-72 h-72">
             <div className={cn(
-              "w-full h-full rounded-full border-2 flex items-center justify-center relative",
-              period === 'AM' 
-                ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300" 
-                : "bg-gradient-to-br from-indigo-900 to-indigo-950 border-indigo-600",
-              isDarkMode && period === 'PM' && "from-indigo-950 to-gray-900"
+              "w-full h-full rounded-full flex items-center justify-center relative",
+              isDarkMode ? "bg-gray-800" : "bg-gray-100"
             )}>
               {/* Números das horas */}
               {hours.map((hour) => {
                 const displayHour = hour === 0 ? 12 : hour;
-                const angle = (displayHour * 30) - 90; // 360/12 = 30 graus por hora, -90 para começar no topo
-                const radius = 90;
+                const angle = (displayHour * 30) - 90;
+                const radius = 110;
                 const x = Math.cos((angle * Math.PI) / 180) * radius;
                 const y = Math.sin((angle * Math.PI) / 180) * radius;
+                const isSelected = selectedHour === displayHour;
                 
                 return (
                   <button
                     key={hour}
                     className={cn(
-                      "absolute w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all shadow-sm",
-                      period === 'AM' 
-                        ? "bg-white text-blue-700 hover:bg-blue-500 hover:text-white border border-blue-200" 
-                        : "bg-indigo-800 text-indigo-100 hover:bg-indigo-500 hover:text-white border border-indigo-600"
+                      "absolute w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all z-10",
+                      isSelected 
+                        ? "bg-yellow-400 text-gray-900 scale-110 shadow-lg" 
+                        : isDarkMode 
+                          ? "text-gray-400 hover:text-gray-200" 
+                          : "text-gray-600 hover:text-gray-900"
                     )}
                     style={{
                       left: `calc(50% + ${x}px - 20px)`,
@@ -105,15 +108,40 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                   </button>
                 );
               })}
+
+              {/* Ponteiro do relógio */}
+              {selectedHour !== null && (
+                <div 
+                  className="absolute w-1 bg-yellow-400 origin-bottom transition-all duration-300"
+                  style={{
+                    height: "90px",
+                    left: "50%",
+                    top: "calc(50% - 90px)",
+                    transform: `translateX(-50%) rotate(${(selectedHour * 30) - 90}deg)`,
+                    transformOrigin: "bottom center"
+                  }} 
+                />
+              )}
               
               {/* Centro do relógio */}
-              <div className={cn(
-                "absolute w-4 h-4 rounded-full shadow-lg",
-                period === 'AM' ? "bg-blue-500" : "bg-indigo-400"
-              )} style={{
+              <div className="absolute w-4 h-4 bg-yellow-400 rounded-full z-20 shadow-md" style={{
                 left: "calc(50% - 8px)",
                 top: "calc(50% - 8px)"
               }} />
+
+              {/* Minutos 00 no topo */}
+              <div 
+                className={cn(
+                  "absolute text-xs font-medium",
+                  isDarkMode ? "text-gray-500" : "text-gray-400"
+                )}
+                style={{
+                  left: "calc(50% - 10px)",
+                  top: "20px"
+                }}
+              >
+                00
+              </div>
             </div>
           </div>
 
@@ -123,15 +151,14 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               variant="ghost"
               onClick={onClose}
               className={cn(
-                "text-yellow-500 hover:text-yellow-600",
-                isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-100"
+                isDarkMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"
               )}
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
               onClick={onClose}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+              className="bg-yellow-400 hover:bg-yellow-500 text-gray-900"
             >
               OK
             </Button>
