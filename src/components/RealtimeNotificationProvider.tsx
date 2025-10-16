@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
+import { createContext, useContext, useEffect, ReactNode, useState, useMemo, useRef } from 'react';
 import { useWhatsAppConversations } from '@/hooks/useWhatsAppConversations';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 
@@ -18,34 +18,20 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   // ✅ ÚNICA INSTÂNCIA de useWhatsAppConversations
   const { conversations } = useWhatsAppConversations();
   const { playNotificationSound } = useNotificationSound();
-  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   
-  const [notificationData, setNotificationData] = useState<{
-    notifications: any[];
-    totalUnread: number;
-  }>({
-    notifications: [],
-    totalUnread: 0
-  });
+  // Rastrear unread_count anterior de cada conversa
+  const previousUnreadMapRef = useRef<Map<string, number>>(new Map());
 
-  useEffect(() => {
-    console.log('🔔 [RealtimeNotificationProvider] Processando conversas:', {
-      total_conversas: conversations.length,
-      conversas: conversations.map(c => ({
-        id: c.id,
-        contact: c.contact?.name,
-        unread_count: c.unread_count
-      }))
-    });
-
+  // Calcular notificações com useMemo para evitar recalcular desnecessariamente
+  const notificationData = useMemo(() => {
     const newNotifications: any[] = [];
-    let unreadCount = 0;
+    let totalUnread = 0;
 
     conversations.forEach((conv) => {
       const actualUnreadCount = conv.unread_count || 0;
 
       if (actualUnreadCount > 0) {
-        unreadCount += actualUnreadCount;
+        totalUnread += actualUnreadCount;
 
         const lastMsg = conv.last_message?.[0];
         newNotifications.push({
@@ -63,34 +49,44 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
     newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    console.log('🔔 [RealtimeNotificationProvider] Notificações calculadas:', {
-      total_unread: unreadCount,
-      num_notificacoes: newNotifications.length,
-      notificacoes: newNotifications.map(n => ({
-        contact: n.contactName,
-        content: n.content
-      }))
-    });
-
-    setNotificationData({
+    return {
       notifications: newNotifications,
-      totalUnread: unreadCount
-    });
+      totalUnread
+    };
   }, [conversations]);
 
+  // Detectar mudanças REAIS no unread_count e tocar som apenas uma vez
   useEffect(() => {
-    console.log('🔔 [RealtimeNotificationProvider] Verificando som:', {
-      total_unread_atual: notificationData.totalUnread,
-      total_unread_anterior: previousUnreadCount,
-      deve_tocar: notificationData.totalUnread > previousUnreadCount && previousUnreadCount > 0
+    const currentUnreadMap = new Map<string, number>();
+    let hasRealChange = false;
+
+    // Construir mapa atual de unread_count
+    conversations.forEach((conv) => {
+      const currentCount = conv.unread_count || 0;
+      currentUnreadMap.set(conv.id, currentCount);
+
+      // Verificar se houve incremento real comparado ao anterior
+      const previousCount = previousUnreadMapRef.current.get(conv.id) || 0;
+      if (currentCount > previousCount) {
+        hasRealChange = true;
+        console.log('🔔 [RealtimeNotificationProvider] Mudança detectada:', {
+          conversation_id: conv.id,
+          contact: conv.contact?.name,
+          previous: previousCount,
+          current: currentCount
+        });
+      }
     });
 
-    if (notificationData.totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+    // Tocar som apenas se houve mudança real
+    if (hasRealChange && previousUnreadMapRef.current.size > 0) {
       console.log('🔊 Tocando som de notificação!');
       playNotificationSound();
     }
-    setPreviousUnreadCount(notificationData.totalUnread);
-  }, [notificationData.totalUnread, previousUnreadCount, playNotificationSound]);
+
+    // Atualizar referência com os valores atuais
+    previousUnreadMapRef.current = currentUnreadMap;
+  }, [conversations, playNotificationSound]);
 
   // Atualizar título da página com notificações
   useEffect(() => {

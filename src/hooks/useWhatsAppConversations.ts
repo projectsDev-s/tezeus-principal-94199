@@ -625,32 +625,22 @@ export const useWhatsAppConversations = () => {
                   aguardando_update_do_backend: true
                 });
 
-                // ✅ CRÍTICO: Atualizar unread_count localmente (UPDATE nunca vem para mensagens recebidas)
-                const isContactMessage = newMessage.sender_type === 'contact';
-                const isAgentMessage = newMessage.sender_type === 'agent' || newMessage.sender_type === 'system';
-                
-                const newUnreadCount = isContactMessage 
-                  ? (conv.unread_count || 0) + 1  // ✅ Incrementar para mensagens de contato
-                  : isAgentMessage 
-                    ? 0                            // ✅ Zerar para mensagens do agente
-                    : conv.unread_count;           // ✅ Manter para outros tipos
-                
+                // Não atualizar unread_count localmente - deixar o backend fazer
+                // O trigger update_conversation_on_new_message vai calcular e o UPDATE virá via realtime
                 const updatedConv = {
                   ...conv,
                   messages: newMessages,
-                  unread_count: newUnreadCount,
+                  unread_count: conv.unread_count, // Manter valor atual, aguardar UPDATE do backend
                   last_message: [lastMessage],
                   last_activity_at: newMessage.created_at,
                   _updated_at: Date.now() // ✅ Força re-render
                 };
 
-                console.log('✅ [INSERT] Unread count atualizado localmente:', {
+                console.log('✅ [INSERT] Aguardando UPDATE do backend para unread_count:', {
                   conversation_id: conv.id,
                   contact: conv.contact.name,
                   sender_type: newMessage.sender_type,
-                  old_unread: conv.unread_count,
-                  new_unread: newUnreadCount,
-                  action: isContactMessage ? 'incrementou' : isAgentMessage ? 'zerou' : 'manteve'
+                  current_unread: conv.unread_count
                 });
 
                 return updatedConv;
