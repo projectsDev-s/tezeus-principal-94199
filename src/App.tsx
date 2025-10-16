@@ -11,6 +11,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import { Login } from "./pages/Login";
 import MasterDashboard from "./pages/MasterDashboard";
+import TesteNotificacao from "./pages/TesteNotificacao";
 import { SystemCustomizationProvider } from "./contexts/SystemCustomizationContext";
 import { RealtimeNotificationProvider } from "./components/RealtimeNotificationProvider";
 
@@ -337,6 +338,7 @@ const App = () => (
             <Route path="/workspace-empresas/:workspaceId/usuarios" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master', 'admin']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
             <Route path="/workspace-relatorios" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/editar-agente/:agentId" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
+            <Route path="/teste-notificacao" element={<ProtectedRoute><TesteNotificacao /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
