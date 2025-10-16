@@ -51,14 +51,7 @@ export function WhatsAppChat({
   selectedConversationId
 }: WhatsAppChatProps) {
   // ✅ USAR conversas do Provider (instância única compartilhada)
-  const { conversations: contextConversations, conversationUnreadMap, totalUnread } = useRealtimeNotifications();
-  
-  // ✅ Forçar re-render quando conversationUnreadMap mudar
-  const unreadMapVersion = useMemo(() => {
-    return Array.from(conversationUnreadMap.entries())
-      .map(([id, count]) => `${id}:${count}`)
-      .join(',');
-  }, [conversationUnreadMap, totalUnread]); // ✅ Incluir totalUnread como dependência
+  const { conversations: contextConversations } = useRealtimeNotifications();
   
   // ✅ Usar hooks locais do useWhatsAppConversations para actions
   const {
@@ -1430,26 +1423,14 @@ export function WhatsAppChat({
                             </AvatarFallback>
                           </Avatar>
                           
-                          {/* Badge de mensagens não lidas - estilo WhatsApp */}
-                          {(() => {
-                            // ✅ USAR o mapa centralizado de notificações em tempo real
-                            const actualUnreadCount = conversationUnreadMap.get(conversation.id) || 0;
-                            
-                            console.log(`🔴 [Badge Render] ${conversation.contact?.name}:`, {
-                              conversationId: conversation.id,
-                              unreadFromMap: actualUnreadCount,
-                              unreadFromConv: conversation.unread_count,
-                              mapVersion: unreadMapVersion
-                            });
-                            
-                            return actualUnreadCount > 0 && (
-                              <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                                <span className="text-white text-xs font-semibold">
-                                  {actualUnreadCount > 99 ? '99+' : actualUnreadCount}
-                                </span>
-                              </div>
-                            );
-                          })()}
+                          {/* Badge de mensagens não lidas - lido diretamente da conversa */}
+                          {conversation.unread_count > 0 && (
+                            <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                              <span className="text-white text-xs font-semibold">
+                                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                              </span>
+                            </div>
+                          )}
                           
                           {/* WhatsApp status icon */}
                           <svg className="absolute -bottom-1 -right-1 w-5 h-5 text-green-500 bg-white rounded-full p-0.5" viewBox="0 0 24 24" fill="currentColor">

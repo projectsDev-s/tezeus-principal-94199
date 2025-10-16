@@ -5,8 +5,7 @@ import { useNotificationSound } from '@/hooks/useNotificationSound';
 interface RealtimeNotificationContextType {
   totalUnread: number;
   notifications: any[];
-  conversationUnreadMap: Map<string, number>;
-  conversations: any[]; // ✅ Expor conversations para compartilhar
+  conversations: any[];
 }
 
 const RealtimeNotificationContext = createContext<RealtimeNotificationContextType | undefined>(undefined);
@@ -21,35 +20,22 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   const { playNotificationSound } = useNotificationSound();
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   
-  // ✅ NOVO: useState ao invés de useMemo para forçar recriação do Map
   const [notificationData, setNotificationData] = useState<{
     notifications: any[];
     totalUnread: number;
-    conversationUnreadMap: Map<string, number>;
   }>({
     notifications: [],
-    totalUnread: 0,
-    conversationUnreadMap: new Map()
+    totalUnread: 0
   });
 
-  // ✅ CRÍTICO: useEffect recalcula sempre que conversations mudar
   useEffect(() => {
-    console.log('🔔 [Provider] Recalculando notificações via useEffect...', {
-      conversationsCount: conversations.length,
-      conversationsData: conversations.map(c => ({ id: c.id, name: c.contact?.name, unread: c.unread_count }))
-    });
-
     const newNotifications: any[] = [];
     let unreadCount = 0;
-    const unreadMap = new Map<string, number>();
 
     conversations.forEach((conv) => {
       const actualUnreadCount = conv.unread_count || 0;
 
-      console.log(`📊 [Provider] [${conv.contact?.name}] unread_count:`, actualUnreadCount);
-
       if (actualUnreadCount > 0) {
-        unreadMap.set(conv.id, actualUnreadCount);
         unreadCount += actualUnreadCount;
 
         const lastMsg = conv.last_message?.[0];
@@ -68,25 +54,14 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
     newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    console.log('✅ [Provider] Total calculado via useEffect:', {
-      totalUnread: unreadCount,
-      notificationsCount: newNotifications.length,
-      conversationsWithUnread: unreadMap.size,
-      mapEntries: Array.from(unreadMap.entries())
-    });
-
-    // ✅ CRÍTICO: Sempre cria um novo objeto e Map, forçando re-render
     setNotificationData({
       notifications: newNotifications,
-      totalUnread: unreadCount,
-      conversationUnreadMap: unreadMap
+      totalUnread: unreadCount
     });
-  }, [conversations]); // Dependência direta em conversations
+  }, [conversations]);
 
-  // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {
     if (notificationData.totalUnread > previousUnreadCount && previousUnreadCount > 0) {
-      console.log('🔔 Som de notificação:', { totalUnread: notificationData.totalUnread, previousUnreadCount });
       playNotificationSound();
     }
     setPreviousUnreadCount(notificationData.totalUnread);
@@ -110,8 +85,7 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   const contextValue = {
     totalUnread: notificationData.totalUnread,
     notifications: notificationData.notifications,
-    conversationUnreadMap: notificationData.conversationUnreadMap,
-    conversations // ✅ Expor conversations
+    conversations
   };
 
   return (
@@ -124,12 +98,10 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 export function useRealtimeNotifications() {
   const context = useContext(RealtimeNotificationContext);
 
-  // ✅ Retornar valores padrão se não estiver dentro do Provider
   if (context === undefined) {
     return {
       totalUnread: 0,
       notifications: [],
-      conversationUnreadMap: new Map<string, number>(),
       conversations: []
     };
   }
