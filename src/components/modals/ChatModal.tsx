@@ -29,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -55,7 +56,30 @@ interface WhatsAppMessage {
   external_id?: string;
   metadata?: any;
   workspace_id?: string;
+  delivered_at?: string | null;
+  read_at?: string | null;
 }
+
+// Mapear status do Evolution para status do componente
+const mapEvolutionStatusToComponent = (status?: string): 'sending' | 'sent' | 'delivered' | 'read' | 'failed' => {
+  if (!status) return 'sending';
+  
+  const statusMap: Record<string, 'sending' | 'sent' | 'delivered' | 'read' | 'failed'> = {
+    'PENDING': 'sending',
+    'SERVER_ACK': 'sent',
+    'DELIVERY_ACK': 'delivered', 
+    'READ': 'read',
+    'PLAYED': 'read',
+    'ERROR': 'failed',
+    'sending': 'sending',
+    'sent': 'sent',
+    'delivered': 'delivered',
+    'read': 'read',
+    'failed': 'failed'
+  };
+  
+  return statusMap[status] || 'sent';
+};
 
 export function ChatModal({ 
   isOpen, 
@@ -67,7 +91,6 @@ export function ChatModal({
   contactId 
 }: ChatModalProps) {
   const [newMessage, setNewMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,27 +109,23 @@ export function ChatModal({
   const { user } = useAuth();
   const { selectedWorkspace } = useWorkspace();
   
-  // Debug quando o modal abre
-  useEffect(() => {
-    if (isOpen) {
-      console.log('🚀 ChatModal aberto com dados:', {
-        conversationId,
-        contactName,
-        contactPhone,
-        contactAvatar
-      });
-      
-      if (!conversationId || conversationId === '') {
-        console.error('❌ ChatModal: conversationId está vazio ou inválido!');
-        console.error('Props recebidas:', { conversationId, contactName, contactPhone, contactAvatar });
-      } else {
-        console.log('✅ ChatModal: conversationId válido:', conversationId);
-      }
-    }
-  }, [isOpen, conversationId, contactName, contactPhone, contactAvatar]);
+  // ✅ MUTEX: Prevenir envio duplicado (IGUAL ao WhatsAppChat)
+  const sendingRef = useRef<Set<string>>(new Set());
+  const [isSending, setIsSending] = useState(false);
   
-  // Usar o hook existente para buscar mensagens
-  const { messages, loading, loadInitial, loadMore, loadingMore, hasMore } = useConversationMessages();
+  // Usar o hook existente para buscar mensagens (COM TODAS AS FUNÇÕES)
+  const { 
+    messages, 
+    loading, 
+    loadInitial, 
+    loadMore, 
+    loadingMore, 
+    hasMore,
+    addMessage,
+    updateMessage,
+    removeMessage,
+    clearMessages
+  } = useConversationMessages();
 
   // Usar contactId da prop ou buscar do workspace_id das mensagens
   useEffect(() => {
@@ -144,24 +163,81 @@ export function ChatModal({
     console.log('📨 ChatModal: Mensagens carregadas:', messages?.length || 0, messages);
   }, [messages]);
 
-  // Enviar mensagem através da função test-send-msg  
+  // ✅ Enviar mensagem EXATAMENTE como WhatsAppChat
   const sendMessage = async () => {
-    if (!newMessage.trim() || isSending || !conversationId) return;
-
+    if (!newMessage.trim() || !conversationId) return;
+    
+    // ✅ PROTEÇÃO 1: Verificar se já está enviando
+    if (isSending) {
+      console.log('⏭️ Ignorando envio - já está enviando');
+      return;
+    }
+    
+    // ✅ PROTEÇÃO 2: MUTEX com chave idempotente
+    const messageKey = `${conversationId}-${newMessage.trim()}`;
+    if (sendingRef.current.has(messageKey)) {
+      console.log('⏭️ Ignorando envio duplicado (MUTEX)');
+      return;
+    }
+    
+    // ✅ Marcar como "enviando" ANTES do try
     setIsSending(true);
+    sendingRef.current.add(messageKey);
+    
+    // ✅ CRÍTICO: Salvar texto e limpar input IMEDIATAMENTE
+    const textToSend = newMessage.trim();
+    setNewMessage('');
+    
     try {
-      const { data, error } = await supabase.functions.invoke('test-send-msg', {
+      // ✅ Gerar clientMessageId único
+      const clientMessageId = crypto.randomUUID();
+      
+      // ✅ Criar mensagem otimista
+      const optimisticMessage = {
+        id: clientMessageId,
+        external_id: clientMessageId,
+        conversation_id: conversationId,
+        content: textToSend,
+        message_type: 'text' as const,
+        sender_type: 'agent' as const,
+        sender_id: user?.id,
+        created_at: new Date().toISOString(),
+        status: 'sending' as const,
+        workspace_id: selectedWorkspace?.workspace_id || ''
+      };
+      addMessage(optimisticMessage);
+      
+      const { data: sendResult, error } = await supabase.functions.invoke('test-send-msg', {
         body: {
           conversation_id: conversationId,
-          content: newMessage.trim(),
+          content: textToSend,
           message_type: 'text',
-          sender_type: 'agent'
+          sender_id: user?.id,
+          sender_type: 'agent',
+          clientMessageId: clientMessageId
+        },
+        headers: {
+          'x-system-user-id': user?.id || '',
+          'x-system-user-email': user?.email || '',
+          'x-workspace-id': selectedWorkspace?.workspace_id || ''
         }
       });
+      
+      if (error || !sendResult?.success) {
+        throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
+      }
 
-      if (error) throw error;
+      console.log('✅ [sendMessage] Mensagem enviada com sucesso:', {
+        clientMessageId,
+        backendMessageId: sendResult.message?.id,
+        optimisticId: optimisticMessage.id
+      });
 
-      setNewMessage('');
+      // ✅ Atualizar status para 'sent'
+      if (sendResult.success) {
+        updateMessage(clientMessageId, { status: 'sent' });
+        console.log('✅ Mensagem marcada como "sent":', { clientMessageId });
+      }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
@@ -171,6 +247,10 @@ export function ChatModal({
       });
     } finally {
       setIsSending(false);
+      // ✅ CRÍTICO: Remover do MUTEX após 1 segundo
+      setTimeout(() => {
+        sendingRef.current.delete(messageKey);
+      }, 1000);
     }
   };
 
@@ -713,27 +793,30 @@ export function ChatModal({
                           senderType={message.sender_type}
                           senderAvatar={message.sender_type === 'contact' ? contactAvatar : undefined}
                           senderName={message.sender_type === 'contact' ? contactName : 'Você'}
-                          messageStatus={message.sender_type !== 'contact' ? (message.status === 'sent' ? 'sent' : 'delivered') : undefined}
+                          messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined}
                           timestamp={message.created_at}
                         />
                       ) : (
-                        <p className="text-sm break-words">{message.content}</p>
-                      )}
-                      
-                      {/* Status e horário - APENAS para mensagens de texto e áudio */}
-                      {(message.message_type === 'text' || message.message_type === 'audio') && (
-                        <div className={cn(
-                          "flex items-center gap-1 mt-1 text-xs",
-                          message.sender_type === 'contact' 
-                            ? 'text-muted-foreground' 
-                            : 'text-primary-foreground/70'
-                        )}>
-                          <span>{formatTime(message.created_at)}</span>
-                          {message.sender_type === 'agent' && (
-                            <MessageStatusIndicator 
-                              status={message.status === 'sent' ? 'sent' : 'delivered'}
-                            />
-                          )}
+                        <div className="flex items-end justify-between gap-2 min-w-0">
+                          <p className="text-sm break-words flex-1">{message.content}</p>
+                          
+                          <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
+                            <span className={cn(
+                              message.sender_type === 'contact' 
+                                ? "text-muted-foreground" 
+                                : "text-primary-foreground/70"
+                            )}>
+                              {new Date(message.created_at).toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                            {message.sender_type !== 'contact' && (
+                              <MessageStatusIndicator 
+                                status={mapEvolutionStatusToComponent(message.status)} 
+                              />
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
