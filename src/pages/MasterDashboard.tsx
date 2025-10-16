@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Home, Users, Building2, BarChart3, Settings2 } from 'lucide-react';
+import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { useWorkspace, Workspace } from '@/contexts/WorkspaceContext';
 import { WorkspaceCard } from '@/components/master/WorkspaceCard';
@@ -50,6 +51,16 @@ export default function MasterDashboard() {
     setSelectedWorkspace(workspace);
     localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
     navigate('/dashboard');
+  };
+
+  const handleNavigateToAdminModule = (module: string) => {
+    // Se não tiver workspace selecionado, selecionar o primeiro
+    if (!filteredWorkspaces || filteredWorkspaces.length === 0) return;
+    
+    const workspace = filteredWorkspaces[0];
+    setSelectedWorkspace(workspace);
+    localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
+    navigate(`/${module}`);
   };
 
   return (
@@ -137,9 +148,46 @@ export default function MasterDashboard() {
                   className="pl-9 w-64"
                 />
               </div>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
+              
+              {/* Dropdown Menu de Administração */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" title="Menu de Administração">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-background z-50">
+                  <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                    Administração
+                  </div>
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('automacoes-agente')}>
+                    <BrainCircuit className="w-4 h-4 mr-2" />
+                    DS Agente
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('automacoes-filas')}>
+                    <Users className="w-4 h-4 mr-2" />
+                    Filas
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('administracao-usuarios')}>
+                    <UserCircle className="w-4 h-4 mr-2" />
+                    Usuários
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('administracao-dashboard')}>
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('administracao-configuracoes')}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Configurações
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
