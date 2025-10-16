@@ -228,25 +228,42 @@ export function DealDetailsModal({
 
   // Carregar ações do pipeline quando mudar
   useEffect(() => {
-    if (selectedPipelineId) {
-      // CRÍTICO: Limpar ações antes de buscar novas para evitar mistura entre pipelines
-      setPipelineActions([]);
+    if (selectedPipelineId && isOpen) {
+      console.log('🎬 Carregando ações do pipeline:', selectedPipelineId);
       fetchPipelineActions(selectedPipelineId);
     }
-  }, [selectedPipelineId]);
+  }, [selectedPipelineId, isOpen]);
 
   const fetchPipelineActions = async (pipelineId: string) => {
     try {
+      console.log('📥 Buscando ações para pipeline:', pipelineId);
+      
       const { data, error } = await supabase
         .from('pipeline_actions')
         .select('*')
         .eq('pipeline_id', pipelineId)
         .order('order_position');
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar ações:', error);
+        throw error;
+      }
+      
+      console.log('✅ Ações recebidas do banco:', data);
       setPipelineActions(data || []);
+      
+      if (data && data.length > 0) {
+        console.log('✅ Ações configuradas:', data.map(a => ({
+          nome: a.action_name,
+          tipo: a.deal_state,
+          pipelineDestino: a.target_pipeline_id,
+          colunaDestino: a.target_column_id
+        })));
+      } else {
+        console.log('⚠️ Nenhuma ação encontrada para este pipeline');
+      }
     } catch (error) {
-      console.error('Error fetching pipeline actions:', error);
+      console.error('❌ Error fetching pipeline actions:', error);
       setPipelineActions([]);
     }
   };
@@ -924,9 +941,17 @@ export function DealDetailsModal({
             
             {/* Botões Ganho e Perda no canto direito */}
             <div className="ml-auto flex gap-2">
-              {pipelineActions
-                .filter(action => action.deal_state === 'Ganho' || action.deal_state === 'Perda')
-                .map((action) => (
+              {(() => {
+                console.log('🎨 Renderizando botões de ação. Total de ações:', pipelineActions.length);
+                console.log('📊 Ações disponíveis:', pipelineActions);
+                
+                const filteredActions = pipelineActions.filter(
+                  action => action.deal_state === 'Ganho' || action.deal_state === 'Perda'
+                );
+                
+                console.log('✅ Ações filtradas (Ganho/Perda):', filteredActions);
+                
+                return filteredActions.map((action) => (
                   <Button
                     key={action.id}
                     size="sm"
@@ -937,7 +962,8 @@ export function DealDetailsModal({
                   >
                     {isExecutingAction ? 'Processando...' : action.deal_state}
                   </Button>
-                ))}
+                ));
+              })()}
             </div>
           </div>
         </DialogHeader>
