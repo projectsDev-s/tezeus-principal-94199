@@ -603,25 +603,8 @@ export function WhatsAppChat({
     }
   };
 
-  // ✅ Realtime subscription para atualização de status das mensagens
-  useEffect(() => {
-    if (!selectedConversation?.id) return;
-    const channel = supabase.channel('messages-realtime').on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'messages',
-      filter: `conversation_id=eq.${selectedConversation.id}`
-    }, payload => {
-      console.log('📨 Message updated via realtime:', payload);
-      // Atualizar mensagem específica
-      if (payload.new && payload.new.id) {
-        updateMessage(payload.new.id, payload.new);
-      }
-    }).subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedConversation?.id, updateMessage]);
+  // ✅ REMOVIDO: Subscription duplicada que causava conflito com useConversationMessages
+  // A subscription de UPDATE agora está centralizada em useConversationMessages.ts
 
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
