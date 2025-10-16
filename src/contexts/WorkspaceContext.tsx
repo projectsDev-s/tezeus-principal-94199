@@ -102,14 +102,16 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     console.log('✅ Workspaces carregados:', workspaces.map(w => w.name));
 
     // PRIORIDADE 1: Se tem exatamente 1 workspace, auto-selecionar
-    if (workspaces.length === 1) {
+    if (workspaces.length === 1 && !selectedWorkspace) {
       console.log('🎯 Auto-selecionando único workspace:', workspaces[0].name);
       setSelectedWorkspace(workspaces[0]);
       return;
     }
 
     // PRIORIDADE 2: Múltiplos workspaces, aguardar seleção manual
-    console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
+    if (workspaces.length > 1 && !selectedWorkspace) {
+      console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
+    }
   }, [workspaces, isLoadingWorkspaces, userRole, selectedWorkspace]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {

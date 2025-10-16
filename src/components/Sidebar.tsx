@@ -75,6 +75,17 @@ export function Sidebar({
     customization
   } = useSystemCustomizationContext();
 
+  // 🔍 Debug workspace visibility
+  useEffect(() => {
+    console.log('🔍 Sidebar Debug:', {
+      userRole,
+      hasRoleMaster: hasRole(['master']),
+      selectedWorkspace: selectedWorkspace?.name || 'null',
+      isCollapsed,
+      shouldShowWorkspace: !hasRole(['master']) && selectedWorkspace && !isCollapsed
+    });
+  }, [userRole, hasRole, selectedWorkspace, isCollapsed]);
+
   const handleBackToMasterDashboard = () => {
     // Limpar workspace selecionado
     setSelectedWorkspace(null);
@@ -315,22 +326,47 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Workspace Info - Only show for admin/user roles */}
-      {!hasRole(['master']) && selectedWorkspace && !isCollapsed && (
-        <div className="flex-shrink-0 px-4 py-3 bg-muted/50 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
-                {selectedWorkspace.name}
-              </p>
-              {selectedWorkspace.cnpj && (
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {selectedWorkspace.cnpj}
+      {/* Workspace Info - Sempre visível para admin/user (mesmo colapsado) */}
+      {!hasRole(['master']) && selectedWorkspace && (
+        <div className={cn(
+          "flex-shrink-0 bg-muted/50 border-b border-sidebar-border",
+          isCollapsed ? "px-2 py-2" : "px-4 py-3"
+        )}>
+          {isCollapsed ? (
+            // Versão mini: só ícone
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex justify-center">
+                    <Building2 className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="ml-2">
+                  <div>
+                    <p className="font-medium">{selectedWorkspace.name}</p>
+                    {selectedWorkspace.cnpj && (
+                      <p className="text-xs text-muted-foreground">{selectedWorkspace.cnpj}</p>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            // Versão completa: nome + CNPJ
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">
+                  {selectedWorkspace.name}
                 </p>
-              )}
+                {selectedWorkspace.cnpj && (
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {selectedWorkspace.cnpj}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
       
