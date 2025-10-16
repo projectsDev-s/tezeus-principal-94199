@@ -24,13 +24,32 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Se for master sem workspace selecionado e não está na dashboard master, redirecionar
-  if (
-    userRole === 'master' && 
-    !selectedWorkspace && 
-    location.pathname !== '/master-dashboard'
-  ) {
-    return <Navigate to="/master-dashboard" replace />;
+  // Master não pode acessar rotas de empresa diretamente
+  if (userRole === 'master') {
+    const allowedMasterPaths = [
+      '/master-dashboard',
+      '/workspace/',
+      '/administracao-usuarios',
+      '/administracao-financeiro', 
+      '/administracao-configuracoes',
+      '/administracao-dashboard',
+      '/workspace-empresas',
+      '/parceiros-clientes'
+    ];
+    
+    // Verificar se a rota atual é permitida para Master
+    const isAllowedPath = allowedMasterPaths.some(path => 
+      location.pathname.startsWith(path)
+    );
+    
+    if (!isAllowedPath) {
+      // Master tentou acessar rota não permitida, limpar workspace e redirecionar
+      console.warn('⚠️ Master tentou acessar rota não permitida:', location.pathname);
+      if (selectedWorkspace) {
+        localStorage.removeItem('selectedWorkspace');
+      }
+      return <Navigate to="/master-dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

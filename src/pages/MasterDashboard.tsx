@@ -45,7 +45,7 @@ export default function MasterDashboard() {
   const handleLogin = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
     localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
-    navigate('/dashboard');
+    navigate(`/workspace/${workspace.workspace_id}/dashboard`);
   };
 
   const handleViewReports = (workspace: Workspace) => {
@@ -57,7 +57,7 @@ export default function MasterDashboard() {
   const handleViewWorkspace = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
     localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
-    navigate('/dashboard');
+    navigate(`/workspace/${workspace.workspace_id}/dashboard`);
   };
 
   const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes') => {

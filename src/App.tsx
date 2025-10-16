@@ -36,7 +36,20 @@ const App = () => (
                 </RoleProtectedRoute>
               </ProtectedRoute>
             } />
-            <Route path="/dashboard" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
+            <Route path="/workspace/:workspaceId/dashboard" element={
+              <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['master']}>
+                  <TezeusCRM />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['admin', 'user']}>
+                  <TezeusCRM />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            } />
             <Route path="/conversas" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/ds-voice" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/crm-negocios" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
