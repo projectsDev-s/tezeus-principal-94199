@@ -64,50 +64,34 @@ export function useNotifications() {
     fetchNotifications();
   }, [selectedWorkspace?.workspace_id, user?.id]);
 
-  // Real-time subscription
+  // Real-time subscription com fallback
   useEffect(() => {
     if (!selectedWorkspace?.workspace_id || !user?.id) {
-      console.log('⚠️ [useNotifications] Subscription CANCELADA - dados faltando:', {
-        hasWorkspace: !!selectedWorkspace?.workspace_id,
-        hasUser: !!user?.id
-      });
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
     const userId = user.id;
+    let pollingInterval: NodeJS.Timeout | null = null;
     
-    console.log('🔔🔔🔔 [useNotifications] CRIANDO SUBSCRIPTION:', {
-      workspaceId,
-      userId,
-      channelName: `notifications-${workspaceId}`
-    });
+    console.log('🔔 [Realtime] Criando subscription');
     
     const channel = supabase
-      .channel(`notifications-${workspaceId}`)
+      .channel('realtime:public:notifications') // Canal global simples
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId}`
+          table: 'notifications'
+          // SEM filtro - filtramos no cliente
         },
         (payload: any) => {
-          console.log('🔔 [REALTIME] Evento INSERT recebido:', {
-            payload_user_id: payload.new.user_id,
-            current_user_id: userId,
-            match: payload.new.user_id === userId,
-            notification: payload.new
-          });
-          
-          // Filtrar apenas notificações do usuário atual
-          if (payload.new.user_id === userId) {
-            console.log('🔔✅ NOVA NOTIFICAÇÃO PARA ESTE USUÁRIO!');
+          // Filtrar por workspace E usuário no cliente
+          if (payload.new.workspace_id === workspaceId && payload.new.user_id === userId) {
+            console.log('🔔✅ Nova notificação recebida via Realtime');
             playNotificationSound();
             fetchNotifications();
-          } else {
-            console.log('🔔❌ Notificação ignorada - não é para este usuário');
           }
         }
       )
@@ -116,43 +100,44 @@ export function useNotifications() {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId}`
+          table: 'notifications'
+          // SEM filtro - filtramos no cliente
         },
         (payload: any) => {
-          console.log('🔔 [REALTIME] Evento UPDATE recebido:', {
-            payload_user_id: payload.new.user_id,
-            current_user_id: userId,
-            match: payload.new.user_id === userId || payload.old?.user_id === userId
-          });
-          
-          // Filtrar apenas notificações do usuário atual
-          if (payload.new.user_id === userId || payload.old?.user_id === userId) {
-            console.log('🔔✅ ATUALIZAÇÃO DE NOTIFICAÇÃO PARA ESTE USUÁRIO!');
+          // Filtrar por workspace E usuário no cliente
+          if (
+            (payload.new.workspace_id === workspaceId && payload.new.user_id === userId) ||
+            (payload.old?.workspace_id === workspaceId && payload.old?.user_id === userId)
+          ) {
+            console.log('🔔✅ Notificação atualizada via Realtime');
             fetchNotifications();
           }
         }
       )
       .subscribe((status) => {
-        console.log('🔔🔔🔔 [useNotifications] STATUS DA SUBSCRIPTION:', {
-          status,
-          timestamp: new Date().toISOString(),
-          channelName: `notifications-${workspaceId}`
-        });
+        console.log('🔔 [Realtime] Status:', status);
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅✅✅ SUBSCRIPTION ATIVA E OUVINDO EVENTOS!');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ ERRO NO CANAL DO REALTIME');
-        } else if (status === 'TIMED_OUT') {
-          console.error('❌ TIMEOUT NA CONEXÃO DO REALTIME');
-        } else if (status === 'CLOSED') {
-          console.error('❌ CANAL FECHADO');
+          console.log('✅ Realtime ATIVO - notificações em tempo real habilitadas');
+          // Limpar polling se existir
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('⚠️ Realtime com erro - ativando fallback polling');
+          // Ativar polling como fallback
+          if (!pollingInterval) {
+            pollingInterval = setInterval(fetchNotifications, 5000);
+          }
         }
       });
 
     return () => {
-      console.log('🔕 [useNotifications] Removendo subscription');
+      console.log('🔕 [Realtime] Removendo subscription');
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
       supabase.removeChannel(channel);
     };
   }, [selectedWorkspace?.workspace_id, user?.id]);
