@@ -4,6 +4,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 interface RealtimeNotificationContextType {
   totalUnread: number;
   notifications: any[];
+  conversationUnreadMap: Map<string, number>; // ✅ Novo: mapa de unread por conversa
 }
 
 const RealtimeNotificationContext = createContext<RealtimeNotificationContextType | undefined>(undefined);
@@ -13,7 +14,7 @@ interface RealtimeNotificationProviderProps {
 }
 
 export function RealtimeNotificationProvider({ children }: RealtimeNotificationProviderProps) {
-  const { notifications, totalUnread } = useNotifications();
+  const { notifications, totalUnread, conversationUnreadMap } = useNotifications();
 
   // Atualizar título da página com notificações
   useEffect(() => {
@@ -32,7 +33,8 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
   const contextValue = {
     totalUnread,
-    notifications
+    notifications,
+    conversationUnreadMap // ✅ Novo: passar mapa para contexto
   };
 
   return (

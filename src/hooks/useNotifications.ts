@@ -24,18 +24,25 @@ export function useNotifications() {
   // ✅ Rastrear mensagens já notificadas por message_id único
   const notifiedMessagesRef = useRef<Set<string>>(new Set());
 
-  // ✅ REMOVIDO: Subscription duplicada - useWhatsAppConversations já faz isso
-
-  // Calcular notificações com useMemo para otimização
-  const { notifications, totalUnread } = useMemo(() => {
+  // ✅ Calcular notificações e unread total em tempo real
+  const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
     const newNotifications: NotificationMessage[] = [];
     let unreadCount = 0;
+    const unreadMap = new Map<string, number>();
     
     conversations.forEach((conv) => {
-      const convUnreadCount = conv.unread_count || 0;
+      // ✅ CRÍTICO: Calcular unread_count REAL baseado nas mensagens
+      const actualUnreadCount = conv.messages?.filter(
+        msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
+      ).length || 0;
+      
+      // ✅ Armazenar no mapa para uso nos cards
+      if (actualUnreadCount > 0) {
+        unreadMap.set(conv.id, actualUnreadCount);
+      }
       
       // ✅ Contabilizar apenas mensagens não lidas NOVAS
-      if (convUnreadCount > 0) {
+      if (actualUnreadCount > 0) {
         const lastMsg = conv.last_message?.[0];
         
         // ✅ CRÍTICO: Usar timestamp + conversa para rastreamento preciso (last_message não tem id)
@@ -43,11 +50,11 @@ export function useNotifications() {
         
         // ✅ Só contabilizar se ainda não foi notificado
         if (lastMsg && !notifiedMessagesRef.current.has(messageKey)) {
-          // ✅ Contar apenas 1 por mensagem, não o unread_count total
+          // ✅ Contar apenas 1 por mensagem nova, não o unread_count total
           unreadCount += 1;
           
           newNotifications.push({
-            id: `${conv.id}-${convUnreadCount}`,
+            id: `${conv.id}-${actualUnreadCount}`,
             conversationId: conv.id,
             contactName: conv.contact.name,
             contactPhone: conv.contact.phone,
@@ -65,7 +72,11 @@ export function useNotifications() {
     
     newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     
-    return { notifications: newNotifications, totalUnread: unreadCount };
+    return { 
+      notifications: newNotifications, 
+      totalUnread: unreadCount,
+      conversationUnreadMap: unreadMap
+    };
   }, [conversations]);
 
   // Tocar som quando totalUnread aumenta
@@ -125,6 +136,7 @@ export function useNotifications() {
   return {
     notifications,
     totalUnread,
+    conversationUnreadMap, // ✅ Novo: mapa de unread por conversa
     getAvatarInitials,
     getAvatarColor,
     formatTimestamp,

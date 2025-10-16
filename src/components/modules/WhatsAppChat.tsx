@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
 import { getConnectionColor } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,9 @@ export function WhatsAppChat({
   const {
     toast
   } = useToast();
+  
+  // ✅ NOVO: Hook centralizado de notificações
+  const { conversationUnreadMap } = useRealtimeNotifications();
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -1417,11 +1421,8 @@ export function WhatsAppChat({
                           
                           {/* Badge de mensagens não lidas - estilo WhatsApp */}
                           {(() => {
-                            // ✅ CRÍTICO: Calcular unread_count baseado em mensagens reais, não no valor do banco
-                            // que pode estar duplicado devido a updates em tempo real
-                            const actualUnreadCount = conversation.messages?.filter(
-                              msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
-                            ).length || 0;
+                            // ✅ USAR o mapa centralizado de notificações em tempo real
+                            const actualUnreadCount = conversationUnreadMap.get(conversation.id) || 0;
                             
                             return actualUnreadCount > 0 && (
                               <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
