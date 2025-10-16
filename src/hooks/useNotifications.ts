@@ -137,7 +137,7 @@ export function useNotifications() {
       console.log('🔕 [useNotifications] Removendo subscription de notificações');
       supabase.removeChannel(notificationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id, user?.id, playNotificationSound]);
+  }, [selectedWorkspace?.workspace_id, user?.id]); // Removido playNotificationSound das dependências
 
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
