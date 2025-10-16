@@ -228,43 +228,35 @@ export function WhatsAppChat({
 
   // ✅ Enviar mensagem usando o hook de mensagens
   const handleSendMessage = async () => {
-    console.log('🔵 handleSendMessage CHAMADO', {
-      timestamp: Date.now(),
-      messageText: messageText.trim(),
-      isSending,
-      conversationId: selectedConversation?.id
-    });
-    
-    if (!messageText.trim() || !selectedConversation) {
-      console.log('⏭️ Retornando: sem texto ou conversa');
-      return;
-    }
+    if (!messageText.trim() || !selectedConversation) return;
     
     // ✅ PROTEÇÃO 1: Verificar se já está enviando IMEDIATAMENTE
     if (isSending) {
-      console.log('⏭️ BLOQUEADO: já está enviando (isSending=true)');
+      console.log('⏭️ Ignorando envio - já está enviando');
       return;
     }
     
     // ✅ PROTEÇÃO 2: MUTEX com chave idempotente (SEM Date.now())
     const messageKey = `${selectedConversation.id}-${messageText.trim()}`;
     if (sendingRef.current.has(messageKey)) {
-      console.log('⏭️ BLOQUEADO: MUTEX ativo para esta mensagem', messageKey);
+      console.log('⏭️ Ignorando envio duplicado (MUTEX)');
       return;
     }
-    
-    console.log('✅ PASSOU pelas proteções - iniciando envio', messageKey);
     
     // ✅ Marcar como "enviando" ANTES do try
     setIsSending(true);
     sendingRef.current.add(messageKey);
     
+    // ✅ CRÍTICO: Salvar texto e limpar input IMEDIATAMENTE
+    const textToSend = messageText.trim();
+    setMessageText('');
+    
     try {
-      // Criar mensagem local otimista
+      // Criar mensagem otimista com status "sending"
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
         conversation_id: selectedConversation.id,
-        content: messageText,
+        content: textToSend,
         message_type: 'text' as const,
         sender_type: 'agent' as const,
         sender_id: user?.id,
@@ -274,19 +266,13 @@ export function WhatsAppChat({
       };
       addMessage(optimisticMessage);
       
-      console.log('📤 Chamando test-send-msg', {
-        timestamp: Date.now(),
-        conversationId: selectedConversation.id,
-        content: messageText
-      });
-      
       const {
         data: sendResult,
         error
       } = await supabase.functions.invoke('test-send-msg', {
         body: {
           conversation_id: selectedConversation.id,
-          content: messageText,
+          content: textToSend,
           message_type: 'text',
           sender_id: user?.id,
           sender_type: 'agent'
@@ -298,16 +284,11 @@ export function WhatsAppChat({
         }
       });
       
-      console.log('📥 Resposta test-send-msg', {
-        timestamp: Date.now(),
-        success: sendResult?.success,
-        error: error?.message
-      });
       if (error || !sendResult?.success) {
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
       }
 
-      // Atualizar mensagem temporária com ID real
+      // Atualizar mensagem temporária com ID real e status "sent"
       if (sendResult.message?.id) {
         updateMessage(optimisticMessage.id, {
           id: sendResult.message.id,
@@ -315,7 +296,6 @@ export function WhatsAppChat({
           created_at: sendResult.message.created_at
         });
       }
-      setMessageText("");
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
@@ -324,6 +304,7 @@ export function WhatsAppChat({
         variant: "destructive"
       });
     } finally {
+      setIsSending(false);
       // ✅ CRÍTICO: Remover do MUTEX após 1 segundo
       setTimeout(() => {
         sendingRef.current.delete(messageKey);
@@ -1873,7 +1854,6 @@ export function WhatsAppChat({
                       onChange={e => setMessageText(e.target.value)} 
                       onKeyDown={e => {
                         if (e.key === 'Enter' && !e.shiftKey) {
-                          console.log('🟢 Enter pressionado no Input', { timestamp: Date.now() });
                           e.preventDefault();
                           handleSendMessage();
                         }
