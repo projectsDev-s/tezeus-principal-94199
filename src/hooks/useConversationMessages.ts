@@ -372,7 +372,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const newMessage = payload.new as WhatsAppMessage;
           
-          console.log('📨 [INSERT] Nova mensagem recebida via Realtime:', {
+          console.log('📨 [INSERT useConversationMessages] Nova mensagem recebida via Realtime:', {
             id: newMessage.id,
             sender_type: newMessage.sender_type,
             workspace_id: newMessage.workspace_id,
@@ -383,24 +383,24 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           
           // ✅ IGNORAR mensagens de agente no INSERT
           // Elas serão adicionadas otimisticamente no handleSendMessage
-          console.log('🔍 [INSERT] Verificando se é mensagem de agente:', {
+          console.log('🔍 [INSERT useConversationMessages] Verificando se é mensagem de agente:', {
             sender_type: newMessage.sender_type,
             should_ignore: newMessage.sender_type === 'agent'
           });
           
           if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ [INSERT] IGNORANDO mensagem de agent no INSERT (já foi adicionada otimisticamente)');
+            console.log('⏭️ [INSERT useConversationMessages] IGNORANDO mensagem de agent no INSERT (já foi adicionada otimisticamente)');
             return;
           }
           
-          console.log('✅ [INSERT] NÃO é mensagem de agente, continuando processamento');
+          console.log('✅ [INSERT useConversationMessages] NÃO é mensagem de agente, continuando processamento');
           
           // Verificar se é do workspace atual
           if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
-            console.log('✅ [INSERT] Workspace correto, chamando addMessage...');
+            console.log('✅ [INSERT useConversationMessages] Workspace correto, chamando addMessage...');
             addMessage(newMessage);
           } else {
-            console.log('❌ [INSERT] Workspace diferente, ignorando mensagem');
+            console.log('❌ [INSERT useConversationMessages] Workspace diferente, ignorando mensagem');
           }
         }
       )
