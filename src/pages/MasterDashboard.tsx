@@ -9,6 +9,10 @@ import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { useWorkspace, Workspace } from '@/contexts/WorkspaceContext';
 import { WorkspaceCard } from '@/components/master/WorkspaceCard';
 import { useAuth } from '@/hooks/useAuth';
+import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
+import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
+import { AdministracaoUsuarios } from '@/components/modules/AdministracaoUsuarios';
+import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoConfiguracoes';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -238,103 +242,10 @@ export default function MasterDashboard() {
             </>
           )}
 
-          {activePage === 'ds-agent' && (
-            <div className="bg-card rounded-lg border p-6">
-              <h2 className="text-xl font-semibold mb-4">DS Agent - Configuração Master</h2>
-              <p className="text-muted-foreground mb-6">
-                Configure agentes inteligentes de forma global para todas as empresas.
-              </p>
-              <div className="grid gap-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Agentes Globais</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Gerencie agentes que podem ser utilizados por todas as empresas do sistema.
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Templates de Respostas</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Crie templates de respostas inteligentes reutilizáveis.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activePage === 'filas' && (
-            <div className="bg-card rounded-lg border p-6">
-              <h2 className="text-xl font-semibold mb-4">Filas - Configuração Master</h2>
-              <p className="text-muted-foreground mb-6">
-                Gerencie filas de atendimento de forma centralizada.
-              </p>
-              <div className="grid gap-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Filas do Sistema</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Visualize e configure todas as filas de atendimento do sistema.
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Regras de Distribuição</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure regras globais de distribuição de atendimentos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activePage === 'usuarios' && (
-            <div className="bg-card rounded-lg border p-6">
-              <h2 className="text-xl font-semibold mb-4">Usuários - Gestão Master</h2>
-              <p className="text-muted-foreground mb-6">
-                Administre todos os usuários do sistema de forma centralizada.
-              </p>
-              <div className="grid gap-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Todos os Usuários</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Visualize e gerencie todos os usuários cadastrados no sistema.
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Permissões Globais</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure permissões e cargos que podem ser aplicados em todas as empresas.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activePage === 'configuracoes' && (
-            <div className="bg-card rounded-lg border p-6">
-              <h2 className="text-xl font-semibold mb-4">Configurações - Master</h2>
-              <p className="text-muted-foreground mb-6">
-                Configurações globais do sistema Tezeus CRM.
-              </p>
-              <div className="grid gap-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Configurações Gerais</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Ajustes gerais do sistema, branding, e personalizações.
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Integrações</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Configure integrações globais com serviços externos.
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Segurança</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Políticas de segurança, logs de auditoria e compliance.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {activePage === 'ds-agent' && <DSAgenteMaster />}
+          {activePage === 'filas' && <AutomacoesFilasMaster />}
+          {activePage === 'usuarios' && <AdministracaoUsuarios />}
+          {activePage === 'configuracoes' && <AdministracaoConfiguracoes />}
         </main>
 
         {/* Footer */}
