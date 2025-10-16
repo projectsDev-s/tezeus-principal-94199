@@ -95,6 +95,7 @@ export function IniciarConversaContatoModal({
         .from('conversations')
         .select('id, status')
         .eq('contact_id', contactId)
+        .eq('connection_id', selectedConnection)
         .eq('workspace_id', selectedWorkspace!.workspace_id)
         .order('created_at', { ascending: false })
         .limit(1)
