@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
 import { getConnectionColor } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
@@ -51,7 +51,14 @@ export function WhatsAppChat({
   selectedConversationId
 }: WhatsAppChatProps) {
   // ✅ USAR conversas do Provider (instância única compartilhada)
-  const { conversations: contextConversations, conversationUnreadMap } = useRealtimeNotifications();
+  const { conversations: contextConversations, conversationUnreadMap, totalUnread } = useRealtimeNotifications();
+  
+  // ✅ Forçar re-render quando conversationUnreadMap mudar
+  const unreadMapVersion = useMemo(() => {
+    return Array.from(conversationUnreadMap.entries())
+      .map(([id, count]) => `${id}:${count}`)
+      .join(',');
+  }, [conversationUnreadMap, totalUnread]); // ✅ Incluir totalUnread como dependência
   
   // ✅ Usar hooks locais do useWhatsAppConversations para actions
   const {
@@ -1427,6 +1434,13 @@ export function WhatsAppChat({
                           {(() => {
                             // ✅ USAR o mapa centralizado de notificações em tempo real
                             const actualUnreadCount = conversationUnreadMap.get(conversation.id) || 0;
+                            
+                            console.log(`🔴 [Badge Render] ${conversation.contact?.name}:`, {
+                              conversationId: conversation.id,
+                              unreadFromMap: actualUnreadCount,
+                              unreadFromConv: conversation.unread_count,
+                              mapVersion: unreadMapVersion
+                            });
                             
                             return actualUnreadCount > 0 && (
                               <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
