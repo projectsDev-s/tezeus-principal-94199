@@ -628,8 +628,9 @@ export function WhatsAppChat({
     isInitialLoadRef.current = true; // Marcar como carregamento inicial
     await loadMessages(conversation.id);
     
-    if (conversation.unread_count > 0) {
-      markAsRead(conversation.id);
+    // Marcar notificações como lidas se houver
+    if (conversationNotifications.has(conversation.id)) {
+      markContactAsRead(conversation.id);
     }
   };
 
@@ -1462,10 +1463,10 @@ export function WhatsAppChat({
                       <div className="flex items-center min-w-0">
                         <span className={cn(
                           "text-foreground/87 truncate whitespace-nowrap overflow-hidden text-ellipsis block",
-                          conversation.unread_count > 0 && "font-bold text-foreground"
+                          conversationNotifications.has(conversation.id) && "font-bold text-foreground"
                         )} style={{
                           fontSize: '11px',
-                          fontWeight: conversation.unread_count > 0 ? 600 : 400,
+                          fontWeight: conversationNotifications.has(conversation.id) ? 600 : 400,
                           letterSpacing: '0px'
                         }}>
                           {conversation.last_message?.[0] ? <>
