@@ -232,30 +232,23 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       id: message.id,
       sender_type: message.sender_type,
       conversation_id: message.conversation_id,
-      evolution_key_id: (message as any).evolution_key_id,
-      evolution_short_key_id: (message as any).evolution_short_key_id,
-      external_id: message.external_id
+      content_preview: message.content?.substring(0, 30)
     });
     
     // ✅ DEDUP: Usar conversation_id + message_id como chave única
     const dedupKey = `${message.conversation_id}_${message.id}`;
     
     if (seenRef.current.has(dedupKey)) {
-      console.log(`⏭️ Mensagem duplicada ignorada (conversation+id): ${dedupKey}`);
+      console.log(`⏭️ [addMessage] BLOQUEADO - Mensagem duplicada ignorada (dedup): ${dedupKey}`);
       return;
     }
     
-    seenRef.current.add(dedupKey);
-    
-    // Limpar Set após 30s para liberar memória
-    setTimeout(() => seenRef.current.delete(dedupKey), 30000);
-    
     setMessages(prevMessages => {
-      // Verificar se já existe apenas por ID (mais simples e confiável)
+      // ✅ VERIFICAR se já existe (proteção adicional)
       const exists = prevMessages.some(m => m.id === message.id);
       
       if (exists) {
-        console.log(`⚠️ [addMessage] Mensagem já existe no state: ${message.id}`);
+        console.log(`⏭️ [addMessage] BLOQUEADO - Mensagem já existe no state: ${message.id}`);
         return prevMessages;
       }
 
@@ -265,6 +258,12 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         content_preview: message.content?.substring(0, 30),
         total_messages_after: prevMessages.length + 1
       });
+      
+      // Marcar como vista
+      seenRef.current.add(dedupKey);
+      
+      // Limpar Set após 30s para liberar memória
+      setTimeout(() => seenRef.current.delete(dedupKey), 30000);
       
       // Adicionar no final (mensagem mais recente) e ordenar por created_at
       return [...prevMessages, message].sort((a, b) => 

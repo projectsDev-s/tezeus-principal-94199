@@ -72,15 +72,20 @@ serve(async (req) => {
       );
     }
 
+    // ✅ DEDUPLICAR mensagens por ID (caso haja duplicatas no banco)
+    const uniqueMessages = messages ? Array.from(
+      new Map(messages.map(msg => [msg.id, msg])).values()
+    ) : [];
+
     // Generate next cursor if we have results
     let nextBefore = null;
-    if (messages && messages.length === limit) {
-      const lastMessage = messages[messages.length - 1];
+    if (uniqueMessages && uniqueMessages.length === limit) {
+      const lastMessage = uniqueMessages[uniqueMessages.length - 1];
       nextBefore = `${lastMessage.created_at}|${lastMessage.id}`;
     }
 
     // Reverse messages to display in chronological order (oldest first)
-    const reversedMessages = messages ? [...messages].reverse() : [];
+    const reversedMessages = uniqueMessages ? [...uniqueMessages].reverse() : [];
 
     return new Response(
       JSON.stringify({
