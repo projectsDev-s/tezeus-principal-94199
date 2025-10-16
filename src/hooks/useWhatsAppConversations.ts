@@ -70,6 +70,9 @@ export const useWhatsAppConversations = () => {
   // ✅ Rastrear último update processado para evitar duplicatas
   const lastUpdateProcessed = useRef<Map<string, number>>(new Map());
   
+  // ✅ DEBOUNCE: Rastrear UPDATEs recentes para evitar processamento duplicado
+  const recentUpdates = useRef<Map<string, number>>(new Map());
+  
   // ✅ MUTEX: Prevenir envio duplicado de mensagens
   const sendingRef = useRef<Map<string, boolean>>(new Map());
 
@@ -631,6 +634,8 @@ export const useWhatsAppConversations = () => {
         { event: 'UPDATE', schema: 'public', table: 'messages' },
         (payload) => {
           const updatedMessage = payload.new as any;
+          
+          console.log('📨 Message updated via realtime:', payload);
           console.log('✏️ Mensagem atualizada:', {
             id: updatedMessage.id,
             status: updatedMessage.status,
@@ -641,13 +646,24 @@ export const useWhatsAppConversations = () => {
             file_name: updatedMessage.file_name,
           });
           
-          // ✅ CORREÇÃO 2: UPDATE deve ADICIONAR mensagens de agent se não existirem
+          // ✅ DEBOUNCE: Ignorar UPDATEs duplicados em menos de 1 segundo
+          const now = Date.now();
+          const lastUpdate = recentUpdates.current.get(updatedMessage.id) || 0;
+          
+          if (now - lastUpdate < 1000) {
+            console.log('⏭️ Ignorando UPDATE duplicado:', updatedMessage.id, `(${now - lastUpdate}ms)`);
+            return;
+          }
+          
+          recentUpdates.current.set(updatedMessage.id, now);
+          
+          // ✅ REFINAMENTO: Só ADICIONAR se for mensagem de agent E não existir
           setConversations(prev => prev.map(conv => {
             if (conv.id === updatedMessage.conversation_id) {
               const existingMsgIndex = conv.messages.findIndex(m => m.id === updatedMessage.id);
               
-              if (existingMsgIndex === -1) {
-                // ✅ Mensagem NÃO existe → ADICIONAR (especialmente para mensagens de agent!)
+              // ✅ CASO 1: Mensagem NÃO existe E é de agent → ADICIONAR
+              if (existingMsgIndex === -1 && updatedMessage.sender_type === 'agent') {
                 console.log('✅ [UPDATE] Adicionando nova mensagem agent:', updatedMessage.id);
                 
                 const messageObj = {
@@ -674,8 +690,10 @@ export const useWhatsAppConversations = () => {
                   }],
                   last_activity_at: updatedMessage.created_at
                 };
-              } else {
-                // ✅ Mensagem JÁ existe → ATUALIZAR status e outros campos
+              }
+              
+              // ✅ CASO 2: Mensagem JÁ existe → ATUALIZAR
+              if (existingMsgIndex !== -1) {
                 console.log('🔄 [UPDATE] Atualizando mensagem existente:', updatedMessage.id);
                 return {
                   ...conv,
@@ -694,6 +712,9 @@ export const useWhatsAppConversations = () => {
                   )
                 };
               }
+              
+              // ✅ CASO 3: Mensagem NÃO existe E NÃO é de agent → IGNORAR
+              console.log('⏭️ Ignorando UPDATE de contact que não existe:', updatedMessage.id);
             }
             return conv;
           }));
