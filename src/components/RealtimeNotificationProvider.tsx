@@ -13,14 +13,7 @@ interface RealtimeNotificationProviderProps {
 }
 
 export function RealtimeNotificationProvider({ children }: RealtimeNotificationProviderProps) {
-  console.log('🔔🔔🔔 [RealtimeNotificationProvider] Componente MONTADO');
-  
   const { notifications, totalUnread } = useNotifications();
-  
-  console.log('🔔🔔🔔 [RealtimeNotificationProvider] Hook retornou:', {
-    notifications: notifications.length,
-    totalUnread
-  });
 
   useEffect(() => {
     console.log('🔔🔔🔔 [RealtimeNotificationProvider] Notificações MUDARAM:', {
