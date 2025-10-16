@@ -8,7 +8,7 @@ import { ModuleType } from "./TezeusCRM";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { NotificationTooltip } from "@/components/NotificationTooltip";
-import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useWhatsAppConversations } from "@/hooks/useWhatsAppConversations";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
@@ -46,11 +46,16 @@ export function Sidebar({
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
 
-  // Hooks para notificações - usando o provider de tempo real
+  // Hooks para notificações - usando o hook direto
   const {
     notifications,
-    totalUnread
-  } = useRealtimeNotifications();
+    totalUnread,
+    markContactAsRead,
+    markAllAsRead,
+    getAvatarInitials,
+    getAvatarColor,
+    formatTimestamp
+  } = useNotifications();
   
   console.log('🔔 [Sidebar] Dados de notificação:', {
     totalUnread,
@@ -60,33 +65,6 @@ export function Sidebar({
       content: n.content
     }))
   });
-  const {
-    markAsRead
-  } = useWhatsAppConversations();
-  
-  // Funções auxiliares para o NotificationTooltip
-  const getAvatarInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-  
-  const getAvatarColor = (name: string) => {
-    const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500'];
-    const index = name.length % colors.length;
-    return colors[index];
-  };
-  
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
-    if (minutes < 1) return 'agora';
-    if (minutes < 60) return `${minutes}m`;
-    if (hours < 24) return `${hours}h`;
-    return `${days}d`;
-  };
   const {
     user,
     userRole,
@@ -310,19 +288,16 @@ export function Sidebar({
       // Marcar como lida após navegação
       setTimeout(() => {
         console.log('✅ Marcando conversa como lida:', conversationId);
-        markAsRead(conversationId);
+        markContactAsRead(conversationId);
       }, 300);
     }
   };
   const handleMarkAllAsRead = () => {
-    // Marcar todas as conversas como lidas
-    notifications.forEach(notification => {
-      markAsRead(notification.conversationId);
-    });
+    markAllAsRead();
     setIsNotificationOpen(false);
   };
   const handleMarkContactAsRead = (conversationId: string) => {
-    markAsRead(conversationId);
+    markContactAsRead(conversationId);
   };
   return <div data-sidebar className={cn("rounded-lg shadow-md m-2 flex flex-col max-h-[calc(100vh-1rem)] transition-all duration-300 ease-in-out relative bg-sidebar border border-sidebar-border", isCollapsed ? "w-28" : "w-64")}>
       {/* Logo */}
