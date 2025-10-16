@@ -128,20 +128,6 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                 left: "calc(50% - 8px)",
                 top: "calc(50% - 8px)"
               }} />
-
-              {/* Minutos 00 no topo */}
-              <div 
-                className={cn(
-                  "absolute text-xs font-medium",
-                  isDarkMode ? "text-gray-500" : "text-gray-400"
-                )}
-                style={{
-                  left: "calc(50% - 10px)",
-                  top: "20px"
-                }}
-              >
-                00
-              </div>
             </div>
           </div>
 
