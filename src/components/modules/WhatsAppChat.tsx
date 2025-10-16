@@ -231,6 +231,15 @@ export function WhatsAppChat({
   // ✅ Estado para desabilitar botão durante envio
   const [isSending, setIsSending] = useState(false);
 
+  // ✅ Marcar como lida automaticamente ao abrir conversa
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.unread_count > 0) {
+      console.log('📖 Marcando conversa como lida:', selectedConversation.contact.name);
+      markAsRead(selectedConversation.id);
+    }
+  }, [selectedConversation?.id]); // Apenas quando mudar de conversa
+
+
   // ✅ Enviar mensagem usando o hook de mensagens
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
