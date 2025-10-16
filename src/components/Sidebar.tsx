@@ -57,14 +57,18 @@ export function Sidebar({
     formatTimestamp
   } = useNotifications();
   
-  console.log('🔔 [Sidebar] Dados de notificação:', {
-    totalUnread,
-    num_notifications: notifications.length,
-    notifications: notifications.map((n: any) => ({
-      contact: n.contactName,
-      content: n.content
-    }))
-  });
+  
+  useEffect(() => {
+    console.log('🔔 [Sidebar] Dados de notificação ATUALIZADOS:', {
+      totalUnread,
+      num_notifications: notifications.length,
+      timestamp: new Date().toISOString(),
+      notifications: notifications.map((n: any) => ({
+        contact: n.contactName,
+        content: n.content
+      }))
+    });
+  }, [notifications, totalUnread]);
   const {
     user,
     userRole,
