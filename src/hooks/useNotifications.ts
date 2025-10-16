@@ -23,9 +23,22 @@ export function useNotifications() {
   
   // ✅ Rastrear mensagens já notificadas por message_id único
   const notifiedMessagesRef = useRef<Set<string>>(new Set());
+  
+  // ✅ CRÍTICO: Forçar recalculo quando mensagens mudam
+  const [updateTrigger, setUpdateTrigger] = useState(0);
+
+  // ✅ Detectar mudanças nas mensagens das conversas
+  useEffect(() => {
+    setUpdateTrigger(prev => prev + 1);
+  }, [conversations]);
 
   // ✅ Calcular notificações e unread total em tempo real
   const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
+    console.log('🔔 Recalculando notificações...', { 
+      conversationsCount: conversations.length,
+      trigger: updateTrigger 
+    });
+    
     const newNotifications: NotificationMessage[] = [];
     let unreadCount = 0;
     const unreadMap = new Map<string, number>();
@@ -35,6 +48,11 @@ export function useNotifications() {
       const actualUnreadCount = conv.messages?.filter(
         msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
       ).length || 0;
+      
+      console.log(`📊 Conversa ${conv.contact.name}:`, { 
+        actualUnreadCount,
+        totalMessages: conv.messages?.length || 0 
+      });
       
       // ✅ Armazenar no mapa para uso nos cards
       if (actualUnreadCount > 0) {
@@ -50,6 +68,11 @@ export function useNotifications() {
         
         // ✅ Só contabilizar se ainda não foi notificado
         if (lastMsg && !notifiedMessagesRef.current.has(messageKey)) {
+          console.log('🆕 Nova notificação detectada:', { 
+            contact: conv.contact.name, 
+            messageKey 
+          });
+          
           // ✅ Contar apenas 1 por mensagem nova, não o unread_count total
           unreadCount += 1;
           
@@ -72,12 +95,18 @@ export function useNotifications() {
     
     newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     
+    console.log('✅ Resultado do cálculo:', { 
+      totalUnread: unreadCount, 
+      notificationsCount: newNotifications.length,
+      unreadMapSize: unreadMap.size 
+    });
+    
     return { 
       notifications: newNotifications, 
       totalUnread: unreadCount,
       conversationUnreadMap: unreadMap
     };
-  }, [conversations]);
+  }, [conversations, updateTrigger]);
 
   // Tocar som quando totalUnread aumenta
   useEffect(() => {
