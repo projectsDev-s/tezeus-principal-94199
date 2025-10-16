@@ -22,7 +22,13 @@ export const Login = () => {
   useEffect(() => {
     if (loginSuccess && user && userRole) {
       if (userRole === 'master') {
-        navigate('/master-dashboard');
+        // Verificar se master está visualizando uma empresa
+        const selectedWorkspace = localStorage.getItem('selectedWorkspace');
+        if (selectedWorkspace) {
+          navigate('/dashboard'); // Manter na empresa
+        } else {
+          navigate('/master-dashboard'); // Novo login → master dashboard
+        }
       } else {
         navigate('/dashboard');
       }
@@ -32,7 +38,12 @@ export const Login = () => {
   // Redirect if already logged in
   if (user && !loading) {
     if (userRole === 'master') {
-      return <Navigate to="/master-dashboard" replace />;
+      // Verificar se master está visualizando uma empresa
+      const selectedWorkspace = localStorage.getItem('selectedWorkspace');
+      if (selectedWorkspace) {
+        return <Navigate to="/dashboard" replace />; // Manter na empresa
+      }
+      return <Navigate to="/master-dashboard" replace />; // Master dashboard
     }
     return <Navigate to="/dashboard" replace />;
   }
