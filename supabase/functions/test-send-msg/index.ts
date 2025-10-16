@@ -323,6 +323,9 @@ serve(async (req) => {
       }
 
       console.log(`✅ [${requestId}] Message saved before N8N: ${savedMessage.id}`);
+      
+      // ✅ Armazenar o ID real para retornar depois
+      const messageCreatedAt = savedMessage.id;
     } catch (preSaveError) {
       console.error(`❌ [${requestId}] Pre-save error:`, preSaveError);
       return new Response(JSON.stringify({
@@ -483,12 +486,16 @@ serve(async (req) => {
 
       console.log(`🎉 [${requestId}] SUCCESS - Message sent with evolution_key_id: ${evolutionData.key?.id}`);
 
+      // ✅ Retornar o ID real da mensagem salva
       return new Response(JSON.stringify({
         success: true,
-        external_id: external_id,
-        evolution_key_id: evolutionData.key?.id,
-        status: 'sent',
-        message: 'Message sent successfully via Evolution API',
+        message: {
+          id: external_id,
+          external_id: external_id,
+          evolution_key_id: evolutionData.key?.id,
+          created_at: new Date().toISOString(),
+          status: 'sent'
+        },
         conversation_id: conversation_id,
         phone_number: contact.phone
       }), {

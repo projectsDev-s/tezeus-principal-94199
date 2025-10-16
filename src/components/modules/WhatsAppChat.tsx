@@ -288,8 +288,13 @@ export function WhatsAppChat({
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
       }
 
-      // Atualizar mensagem temporária com ID real e status "sent"
+      // ✅ SUBSTITUIR mensagem temporária pelo ID real
       if (sendResult.message?.id) {
+        console.log('✅ Substituindo mensagem temporária pelo ID real:', {
+          tempId: optimisticMessage.id,
+          realId: sendResult.message.id
+        });
+        
         updateMessage(optimisticMessage.id, {
           id: sendResult.message.id,
           status: 'sent',

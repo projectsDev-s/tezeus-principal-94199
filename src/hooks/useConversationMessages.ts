@@ -298,14 +298,14 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         });
         
         // Verificar se já existe mensagem com o novo ID
-        const existingMessageWithNewId = prevMessages.find(m => m.id === updates.id);
-        if (existingMessageWithNewId) {
+        const existingIndex = prevMessages.findIndex(m => m.id === updates.id);
+        if (existingIndex !== -1) {
           console.log('⚠️ JÁ EXISTE mensagem com o ID real, REMOVENDO a temporária:', updates.id);
-          // Remover apenas a mensagem temporária, manter a real
+          // ✅ Já existe → remover a temporária
           return prevMessages.filter(m => m.id !== messageId);
         }
         
-        // Se não existe, atualizar o ID da mensagem temporária
+        // ✅ Se não existe, atualizar o ID da mensagem temporária
         console.log('✅ Não existe mensagem com ID real, atualizando temporária');
       }
       
@@ -421,53 +421,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             return;
           }
           
-          // Para mensagens de agente, gerenciar duplicação
-          if (updatedMessage.sender_type === 'agent') {
-            setMessages(prev => {
-              // ✅ BUSCAR por ID real
-              const existingRealIndex = prev.findIndex(m => m.id === updatedMessage.id);
-              
-              if (existingRealIndex !== -1) {
-                // ✅ Já existe com ID real → APENAS ATUALIZAR STATUS
-                console.log(`🔄 [UPDATE] Atualizando status da mensagem existente: ${updatedMessage.id} (${updatedMessage.status})`);
-                const updated = [...prev];
-                // Apenas atualizar campos de status, manter o resto
-                updated[existingRealIndex] = {
-                  ...updated[existingRealIndex],
-                  status: updatedMessage.status,
-                  delivered_at: updatedMessage.delivered_at,
-                  read_at: updatedMessage.read_at
-                };
-                return updated;
-              }
-              
-              // Se não existe com ID real, procurar mensagem temporária
-              const existingTempIndex = prev.findIndex(m => 
-                m.id.startsWith('temp-') && 
-                m.conversation_id === updatedMessage.conversation_id &&
-                m.content === updatedMessage.content &&
-                m.message_type === updatedMessage.message_type
-              );
-              
-              if (existingTempIndex !== -1) {
-                // ✅ Existe mensagem temporária → SUBSTITUIR pela real
-                console.log(`🔄 [UPDATE] Substituindo temporária pela real:`, {
-                  tempId: prev[existingTempIndex].id,
-                  realId: updatedMessage.id
-                });
-                const updated = [...prev];
-                updated[existingTempIndex] = updatedMessage;
-                return updated;
-              }
-              
-              // ⏭️ Se não existe localmente, não adicionar (evita duplicação)
-              console.log(`⏭️ [UPDATE] Mensagem não existe localmente, ignorando (${updatedMessage.id})`);
-              return prev;
-            });
-          } else {
-            // Para mensagens de contato, apenas atualizar
-            updateMessage(updatedMessage.id, updatedMessage);
-          }
+          // ✅ APENAS ATUALIZAR STATUS (sem lógica de substituição)
+          console.log('🔄 [UPDATE] Atualizando apenas status da mensagem:', {
+            id: updatedMessage.id,
+            status: updatedMessage.status
+          });
+          
+          updateMessage(updatedMessage.id, {
+            status: updatedMessage.status,
+            delivered_at: updatedMessage.delivered_at,
+            read_at: updatedMessage.read_at
+          });
         }
       )
       .subscribe();
