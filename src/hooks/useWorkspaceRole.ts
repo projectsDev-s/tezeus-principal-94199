@@ -126,13 +126,29 @@ export function useWorkspaceRole(): WorkspaceRoleHook {
   };
 
   const canManagePipelines = (workspaceId?: string) => {
-    // Apenas master pode gerenciar pipelines
-    return isMaster;
+    // master e admin podem gerenciar pipelines
+    if (isMaster) return true;
+    
+    // admin pode gerenciar pipelines no workspace dele
+    if (workspaceId) {
+      return isAdmin(workspaceId);
+    }
+    
+    // Se não especificar workspace, verifica se é pelo menos admin em algum lugar
+    return userWorkspaceRole === 'admin';
   };
 
   const canManageColumns = (workspaceId?: string) => {
-    // Apenas master pode gerenciar colunas
-    return isMaster;
+    // master e admin podem gerenciar colunas
+    if (isMaster) return true;
+    
+    // admin pode gerenciar colunas no workspace dele
+    if (workspaceId) {
+      return isAdmin(workspaceId);
+    }
+    
+    // Se não especificar workspace, verifica se é pelo menos admin em algum lugar
+    return userWorkspaceRole === 'admin';
   };
 
   const getUserWorkspaces = async (): Promise<string[]> => {
