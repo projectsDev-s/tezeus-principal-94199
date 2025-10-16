@@ -815,25 +815,20 @@ export const useWhatsAppConversations = () => {
             }
           
           // ✅ CRÍTICO: Evitar processar updates duplicados
-          // Comparar com estado anterior para só processar mudanças reais
-          const hasChanged = oldConv && (
-            oldConv.unread_count !== updatedConv.unread_count ||
-            oldConv.last_activity_at !== updatedConv.last_activity_at ||
-            oldConv.status !== updatedConv.status ||
-            oldConv.agente_ativo !== updatedConv.agente_ativo ||
-            oldConv.assigned_user_id !== updatedConv.assigned_user_id
-          );
+          // Comparar APENAS se for o mesmo timestamp (duplicata real)
+          const isDuplicate = oldConv && 
+            oldConv.unread_count === updatedConv.unread_count &&
+            oldConv.last_activity_at === updatedConv.last_activity_at &&
+            oldConv.status === updatedConv.status &&
+            oldConv.agente_ativo === updatedConv.agente_ativo &&
+            oldConv.assigned_user_id === updatedConv.assigned_user_id;
           
-          if (!hasChanged) {
-            console.log('⏭️ [Realtime] Update ignorado - sem mudanças:', {
-              id: updatedConv.id,
-              old_unread: oldConv?.unread_count,
-              new_unread: updatedConv.unread_count
-            });
+          if (isDuplicate) {
+            console.log('⏭️ [Realtime] Update duplicado ignorado:', updatedConv.id);
             return;
           }
           
-          console.log('✅ [Realtime] Mudança detectada:', {
+          console.log('✅ [Realtime] Processando update:', {
             id: updatedConv.id,
             old_unread: oldConv?.unread_count,
             new_unread: updatedConv.unread_count,
