@@ -66,9 +66,9 @@ export default function MasterDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex fixed inset-0">
       {/* Sidebar */}
-      <aside className="w-16 bg-card border-r border-border flex flex-col items-center py-6 gap-6">
+      <aside className="w-16 bg-card border-r border-border flex flex-col items-center py-6 gap-6 shrink-0">
         <button
           onClick={() => setActivePage('workspaces')}
           className={`p-3 rounded-lg transition-colors ${
