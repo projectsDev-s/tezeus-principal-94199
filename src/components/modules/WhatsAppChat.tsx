@@ -72,6 +72,7 @@ export function WhatsAppChat({
     loadMore: loadMoreMessages,
     addMessage,
     updateMessage,
+    removeMessage, // ✅ NOVO: função para remover mensagem
     clearMessages
   } = useConversationMessages();
   const {
@@ -310,29 +311,19 @@ export function WhatsAppChat({
         messageToReplace: messages.find(m => m.id === optimisticMessage.id)
       });
 
-      // ✅ SUBSTITUIR mensagem temporária pelo ID real
+      // ✅ REMOVER mensagem otimista e confiar no Realtime INSERT
       if (sendResult.message?.id) {
-        console.log('✅ [ETAPA 2] Substituindo mensagem temporária pelo ID real:', {
+        console.log('✅ [handleSendMessage] Removendo mensagem otimista:', {
           tempId: optimisticMessage.id,
-          realId: sendResult.message.id
+          realIdExpected: sendResult.message.id
         });
         
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-
-        // ✅ ETAPA 2: DEBUG - Verificar estado após substituição
-        setTimeout(() => {
-          console.log('📋 [ETAPA 2] Estado após substituição:', {
-            totalMessages: messages.length,
-            temporaryMessages: messages.filter(m => m.id.startsWith('temp-')).map(m => ({ id: m.id, content: m.content })),
-            realMessage: messages.find(m => m.id === sendResult.message.id)
-          });
-        }, 100);
+        // ✅ CRÍTICO: Remover a mensagem otimista
+        removeMessage(optimisticMessage.id);
+        
+        // O Realtime INSERT irá adicionar a mensagem real automaticamente
       } else {
-        console.warn('⚠️ [ETAPA 2] Backend não retornou message.id!');
+        console.warn('⚠️ Backend não retornou message.id!');
         updateMessage(optimisticMessage.id, { status: 'sent' });
       }
     } catch (error) {

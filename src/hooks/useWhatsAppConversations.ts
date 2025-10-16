@@ -617,10 +617,17 @@ export const useWhatsAppConversations = () => {
                   created_at: newMessage.created_at
                 };
 
+                // ✅ CRÍTICO: Calcular unread_count baseado nas mensagens reais
+                const newMessages = [...conv.messages, messageObj];
+                const actualUnreadCount = newMessages.filter(
+                  msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
+                ).length;
+
                 const updatedConv = {
                   ...conv,
-                  messages: [...conv.messages, messageObj],
-                  last_message: [lastMessage], // Atualizar last_message
+                  messages: newMessages,
+                  unread_count: actualUnreadCount, // ✅ Atualizar contador
+                  last_message: [lastMessage],
                   last_activity_at: newMessage.created_at
                 };
 
@@ -628,7 +635,8 @@ export const useWhatsAppConversations = () => {
                   conversation_id: conv.id,
                   message_id: newMessage.id,
                   sender_type: newMessage.sender_type,
-                  total_messages: updatedConv.messages.length
+                  total_messages: updatedConv.messages.length,
+                  unread_count: actualUnreadCount // ✅ Log do contador
                 });
 
                 return updatedConv;

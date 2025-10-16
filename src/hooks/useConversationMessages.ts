@@ -32,6 +32,7 @@ interface UseConversationMessagesReturn {
   loadMore: () => Promise<void>;
   addMessage: (message: WhatsAppMessage) => void;
   updateMessage: (messageId: string, updates: Partial<WhatsAppMessage>) => void;
+  removeMessage: (messageId: string) => void; // ✅ NOVO
   clearMessages: () => void;
 }
 
@@ -279,6 +280,27 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     }
   }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
+  // ✅ NOVO: Função para remover mensagem por ID
+  const removeMessage = useCallback((messageId: string) => {
+    console.log('🗑️ [removeMessage] Removendo mensagem:', messageId);
+    
+    setMessages(prevMessages => {
+      const filtered = prevMessages.filter(m => m.id !== messageId);
+      console.log('✅ [removeMessage] Mensagem removida:', {
+        messageId,
+        totalBefore: prevMessages.length,
+        totalAfter: filtered.length
+      });
+      return filtered;
+    });
+
+    // Limpar do Set de mensagens vistas
+    if (selectedWorkspace?.workspace_id && currentConversationId) {
+      const dedupKey = `${currentConversationId}_${messageId}`;
+      seenRef.current.delete(dedupKey);
+    }
+  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
     console.log('🔄 updateMessage chamado:', { messageId, updates });
     
@@ -459,6 +481,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     loadMore,
     addMessage,
     updateMessage,
+    removeMessage, // ✅ NOVO
     clearMessages
   };
 }
