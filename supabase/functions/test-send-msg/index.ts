@@ -307,10 +307,7 @@ serve(async (req) => {
 
       const { data: savedMessage, error: saveError } = await supabase
         .from('messages')
-        .upsert(messageData, {
-          onConflict: 'workspace_id, external_id',
-          ignoreDuplicates: false
-        })
+        .insert(messageData)
         .select('id')
         .single();
 
