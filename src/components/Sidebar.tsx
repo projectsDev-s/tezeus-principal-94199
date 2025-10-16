@@ -329,7 +329,11 @@ export function Sidebar({
       </div>
 
       {/* Workspace Info - Sempre visível para admin/user (mesmo colapsado) */}
-      {!hasRole(['master']) && selectedWorkspace && (
+      {(() => {
+        const shouldRenderWorkspace = !hasRole(['master']) && selectedWorkspace !== null && selectedWorkspace !== undefined;
+        console.log('🎨 Renderizando workspace?', shouldRenderWorkspace, selectedWorkspace);
+        return shouldRenderWorkspace;
+      })() && (
         <div className={cn(
           "flex-shrink-0 bg-muted/50 border-b border-sidebar-border",
           isCollapsed ? "px-2 py-2" : "px-4 py-3"
