@@ -16,7 +16,7 @@ export default function MasterDashboard() {
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings'>('workspaces');
+  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -53,14 +53,8 @@ export default function MasterDashboard() {
     navigate('/dashboard');
   };
 
-  const handleNavigateToAdminModule = (module: string) => {
-    // Se não tiver workspace selecionado, selecionar o primeiro
-    if (!filteredWorkspaces || filteredWorkspaces.length === 0) return;
-    
-    const workspace = filteredWorkspaces[0];
-    setSelectedWorkspace(workspace);
-    localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
-    navigate(`/${module}`);
+  const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes') => {
+    setActivePage(page);
   };
 
   return (
@@ -131,10 +125,22 @@ export default function MasterDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-foreground">
-                Workspaces do Usuário Master
+                {activePage === 'workspaces' && 'Workspaces do Usuário Master'}
+                {activePage === 'ds-agent' && 'DS Agent - Configuração Master'}
+                {activePage === 'filas' && 'Filas - Configuração Master'}
+                {activePage === 'usuarios' && 'Usuários - Gestão Master'}
+                {activePage === 'configuracoes' && 'Configurações - Master'}
+                {activePage === 'home' && 'Home'}
+                {activePage === 'users' && 'Usuários'}
+                {activePage === 'reports' && 'Relatórios'}
+                {activePage === 'settings' && 'Configurações'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Gerencie todas as empresas do sistema
+                {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
+                {activePage === 'ds-agent' && 'Configure agentes inteligentes de forma global'}
+                {activePage === 'filas' && 'Gerencie filas de atendimento do sistema'}
+                {activePage === 'usuarios' && 'Administre todos os usuários do sistema'}
+                {activePage === 'configuracoes' && 'Configurações globais do sistema'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -162,27 +168,22 @@ export default function MasterDashboard() {
                   </div>
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('automacoes-agente')}>
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('ds-agent')}>
                     <BrainCircuit className="w-4 h-4 mr-2" />
-                    DS Agente
+                    DS Agent
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('automacoes-filas')}>
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('filas')}>
                     <Users className="w-4 h-4 mr-2" />
                     Filas
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('administracao-usuarios')}>
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('usuarios')}>
                     <UserCircle className="w-4 h-4 mr-2" />
                     Usuários
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('administracao-dashboard')}>
-                    <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => handleNavigateToAdminModule('administracao-configuracoes')}>
+                  <DropdownMenuItem onClick={() => handleNavigateToAdminPage('configuracoes')}>
                     <Settings className="w-4 h-4 mr-2" />
                     Configurações
                   </DropdownMenuItem>
@@ -194,43 +195,145 @@ export default function MasterDashboard() {
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-auto">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-lg" />
-              ))}
-            </div>
-          ) : filteredWorkspaces.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                {searchQuery ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {searchQuery 
-                  ? 'Tente ajustar sua busca ou limpar o filtro.'
-                  : 'Comece criando uma nova empresa no sistema.'}
-              </p>
-            </div>
-          ) : (
+          {activePage === 'workspaces' && (
             <>
-              <div className="mb-4 text-sm text-muted-foreground">
-                Exibindo {filteredWorkspaces.length} de {workspaces.length} empresas
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredWorkspaces.map((workspace) => (
-                  <WorkspaceCard
-                    key={workspace.workspace_id}
-                    workspace={workspace}
-                    usersCount={0}
-                    conversationsCount={0}
-                    onLogin={handleLogin}
-                    onViewReports={handleViewReports}
-                    onViewWorkspace={handleViewWorkspace}
-                  />
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <Skeleton key={i} className="h-64 rounded-lg" />
+                  ))}
+                </div>
+              ) : filteredWorkspaces.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    {searchQuery ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery 
+                      ? 'Tente ajustar sua busca ou limpar o filtro.'
+                      : 'Comece criando uma nova empresa no sistema.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 text-sm text-muted-foreground">
+                    Exibindo {filteredWorkspaces.length} de {workspaces.length} empresas
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredWorkspaces.map((workspace) => (
+                      <WorkspaceCard
+                        key={workspace.workspace_id}
+                        workspace={workspace}
+                        usersCount={0}
+                        conversationsCount={0}
+                        onLogin={handleLogin}
+                        onViewReports={handleViewReports}
+                        onViewWorkspace={handleViewWorkspace}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </>
+          )}
+
+          {activePage === 'ds-agent' && (
+            <div className="bg-card rounded-lg border p-6">
+              <h2 className="text-xl font-semibold mb-4">DS Agent - Configuração Master</h2>
+              <p className="text-muted-foreground mb-6">
+                Configure agentes inteligentes de forma global para todas as empresas.
+              </p>
+              <div className="grid gap-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Agentes Globais</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Gerencie agentes que podem ser utilizados por todas as empresas do sistema.
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Templates de Respostas</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Crie templates de respostas inteligentes reutilizáveis.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePage === 'filas' && (
+            <div className="bg-card rounded-lg border p-6">
+              <h2 className="text-xl font-semibold mb-4">Filas - Configuração Master</h2>
+              <p className="text-muted-foreground mb-6">
+                Gerencie filas de atendimento de forma centralizada.
+              </p>
+              <div className="grid gap-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Filas do Sistema</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Visualize e configure todas as filas de atendimento do sistema.
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Regras de Distribuição</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure regras globais de distribuição de atendimentos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePage === 'usuarios' && (
+            <div className="bg-card rounded-lg border p-6">
+              <h2 className="text-xl font-semibold mb-4">Usuários - Gestão Master</h2>
+              <p className="text-muted-foreground mb-6">
+                Administre todos os usuários do sistema de forma centralizada.
+              </p>
+              <div className="grid gap-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Todos os Usuários</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Visualize e gerencie todos os usuários cadastrados no sistema.
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Permissões Globais</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure permissões e cargos que podem ser aplicados em todas as empresas.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePage === 'configuracoes' && (
+            <div className="bg-card rounded-lg border p-6">
+              <h2 className="text-xl font-semibold mb-4">Configurações - Master</h2>
+              <p className="text-muted-foreground mb-6">
+                Configurações globais do sistema Tezeus CRM.
+              </p>
+              <div className="grid gap-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Configurações Gerais</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ajustes gerais do sistema, branding, e personalizações.
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Integrações</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure integrações globais com serviços externos.
+                  </p>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Segurança</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Políticas de segurança, logs de auditoria e compliance.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </main>
 
