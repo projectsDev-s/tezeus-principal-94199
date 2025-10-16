@@ -837,33 +837,17 @@ export const useWhatsAppConversations = () => {
           });
           
           setConversations(prev => {
-            console.log('🔍 Antes da atualização:', {
-              total: prev.length,
-              conversation_exists: prev.some(c => c.id === updatedConv.id),
-              current_order: prev.slice(0, 3).map(c => ({ 
-                id: c.id, 
-                unread: c.unread_count, 
-                last_activity: c.last_activity_at 
-              }))
-            });
-
-            // Encontrar a conversa e atualizar
+            // ✅ CRÍTICO: Encontrar e atualizar a conversa
             let conversationFound = false;
             const updated = prev.map(conv => {
               if (conv.id === updatedConv.id) {
                 conversationFound = true;
-                // ✅ Log do payload RAW do backend
-                console.log('📥 [UPDATE] Payload do backend:', {
-                  raw_unread_count: updatedConv.unread_count,
-                  is_undefined: updatedConv.unread_count === undefined,
-                  is_null: updatedConv.unread_count === null,
-                  tipo: typeof updatedConv.unread_count
-                });
-
+                
+                // ✅ CRIAR NOVO OBJETO para forçar re-render
                 const updatedConversation = { 
                   ...conv, 
                   agente_ativo: updatedConv.agente_ativo ?? conv.agente_ativo,
-                  unread_count: updatedConv.unread_count ?? conv.unread_count, // ✅ Fonte da verdade do backend
+                  unread_count: updatedConv.unread_count ?? conv.unread_count,
                   last_activity_at: updatedConv.last_activity_at ?? conv.last_activity_at,
                   status: updatedConv.status ?? conv.status,
                   evolution_instance: updatedConv.evolution_instance ?? conv.evolution_instance,
@@ -871,13 +855,11 @@ export const useWhatsAppConversations = () => {
                   ...(updatedConv.priority !== undefined && { priority: updatedConv.priority })
                 };
                 
-                console.log('✅ [UPDATE conversations] Conversa atualizada:', {
+                console.log('✅ [UPDATE] Conversa atualizada:', {
                   id: conv.id,
                   contact: conv.contact.name,
-                  old_unread_count: conv.unread_count,
-                  backend_unread_count: updatedConv.unread_count,
-                  final_unread_count: updatedConversation.unread_count,
-                  fonte: 'backend trigger'
+                  old_unread: conv.unread_count,
+                  new_unread: updatedConversation.unread_count
                 });
                 
                 return updatedConversation;
@@ -886,35 +868,24 @@ export const useWhatsAppConversations = () => {
             });
             
             if (!conversationFound) {
-              console.log('⚠️ Conversa não encontrada na lista atual:', updatedConv.id);
-              return prev; // Retorna sem alterações se a conversa não existe
+              console.log('⚠️ Conversa não encontrada:', updatedConv.id);
+              return prev;
             }
             
-            // Reordenar por atividade após atualização - garantir que sempre reordene
+            // ✅ CRÍTICO: SEMPRE criar novo array com spread para forçar detecção de mudança
             const sorted = [...updated].sort((a, b) => {
               const timeA = new Date(a.last_activity_at).getTime();
               const timeB = new Date(b.last_activity_at).getTime();
-              return timeB - timeA; // Mais recente primeiro
+              return timeB - timeA;
             });
             
-            console.log('✅ Lista reordenada em tempo real:', {
+            console.log('🔄 [UPDATE] Array atualizado:', {
               total: sorted.length,
-              updated_conversation_id: updatedConv.id,
-              conversation_moved_to_top: sorted[0]?.id === updatedConv.id,
-              new_order: sorted.slice(0, 5).map(c => ({ 
-                id: c.id, 
-                unread: c.unread_count, 
-                last_activity: c.last_activity_at,
-                contact_name: c.contact.name
-              }))
+              first_conv: sorted[0]?.contact?.name,
+              first_unread: sorted[0]?.unread_count
             });
             
-            // Forçar re-render comparando se realmente houve mudança na ordem
-            const orderChanged = JSON.stringify(prev.map(c => c.id)) !== JSON.stringify(sorted.map(c => c.id));
-            if (orderChanged) {
-              console.log('🔄 Ordem das conversas alterada - forçando re-render');
-            }
-            
+            // ✅ RETORNAR NOVO ARRAY para forçar re-render
             return sorted;
           });
           } catch (error) {
