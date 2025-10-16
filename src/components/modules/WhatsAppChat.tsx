@@ -50,17 +50,23 @@ export function WhatsAppChat({
   isDarkMode = false,
   selectedConversationId
 }: WhatsAppChatProps) {
-  // ✅ Separação total: conversas vs mensagens
+  // ✅ USAR conversas do Provider (instância única compartilhada)
+  const { conversations: contextConversations, conversationUnreadMap } = useRealtimeNotifications();
+  
+  // ✅ Usar hooks locais do useWhatsAppConversations para actions
   const {
-    conversations,
-    loading,
     markAsRead,
     assumirAtendimento,
     reativarIA,
     clearAllConversations,
     acceptConversation,
-    fetchConversations
+    fetchConversations,
+    loading,
+    sendMessage
   } = useWhatsAppConversations();
+  
+  // ✅ Usar conversas do contexto (compartilhadas)
+  const conversations = contextConversations;
 
   // ✅ Hook específico para mensagens (lazy loading)
   const {
@@ -103,8 +109,6 @@ export function WhatsAppChat({
     toast
   } = useToast();
   
-  // ✅ NOVO: Hook centralizado de notificações
-  const { conversationUnreadMap } = useRealtimeNotifications();
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
