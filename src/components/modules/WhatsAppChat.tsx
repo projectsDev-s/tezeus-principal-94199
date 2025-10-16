@@ -54,6 +54,17 @@ export function WhatsAppChat({
   // Usar notificações para saber quais conversas têm mensagens não lidas
   const { notifications, markContactAsRead } = useNotifications();
   
+  useEffect(() => {
+    console.log('🔔 [WhatsAppChat] Notificações MUDARAM:', {
+      total: notifications.length,
+      timestamp: new Date().toISOString(),
+      notifications: notifications.map(n => ({
+        conversationId: n.conversationId,
+        content: n.content
+      }))
+    });
+  }, [notifications]);
+  
   // Criar mapa de conversas com notificações não lidas
   const conversationNotifications = useMemo(() => {
     const map = new Map<string, number>();
@@ -61,7 +72,7 @@ export function WhatsAppChat({
       const currentCount = map.get(notif.conversationId) || 0;
       map.set(notif.conversationId, currentCount + 1);
     });
-    console.log('🔔 [WhatsAppChat] Mapa de notificações:', Array.from(map.entries()));
+    console.log('🔔 [WhatsAppChat] Mapa de notificações RECALCULADO:', Array.from(map.entries()));
     return map;
   }, [notifications]);
   
