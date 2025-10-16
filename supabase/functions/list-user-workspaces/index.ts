@@ -206,6 +206,7 @@ serve(async (req) => {
       
       // Transform the data to match expected format
       const workspaces = memberships?.map(m => ({
+        id: m.workspaces.id,
         workspace_id: m.workspaces.id,
         name: m.workspaces.name,
         slug: m.workspaces.slug,
