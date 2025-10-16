@@ -134,13 +134,7 @@ export function Sidebar({
   }, {
     id: "workspace-empresas",
     label: "Empresas",
-    icon: <Building2 className="w-5 h-5" />,
-    group: "workspace"
-  }, {
-    id: "workspace-relatorios",
-    label: "Relatórios",
-    icon: <BarChart3 className="w-5 h-5" />,
-    group: "workspace"
+    icon: <Building2 className="w-5 h-5" />
   }, {
     id: "crm-negocios",
     label: "Negócios",
@@ -271,7 +265,6 @@ export function Sidebar({
       </div>;
   };
   const ungroupedItems = menuItems.filter(item => !item.group);
-  const workspaceItems = menuItems.filter(item => item.group === "workspace");
   const crmItems = menuItems.filter(item => item.group === "crm");
   const parceirosItems = menuItems.filter(item => item.group === "parceiros");
   const administracaoItems = menuItems.filter(item => item.group === "administracao");
@@ -347,6 +340,8 @@ export function Sidebar({
           if (item.id === 'conversas') return canView('conversas-item');
           // DS Voice - sempre visível
           if (item.id === 'ds-voice') return true;
+          // Empresas - apenas master e admin
+          if (item.id === 'workspace-empresas') return hasRole(['master', 'admin']);
           return true;
         }).map(renderMenuItem)}
         
@@ -357,13 +352,6 @@ export function Sidebar({
             if (item.id === 'crm-tags') return canView('crm-tags-item');
             if (item.id === 'crm-produtos') return canView('crm-produtos-item');
             return false;
-          }))}
-        
-        {(hasRole(['master', 'admin', 'mentor_master', 'gestor']) || canViewAnyIn(['workspace-empresas', 'workspace-relatorios'])) && 
-          renderGroup("workspace", "Workspace", workspaceItems.filter(item => {
-            if (item.id === 'workspace-empresas') return canView('workspace-empresas');
-            if (item.id === 'workspace-relatorios') return canView('workspace-relatorios');
-            return hasRole(['master', 'admin', 'mentor_master', 'gestor']);
           }))}
         
         {hasRole(['master', 'admin']) && renderGroup("administracao", "Administração", administracaoItems)}
