@@ -69,8 +69,8 @@ export function WorkspaceCard({
             variant="outline"
             size="sm"
           >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Relatórios
+            <Users className="h-4 w-4 mr-2" />
+            Usuários
           </Button>
           <Button
             onClick={() => onViewConfig?.(workspace)}
