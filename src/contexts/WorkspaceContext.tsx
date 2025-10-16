@@ -79,7 +79,22 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     // PRIORIDADE 3: Múltiplos workspaces, aguardar seleção manual
     console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
     setHasInitialized(true);
-  }, [workspaces, isLoadingWorkspaces, hasInitialized]);
+  }, [workspaces, isLoadingWorkspaces]);
+
+  // Reset hasInitialized quando workspaces mudam (detecta mudança no array)
+  useEffect(() => {
+    if (workspaces.length > 0) {
+      const currentWorkspaceIds = workspaces.map(w => w.workspace_id).sort().join(',');
+      const storedIds = sessionStorage.getItem('workspace_ids');
+      
+      if (storedIds && storedIds !== currentWorkspaceIds) {
+        console.log('🔄 Workspaces mudaram, resetando inicialização');
+        setHasInitialized(false);
+      }
+      
+      sessionStorage.setItem('workspace_ids', currentWorkspaceIds);
+    }
+  }, [workspaces]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);
