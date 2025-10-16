@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, ReactNode, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { useWhatsAppConversations } from '@/hooks/useWhatsAppConversations';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 
@@ -20,19 +20,22 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   const { conversations } = useWhatsAppConversations();
   const { playNotificationSound } = useNotificationSound();
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
+  
+  // ✅ NOVO: useState ao invés de useMemo para forçar recriação do Map
+  const [notificationData, setNotificationData] = useState<{
+    notifications: any[];
+    totalUnread: number;
+    conversationUnreadMap: Map<string, number>;
+  }>({
+    notifications: [],
+    totalUnread: 0,
+    conversationUnreadMap: new Map()
+  });
 
-  // ✅ CRÍTICO: Criar versão baseada nos valores reais, não na referência do array
-  const conversationsVersion = useMemo(() => {
-    return conversations
-      .map(c => `${c.id}:${c.unread_count}:${c.last_activity_at}`)
-      .join('|');
-  }, [conversations]);
-
-  // ✅ Calcular notificações diretamente aqui
-  const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
-    console.log('🔔 [Provider] Recalculando notificações...', {
+  // ✅ CRÍTICO: useEffect recalcula sempre que conversations mudar
+  useEffect(() => {
+    console.log('🔔 [Provider] Recalculando notificações via useEffect...', {
       conversationsCount: conversations.length,
-      version: conversationsVersion,
       conversationsData: conversations.map(c => ({ id: c.id, name: c.contact?.name, unread: c.unread_count }))
     });
 
@@ -65,36 +68,36 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
     newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    console.log('✅ [Provider] Total calculado:', {
+    console.log('✅ [Provider] Total calculado via useEffect:', {
       totalUnread: unreadCount,
       notificationsCount: newNotifications.length,
       conversationsWithUnread: unreadMap.size,
-      mapEntries: Array.from(unreadMap.entries()),
-      version: conversationsVersion
+      mapEntries: Array.from(unreadMap.entries())
     });
 
-    return {
+    // ✅ CRÍTICO: Sempre cria um novo objeto e Map, forçando re-render
+    setNotificationData({
       notifications: newNotifications,
       totalUnread: unreadCount,
       conversationUnreadMap: unreadMap
-    };
-  }, [conversations, conversationsVersion]);
+    });
+  }, [conversations]); // Dependência direta em conversations
 
   // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {
-    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
-      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
+    if (notificationData.totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+      console.log('🔔 Som de notificação:', { totalUnread: notificationData.totalUnread, previousUnreadCount });
       playNotificationSound();
     }
-    setPreviousUnreadCount(totalUnread);
-  }, [totalUnread, previousUnreadCount, playNotificationSound]);
+    setPreviousUnreadCount(notificationData.totalUnread);
+  }, [notificationData.totalUnread, previousUnreadCount, playNotificationSound]);
 
   // Atualizar título da página com notificações
   useEffect(() => {
     const originalTitle = document.title;
 
-    if (totalUnread > 0) {
-      document.title = `(${totalUnread}) ${originalTitle.replace(/^\(\d+\) /, '')}`;
+    if (notificationData.totalUnread > 0) {
+      document.title = `(${notificationData.totalUnread}) ${originalTitle.replace(/^\(\d+\) /, '')}`;
     } else {
       document.title = originalTitle.replace(/^\(\d+\) /, '');
     }
@@ -102,12 +105,12 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
     return () => {
       document.title = originalTitle.replace(/^\(\d+\) /, '');
     };
-  }, [totalUnread]);
+  }, [notificationData.totalUnread]);
 
   const contextValue = {
-    totalUnread,
-    notifications,
-    conversationUnreadMap,
+    totalUnread: notificationData.totalUnread,
+    notifications: notificationData.notifications,
+    conversationUnreadMap: notificationData.conversationUnreadMap,
     conversations // ✅ Expor conversations
   };
 
