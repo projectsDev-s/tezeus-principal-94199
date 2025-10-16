@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Notificação Realtime</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Teste de Notificação Realtime</h1>
+    <button id="testBtn">Inserir Notificação de Teste</button>
+    <div id="log"></div>
+
+    <script>
+        const supabaseUrl = 'https://zldeaozqxjwvzgrblyrh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsZGVhb3pxeGp3dnpncmJseXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNDQyNDYsImV4cCI6MjA2ODkyMDI0Nn0.4KmrswdBfTyHLqrUt9NdCBUjDPKCeO2NN7Vvqepr4xM';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const log = document.getElementById('log');
+        
+        function addLog(message) {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(p);
+            console.log(message);
+        }
+
+        const userId = 'b308f0d3-e060-47c3-9a91-7da9c343e035';
+        const workspaceId = '9379d213-8df0-47a8-a1b0-9d71e036fa5d';
+
+        // Testar canal simples SEM configuração broadcast
+        const channel1 = supabase
+            .channel(`test-notifications-simple`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${userId}`
+                },
+                (payload) => {
+                    addLog('✅ RECEBIDO (Canal Simples): ' + JSON.stringify(payload.new));
+                }
+            )
+            .subscribe((status) => {
+                addLog('Canal Simples Status: ' + status);
+            });
+
+        // Testar canal COM configuração broadcast
+        const channel2 = supabase
+            .channel(`test-notifications-broadcast`, {
+                config: {
+                    broadcast: { self: true }
+                }
+            })
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${userId}`
+                },
+                (payload) => {
+                    addLog('✅ RECEBIDO (Canal Broadcast): ' + JSON.stringify(payload.new));
+                }
+            )
+            .subscribe((status) => {
+                addLog('Canal Broadcast Status: ' + status);
+            });
+
+        // Testar canal SEM filtro
+        const channel3 = supabase
+            .channel(`test-notifications-no-filter`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notifications'
+                },
+                (payload) => {
+                    addLog('✅ RECEBIDO (Sem Filtro): ' + JSON.stringify(payload.new));
+                }
+            )
+            .subscribe((status) => {
+                addLog('Canal Sem Filtro Status: ' + status);
+            });
+
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            addLog('🔵 Inserindo notificação de teste...');
+            
+            const { data, error } = await supabase
+                .from('notifications')
+                .insert({
+                    workspace_id: workspaceId,
+                    user_id: userId,
+                    conversation_id: 'fc99ff01-5c21-447c-845f-6697be699989',
+                    contact_id: '4aa4b26a-f478-4c42-9a62-107228ea2a89',
+                    message_id: crypto.randomUUID(),
+                    title: 'TESTE REALTIME',
+                    content: 'Testando realtime ' + new Date().toISOString(),
+                    message_type: 'text',
+                    status: 'unread'
+                })
+                .select();
+
+            if (error) {
+                addLog('❌ Erro ao inserir: ' + error.message);
+            } else {
+                addLog('✅ Notificação inserida: ' + JSON.stringify(data));
+            }
+        });
+    </script>
+</body>
+</html>
