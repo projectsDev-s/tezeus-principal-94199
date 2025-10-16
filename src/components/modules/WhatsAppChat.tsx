@@ -635,10 +635,14 @@ export function WhatsAppChat({
     isInitialLoadRef.current = true; // Marcar como carregamento inicial
     await loadMessages(conversation.id);
     
-    // Marcar notificações como lidas SEMPRE ao abrir conversa
-    // Isso garante que tanto cliques no card quanto nas notificações zerem o contador
+    // ✅ IMEDIATO: Marcar como lida no backend (zerando unread_count E notificações)
     console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
+    
+    // 1. Zerar notificações
     markContactAsRead(conversation.id);
+    
+    // 2. Zerar unread_count da conversa
+    markAsRead(conversation.id);
   };
 
   // Funções de seleção e encaminhamento
