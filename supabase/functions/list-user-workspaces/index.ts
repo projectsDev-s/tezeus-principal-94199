@@ -157,8 +157,7 @@ serve(async (req) => {
         console.log('✅ Returning', workspaces?.length || 0, 'workspaces for master user');
         return successResponse({ 
           workspaces: workspaces || [], 
-          userRole: 'master',
-          userMemberships: [] // Master doesn't need memberships
+          userRole: 'master' 
         });
       }
 
@@ -186,56 +185,26 @@ serve(async (req) => {
         throw new Error(`Failed to fetch workspace memberships: ${membershipError.message}`);
       }
 
-      if (!memberships || memberships.length === 0) {
-        console.log('⚠️ No workspaces found for user');
-        return successResponse({
-          workspaces: [],
-          userMemberships: [],
-          userRole: systemUser.profile
-        });
-      }
-
-      console.log(`🔄 Transforming ${memberships.length} membership(s) data...`);
-      
-      // Get connections count for each workspace
-      const workspaceIds = memberships?.map(m => m.workspace_id) || [];
-      
-      let connectionsCount: Record<string, number> = {};
-      if (workspaceIds.length > 0) {
-        const { data: connections } = await supabase
-          .from('connections')
-          .select('workspace_id')
-          .in('workspace_id', workspaceIds);
-        
-        connectionsCount = connections?.reduce((acc: Record<string, number>, conn) => {
-          acc[conn.workspace_id] = (acc[conn.workspace_id] || 0) + 1;
-          return acc;
-        }, {}) || {};
-      }
+      console.log('🔄 Transforming membership data...');
       
       // Transform the data to match expected format
-      const workspaces = memberships?.map(m => {
-        const workspace = {
-          id: m.workspaces.id,
-          workspace_id: m.workspaces.id,
-          name: m.workspaces.name,
-          slug: m.workspaces.slug,
-          cnpj: m.workspaces.cnpj,
-          created_at: m.workspaces.created_at,
-          updated_at: m.workspaces.updated_at,
-          connections_count: connectionsCount[m.workspaces.id] || 0
-        };
-        console.log('📦 Workspace transformed:', workspace.name, workspace.id);
-        return workspace;
-      }) || [];
+      const workspaces = memberships?.map(m => ({
+        workspace_id: m.workspaces.id,
+        name: m.workspaces.name,
+        slug: m.workspaces.slug,
+        cnpj: m.workspaces.cnpj,
+        created_at: m.workspaces.created_at,
+        updated_at: m.workspaces.updated_at,
+        connections_count: 0 // We don't need this for the basic functionality
+      })) || [];
 
       // Get user memberships for role calculation
       const userMemberships = memberships?.map(m => ({
-        workspace_id: m.workspace_id,
+        workspaceId: m.workspace_id,
         role: m.role
       })) || [];
 
-      console.log(`✅ Returning ${workspaces.length} workspaces for user: ${systemUser.id}`);
+      console.log('✅ Returning', workspaces.length, 'workspaces for user:', systemUser.id);
 
       return successResponse({ 
         workspaces, 
