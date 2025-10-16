@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Home } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { WalletModal } from "./modals/WalletModal";
 import { WorkspaceSelector } from "./WorkspaceSelector";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface TopBarProps {
   onNavigateToConversation?: (conversationId: string) => void;
@@ -10,10 +14,41 @@ interface TopBarProps {
 
 export function TopBar({ onNavigateToConversation }: TopBarProps) {
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const { userRole } = useAuth();
+  const { selectedWorkspace, setSelectedWorkspace } = useWorkspace();
+  const navigate = useNavigate();
+
+  const handleBackToMasterDashboard = () => {
+    // Limpar workspace selecionado
+    setSelectedWorkspace(null);
+    localStorage.removeItem('selectedWorkspace');
+    // Redirecionar para dashboard master
+    navigate('/master-dashboard');
+  };
+
+  // Verificar se deve mostrar o botão de voltar
+  const showBackButton = userRole === 'master' && selectedWorkspace;
 
   return (
     <>
       <div className="flex gap-2 mx-4 mt-4 mb-4">
+        {/* Botão de Voltar para Dashboard Master (apenas para usuários master) */}
+        {showBackButton && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBackToMasterDashboard}
+              className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden md:inline">Dashboard Master</span>
+              <Home className="h-4 w-4 md:hidden" />
+            </Button>
+            <div className="h-8 w-px bg-border" />
+          </div>
+        )}
+
         {/* Workspace Selector */}
         <div className="flex items-center">
           <WorkspaceSelector />
