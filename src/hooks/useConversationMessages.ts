@@ -383,10 +383,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           
           // ✅ IGNORAR mensagens de agente no INSERT
           // Elas serão adicionadas otimisticamente no handleSendMessage
+          console.log('🔍 [INSERT] Verificando se é mensagem de agente:', {
+            sender_type: newMessage.sender_type,
+            should_ignore: newMessage.sender_type === 'agent'
+          });
+          
           if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ [INSERT] Ignorando mensagem de agent no INSERT (já foi adicionada otimisticamente)');
+            console.log('⏭️ [INSERT] IGNORANDO mensagem de agent no INSERT (já foi adicionada otimisticamente)');
             return;
           }
+          
+          console.log('✅ [INSERT] NÃO é mensagem de agente, continuando processamento');
           
           // Verificar se é do workspace atual
           if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
