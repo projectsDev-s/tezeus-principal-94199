@@ -21,10 +21,18 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
   const { playNotificationSound } = useNotificationSound();
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
 
+  // ✅ CRÍTICO: Criar versão baseada nos valores reais, não na referência do array
+  const conversationsVersion = useMemo(() => {
+    return conversations
+      .map(c => `${c.id}:${c.unread_count}:${c.last_activity_at}`)
+      .join('|');
+  }, [conversations]);
+
   // ✅ Calcular notificações diretamente aqui
   const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
     console.log('🔔 [Provider] Recalculando notificações...', {
       conversationsCount: conversations.length,
+      version: conversationsVersion,
       conversationsData: conversations.map(c => ({ id: c.id, name: c.contact?.name, unread: c.unread_count }))
     });
 
@@ -61,7 +69,8 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
       totalUnread: unreadCount,
       notificationsCount: newNotifications.length,
       conversationsWithUnread: unreadMap.size,
-      details: Array.from(unreadMap.entries())
+      mapEntries: Array.from(unreadMap.entries()),
+      version: conversationsVersion
     });
 
     return {
@@ -69,7 +78,7 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
       totalUnread: unreadCount,
       conversationUnreadMap: unreadMap
     };
-  }, [conversations]);
+  }, [conversations, conversationsVersion]);
 
   // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {
