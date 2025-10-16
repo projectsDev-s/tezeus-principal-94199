@@ -391,7 +391,7 @@ serve(async (req) => {
         connection_id: conversation.connection_id,
         conversation_id: conversation_id,
         contact_name: contact.name,
-        instance_name: connection.instance_name,
+        instance_name: instance_name,
         evolution_url: evolutionUrl,
         evolution_api_key: evolutionApiKey,
         request_id: requestId
