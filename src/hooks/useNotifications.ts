@@ -114,15 +114,18 @@ export function useNotifications() {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId},user_id=eq.${userId}`
+          filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
-          console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA!', {
-            notification: payload.new,
-            timestamp: new Date().toISOString()
-          });
-          playNotificationSound();
-          fetchNotifications();
+          // Filtrar user_id no cliente
+          if (payload.new.user_id === userId) {
+            console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA!', {
+              notification: payload.new,
+              timestamp: new Date().toISOString()
+            });
+            playNotificationSound();
+            fetchNotifications();
+          }
         }
       )
       .on(
@@ -131,15 +134,18 @@ export function useNotifications() {
           event: 'UPDATE',
           schema: 'public',
           table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId},user_id=eq.${userId}`
+          filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
-          console.log('🔔 [Realtime] Notificação ATUALIZADA:', {
-            old: payload.old,
-            new: payload.new,
-            timestamp: new Date().toISOString()
-          });
-          fetchNotifications();
+          // Filtrar user_id no cliente
+          if (payload.new.user_id === userId) {
+            console.log('🔔 [Realtime] Notificação ATUALIZADA:', {
+              old: payload.old,
+              new: payload.new,
+              timestamp: new Date().toISOString()
+            });
+            fetchNotifications();
+          }
         }
       )
       .subscribe((status, err) => {
