@@ -669,6 +669,125 @@ serve(async (req) => {
         }
         break;
 
+      case 'actions':
+        if (method === 'GET') {
+          const pipelineId = url.searchParams.get('pipeline_id');
+          if (!pipelineId) {
+            return new Response(
+              JSON.stringify({ error: 'Pipeline ID required' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const { data: pipelineActions, error } = await supabaseClient
+            .from('pipeline_actions')
+            .select('*')
+            .eq('pipeline_id', pipelineId)
+            .order('order_position');
+
+          if (error) throw error;
+          return new Response(JSON.stringify(pipelineActions), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (method === 'POST') {
+          try {
+            const body = await req.json();
+            console.log('📝 Creating pipeline action with data:', body);
+            
+            const { data: action, error } = await supabaseClient
+              .from('pipeline_actions')
+              .insert({
+                pipeline_id: body.pipeline_id,
+                action_name: body.action_name,
+                target_pipeline_id: body.target_pipeline_id,
+                target_column_id: body.target_column_id,
+                deal_state: body.deal_state,
+                order_position: body.order_position || 0,
+              })
+              .select()
+              .single();
+
+            if (error) {
+              console.error('❌ Database error creating action:', error);
+              throw error;
+            }
+            
+            console.log('✅ Pipeline action created successfully:', action);
+            return new Response(JSON.stringify(action), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } catch (err) {
+            console.error('❌ Error in POST actions:', err);
+            throw err;
+          }
+        }
+
+        if (method === 'PUT') {
+          try {
+            const actionId = url.searchParams.get('id');
+            if (!actionId) {
+              return new Response(
+                JSON.stringify({ error: 'Action ID required' }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+
+            const body = await req.json();
+            console.log('📝 Updating pipeline action:', actionId, body);
+            
+            const { data: action, error } = await supabaseClient
+              .from('pipeline_actions')
+              .update({
+                action_name: body.action_name,
+                target_pipeline_id: body.target_pipeline_id,
+                target_column_id: body.target_column_id,
+                deal_state: body.deal_state,
+                order_position: body.order_position,
+              })
+              .eq('id', actionId)
+              .select()
+              .single();
+
+            if (error) throw error;
+            
+            console.log('✅ Pipeline action updated successfully');
+            return new Response(JSON.stringify(action), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } catch (error) {
+            console.error('❌ Error in PUT /actions:', error);
+            throw error;
+          }
+        }
+
+        if (method === 'DELETE') {
+          const actionId = url.searchParams.get('id');
+          if (!actionId) {
+            return new Response(
+              JSON.stringify({ error: 'Action ID required' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          console.log('🗑️ Deleting pipeline action:', actionId);
+
+          const { error } = await supabaseClient
+            .from('pipeline_actions')
+            .delete()
+            .eq('id', actionId);
+
+          if (error) throw error;
+
+          console.log('✅ Pipeline action deleted successfully:', actionId);
+          
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        break;
+
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid action' }),

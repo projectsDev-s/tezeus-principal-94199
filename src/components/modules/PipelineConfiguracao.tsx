@@ -16,6 +16,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 import { DeletarColunaModal } from "@/components/modals/DeletarColunaModal";
 import { DeletarPipelineModal } from "@/components/modals/DeletarPipelineModal";
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
@@ -325,6 +326,7 @@ export default function PipelineConfiguracao({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isLoadingColumns, setIsLoadingColumns] = useState(false);
+  const { getHeaders } = useWorkspaceHeaders();
   const [isDeletePipelineModalOpen, setIsDeletePipelineModalOpen] = useState(false);
   const [isDeletingPipeline, setIsDeletingPipeline] = useState(false);
   const {
@@ -548,11 +550,14 @@ export default function PipelineConfiguracao({
     try {
       console.log('📥 Carregando ações para pipeline:', pipelineId);
       
-      const { data, error } = await supabase
-        .from('pipeline_actions')
-        .select('*')
-        .eq('pipeline_id', pipelineId)
-        .order('order_position');
+      const headers = getHeaders();
+      const { data, error } = await supabase.functions.invoke(
+        `pipeline-management/actions?pipeline_id=${pipelineId}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
       if (error) {
         console.error('❌ Erro ao carregar ações:', error);
@@ -694,11 +699,15 @@ export default function PipelineConfiguracao({
 
       if (action.id.startsWith('temp-')) {
         // Criar nova ação
-        const { data, error } = await supabase
-          .from('pipeline_actions')
-          .insert(actionData)
-          .select()
-          .single();
+        const headers = getHeaders();
+        const { data, error } = await supabase.functions.invoke(
+          'pipeline-management/actions',
+          {
+            method: 'POST',
+            headers,
+            body: actionData
+          }
+        );
 
         if (error) {
           console.error('❌ Erro ao criar ação:', error);
@@ -716,10 +725,15 @@ export default function PipelineConfiguracao({
         await loadPipelineActions(selectedPipeline.id);
       } else {
         // Atualizar ação existente
-        const { error } = await supabase
-          .from('pipeline_actions')
-          .update(actionData)
-          .eq('id', action.id);
+        const headers = getHeaders();
+        const { error } = await supabase.functions.invoke(
+          `pipeline-management/actions?id=${action.id}`,
+          {
+            method: 'PUT',
+            headers,
+            body: actionData
+          }
+        );
 
         if (error) {
           console.error('❌ Erro ao atualizar ação:', error);
@@ -749,10 +763,14 @@ export default function PipelineConfiguracao({
   const deleteAction = async (actionId: string) => {
     try {
       if (!actionId.startsWith('temp-')) {
-        const { error } = await supabase
-          .from('pipeline_actions')
-          .delete()
-          .eq('id', actionId);
+        const headers = getHeaders();
+        const { error } = await supabase.functions.invoke(
+          `pipeline-management/actions?id=${actionId}`,
+          {
+            method: 'DELETE',
+            headers
+          }
+        );
 
         if (error) throw error;
       }

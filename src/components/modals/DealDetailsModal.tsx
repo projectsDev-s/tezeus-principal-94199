@@ -26,6 +26,7 @@ import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { useUsersCache } from "@/hooks/useUsersCache";
 import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
+import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 interface Tag {
   id: string;
   name: string;
@@ -135,6 +136,7 @@ export function DealDetailsModal({
   const { toast } = useToast();
   const { selectedPipeline, refreshCurrentPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
+  const { getHeaders } = useWorkspaceHeaders();
   
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
@@ -238,11 +240,14 @@ export function DealDetailsModal({
     try {
       console.log('📥 Buscando ações para pipeline:', pipelineId);
       
-      const { data, error } = await supabase
-        .from('pipeline_actions')
-        .select('*')
-        .eq('pipeline_id', pipelineId)
-        .order('order_position');
+      const headers = getHeaders();
+      const { data, error } = await supabase.functions.invoke(
+        `pipeline-management/actions?pipeline_id=${pipelineId}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
       if (error) {
         console.error('❌ Erro ao buscar ações:', error);
