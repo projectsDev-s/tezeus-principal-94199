@@ -21,10 +21,16 @@ export function useNotifications() {
   const { playNotificationSound } = useNotificationSound();
   const { selectedWorkspace } = useWorkspace();
 
-  // ✅ SIMPLIFICADO: Calcular diretamente do backend sem rastreamento complexo
+  // ✅ Criar hash para forçar recálculo quando unread_count mudar
+  const conversationsHash = useMemo(() => {
+    return conversations.map(c => `${c.id}:${c.unread_count}`).join('|');
+  }, [conversations]);
+
+  // ✅ Calcular notificações com dependência no hash
   const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
-    console.log('🔔 Calculando notificações das conversas...', { 
-      conversationsCount: conversations.length
+    console.log('🔔 Recalculando notificações...', { 
+      conversationsCount: conversations.length,
+      hash: conversationsHash
     });
     
     const newNotifications: NotificationMessage[] = [];
@@ -36,12 +42,10 @@ export function useNotifications() {
       
       console.log(`📊 [${conv.contact.name}] unread_count:`, actualUnreadCount);
       
-      // ✅ Adicionar ao mapa se tiver não lidas
       if (actualUnreadCount > 0) {
         unreadMap.set(conv.id, actualUnreadCount);
         unreadCount += actualUnreadCount;
         
-        // ✅ Adicionar notificação
         const lastMsg = conv.last_message?.[0];
         newNotifications.push({
           id: conv.id,
@@ -70,7 +74,7 @@ export function useNotifications() {
       totalUnread: unreadCount,
       conversationUnreadMap: unreadMap
     };
-  }, [conversations]);
+  }, [conversations, conversationsHash]);
 
   // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {

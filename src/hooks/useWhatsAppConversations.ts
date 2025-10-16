@@ -451,6 +451,7 @@ export const useWhatsAppConversations = () => {
       }
 
       // Atualizar contador de não lidas na conversa
+      console.log('🔄 Zerando unread_count no backend para:', conversationId);
       const { error: conversationError } = await supabase
         .from('conversations')
         .update({ unread_count: 0 })
@@ -458,6 +459,8 @@ export const useWhatsAppConversations = () => {
 
       if (conversationError) {
         console.error('❌ Erro ao atualizar contador da conversa:', conversationError);
+      } else {
+        console.log('✅ unread_count zerado no backend com sucesso');
       }
 
       // ✅ CORREÇÃO 7: Atualizar estado local imediatamente
@@ -909,6 +912,14 @@ export const useWhatsAppConversations = () => {
             const updated = prev.map(conv => {
               if (conv.id === updatedConv.id) {
                 conversationFound = true;
+                // ✅ Log do payload RAW do backend
+                console.log('📥 [UPDATE] Payload do backend:', {
+                  raw_unread_count: updatedConv.unread_count,
+                  is_undefined: updatedConv.unread_count === undefined,
+                  is_null: updatedConv.unread_count === null,
+                  tipo: typeof updatedConv.unread_count
+                });
+
                 const updatedConversation = { 
                   ...conv, 
                   agente_ativo: updatedConv.agente_ativo ?? conv.agente_ativo,
@@ -920,14 +931,13 @@ export const useWhatsAppConversations = () => {
                   ...(updatedConv.priority !== undefined && { priority: updatedConv.priority })
                 };
                 
-                console.log('✅ [UPDATE conversations] Conversa atualizada com unread_count do backend:', {
+                console.log('✅ [UPDATE conversations] Conversa atualizada:', {
                   id: conv.id,
                   contact: conv.contact.name,
-                  old_last_activity: conv.last_activity_at,
-                  new_last_activity: updatedConversation.last_activity_at,
-                  old_unread_LOCAL: conv.unread_count,
-                  new_unread_BACKEND: updatedConversation.unread_count,
-                  fonte: 'trigger do backend'
+                  old_unread_count: conv.unread_count,
+                  backend_unread_count: updatedConv.unread_count,
+                  final_unread_count: updatedConversation.unread_count,
+                  fonte: 'backend trigger'
                 });
                 
                 return updatedConversation;
