@@ -252,6 +252,9 @@ export function WhatsAppChat({
     setMessageText('');
     
     try {
+      // ✅ ETAPA 2: Gerar clientMessageId único
+      const clientMessageId = crypto.randomUUID();
+      
       // Criar mensagem otimista com status "sending"
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
@@ -275,7 +278,8 @@ export function WhatsAppChat({
           content: textToSend,
           message_type: 'text',
           sender_id: user?.id,
-          sender_type: 'agent'
+          sender_type: 'agent',
+          clientMessageId: clientMessageId // ✅ ETAPA 2: Enviar clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -352,7 +356,8 @@ export function WhatsAppChat({
           content: content,
           message_type: type,
           sender_id: user?.id,
-          sender_type: 'agent'
+          sender_type: 'agent',
+          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2: clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -416,7 +421,8 @@ export function WhatsAppChat({
           sender_id: user?.id,
           sender_type: 'agent',
           file_url: file.url,
-          file_name: file.name
+          file_name: file.name,
+          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -480,7 +486,8 @@ export function WhatsAppChat({
           sender_id: user?.id,
           sender_type: 'agent',
           file_url: file.url,
-          file_name: file.name
+          file_name: file.name,
+          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -544,7 +551,8 @@ export function WhatsAppChat({
           sender_id: user?.id,
           sender_type: 'agent',
           file_url: file.url,
-          file_name: file.name
+          file_name: file.name,
+          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -648,7 +656,8 @@ export function WhatsAppChat({
                 sender_id: user?.id,
                 sender_type: 'agent',
                 file_url: msg.file_url,
-                file_name: msg.file_name
+                file_name: msg.file_name,
+                clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
               },
               headers: {
                 'x-system-user-id': user?.id || '',
@@ -1806,7 +1815,8 @@ export function WhatsAppChat({
                     sender_id: user?.id,
                     sender_type: 'agent',
                     file_url: fileUrl,
-                    file_name: file.name
+                    file_name: file.name,
+                    clientMessageId: crypto.randomUUID() // ✅ ETAPA 2: clientMessageId
                   },
                   headers: {
                     'x-system-user-id': user?.id || '',

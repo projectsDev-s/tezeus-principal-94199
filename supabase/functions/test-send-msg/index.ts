@@ -254,9 +254,17 @@ serve(async (req) => {
     console.log(`✅ [${requestId}] Evolution config found: ${evolutionUrl}`);
 
 
-    // ✅ VERIFICAR DUPLICAÇÃO POR clientMessageId
+    // ✅ ETAPA 2: VERIFICAR DUPLICAÇÃO POR clientMessageId
     if (clientMessageId) {
-      console.log(`🔍 [${requestId}] Checking for duplicate clientMessageId: ${clientMessageId}`);
+      console.log(`🔍 [${requestId}] ETAPA 2 - Verificando duplicação:`, {
+        request_id: requestId,
+        session_id: conversation.workspace_id,
+        chat_id: conversation_id,
+        client_message_id: clientMessageId,
+        source: 'frontend',
+        attempt: 1
+      });
+      
       const { data: existing } = await supabase
         .from('messages')
         .select('id')
@@ -264,17 +272,25 @@ serve(async (req) => {
         .maybeSingle();
       
       if (existing) {
-        console.log(`⚠️ [${requestId}] Duplicate message detected: ${clientMessageId}`);
+        console.log(`✅ [${requestId}] ETAPA 2 - Duplicação detectada (DEDUPLICADO):`, {
+          request_id: requestId,
+          client_message_id: clientMessageId,
+          existing_message_id: existing.id,
+          action: 'skipped_insertion'
+        });
+        
         return new Response(JSON.stringify({
           success: true,
           message_id: existing.id,
           status: 'duplicate',
-          message: 'Message already sent'
+          message: 'Message already sent (deduplicated by clientMessageId)'
         }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
+      
+      console.log(`✅ [${requestId}] ETAPA 2 - Nenhuma duplicação encontrada, prosseguindo`);
     }
     
     // Generate external_id for tracking (usar clientMessageId se fornecido)
@@ -305,6 +321,16 @@ serve(async (req) => {
         }
       };
 
+      console.log(`📋 [${requestId}] ETAPA 2 - PRÉ-SALVAMENTO:`, {
+        request_id: requestId,
+        session_id: conversation.workspace_id,
+        chat_id: conversation_id,
+        message_id: external_id,
+        client_message_id: clientMessageId,
+        source: 'frontend',
+        attempt: 1
+      });
+
       const { data: savedMessage, error: saveError } = await supabase
         .from('messages')
         .insert(messageData)
@@ -322,7 +348,12 @@ serve(async (req) => {
         });
       }
 
-      console.log(`✅ [${requestId}] Message saved before N8N: ${savedMessage.id}`);
+      console.log(`✅ [${requestId}] ETAPA 2 - PÓS-SALVAMENTO:`, {
+        request_id: requestId,
+        database_id: savedMessage.id,
+        external_id: external_id,
+        client_message_id: clientMessageId
+      });
       
       // ✅ Armazenar o ID real para retornar depois
       const messageCreatedAt = savedMessage.id;
