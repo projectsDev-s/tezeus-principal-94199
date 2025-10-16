@@ -67,16 +67,20 @@ export function useNotifications() {
   // Real-time subscription
   useEffect(() => {
     if (!selectedWorkspace?.workspace_id || !user?.id) {
-      console.log('⚠️ [useNotifications] Não criando subscription - dados faltando');
+      console.log('⚠️ [useNotifications] Subscription CANCELADA - dados faltando:', {
+        hasWorkspace: !!selectedWorkspace?.workspace_id,
+        hasUser: !!user?.id
+      });
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
     const userId = user.id;
     
-    console.log('🔔 [useNotifications] Criando subscription de notificações:', {
+    console.log('🔔🔔🔔 [useNotifications] CRIANDO SUBSCRIPTION:', {
       workspaceId,
-      userId
+      userId,
+      channelName: `notifications-${workspaceId}`
     });
     
     const channel = supabase
@@ -90,11 +94,20 @@ export function useNotifications() {
           filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
+          console.log('🔔 [REALTIME] Evento INSERT recebido:', {
+            payload_user_id: payload.new.user_id,
+            current_user_id: userId,
+            match: payload.new.user_id === userId,
+            notification: payload.new
+          });
+          
           // Filtrar apenas notificações do usuário atual
           if (payload.new.user_id === userId) {
-            console.log('🔔🔔🔔 [useNotifications] NOVA NOTIFICAÇÃO!', payload.new);
+            console.log('🔔✅ NOVA NOTIFICAÇÃO PARA ESTE USUÁRIO!');
             playNotificationSound();
             fetchNotifications();
+          } else {
+            console.log('🔔❌ Notificação ignorada - não é para este usuário');
           }
         }
       )
@@ -107,15 +120,35 @@ export function useNotifications() {
           filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
+          console.log('🔔 [REALTIME] Evento UPDATE recebido:', {
+            payload_user_id: payload.new.user_id,
+            current_user_id: userId,
+            match: payload.new.user_id === userId || payload.old?.user_id === userId
+          });
+          
           // Filtrar apenas notificações do usuário atual
           if (payload.new.user_id === userId || payload.old?.user_id === userId) {
-            console.log('🔔 [useNotifications] Notificação atualizada');
+            console.log('🔔✅ ATUALIZAÇÃO DE NOTIFICAÇÃO PARA ESTE USUÁRIO!');
             fetchNotifications();
           }
         }
       )
       .subscribe((status) => {
-        console.log('🔔 [useNotifications] Status da subscription:', status);
+        console.log('🔔🔔🔔 [useNotifications] STATUS DA SUBSCRIPTION:', {
+          status,
+          timestamp: new Date().toISOString(),
+          channelName: `notifications-${workspaceId}`
+        });
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅✅✅ SUBSCRIPTION ATIVA E OUVINDO EVENTOS!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ ERRO NO CANAL DO REALTIME');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ TIMEOUT NA CONEXÃO DO REALTIME');
+        } else if (status === 'CLOSED') {
+          console.error('❌ CANAL FECHADO');
+        }
       });
 
     return () => {
