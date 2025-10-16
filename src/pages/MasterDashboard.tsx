@@ -17,7 +17,7 @@ import { WebhooksEvolutionConfigMaster } from '@/components/modules/master/Webho
 import { EvolutionApiConfigMaster } from '@/components/modules/master/EvolutionApiConfigMaster';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspaceRelatorios } from '@/components/modules/WorkspaceRelatorios';
-import { WorkspaceUsersPage } from '@/components/modules/WorkspaceUsersPage';
+import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -26,7 +26,8 @@ export default function MasterDashboard() {
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
-  const [selectedWorkspaceForUsers, setSelectedWorkspaceForUsers] = useState<Workspace | null>(null);
+  const [usersModalOpen, setUsersModalOpen] = useState(false);
+  const [selectedWorkspaceForModal, setSelectedWorkspaceForModal] = useState<Workspace | null>(null);
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -52,9 +53,8 @@ export default function MasterDashboard() {
   };
 
   const handleViewUsers = (workspace: Workspace) => {
-    setSelectedWorkspace(workspace);
-    localStorage.setItem('selectedWorkspace', JSON.stringify(workspace));
-    setSelectedWorkspaceForUsers(workspace);
+    setSelectedWorkspaceForModal(workspace);
+    setUsersModalOpen(true);
   };
 
   const handleViewWorkspace = (workspace: Workspace) => {
@@ -171,28 +171,20 @@ export default function MasterDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-foreground">
-                {selectedWorkspaceForUsers ? `Usuários - ${selectedWorkspaceForUsers.name}` : (
-                  <>
-                    {activePage === 'workspaces' && 'Workspaces do Usuário Master'}
-                    {activePage === 'ds-agent' && 'DS Agent - Configuração Master'}
-                    {activePage === 'filas' && 'Filas - Configuração Master'}
-                    {activePage === 'usuarios' && 'Usuários - Gestão Master'}
-                    {activePage === 'configuracoes' && 'Configurações - Master'}
-                    {activePage === 'reports' && 'Relatórios'}
-                  </>
-                )}
+                {activePage === 'workspaces' && 'Workspaces do Usuário Master'}
+                {activePage === 'ds-agent' && 'DS Agent - Configuração Master'}
+                {activePage === 'filas' && 'Filas - Configuração Master'}
+                {activePage === 'usuarios' && 'Usuários - Gestão Master'}
+                {activePage === 'configuracoes' && 'Configurações - Master'}
+                {activePage === 'reports' && 'Relatórios'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {selectedWorkspaceForUsers ? 'Gerencie os usuários deste workspace' : (
-                  <>
-                    {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
-                    {activePage === 'ds-agent' && 'Configure agentes inteligentes de forma global'}
-                    {activePage === 'filas' && 'Gerencie filas de atendimento do sistema'}
-                    {activePage === 'usuarios' && 'Administre todos os usuários do sistema'}
-                    {activePage === 'configuracoes' && 'Configurações globais do sistema'}
-                    {activePage === 'reports' && 'Visualize métricas e estatísticas de todas as empresas'}
-                  </>
-                )}
+                {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
+                {activePage === 'ds-agent' && 'Configure agentes inteligentes de forma global'}
+                {activePage === 'filas' && 'Gerencie filas de atendimento do sistema'}
+                {activePage === 'usuarios' && 'Administre todos os usuários do sistema'}
+                {activePage === 'configuracoes' && 'Configurações globais do sistema'}
+                {activePage === 'reports' && 'Visualize métricas e estatísticas de todas as empresas'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -214,19 +206,7 @@ export default function MasterDashboard() {
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-auto">
-          {selectedWorkspaceForUsers ? (
-            <div className="space-y-4">
-              <Button
-                onClick={() => setSelectedWorkspaceForUsers(null)}
-                variant="outline"
-                size="sm"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar para Empresas
-              </Button>
-              <WorkspaceUsersPage workspaceId={selectedWorkspaceForUsers.workspace_id} />
-            </div>
-          ) : activePage === 'workspaces' ? (
+          {activePage === 'workspaces' ? (
             <>
               {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -306,6 +286,16 @@ export default function MasterDashboard() {
           </div>
         </footer>
       </div>
+
+      {/* Modal de Usuários */}
+      {selectedWorkspaceForModal && (
+        <WorkspaceUsersModal
+          open={usersModalOpen}
+          onOpenChange={setUsersModalOpen}
+          workspaceId={selectedWorkspaceForModal.workspace_id}
+          workspaceName={selectedWorkspaceForModal.name}
+        />
+      )}
     </div>
   );
 }
