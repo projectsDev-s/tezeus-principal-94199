@@ -670,8 +670,10 @@ serve(async (req) => {
         break;
 
       case 'actions':
+        console.log('🎯 Entering actions case, method:', method);
         if (method === 'GET') {
           const pipelineId = url.searchParams.get('pipeline_id');
+          console.log('📥 GET actions - pipeline_id:', pipelineId);
           if (!pipelineId) {
             return new Response(
               JSON.stringify({ error: 'Pipeline ID required' }),
@@ -685,8 +687,13 @@ serve(async (req) => {
             .eq('pipeline_id', pipelineId)
             .order('order_position');
 
-          if (error) throw error;
-          return new Response(JSON.stringify(pipelineActions), {
+          if (error) {
+            console.error('❌ Error fetching actions:', error);
+            throw error;
+          }
+          
+          console.log('✅ Actions fetched successfully:', pipelineActions?.length || 0);
+          return new Response(JSON.stringify(pipelineActions || []), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
@@ -696,7 +703,7 @@ serve(async (req) => {
             const body = await req.json();
             console.log('📝 Creating pipeline action with data:', body);
             
-            const { data: action, error } = await supabaseClient
+            const { data: actionData, error } = await supabaseClient
               .from('pipeline_actions')
               .insert({
                 pipeline_id: body.pipeline_id,
@@ -714,8 +721,8 @@ serve(async (req) => {
               throw error;
             }
             
-            console.log('✅ Pipeline action created successfully:', action);
-            return new Response(JSON.stringify(action), {
+            console.log('✅ Pipeline action created successfully:', actionData);
+            return new Response(JSON.stringify(actionData), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           } catch (err) {
@@ -737,7 +744,7 @@ serve(async (req) => {
             const body = await req.json();
             console.log('📝 Updating pipeline action:', actionId, body);
             
-            const { data: action, error } = await supabaseClient
+            const { data: actionData, error } = await supabaseClient
               .from('pipeline_actions')
               .update({
                 action_name: body.action_name,
@@ -753,7 +760,7 @@ serve(async (req) => {
             if (error) throw error;
             
             console.log('✅ Pipeline action updated successfully');
-            return new Response(JSON.stringify(action), {
+            return new Response(JSON.stringify(actionData), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           } catch (error) {
@@ -786,6 +793,8 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+        
+        console.warn('⚠️ No matching method for actions case, method:', method);
         break;
 
       default:
