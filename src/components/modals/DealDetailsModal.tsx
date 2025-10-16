@@ -127,7 +127,7 @@ function ActivityItem({
   };
 
   return (
-    <div className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+    <div className={cn("border-l-4 rounded-lg p-4", isDarkMode ? "border-yellow-500 bg-[#1f1f1f]" : "border-yellow-500 bg-white shadow-sm")}>
       {isEditingActivity ? (
         <div className="space-y-3">
           <div className="space-y-2">
@@ -163,6 +163,7 @@ function ActivityItem({
             <Button
               size="sm"
               onClick={handleSaveActivity}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white"
             >
               <Check className="w-4 h-4 mr-1" />
               Salvar
@@ -171,61 +172,59 @@ function ActivityItem({
         </div>
       ) : (
         <>
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="text-xs">
-                  {activity.type}
-                </Badge>
-                <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                  {activity.users?.name}
-                </span>
-              </div>
-              <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
-                {activity.subject}
-              </h4>
-              <p className={cn("text-sm mt-1", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
-                  locale: ptBR
-                })}
+          <div className="space-y-2 mb-4">
+            <h4 className={cn("font-semibold text-base", isDarkMode ? "text-white" : "text-gray-900")}>
+              {activity.subject}
+            </h4>
+            <p className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+              {format(new Date(activity.scheduled_for), "dd/MM/yyyy HH:mm", {
+                locale: ptBR
+              })}
+            </p>
+            {activity.description && (
+              <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-600")}>
+                {activity.description}
               </p>
-              {activity.description && (
-                <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                  {activity.description}
-                </p>
-              )}
-              
-              {activity.attachment_url && (
-                <div className="mt-3">
-                  <img 
-                    src={activity.attachment_url} 
-                    alt={activity.attachment_name || "Anexo"}
-                    className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
-                    onClick={() => onAttachmentClick({ 
-                      url: activity.attachment_url!, 
-                      name: activity.attachment_name || "Anexo" 
-                    })}
-                  />
-                </div>
-              )}
-            </div>
+            )}
+            
+            {activity.attachment_url && (
+              <div className="mt-3">
+                <img 
+                  src={activity.attachment_url} 
+                  alt={activity.attachment_name || "Anexo"}
+                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                  onClick={() => onAttachmentClick({ 
+                    url: activity.attachment_url!, 
+                    name: activity.attachment_name || "Anexo" 
+                  })}
+                />
+              </div>
+            )}
           </div>
-          <div className="flex gap-2 justify-end">
+          
+          <div className="flex gap-2">
             <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => setIsEditingActivity(true)}
-            >
-              <FileText className="w-4 h-4 mr-1" />
-              Editar
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
+              size="sm"
               onClick={() => onComplete(activity.id)}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white flex-1"
             >
               <Check className="w-4 h-4 mr-1" />
               Concluir
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setIsEditingActivity(true)}
+              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+            >
+              <FileText className="w-4 h-4" />
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="border-red-500 text-red-600 hover:bg-red-50"
+            >
+              <X className="w-4 h-4" />
             </Button>
           </div>
         </>
