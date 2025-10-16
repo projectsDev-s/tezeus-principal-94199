@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 import { Dashboard } from "./Dashboard";
 import { Conversas } from "./modules/Conversas";
@@ -62,6 +64,8 @@ export function TezeusCRM() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
+  const { userRole } = useAuth();
+  const { selectedWorkspace } = useWorkspace();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark');
@@ -86,13 +90,30 @@ export function TezeusCRM() {
     updateTheme(isDarkMode);
   }, [isDarkMode]);
 
+  // Helper para construir rotas baseado no role
+  const getRoutePath = (path: string) => {
+    // Remover barra inicial se houver
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    
+    if (userRole === 'master' && selectedWorkspace) {
+      return `/workspace/${selectedWorkspace.workspace_id}${cleanPath}`;
+    }
+    return cleanPath;
+  };
+
   // Convert URL path to module type
   const getModuleFromPath = (pathname: string): ModuleType => {
-    const path = pathname.substring(1); // Remove leading slash
+    // Remover prefixo /workspace/:workspaceId se existir
+    let path = pathname;
+    const workspaceMatch = pathname.match(/^\/workspace\/[^/]+\/(.+)/);
+    if (workspaceMatch) {
+      path = `/${workspaceMatch[1]}`;
+    }
+    
+    path = path.substring(1); // Remove leading slash
     if (!path || path === "dashboard") return "dashboard";
     if (path.startsWith("editar-agente/")) return "editar-agente";
     if (path.includes("/usuarios")) return "workspace-usuarios";
-    
     
     return path as ModuleType;
   };
@@ -118,14 +139,14 @@ export function TezeusCRM() {
     const handleNavigateToConversation = (event: CustomEvent) => {
       const conversationId = event.detail;
       setSelectedConversationId(conversationId);
-      navigate(`/conversas?id=${conversationId}`);
+      navigate(getRoutePath('/conversas'));
     };
 
     window.addEventListener('navigate-to-conversation', handleNavigateToConversation as EventListener);
     return () => {
       window.removeEventListener('navigate-to-conversation', handleNavigateToConversation as EventListener);
     };
-  }, [navigate]);
+  }, [navigate, userRole, selectedWorkspace]);
 
   const renderModule = () => {
     const moduleProps = { isDarkMode };
@@ -189,7 +210,7 @@ export function TezeusCRM() {
             // Handle editar-agente navigation differently since it needs agentId
             return;
           }
-          navigate(`/${module === 'dashboard' ? 'dashboard' : module}`);
+          navigate(getRoutePath(`/${module === 'dashboard' ? 'dashboard' : module}`));
         }}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
@@ -199,8 +220,8 @@ export function TezeusCRM() {
           console.log('🚀 TezeusCRM: Navegando para conversa:', conversationId);
           setSelectedConversationId(conversationId);
           
-          // ✅ Usar location.state em vez de URL params
-          navigate('/conversas', { 
+          // ✅ Usar rota correta baseada no role
+          navigate(getRoutePath('/conversas'), { 
             state: { selectedConversationId: conversationId },
             replace: true 
           });
