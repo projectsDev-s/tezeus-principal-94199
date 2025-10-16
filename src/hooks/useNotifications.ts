@@ -72,15 +72,6 @@ export function useNotifications() {
     };
   }, [conversations]);
 
-  // ✅ Tocar som quando totalUnread aumenta
-  useEffect(() => {
-    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
-      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
-      playNotificationSound();
-    }
-    setPreviousUnreadCount(totalUnread);
-  }, [totalUnread, previousUnreadCount, playNotificationSound]);
-
   // ✅ REALTIME: Ouvir mudanças em conversas
   useEffect(() => {
     if (!selectedWorkspace?.workspace_id) return;
@@ -129,9 +120,10 @@ export function useNotifications() {
     };
   }, [selectedWorkspace?.workspace_id, fetchConversations]);
 
-  // Tocar som quando totalUnread aumenta
+  // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {
     if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
+      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
       playNotificationSound();
     }
     setPreviousUnreadCount(totalUnread);
