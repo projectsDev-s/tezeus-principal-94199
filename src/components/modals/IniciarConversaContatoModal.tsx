@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useNavigate } from "react-router-dom";
 import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
+import { useAuth } from "@/hooks/useAuth";
 
 interface IniciarConversaContatoModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function IniciarConversaContatoModal({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   
   // Usar hook para buscar conexões
   const { connections, isLoading: connectionsLoading } = useWorkspaceConnections(
@@ -153,9 +155,16 @@ export function IniciarConversaContatoModal({
       }
 
       // Redirecionar para a aba Conversas com a conversa selecionada
-      navigate('/conversas', { 
-        state: { selectedConversationId: conversationId } 
-      });
+      // Master deve ir para a rota do workspace, outros usuários vão para /conversas
+      if (userRole === 'master' && selectedWorkspace) {
+        navigate(`/workspace/${selectedWorkspace.workspace_id}/conversas`, { 
+          state: { selectedConversationId: conversationId } 
+        });
+      } else {
+        navigate('/conversas', { 
+          state: { selectedConversationId: conversationId } 
+        });
+      }
 
       handleClose();
     } catch (error) {
