@@ -421,6 +421,16 @@ export function useConversationMessages(): UseConversationMessagesReturn {
               setMessages(prev => {
                 // ✅ BUSCAR por ID real OU por mensagem temporária com mesmo conteúdo
                 const existingRealIndex = prev.findIndex(m => m.id === updatedMessage.id);
+                
+                if (existingRealIndex !== -1) {
+                  // ✅ Já existe com ID real → APENAS ATUALIZAR (não adicionar novamente)
+                  console.log(`🔄 [UPDATE] Atualizando mensagem existente: ${updatedMessage.id}`);
+                  const updated = [...prev];
+                  updated[existingRealIndex] = updatedMessage;
+                  return updated;
+                }
+                
+                // Se não existe com ID real, procurar mensagem temporária
                 const existingTempIndex = prev.findIndex(m => 
                   m.id.startsWith('temp-') && 
                   m.conversation_id === updatedMessage.conversation_id &&
@@ -428,32 +438,28 @@ export function useConversationMessages(): UseConversationMessagesReturn {
                   m.message_type === updatedMessage.message_type
                 );
                 
-                if (existingRealIndex !== -1) {
-                  // ✅ Já existe com ID real → APENAS ATUALIZAR
-                  console.log(`🔄 Atualizando mensagem agent com ID real: ${updatedMessage.id}`);
-                  const updated = [...prev];
-                  updated[existingRealIndex] = updatedMessage;
-                  return updated;
-                } else if (existingTempIndex !== -1) {
+                if (existingTempIndex !== -1) {
                   // ✅ Existe mensagem temporária → SUBSTITUIR pela real
-                  console.log(`🔄 Substituindo mensagem temporária pela real:`, {
+                  console.log(`🔄 [UPDATE] Substituindo temporária pela real:`, {
                     tempId: prev[existingTempIndex].id,
                     realId: updatedMessage.id
                   });
                   const updated = [...prev];
                   updated[existingTempIndex] = updatedMessage;
                   return updated;
-                } else if (updatedMessage.status === 'sent' || updatedMessage.status === 'SENT') {
-                  // ✅ Mensagem NÃO existe → ADICIONAR (caso não tenha sido otimista)
-                  console.log(`✅ Adicionando nova mensagem agent: ${updatedMessage.id}`);
+                }
+                
+                // ✅ Se não existe nem com ID real nem temporária, adicionar APENAS se status=sent/SENT
+                if (updatedMessage.status === 'sent' || updatedMessage.status === 'SENT') {
+                  console.log(`✅ [UPDATE] Adicionando nova mensagem agent: ${updatedMessage.id}`);
                   return [...prev, updatedMessage].sort((a, b) => 
                     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                   );
-                } else {
-                  // ⏭️ Ignorar outros casos
-                  console.log(`⏭️ Ignorando UPDATE de mensagem agent: ${updatedMessage.id} (status: ${updatedMessage.status})`);
-                  return prev;
                 }
+                
+                // ⏭️ Caso contrário, ignorar (não adicionar nem atualizar)
+                console.log(`⏭️ [UPDATE] Ignorando mensagem que não existe localmente (status: ${updatedMessage.status})`);
+                return prev;
               });
             } else {
               // Para mensagens de contato, apenas atualizar
