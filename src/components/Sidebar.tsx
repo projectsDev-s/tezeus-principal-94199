@@ -8,7 +8,7 @@ import { ModuleType } from "./TezeusCRM";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { NotificationTooltip } from "@/components/NotificationTooltip";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
 import { useWhatsAppConversations } from "@/hooks/useWhatsAppConversations";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
@@ -46,17 +46,38 @@ export function Sidebar({
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
 
-  // Hooks para notificações - só carrega quando abrir o popover
+  // Hooks para notificações - usando o provider de tempo real
   const {
     notifications,
-    totalUnread,
-    getAvatarInitials,
-    getAvatarColor,
-    formatTimestamp
-  } = useNotifications();
+    totalUnread
+  } = useRealtimeNotifications();
   const {
     markAsRead
   } = useWhatsAppConversations();
+  
+  // Funções auxiliares para o NotificationTooltip
+  const getAvatarInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+  
+  const getAvatarColor = (name: string) => {
+    const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500'];
+    const index = name.length % colors.length;
+    return colors[index];
+  };
+  
+  const formatTimestamp = (timestamp: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `${minutes}m`;
+    if (hours < 24) return `${hours}h`;
+    return `${days}d`;
+  };
   const {
     user,
     userRole,
