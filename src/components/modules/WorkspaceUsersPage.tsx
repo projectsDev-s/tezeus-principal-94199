@@ -40,9 +40,14 @@ const roleVariants = {
   master: 'destructive' as const
 };
 
-export function WorkspaceUsersPage() {
+interface WorkspaceUsersPageProps {
+  workspaceId?: string;
+}
+
+export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUsersPageProps = {}) {
   const navigate = useNavigate();
-  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { workspaceId: paramWorkspaceId } = useParams<{ workspaceId: string }>();
+  const workspaceId = propWorkspaceId || paramWorkspaceId;
   const { workspaces } = useWorkspaces();
   const { userRole } = useAuth();
   const { isMaster, isAdmin } = useWorkspaceRole();

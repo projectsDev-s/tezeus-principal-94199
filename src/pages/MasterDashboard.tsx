@@ -224,7 +224,7 @@ export default function MasterDashboard() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar para Empresas
               </Button>
-              <WorkspaceUsersPage />
+              <WorkspaceUsersPage workspaceId={selectedWorkspaceForUsers.workspace_id} />
             </div>
           ) : activePage === 'workspaces' ? (
             <>
