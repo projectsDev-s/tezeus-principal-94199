@@ -51,33 +51,25 @@ export function WorkspaceCard({
         </div>
       </CardContent>
 
-      <CardFooter className="flex flex-col gap-2">
+      <CardFooter className="flex gap-2 w-full">
+        <Button
+          onClick={() => onViewReports(workspace)}
+          variant="outline"
+          size="sm"
+          className="flex-1"
+        >
+          <BarChart3 className="h-4 w-4 mr-2" />
+          Relatórios
+        </Button>
         <Button
           onClick={() => onLogin(workspace)}
-          className="w-full"
+          variant="outline"
           size="sm"
+          className="flex-1"
         >
-          <LogIn className="h-4 w-4 mr-2" />
-          Entrar
+          <Eye className="h-4 w-4 mr-2" />
+          Visualizar
         </Button>
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <Button
-            onClick={() => onViewReports(workspace)}
-            variant="outline"
-            size="sm"
-          >
-            <BarChart3 className="h-4 w-4 mr-1" />
-            Relatórios
-          </Button>
-          <Button
-            onClick={() => onViewWorkspace(workspace)}
-            variant="outline"
-            size="sm"
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            Visualizar
-          </Button>
-        </div>
       </CardFooter>
     </Card>
   );
