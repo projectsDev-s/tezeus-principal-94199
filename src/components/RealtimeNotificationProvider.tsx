@@ -46,8 +46,15 @@ export function RealtimeNotificationProvider({ children }: RealtimeNotificationP
 
 export function useRealtimeNotifications() {
   const context = useContext(RealtimeNotificationContext);
+  
+  // ✅ Retornar valores padrão se não estiver dentro do Provider
   if (context === undefined) {
-    throw new Error('useRealtimeNotifications must be used within a RealtimeNotificationProvider');
+    return {
+      totalUnread: 0,
+      notifications: [],
+      conversationUnreadMap: new Map<string, number>()
+    };
   }
+  
   return context;
 }
