@@ -129,8 +129,18 @@ export function useNotifications() {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('🔔 [Realtime] Status da subscription:', status);
+      .subscribe((status, err) => {
+        console.log('🔔🔔🔔 [Realtime Notifications] Status:', status);
+        if (err) {
+          console.error('🔔❌ [Realtime Notifications] ERRO:', err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('🔔✅ [Realtime Notifications] Canal conectado com sucesso!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('🔔❌ [Realtime Notifications] ERRO NO CANAL');
+        } else if (status === 'CLOSED') {
+          console.error('🔔❌ [Realtime Notifications] CANAL FECHADO');
+        }
       });
 
     return () => {
