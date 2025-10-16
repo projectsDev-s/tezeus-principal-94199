@@ -44,37 +44,36 @@ export function useNotifications() {
     const unreadMap = new Map<string, number>();
     
     conversations.forEach((conv) => {
-      // ✅ CRÍTICO: Calcular unread_count REAL baseado nas mensagens
-      const actualUnreadCount = conv.messages?.filter(
-        msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
-      ).length || 0;
+      // ✅ USAR o unread_count que vem do BACKEND (já está correto!)
+      const actualUnreadCount = conv.unread_count || 0;
       
       console.log(`📊 Conversa ${conv.contact.name}:`, { 
         actualUnreadCount,
-        totalMessages: conv.messages?.length || 0 
+        source: 'backend_unread_count'
       });
       
-      // ✅ Armazenar no mapa para uso nos cards
+      // ✅ Armazenar no mapa para uso nos badges
       if (actualUnreadCount > 0) {
         unreadMap.set(conv.id, actualUnreadCount);
       }
       
-      // ✅ Contabilizar apenas mensagens não lidas NOVAS
+      // ✅ Contabilizar apenas mensagens não lidas NOVAS para o sino
       if (actualUnreadCount > 0) {
         const lastMsg = conv.last_message?.[0];
         
-        // ✅ CRÍTICO: Usar timestamp + conversa para rastreamento preciso (last_message não tem id)
+        // ✅ CRÍTICO: Usar timestamp + conversa para rastreamento preciso
         const messageKey = `${conv.id}-${lastMsg?.created_at || ''}`;
         
         // ✅ Só contabilizar se ainda não foi notificado
         if (lastMsg && !notifiedMessagesRef.current.has(messageKey)) {
           console.log('🆕 Nova notificação detectada:', { 
             contact: conv.contact.name, 
-            messageKey 
+            messageKey,
+            unreadCount: actualUnreadCount
           });
           
-          // ✅ Contar apenas 1 por mensagem nova, não o unread_count total
-          unreadCount += 1;
+          // ✅ Somar TODOS os não lidos para o sino
+          unreadCount += actualUnreadCount;
           
           newNotifications.push({
             id: `${conv.id}-${actualUnreadCount}`,
@@ -98,7 +97,8 @@ export function useNotifications() {
     console.log('✅ Resultado do cálculo:', { 
       totalUnread: unreadCount, 
       notificationsCount: newNotifications.length,
-      unreadMapSize: unreadMap.size 
+      unreadMapSize: unreadMap.size,
+      unreadDetails: Array.from(unreadMap.entries())
     });
     
     return { 
