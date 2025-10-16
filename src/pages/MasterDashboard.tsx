@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered } from 'lucide-react';
+import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,7 +22,7 @@ export default function MasterDashboard() {
   const navigate = useNavigate();
   const { workspaces, isLoading } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
-  const { userRole } = useAuth();
+  const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
 
@@ -63,6 +63,11 @@ export default function MasterDashboard() {
 
   const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes') => {
     setActivePage(page);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -130,8 +135,16 @@ export default function MasterDashboard() {
         </button>
         
         <button
+          onClick={handleLogout}
+          className="p-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mt-auto"
+          title="Sair"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
+        
+        <button
           onClick={() => setActivePage('configuracoes')}
-          className={`p-3 rounded-lg transition-colors mt-auto ${
+          className={`p-3 rounded-lg transition-colors ${
             activePage === 'configuracoes' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
