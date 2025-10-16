@@ -19,45 +19,48 @@ async function fetchRelatorios(userId: string | undefined, isMaster: boolean, se
 
   console.log('📊 Relatórios: Iniciando fetch', { userId, isMaster, selectedWorkspaceId });
 
-  // 1. Buscar workspaces
-  let workspacesQuery = supabase.from('workspaces').select('id, name');
-  
-  if (!isMaster && selectedWorkspaceId) {
-    workspacesQuery = workspacesQuery.eq('id', selectedWorkspaceId);
-  }
-
-  const { data: workspacesData, error: workspacesError } = await workspacesQuery;
+  // 1. Buscar workspaces usando a edge function
+  const { data: workspacesResponse, error: workspacesError } = await supabase.functions.invoke('list-user-workspaces');
 
   if (workspacesError) {
     console.error('❌ Relatórios: Erro ao buscar workspaces', workspacesError);
     throw workspacesError;
   }
 
-  if (!workspacesData || workspacesData.length === 0) {
+  const workspacesList = workspacesResponse?.workspaces || [];
+  
+  if (workspacesList.length === 0) {
     console.log('⚠️ Relatórios: Nenhum workspace encontrado');
     return [];
   }
 
-  console.log('✅ Relatórios: Workspaces encontrados', { count: workspacesData.length });
+  console.log('✅ Relatórios: Workspaces encontrados', { count: workspacesList.length });
+
+  // Filtrar workspace se não for master e tiver um selecionado
+  const workspacesData = (!isMaster && selectedWorkspaceId)
+    ? workspacesList.filter((ws: any) => ws.workspace_id === selectedWorkspaceId)
+    : workspacesList;
 
   // 2. Buscar stats de cada workspace em paralelo
-  const statsPromises = workspacesData.map(async (workspace) => {
+  const statsPromises = workspacesData.map(async (workspace: any) => {
+    const workspaceId = workspace.workspace_id || workspace.id;
+    
     const [
       { count: connectionsCount },
       { count: conversationsCount },
       { count: messagesCount },
       { count: activeConversations }
     ] = await Promise.all([
-      supabase.from('connections').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
-      supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
-      supabase.from('messages').select('*', { count: 'exact', head: true }).eq('workspace_id', workspace.id),
+      supabase.from('connections').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+      supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+      supabase.from('messages').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
       supabase.from('conversations').select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspace.id)
+        .eq('workspace_id', workspaceId)
         .gte('last_activity_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     ]);
 
     return {
-      workspace_id: workspace.id,
+      workspace_id: workspaceId,
       workspace_name: workspace.name,
       connections_count: connectionsCount || 0,
       conversations_count: conversationsCount || 0,
