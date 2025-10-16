@@ -49,12 +49,28 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       return;
     }
 
-    // Se não há workspaces, limpar seleção e marcar como inicializado
+    // Se não há workspaces disponíveis, verificar se há workspace salvo antes de limpar
     if (workspaces.length === 0) {
-      console.log('⚠️ WorkspaceContext: Nenhum workspace disponível');
-      setSelectedWorkspaceState(null);
-      localStorage.removeItem('selectedWorkspace');
-      setHasInitialized(true);
+      const stored = localStorage.getItem('selectedWorkspace');
+      
+      if (stored && !isLoadingWorkspaces) {
+        try {
+          const parsed = JSON.parse(stored);
+          console.log('⏳ WorkspaceContext: Aguardando workspaces carregar, mantendo workspace salvo:', parsed.name);
+          // Não limpar ainda, aguardar workspaces carregarem
+          return;
+        } catch (e) {
+          console.error('❌ WorkspaceContext: Erro ao parsear workspace salvo:', e);
+        }
+      }
+      
+      // Só limpar se NÃO houver workspace salvo E não estiver carregando
+      if (!isLoadingWorkspaces) {
+        console.log('⚠️ WorkspaceContext: Nenhum workspace disponível E nenhum salvo');
+        setSelectedWorkspaceState(null);
+        localStorage.removeItem('selectedWorkspace');
+        setHasInitialized(true);
+      }
       return;
     }
 
@@ -107,21 +123,6 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     console.log('📋 WorkspaceContext: Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
     setHasInitialized(true);
   }, [workspaces, isLoadingWorkspaces, hasInitialized, userRole]);
-
-  // Reset hasInitialized quando workspaces mudam (detecta mudança no array)
-  useEffect(() => {
-    if (workspaces.length > 0) {
-      const currentWorkspaceIds = workspaces.map(w => w.workspace_id).sort().join(',');
-      const storedIds = sessionStorage.getItem('workspace_ids');
-      
-      if (storedIds && storedIds !== currentWorkspaceIds) {
-        console.log('🔄 Workspaces mudaram, resetando inicialização');
-        setHasInitialized(false);
-      }
-      
-      sessionStorage.setItem('workspace_ids', currentWorkspaceIds);
-    }
-  }, [workspaces]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);

@@ -10,9 +10,9 @@ export function useWorkspaces() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const { setWorkspaces: setContextWorkspaces, setIsLoadingWorkspaces } = useWorkspace();
-  const { getCache, setCache, isExpired } = useCache<Workspace[]>(5); // 5 min cache
+  const { getCache, setCache, isExpired, clearCache } = useCache<Workspace[]>(5); // 5 min cache
   const { retry } = useRetry();
   const hasFetched = useRef(false);
 
@@ -138,7 +138,13 @@ export function useWorkspaces() {
       hasFetched.current = true;
       fetchWorkspaces();
     }
-  }, [user, userRole]);
+  }, [user]);
+
+  // Limpar cache apenas quando necessário (não por mudança de selectedWorkspace)
+  const clearWorkspacesCache = () => {
+    console.log('🗑️ useWorkspaces: Clearing cache manually');
+    clearCache();
+  };
 
   const createWorkspace = async (name: string, cnpj?: string, connectionLimit?: number) => {
     try {
@@ -264,6 +270,7 @@ export function useWorkspaces() {
     fetchWorkspaces,
     createWorkspace,
     updateWorkspace,
-    deleteWorkspace
+    deleteWorkspace,
+    clearWorkspacesCache
   };
 }

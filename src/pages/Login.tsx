@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -63,6 +64,51 @@ export const Login = () => {
           variant: "destructive"
         });
       } else {
+        // ✅ NOVO: Para Admin/User, buscar e salvar workspace ANTES de redirecionar
+        // result só retorna vazio {} se sucesso, precisa pegar user do localStorage
+        const savedUser = localStorage.getItem('currentUser');
+        
+        if (savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            const role = parsedUser.profile === 'master' ? 'master' : (parsedUser.profile === 'admin' ? 'admin' : 'user');
+            
+            if (role !== 'master') {
+              console.log('🔐 Login: Buscando workspace para Admin/User...');
+              try {
+                const { data } = await supabase.functions.invoke('list-user-workspaces', {
+                  headers: {
+                    'x-system-user-id': parsedUser.id,
+                    'x-system-user-email': parsedUser.email || ''
+                  }
+                });
+                
+                if (data?.workspaces && data.workspaces.length > 0) {
+                  const userWorkspace = {
+                    workspace_id: data.workspaces[0].workspace_id || data.workspaces[0].id,
+                    name: data.workspaces[0].name,
+                    slug: data.workspaces[0].slug,
+                    cnpj: data.workspaces[0].cnpj,
+                    created_at: data.workspaces[0].created_at,
+                    updated_at: data.workspaces[0].updated_at,
+                    connections_count: data.workspaces[0].connections_count || 0
+                  };
+                  
+                  localStorage.setItem('selectedWorkspace', JSON.stringify(userWorkspace));
+                  console.log('✅ Login: Workspace salvo no localStorage:', userWorkspace.name);
+                } else {
+                  console.warn('⚠️ Login: Nenhum workspace encontrado para o usuário');
+                }
+              } catch (wsError) {
+                console.error('❌ Login: Erro ao buscar workspace:', wsError);
+                // Não bloquear login por erro ao buscar workspace
+              }
+            }
+          } catch (parseError) {
+            console.error('❌ Login: Erro ao parsear usuário salvo:', parseError);
+          }
+        }
+        
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando...",
