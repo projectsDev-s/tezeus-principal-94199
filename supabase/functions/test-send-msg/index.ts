@@ -470,10 +470,13 @@ serve(async (req) => {
           }
         };
         
-        // Aceitar evolution_key_id de múltiplos formatos possíveis
+        // ✅ CRÍTICO: Aceitar evolution_key_id e ATUALIZAR external_id
         const evolutionKeyId = n8nData.evolution_key_id || n8nData.key?.id || n8nData.keyId;
         if (evolutionKeyId) {
           updateFields.evolution_key_id = evolutionKeyId;
+          // ✅ ATUALIZAR external_id com evolution_key_id para deduplicação de webhooks
+          updateFields.external_id = evolutionKeyId;
+          console.log(`🔄 [${requestId}] Atualizando external_id: ${external_id} → ${evolutionKeyId}`);
         }
         
         if (n8nData.evolution_short_key_id) {
@@ -483,7 +486,7 @@ serve(async (req) => {
         const { error: updateError } = await supabase
           .from('messages')
           .update(updateFields)
-          .eq('external_id', external_id);
+          .eq('id', external_id);
 
         if (updateError) {
           console.error(`⚠️ [${requestId}] Failed to save evolution IDs from N8N:`, updateError);

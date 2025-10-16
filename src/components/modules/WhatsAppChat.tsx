@@ -273,10 +273,10 @@ export function WhatsAppChat({
       // ✅ OPÇÃO 3: Gerar clientMessageId único (será usado como external_id)
       const clientMessageId = crypto.randomUUID();
       
-      // ✅ Criar mensagem otimista com external_id = clientMessageId
+      // ✅ Criar mensagem otimista com ID = clientMessageId (MESMO ID que será salvo no banco)
       const optimisticMessage = {
-        id: `temp-${Date.now()}`,
-        external_id: clientMessageId, // ✅ MESMO ID que será salvo no banco
+        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
+        external_id: clientMessageId,
         conversation_id: selectedConversation.id,
         content: textToSend,
         message_type: 'text' as const,
@@ -317,13 +317,12 @@ export function WhatsAppChat({
         optimisticId: optimisticMessage.id
       });
 
-      // ✅ Atualizar mensagem otimista IMEDIATAMENTE com ID real e status 'sent'
-      if (sendResult.success && sendResult.evolution_key_id) {
+      // ✅ Atualizar status para 'sent' quando N8N responder com sucesso
+      if (sendResult.success) {
         updateMessage(clientMessageId, {
-          id: sendResult.message?.id || optimisticMessage.id,
-          external_id: sendResult.evolution_key_id,
           status: 'sent'
         });
+        console.log('✅ Mensagem marcada como "sent":', { clientMessageId });
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);

@@ -409,19 +409,22 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             content_preview: newMessage.content?.substring(0, 30)
           });
           
-          // ✅ DEDUPLICAÇÃO INTELIGENTE: Se já existe otimista, ATUALIZAR ao invés de ignorar
+          // ✅ DEDUPLICAÇÃO: Ignorar se já existe mensagem com mesmo ID ou external_id
           if (newMessage.external_id) {
-            const existingMessage = messages.find(m => 
-              m.external_id === newMessage.external_id
-            );
+            const existingById = messages.find(m => m.id === newMessage.external_id);
+            const existingByExternalId = messages.find(m => m.external_id === newMessage.external_id);
             
-            if (existingMessage) {
-              console.log('🔄 [INSERT] Mensagem otimista já existe, atualizando com dados reais...');
-              updateMessage(existingMessage.id, {
-                id: newMessage.id,
-                external_id: newMessage.external_id,
-                status: newMessage.status || 'sent'
+            if (existingById) {
+              console.log('🔄 [INSERT] Mensagem otimista encontrada por ID, substituindo...');
+              updateMessage(existingById.id, {
+                ...newMessage,
+                id: newMessage.id
               });
+              return;
+            }
+            
+            if (existingByExternalId && existingByExternalId.id !== newMessage.id) {
+              console.log('⏭️ [INSERT] Mensagem duplicada ignorada (external_id já existe)');
               return;
             }
           }
