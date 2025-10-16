@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNotificationSound } from './useNotificationSound';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from './useAuth';
+import { useNotificationSound } from './useNotificationSound';
 
 export interface NotificationMessage {
   id: string;
@@ -18,15 +18,14 @@ export interface NotificationMessage {
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
-  const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
-  const { playNotificationSound } = useNotificationSound();
   const { selectedWorkspace } = useWorkspace();
   const { user } = useAuth();
+  const { playNotificationSound } = useNotificationSound();
 
-  // Buscar notificações do usuário atual
+  // Buscar notificações
   const fetchNotifications = async () => {
     if (!selectedWorkspace?.workspace_id || !user?.id) {
-      console.log('⚠️ Workspace ou user não disponível');
+      console.log('⚠️ [useNotifications] Workspace ou user não disponível');
       return;
     }
 
@@ -39,10 +38,7 @@ export function useNotifications() {
         .eq('status', 'unread')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('❌ Erro ao buscar notificações:', error);
-        return;
-      }
+      if (error) throw error;
 
       const formattedNotifications: NotificationMessage[] = (data || []).map(notif => ({
         id: notif.id,
@@ -56,14 +52,10 @@ export function useNotifications() {
         status: notif.status as 'unread' | 'read'
       }));
 
-      console.log('✅ Notificações carregadas:', {
-        total: formattedNotifications.length,
-        notifications: formattedNotifications
-      });
-
+      console.log('✅ [useNotifications] Notificações carregadas:', formattedNotifications.length);
       setNotifications(formattedNotifications);
     } catch (err) {
-      console.error('❌ Erro ao processar notificações:', err);
+      console.error('❌ [useNotifications] Erro ao buscar notificações:', err);
     }
   };
 
@@ -72,42 +64,23 @@ export function useNotifications() {
     fetchNotifications();
   }, [selectedWorkspace?.workspace_id, user?.id]);
 
-  // Tocar som quando quantidade de notificações aumenta
+  // Real-time subscription
   useEffect(() => {
-    const totalUnread = notifications.length;
-    if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
-      console.log('🔔 Som de notificação:', { totalUnread, previousUnreadCount });
-      playNotificationSound();
-    }
-    setPreviousUnreadCount(totalUnread);
-  }, [notifications.length, previousUnreadCount, playNotificationSound]);
-
-  // Real-time subscriptions para notificações
-  useEffect(() => {
-    console.log('🔔🔔🔔 [useNotifications] Verificando condições para subscription:', {
-      hasWorkspace: !!selectedWorkspace?.workspace_id,
-      hasUser: !!user?.id,
-      workspaceId: selectedWorkspace?.workspace_id,
-      userId: user?.id
-    });
-
     if (!selectedWorkspace?.workspace_id || !user?.id) {
-      console.log('⚠️ [useNotifications] Workspace ou user não disponível, subscription não será criada');
+      console.log('⚠️ [useNotifications] Não criando subscription - dados faltando');
       return;
     }
 
-    const userId = user.id;
     const workspaceId = selectedWorkspace.workspace_id;
+    const userId = user.id;
     
-    console.log('🔔🔔🔔 [useNotifications] CRIANDO SUBSCRIPTION DE NOTIFICAÇÕES:', {
-      userId,
+    console.log('🔔 [useNotifications] Criando subscription de notificações:', {
       workspaceId,
-      channelName: `notifications-realtime-${workspaceId}-${userId}`
+      userId
     });
     
-    // Subscription para novas notificações e atualizações
-    const notificationsChannel = supabase
-      .channel(`notifications-realtime-${workspaceId}-${userId}`)
+    const channel = supabase
+      .channel(`notifications-${workspaceId}`)
       .on(
         'postgres_changes',
         {
@@ -117,12 +90,9 @@ export function useNotifications() {
           filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
-          // Filtrar user_id no cliente
+          // Filtrar apenas notificações do usuário atual
           if (payload.new.user_id === userId) {
-            console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA!', {
-              notification: payload.new,
-              timestamp: new Date().toISOString()
-            });
+            console.log('🔔🔔🔔 [useNotifications] NOVA NOTIFICAÇÃO!', payload.new);
             playNotificationSound();
             fetchNotifications();
           }
@@ -137,51 +107,72 @@ export function useNotifications() {
           filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
-          // Filtrar user_id no cliente
-          if (payload.new.user_id === userId) {
-            console.log('🔔 [Realtime] Notificação ATUALIZADA:', {
-              old: payload.old,
-              new: payload.new,
-              timestamp: new Date().toISOString()
-            });
+          // Filtrar apenas notificações do usuário atual
+          if (payload.new.user_id === userId || payload.old?.user_id === userId) {
+            console.log('🔔 [useNotifications] Notificação atualizada');
             fetchNotifications();
           }
         }
       )
-      .subscribe((status, err) => {
-        console.log('🔔🔔🔔 [Realtime Notifications] STATUS MUDOU:', {
-          status,
-          error: err,
-          timestamp: new Date().toISOString()
-        });
-        
-        if (err) {
-          console.error('🔔❌ [Realtime Notifications] ERRO NA SUBSCRIPTION:', err);
-        }
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('🔔✅✅✅ [Realtime Notifications] SUBSCRIPTION ATIVA E FUNCIONANDO!', {
-            channel: `notifications-realtime-${workspaceId}-${userId}`,
-            filters: {
-              workspace_id: workspaceId,
-              user_id: userId
-            }
-          });
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('🔔❌ [Realtime Notifications] ERRO NO CANAL - RECONECTANDO...');
-        } else if (status === 'CLOSED') {
-          console.error('🔔❌ [Realtime Notifications] CANAL FECHADO');
-        } else if (status === 'TIMED_OUT') {
-          console.error('🔔❌ [Realtime Notifications] TIMEOUT NA CONEXÃO');
-        }
+      .subscribe((status) => {
+        console.log('🔔 [useNotifications] Status da subscription:', status);
       });
 
     return () => {
-      console.log('🔕 [useNotifications] Removendo subscription de notificações');
-      supabase.removeChannel(notificationsChannel);
+      console.log('🔕 [useNotifications] Removendo subscription');
+      supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace?.workspace_id, user?.id, playNotificationSound, fetchNotifications]);
+  }, [selectedWorkspace?.workspace_id, user?.id]);
 
+  // Marcar conversa como lida
+  const markContactAsRead = async (conversationId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          status: 'read',
+          read_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('conversation_id', conversationId)
+        .eq('status', 'unread');
+
+      if (error) throw error;
+      
+      console.log('✅ [useNotifications] Notificações marcadas como lidas:', conversationId);
+      await fetchNotifications();
+    } catch (err) {
+      console.error('❌ [useNotifications] Erro ao marcar como lida:', err);
+    }
+  };
+
+  // Marcar todas como lidas
+  const markAllAsRead = async () => {
+    if (!user?.id || !selectedWorkspace?.workspace_id) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          status: 'read',
+          read_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('workspace_id', selectedWorkspace.workspace_id)
+        .eq('status', 'unread');
+
+      if (error) throw error;
+
+      console.log('✅ [useNotifications] Todas as notificações marcadas como lidas');
+      await fetchNotifications();
+    } catch (err) {
+      console.error('❌ [useNotifications] Erro ao marcar todas como lidas:', err);
+    }
+  };
+
+  // Utilitários
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -208,78 +199,13 @@ export function useNotifications() {
     return `${days}d`;
   };
 
-  const markContactAsRead = async (conversationId: string) => {
-    if (!user?.id) {
-      console.log('⚠️ [markContactAsRead] User não disponível');
-      return;
-    }
-
-    console.log('🔔 [markContactAsRead] Iniciando marcação para conversa:', conversationId, 'user:', user.id);
-
-    try {
-      // Marcar todas as notificações dessa conversa como lidas
-      const { data, error } = await supabase
-        .from('notifications')
-        .update({ 
-          status: 'read',
-          read_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .eq('conversation_id', conversationId)
-        .eq('status', 'unread')
-        .select();
-
-      if (error) {
-        console.error('❌ [markContactAsRead] Erro ao marcar notificação como lida:', error);
-        return;
-      }
-
-      console.log('✅ [markContactAsRead] Notificações marcadas como lidas:', {
-        conversationId,
-        count: data?.length || 0,
-        notifications: data
-      });
-      
-      // Forçar recarregamento imediato das notificações
-      await fetchNotifications();
-    } catch (err) {
-      console.error('❌ [markContactAsRead] Erro ao processar marcação de lida:', err);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    if (!user?.id || !selectedWorkspace?.workspace_id) return;
-
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ 
-          status: 'read',
-          read_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .eq('workspace_id', selectedWorkspace.workspace_id)
-        .eq('status', 'unread');
-
-      if (error) {
-        console.error('❌ Erro ao marcar todas como lidas:', error);
-        return;
-      }
-
-      console.log('✅ Todas as notificações marcadas como lidas');
-      fetchNotifications();
-    } catch (err) {
-      console.error('❌ Erro ao processar marcação de todas como lidas:', err);
-    }
-  };
-
   return {
     notifications,
     totalUnread: notifications.length,
+    markContactAsRead,
+    markAllAsRead,
     getAvatarInitials,
     getAvatarColor,
-    formatTimestamp,
-    markContactAsRead,
-    markAllAsRead
+    formatTimestamp
   };
 }
