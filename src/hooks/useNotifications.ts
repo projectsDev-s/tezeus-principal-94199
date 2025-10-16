@@ -20,17 +20,17 @@ export function useNotifications() {
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
   const { playNotificationSound } = useNotificationSound();
   const { selectedWorkspace } = useWorkspace();
-
-  // ✅ Criar hash para forçar recálculo quando unread_count mudar
-  const conversationsHash = useMemo(() => {
-    return conversations.map(c => `${c.id}:${c.unread_count}`).join('|');
+  
+  // ✅ Criar chave de versão baseada nos unread_counts para forçar recálculo
+  const conversationsVersion = useMemo(() => {
+    return conversations.map(c => `${c.id}:${c.unread_count || 0}`).join('|');
   }, [conversations]);
 
-  // ✅ Calcular notificações com dependência no hash
+  // ✅ Calcular notificações diretamente de conversations (sem hash intermediário)
   const { notifications, totalUnread, conversationUnreadMap } = useMemo(() => {
     console.log('🔔 Recalculando notificações...', { 
       conversationsCount: conversations.length,
-      hash: conversationsHash
+      conversationsData: conversations.map(c => ({ id: c.id, name: c.contact.name, unread: c.unread_count }))
     });
     
     const newNotifications: NotificationMessage[] = [];
@@ -74,7 +74,7 @@ export function useNotifications() {
       totalUnread: unreadCount,
       conversationUnreadMap: unreadMap
     };
-  }, [conversations, conversationsHash]);
+  }, [conversations, conversationsVersion]); // ✅ Adicionar conversationsVersion como dependência
 
   // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {
