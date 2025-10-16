@@ -157,7 +157,8 @@ serve(async (req) => {
         console.log('✅ Returning', workspaces?.length || 0, 'workspaces for master user');
         return successResponse({ 
           workspaces: workspaces || [], 
-          userRole: 'master' 
+          userRole: 'master',
+          userMemberships: [] // Master doesn't need memberships
         });
       }
 
@@ -187,6 +188,22 @@ serve(async (req) => {
 
       console.log('🔄 Transforming membership data...');
       
+      // Get connections count for each workspace
+      const workspaceIds = memberships?.map(m => m.workspace_id) || [];
+      
+      let connectionsCount: Record<string, number> = {};
+      if (workspaceIds.length > 0) {
+        const { data: connections } = await supabase
+          .from('connections')
+          .select('workspace_id')
+          .in('workspace_id', workspaceIds);
+        
+        connectionsCount = connections?.reduce((acc: Record<string, number>, conn) => {
+          acc[conn.workspace_id] = (acc[conn.workspace_id] || 0) + 1;
+          return acc;
+        }, {}) || {};
+      }
+      
       // Transform the data to match expected format
       const workspaces = memberships?.map(m => ({
         workspace_id: m.workspaces.id,
@@ -195,12 +212,12 @@ serve(async (req) => {
         cnpj: m.workspaces.cnpj,
         created_at: m.workspaces.created_at,
         updated_at: m.workspaces.updated_at,
-        connections_count: 0 // We don't need this for the basic functionality
+        connections_count: connectionsCount[m.workspaces.id] || 0
       })) || [];
 
       // Get user memberships for role calculation
       const userMemberships = memberships?.map(m => ({
-        workspaceId: m.workspace_id,
+        workspace_id: m.workspace_id,
         role: m.role
       })) || [];
 
