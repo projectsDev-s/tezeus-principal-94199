@@ -582,7 +582,8 @@ export const useWhatsAppConversations = () => {
             id: newMessage.id,
             conversation_id: newMessage.conversation_id,
             sender_type: newMessage.sender_type,
-            workspace_id: newMessage.workspace_id
+            workspace_id: newMessage.workspace_id,
+            read_at: newMessage.read_at // ✅ VERIFICAR se vem null ou não
           });
           
           setConversations(prev => {
@@ -623,6 +624,18 @@ export const useWhatsAppConversations = () => {
                   msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
                 ).length;
 
+                console.log('🔔 NOTIFICAÇÃO DEBUG:', {
+                  conversa: conv.contact.name,
+                  sender_type: newMessage.sender_type,
+                  is_contact: newMessage.sender_type === 'contact',
+                  read_at: newMessage.read_at,
+                  is_unread: !newMessage.read_at,
+                  actualUnreadCount,
+                  total_messages: newMessages.length,
+                  messages_de_contact: newMessages.filter(m => m.sender_type === 'contact').length,
+                  messages_nao_lidas: newMessages.filter(m => m.sender_type === 'contact' && !m.read_at).length
+                });
+
                 const updatedConv = {
                   ...conv,
                   messages: newMessages,
@@ -631,12 +644,12 @@ export const useWhatsAppConversations = () => {
                   last_activity_at: newMessage.created_at
                 };
 
-                console.log('✅ Mensagem adicionada:', {
+                console.log('✅ Mensagem adicionada e conversa atualizada:', {
                   conversation_id: conv.id,
                   message_id: newMessage.id,
                   sender_type: newMessage.sender_type,
                   total_messages: updatedConv.messages.length,
-                  unread_count: actualUnreadCount // ✅ Log do contador
+                  unread_count: actualUnreadCount
                 });
 
                 return updatedConv;
@@ -648,6 +661,16 @@ export const useWhatsAppConversations = () => {
             const sorted = updated.sort((a, b) => 
               new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
             );
+            
+            console.log('📊 Estado após INSERT:', {
+              total_conversas: sorted.length,
+              conversas_com_unread: sorted.filter(c => c.unread_count > 0).length,
+              unread_por_conversa: sorted.map(c => ({ 
+                nome: c.contact.name, 
+                unread: c.unread_count,
+                total_msgs: c.messages?.length || 0
+              }))
+            });
             
             return sorted;
           });
