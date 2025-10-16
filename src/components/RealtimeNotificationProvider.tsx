@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 
 interface RealtimeNotificationContextType {
@@ -13,17 +13,19 @@ interface RealtimeNotificationProviderProps {
 }
 
 export function RealtimeNotificationProvider({ children }: RealtimeNotificationProviderProps) {
-  // Usar o novo hook de notificações baseado na tabela dedicada
   const { notifications, totalUnread } = useNotifications();
 
-  console.log('🔔 [RealtimeNotificationProvider] Contexto atualizado:', {
-    totalUnread,
-    num_notifications: notifications.length,
-    notifications: notifications.map(n => ({
-      contact: n.contactName,
-      content: n.content
-    }))
-  });
+  useEffect(() => {
+    console.log('🔔🔔🔔 [RealtimeNotificationProvider] Notificações MUDARAM:', {
+      totalUnread,
+      num_notifications: notifications.length,
+      timestamp: new Date().toISOString(),
+      notifications: notifications.map(n => ({
+        contact: n.contactName,
+        content: n.content
+      }))
+    });
+  }, [notifications, totalUnread]);
 
   const contextValue = useMemo(() => ({
     totalUnread,
