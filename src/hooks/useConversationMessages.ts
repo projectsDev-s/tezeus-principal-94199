@@ -381,16 +381,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             content_preview: newMessage.content?.substring(0, 30)
           });
           
-          // ✅ IGNORAR mensagens de agente no INSERT
-          // Elas serão adicionadas otimisticamente no handleSendMessage
+          // ✅ IGNORAR COMPLETAMENTE mensagens de agente no INSERT
+          // Mensagens do agente são SEMPRE adicionadas otimisticamente em handleSendMessage
+          // O realtime INSERT só serve para confirmar o salvamento no backend
           if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ [INSERT] Ignorando mensagem de agent no INSERT (já foi adicionada otimisticamente)');
+            console.log('⏭️ [INSERT] IGNORADO - Mensagem de agente (já adicionada otimisticamente)');
             return;
           }
           
-          // Verificar se é do workspace atual
+          // Apenas processar mensagens de contato
           if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
-            console.log('✅ [INSERT] Workspace correto, chamando addMessage...');
+            console.log('✅ [INSERT] Mensagem de contato - adicionando:', newMessage.id);
             addMessage(newMessage);
           } else {
             console.log('❌ [INSERT] Workspace diferente, ignorando mensagem');
@@ -421,53 +422,27 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             return;
           }
           
-          // Para mensagens de agente, gerenciar duplicação
-          if (updatedMessage.sender_type === 'agent') {
-            setMessages(prev => {
-              // ✅ BUSCAR por ID real
-              const existingRealIndex = prev.findIndex(m => m.id === updatedMessage.id);
-              
-              if (existingRealIndex !== -1) {
-                // ✅ Já existe com ID real → APENAS ATUALIZAR STATUS
-                console.log(`🔄 [UPDATE] Atualizando status da mensagem existente: ${updatedMessage.id} (${updatedMessage.status})`);
-                const updated = [...prev];
-                // Apenas atualizar campos de status, manter o resto
-                updated[existingRealIndex] = {
-                  ...updated[existingRealIndex],
-                  status: updatedMessage.status,
-                  delivered_at: updatedMessage.delivered_at,
-                  read_at: updatedMessage.read_at
-                };
-                return updated;
-              }
-              
-              // Se não existe com ID real, procurar mensagem temporária
-              const existingTempIndex = prev.findIndex(m => 
-                m.id.startsWith('temp-') && 
-                m.conversation_id === updatedMessage.conversation_id &&
-                m.content === updatedMessage.content &&
-                m.message_type === updatedMessage.message_type
-              );
-              
-              if (existingTempIndex !== -1) {
-                // ✅ Existe mensagem temporária → SUBSTITUIR pela real
-                console.log(`🔄 [UPDATE] Substituindo temporária pela real:`, {
-                  tempId: prev[existingTempIndex].id,
-                  realId: updatedMessage.id
-                });
-                const updated = [...prev];
-                updated[existingTempIndex] = updatedMessage;
-                return updated;
-              }
-              
-              // ⏭️ Se não existe localmente, não adicionar (evita duplicação)
-              console.log(`⏭️ [UPDATE] Mensagem não existe localmente, ignorando (${updatedMessage.id})`);
-              return prev;
-            });
-          } else {
-            // Para mensagens de contato, apenas atualizar
-            updateMessage(updatedMessage.id, updatedMessage);
-          }
+          // ✅ APENAS ATUALIZAR STATUS DE MENSAGENS EXISTENTES (não adicionar novas)
+          setMessages(prev => {
+            const existingIndex = prev.findIndex(m => m.id === updatedMessage.id);
+            
+            if (existingIndex !== -1) {
+              // ✅ Mensagem existe → Atualizar apenas status/timestamps
+              console.log(`🔄 [UPDATE] Atualizando status: ${updatedMessage.id} → ${updatedMessage.status}`);
+              const updated = [...prev];
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                status: updatedMessage.status,
+                delivered_at: updatedMessage.delivered_at,
+                read_at: updatedMessage.read_at
+              };
+              return updated;
+            }
+            
+            // ⏭️ Mensagem não existe → IGNORAR (evita duplicação)
+            console.log(`⏭️ [UPDATE] Mensagem não existe localmente, ignorando: ${updatedMessage.id}`);
+            return prev;
+          });
         }
       )
       .subscribe();
