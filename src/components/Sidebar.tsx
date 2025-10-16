@@ -173,41 +173,9 @@ export function Sidebar({
     icon: <Package className="w-5 h-5" />,
     group: "crm"
   }, {
-    id: "automacoes-agente",
-    label: "DS Agente",
-    icon: <BrainCircuit className="w-5 h-5" />,
-    group: "administracao"
-  }, {
     id: "automacoes-filas",
     label: "Filas",
     icon: <Users className="w-5 h-5" />,
-    group: "administracao"
-  }, {
-    id: "parceiros-clientes",
-    label: "Clientes",
-    icon: <Users className="w-5 h-5" />,
-    group: "parceiros"
-  }, {
-    id: "administracao-usuarios",
-    label: "Usuários",
-    icon: <Users className="w-5 h-5" />,
-    group: "administracao"
-  },
-  // {
-  //  id: "administracao-financeiro",
-  // label: "Financeiro",
-  // icon: <DollarSign className="w-5 h-5" />,
-  //group: "administracao"
-  //  },
-  {
-    id: "administracao-dashboard",
-    label: "Dashboard",
-    icon: <Settings className="w-5 h-5" />,
-    group: "administracao"
-  }, {
-    id: "administracao-configuracoes",
-    label: "Configurações",
-    icon: <Settings className="w-5 h-5" />,
     group: "administracao"
   }];
   const toggleGroup = (group: string) => {
