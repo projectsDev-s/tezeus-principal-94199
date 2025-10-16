@@ -36,6 +36,7 @@ interface Activity {
   id: string;
   type: string;
   subject: string;
+  description?: string | null;
   scheduled_for: string;
   responsible_id: string;
   is_completed: boolean;
@@ -1130,47 +1131,152 @@ export function DealDetailsModal({
                 </div>
                 
                 {pendingActivities.length > 0 ? <div className="space-y-3">
-                    {pendingActivities.map(activity => <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                {activity.type}
-                              </Badge>
-                              <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                                {activity.users?.name}
-                              </span>
-                            </div>
-                            <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
-                              {activity.subject}
-                            </h4>
-                            <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
-                        locale: ptBR
-                      })}
-                            </p>
-                            
-                            {/* Imagens anexadas */}
-                            {activity.attachment_url && (
-                              <div className="mt-3">
-                                <img 
-                                  src={activity.attachment_url} 
-                                  alt={activity.attachment_name || "Anexo"}
-                                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
-                                  onClick={() => setSelectedAttachment({ 
-                                    url: activity.attachment_url!, 
-                                    name: activity.attachment_name || "Anexo" 
-                                  })}
+                    {pendingActivities.map(activity => {
+                      const [isEditingActivity, setIsEditingActivity] = useState(false);
+                      const [editActivityForm, setEditActivityForm] = useState({
+                        subject: activity.subject,
+                        description: activity.description || "",
+                        scheduled_for: activity.scheduled_for
+                      });
+
+                      const handleSaveActivity = async () => {
+                        try {
+                          const { error } = await supabase
+                            .from('activities')
+                            .update({
+                              subject: editActivityForm.subject,
+                              description: editActivityForm.description,
+                              scheduled_for: editActivityForm.scheduled_for
+                            })
+                            .eq('id', activity.id);
+
+                          if (error) throw error;
+
+                          toast({
+                            title: "Atividade atualizada",
+                            description: "As alterações foram salvas com sucesso."
+                          });
+
+                          setIsEditingActivity(false);
+                          fetchActivities(contactId);
+                        } catch (error) {
+                          console.error('Erro ao atualizar atividade:', error);
+                          toast({
+                            title: "Erro",
+                            description: "Não foi possível atualizar a atividade.",
+                            variant: "destructive"
+                          });
+                        }
+                      };
+
+                      return (
+                        <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                          {isEditingActivity ? (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                                  Assunto
+                                </label>
+                                <Input
+                                  value={editActivityForm.subject}
+                                  onChange={(e) => setEditActivityForm({...editActivityForm, subject: e.target.value})}
+                                  className={isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : ""}
                                 />
                               </div>
-                            )}
-                          </div>
-                          <Button size="sm" variant="outline" onClick={() => handleCompleteActivity(activity.id)} className="ml-4">
-                            <Check className="w-4 h-4 mr-1" />
-                            Concluir
-                          </Button>
+                              <div className="space-y-2">
+                                <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                                  Descrição
+                                </label>
+                                <Textarea
+                                  value={editActivityForm.description}
+                                  onChange={(e) => setEditActivityForm({...editActivityForm, description: e.target.value})}
+                                  className={isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : ""}
+                                  rows={3}
+                                />
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setIsEditingActivity(false)}
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={handleSaveActivity}
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Salvar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {activity.type}
+                                    </Badge>
+                                    <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                                      {activity.users?.name}
+                                    </span>
+                                  </div>
+                                  <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
+                                    {activity.subject}
+                                  </h4>
+                                  <p className={cn("text-sm mt-1", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                                    {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
+                                      locale: ptBR
+                                    })}
+                                  </p>
+                                  {activity.description && (
+                                    <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                                      {activity.description}
+                                    </p>
+                                  )}
+                                  
+                                  {/* Imagens anexadas */}
+                                  {activity.attachment_url && (
+                                    <div className="mt-3">
+                                      <img 
+                                        src={activity.attachment_url} 
+                                        alt={activity.attachment_name || "Anexo"}
+                                        className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                                        onClick={() => setSelectedAttachment({ 
+                                          url: activity.attachment_url!, 
+                                          name: activity.attachment_name || "Anexo" 
+                                        })}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => setIsEditingActivity(true)}
+                                >
+                                  <FileText className="w-4 h-4 mr-1" />
+                                  Editar
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleCompleteActivity(activity.id)}
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Concluir
+                                </Button>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </div>)}
+                      );
+                    })}
                   </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                     <p>Nenhuma atividade pendente encontrada</p>
                   </div>}
