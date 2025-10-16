@@ -62,23 +62,27 @@ export function useWorkspaceRole(): WorkspaceRoleHook {
           userRoleFromAuth: userRole
         });
 
-        if (memberships && memberships.length > 0) {
-          setUserWorkspaces(memberships.map((m: any) => ({ workspaceId: m.workspace_id, role: m.role as WorkspaceRole })));
+        // IMPORTANTE: Se o usuário tem profile admin no sistema, ele é admin globalmente
+        if (backendUserRole === 'master') {
+          setUserWorkspaceRole('master');
+          setUserWorkspaces(memberships.map((m: any) => ({ workspaceId: m.workspaceId, role: 'master' })));
+        } else if (backendUserRole === 'admin') {
+          // Se o profile global é admin, o usuário é admin em todos os workspaces
+          setUserWorkspaceRole('admin');
+          setUserWorkspaces(memberships.map((m: any) => ({ 
+            workspaceId: m.workspaceId, 
+            role: 'admin' // Força admin mesmo que o membership seja user
+          })));
+        } else if (memberships && memberships.length > 0) {
+          setUserWorkspaces(memberships.map((m: any) => ({ workspaceId: m.workspaceId, role: m.role as WorkspaceRole })));
           
-          // Check if user is master in any workspace or globally
-          const isMaster = backendUserRole === 'master' || memberships.some((m: any) => m.role === 'master');
-          if (isMaster) {
-            setUserWorkspaceRole('master');
-          } else {
-            // Set the highest role
-            const hasAdmin = memberships.some((m: any) => m.role === 'admin');
-            const finalRole = hasAdmin ? 'admin' : 'user';
-            console.log('🔍 useWorkspaceRole - Setting role:', { hasAdmin, finalRole });
-            setUserWorkspaceRole(finalRole);
-          }
+          // Para usuários não-admin, usa o role do membership
+          const hasAdmin = memberships.some((m: any) => m.role === 'admin');
+          const finalRole = hasAdmin ? 'admin' : 'user';
+          console.log('🔍 useWorkspaceRole - Setting role from memberships:', { hasAdmin, finalRole });
+          setUserWorkspaceRole(finalRole);
         } else {
-          // Check if user is globally master
-          setUserWorkspaceRole(backendUserRole === 'master' ? 'master' : null);
+          setUserWorkspaceRole(null);
           setUserWorkspaces([]);
         }
       } catch (error) {
