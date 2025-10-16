@@ -552,10 +552,25 @@ export const useWhatsAppConversations = () => {
         (payload) => {
           const newMessage = payload.new as any;
           
-          // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
-          if (newMessage.workspace_id !== workspaceId) {
+          console.log('📨 [INSERT useWhatsAppConversations] Nova mensagem recebida:', {
+            id: newMessage.id,
+            sender_type: newMessage.sender_type,
+            workspace_id: newMessage.workspace_id
+          });
+          
+          // ✅ IGNORAR mensagens de agente - elas são tratadas otimisticamente
+          if (newMessage.sender_type === 'agent') {
+            console.log('⏭️ [INSERT useWhatsAppConversations] IGNORANDO mensagem de agent (otimista)');
             return;
           }
+          
+          // ✅ Filtrar por workspace_id para garantir que apenas mensagens do workspace atual sejam processadas
+          if (newMessage.workspace_id !== workspaceId) {
+            console.log('⏭️ [INSERT useWhatsAppConversations] Workspace diferente, ignorando');
+            return;
+          }
+          
+          console.log('✅ [INSERT useWhatsAppConversations] Processando mensagem de contact');
           
           // ✅ CORREÇÃO 1: Ignorar mensagens de agent no INSERT (elas vêm via UPDATE)
           if (newMessage.sender_type === 'agent') {
