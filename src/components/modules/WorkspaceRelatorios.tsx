@@ -1,103 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MessageCircle, Users, Activity, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, MessageCircle, Users, Activity, TrendingUp, RefreshCw } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface WorkspaceStats {
-  workspace_id: string;
-  workspace_name: string;
-  connections_count: number;
-  conversations_count: number;
-  messages_count: number;
-  active_conversations: number;
-}
+import { useRelatorios } from "@/hooks/useRelatorios";
 
 export function WorkspaceRelatorios() {
-  const { selectedWorkspace, workspaces } = useWorkspace();
-  const [stats, setStats] = useState<WorkspaceStats[]>([]);
+  const { workspaces } = useWorkspace();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchStats = async () => {
-    setIsLoading(true);
-    try {
-      // Filter workspaces based on user access (Masters see all, Admins see only their workspace)
-      const userData = localStorage.getItem('currentUser');
-      const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (!currentUserData?.id) {
-        console.error('No user data available');
-        return;
-      }
-
-      let workspacesQuery = supabase.from('workspaces').select('id, name');
-      
-      // If user is not master and selectedWorkspace is available, filter by workspace
-      if (currentUserData.profile !== 'master' && selectedWorkspace) {
-        workspacesQuery = workspacesQuery.eq('id', selectedWorkspace.workspace_id);
-      }
-
-      const { data: workspacesData, error: workspacesError } = await workspacesQuery;
-
-      if (workspacesError) throw workspacesError;
-
-      const statsPromises = workspacesData.map(async (workspace) => {
-        // Get connections count
-        const { count: connectionsCount } = await supabase
-          .from('connections')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id);
-
-        // Get conversations count
-        const { count: conversationsCount } = await supabase
-          .from('conversations')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id);
-
-        // Get messages count
-        const { count: messagesCount } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id);
-
-        // Get active conversations (last 24h)
-        const { count: activeConversations } = await supabase
-          .from('conversations')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id)
-          .gte('last_activity_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-        return {
-          workspace_id: workspace.id,
-          workspace_name: workspace.name,
-          connections_count: connectionsCount || 0,
-          conversations_count: conversationsCount || 0,
-          messages_count: messagesCount || 0,
-          active_conversations: activeConversations || 0,
-        };
-      });
-
-      const resolvedStats = await Promise.all(statsPromises);
-      setStats(resolvedStats);
-    } catch (error) {
-      console.error('Error fetching workspace stats:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  
+  const { data: stats, isLoading, isError, error, refetch } = useRelatorios();
 
   const filteredStats = selectedWorkspaceId === 'all' 
-    ? stats 
-    : stats.filter(stat => stat.workspace_id === selectedWorkspaceId);
+    ? stats || []
+    : (stats || []).filter(stat => stat.workspace_id === selectedWorkspaceId);
 
-  const totalStats = stats.reduce((acc, stat) => ({
+  const totalStats = (stats || []).reduce((acc, stat) => ({
     connections_count: acc.connections_count + stat.connections_count,
     conversations_count: acc.conversations_count + stat.conversations_count,
     messages_count: acc.messages_count + stat.messages_count,
@@ -108,6 +28,30 @@ export function WorkspaceRelatorios() {
     messages_count: 0,
     active_conversations: 0,
   });
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Erro ao Carregar Relatórios
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {error?.message || "Ocorreu um erro ao buscar os dados dos relatórios."}
+            </p>
+            <Button onClick={() => refetch()} variant="default" className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -140,19 +84,30 @@ export function WorkspaceRelatorios() {
             Métricas de performance e atividade por workspace
           </p>
         </div>
-        <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtrar por empresa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as empresas</SelectItem>
-            {workspaces.map((workspace) => (
-              <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                {workspace.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Atualizar
+          </Button>
+          <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as empresas</SelectItem>
+              {workspaces.map((workspace) => (
+                <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                  {workspace.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {selectedWorkspaceId === 'all' && (
@@ -255,7 +210,7 @@ export function WorkspaceRelatorios() {
       {filteredStats.length === 0 && (
         <div className="text-center py-12">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhum dados encontrados</h3>
+          <h3 className="text-lg font-medium mb-2">Nenhum dado encontrado</h3>
           <p className="text-muted-foreground">
             {selectedWorkspaceId === 'all' 
               ? "Não há empresas com dados para exibir"
