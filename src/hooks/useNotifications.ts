@@ -22,14 +22,6 @@ export function useNotifications() {
   const { user } = useAuth();
   const { playNotificationSound } = useNotificationSound();
 
-  // Log inicial para debug
-  console.log('🔍 [useNotifications] Hook inicializado:', {
-    hasWorkspace: !!selectedWorkspace?.workspace_id,
-    workspaceId: selectedWorkspace?.workspace_id,
-    hasUser: !!user?.id,
-    userId: user?.id
-  });
-
   // Buscar notificações
   const fetchNotifications = async () => {
     if (!selectedWorkspace?.workspace_id || !user?.id) {
