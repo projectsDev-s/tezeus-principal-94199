@@ -25,11 +25,11 @@ async function fetchRelatorios(
 
   console.log('📊 Relatórios: Iniciando fetch', { userId, userEmail, isMaster, selectedWorkspaceId });
 
-  // 1. Buscar workspaces usando a edge function COM HEADERS
+  // 1. Buscar workspaces usando a edge function COM HEADERS CORRETOS
   const { data: workspacesResponse, error: workspacesError } = await supabase.functions.invoke('list-user-workspaces', {
     headers: {
-      'x-user-id': userId,
-      'x-user-email': userEmail,
+      'x-system-user-id': userId,
+      'x-system-user-email': userEmail,
     }
   });
 
