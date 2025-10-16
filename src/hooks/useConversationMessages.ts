@@ -305,7 +305,11 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     console.log('🔄 updateMessage chamado:', { messageId, updates });
     
     setMessages(prevMessages => {
-      const messageIndex = prevMessages.findIndex(m => m.id === messageId);
+      // ✅ Atualizar por ID OU por external_id
+      const messageIndex = prevMessages.findIndex(m => 
+        m.id === messageId || m.external_id === messageId
+      );
+      
       if (messageIndex === -1) {
         console.log('⚠️ Mensagem não encontrada para atualizar:', messageId);
         return prevMessages;
@@ -397,12 +401,26 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           
           console.log('📨 [INSERT useConversationMessages] Nova mensagem recebida via Realtime:', {
             id: newMessage.id,
+            external_id: newMessage.external_id,
             sender_type: newMessage.sender_type,
             workspace_id: newMessage.workspace_id,
             current_workspace: selectedWorkspace.workspace_id,
             conversation_id: newMessage.conversation_id,
             content_preview: newMessage.content?.substring(0, 30)
           });
+          
+          // ✅ DEDUPLICAÇÃO: Ignorar se já existe mensagem com mesmo external_id
+          if (newMessage.external_id) {
+            const isDuplicate = messages.some(m => 
+              m.external_id === newMessage.external_id ||
+              m.id === newMessage.external_id
+            );
+            
+            if (isDuplicate) {
+              console.log(`⏭️ [INSERT] Mensagem duplicada ignorada (external_id: ${newMessage.external_id})`);
+              return;
+            }
+          }
           
           // ✅ PROCESSAR TODAS as mensagens (contact E agent)
           console.log('✅ [INSERT useConversationMessages] Processando mensagem:', {

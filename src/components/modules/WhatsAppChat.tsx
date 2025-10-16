@@ -270,12 +270,13 @@ export function WhatsAppChat({
     setMessageText('');
     
     try {
-      // ✅ ETAPA 2: Gerar clientMessageId único
+      // ✅ OPÇÃO 3: Gerar clientMessageId único (será usado como external_id)
       const clientMessageId = crypto.randomUUID();
       
-      // Criar mensagem otimista com status "sending"
+      // ✅ Criar mensagem otimista com external_id = clientMessageId
       const optimisticMessage = {
         id: `temp-${Date.now()}`,
+        external_id: clientMessageId, // ✅ MESMO ID que será salvo no banco
         conversation_id: selectedConversation.id,
         content: textToSend,
         message_type: 'text' as const,
@@ -297,7 +298,7 @@ export function WhatsAppChat({
           message_type: 'text',
           sender_id: user?.id,
           sender_type: 'agent',
-          clientMessageId: clientMessageId // ✅ ETAPA 2: Enviar clientMessageId
+          clientMessageId: clientMessageId // ✅ Backend vai usar isso como external_id
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -310,34 +311,19 @@ export function WhatsAppChat({
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
       }
 
-      // ✅ ETAPA 2: DEBUG - Verificar resposta do backend
-      console.log('📨 [ETAPA 2] Resposta do backend:', {
-        sendResult,
-        hasMessageId: !!sendResult.message?.id,
+      console.log('✅ [handleSendMessage] Mensagem enviada com sucesso:', {
+        clientMessageId,
+        backendMessageId: sendResult.message?.id,
         optimisticId: optimisticMessage.id
       });
 
-      // ✅ ETAPA 2: DEBUG - Verificar estado atual das mensagens
-      console.log('📋 [ETAPA 2] Estado atual de mensagens antes da substituição:', {
-        totalMessages: messages.length,
-        temporaryMessages: messages.filter(m => m.id.startsWith('temp-')).map(m => ({ id: m.id, content: m.content })),
-        messageToReplace: messages.find(m => m.id === optimisticMessage.id)
-      });
-
-      // ✅ REMOVER mensagem otimista e confiar no Realtime INSERT
+      // ✅ NÃO remover mensagem otimista - o INSERT será ignorado pela deduplicação
+      // ✅ O UPDATE vai atualizar a mensagem otimista via external_id
       if (sendResult.message?.id) {
-        console.log('✅ [handleSendMessage] Removendo mensagem otimista:', {
-          tempId: optimisticMessage.id,
-          realIdExpected: sendResult.message.id
+        updateMessage(clientMessageId, {
+          id: sendResult.message.id,
+          status: 'sent'
         });
-        
-        // ✅ CRÍTICO: Remover a mensagem otimista
-        removeMessage(optimisticMessage.id);
-        
-        // O Realtime INSERT irá adicionar a mensagem real automaticamente
-      } else {
-        console.warn('⚠️ Backend não retornou message.id!');
-        updateMessage(optimisticMessage.id, { status: 'sent' });
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
