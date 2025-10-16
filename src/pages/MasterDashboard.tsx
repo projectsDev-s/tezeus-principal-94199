@@ -16,6 +16,7 @@ import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoCo
 import { WebhooksEvolutionConfigMaster } from '@/components/modules/master/WebhooksEvolutionConfigMaster';
 import { EvolutionApiConfigMaster } from '@/components/modules/master/EvolutionApiConfigMaster';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WorkspaceRelatorios } from '@/components/modules/WorkspaceRelatorios';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -148,6 +149,7 @@ export default function MasterDashboard() {
                 {activePage === 'filas' && 'Gerencie filas de atendimento do sistema'}
                 {activePage === 'usuarios' && 'Administre todos os usuários do sistema'}
                 {activePage === 'configuracoes' && 'Configurações globais do sistema'}
+                {activePage === 'reports' && 'Visualize métricas e estatísticas de todas as empresas'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -248,6 +250,7 @@ export default function MasterDashboard() {
           {activePage === 'ds-agent' && <DSAgenteMaster />}
           {activePage === 'filas' && <AutomacoesFilasMaster />}
           {activePage === 'usuarios' && <AdministracaoUsuarios />}
+          {activePage === 'reports' && <WorkspaceRelatorios />}
           {activePage === 'configuracoes' && (
             <div className="space-y-6">
               <Tabs defaultValue="personalizacao">
