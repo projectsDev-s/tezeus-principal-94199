@@ -16,6 +16,8 @@ interface WhatsAppMessage {
   mime_type?: string;
   created_at: string;
   status?: string; // Status pode vir do Evolution como 'DELIVERY_ACK', 'READ_ACK', etc.
+  delivered_at?: string;
+  read_at?: string;
   external_id?: string;
   metadata?: any;
   workspace_id?: string;
@@ -356,7 +358,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return;
     }
 
-    // Setting up real-time subscription for conversation
+    console.log('🔌 Criando subscription para conversa:', currentConversationId);
 
     const channel = supabase
       .channel(`conversation-messages-${currentConversationId}`)
@@ -381,9 +383,9 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           });
           
           // ✅ IGNORAR mensagens de agente no INSERT
-          // Elas serão adicionadas via UPDATE quando status = 'sent'
+          // Elas serão adicionadas otimisticamente no handleSendMessage
           if (newMessage.sender_type === 'agent') {
-            console.log('⏭️ [INSERT] Ignorando mensagem de agent (será adicionada via UPDATE)');
+            console.log('⏭️ [INSERT] Ignorando mensagem de agent no INSERT (já foi adicionada otimisticamente)');
             return;
           }
           
@@ -415,56 +417,57 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           });
           
           // Verificar se é do workspace atual
-          if (updatedMessage.workspace_id === selectedWorkspace.workspace_id) {
-            // Para mensagens de agente, evitar duplicação
-            if (updatedMessage.sender_type === 'agent') {
-              setMessages(prev => {
-                // ✅ BUSCAR por ID real OU por mensagem temporária com mesmo conteúdo
-                const existingRealIndex = prev.findIndex(m => m.id === updatedMessage.id);
-                
-                if (existingRealIndex !== -1) {
-                  // ✅ Já existe com ID real → APENAS ATUALIZAR (não adicionar novamente)
-                  console.log(`🔄 [UPDATE] Atualizando mensagem existente: ${updatedMessage.id}`);
-                  const updated = [...prev];
-                  updated[existingRealIndex] = updatedMessage;
-                  return updated;
-                }
-                
-                // Se não existe com ID real, procurar mensagem temporária
-                const existingTempIndex = prev.findIndex(m => 
-                  m.id.startsWith('temp-') && 
-                  m.conversation_id === updatedMessage.conversation_id &&
-                  m.content === updatedMessage.content &&
-                  m.message_type === updatedMessage.message_type
-                );
-                
-                if (existingTempIndex !== -1) {
-                  // ✅ Existe mensagem temporária → SUBSTITUIR pela real
-                  console.log(`🔄 [UPDATE] Substituindo temporária pela real:`, {
-                    tempId: prev[existingTempIndex].id,
-                    realId: updatedMessage.id
-                  });
-                  const updated = [...prev];
-                  updated[existingTempIndex] = updatedMessage;
-                  return updated;
-                }
-                
-                // ✅ Se não existe nem com ID real nem temporária, adicionar APENAS se status=sent/SENT
-                if (updatedMessage.status === 'sent' || updatedMessage.status === 'SENT') {
-                  console.log(`✅ [UPDATE] Adicionando nova mensagem agent: ${updatedMessage.id}`);
-                  return [...prev, updatedMessage].sort((a, b) => 
-                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-                  );
-                }
-                
-                // ⏭️ Caso contrário, ignorar (não adicionar nem atualizar)
-                console.log(`⏭️ [UPDATE] Ignorando mensagem que não existe localmente (status: ${updatedMessage.status})`);
-                return prev;
-              });
-            } else {
-              // Para mensagens de contato, apenas atualizar
-              updateMessage(updatedMessage.id, updatedMessage);
-            }
+          if (updatedMessage.workspace_id !== selectedWorkspace.workspace_id) {
+            console.log('❌ [UPDATE] Workspace diferente, ignorando');
+            return;
+          }
+          
+          // Para mensagens de agente, gerenciar duplicação
+          if (updatedMessage.sender_type === 'agent') {
+            setMessages(prev => {
+              // ✅ BUSCAR por ID real
+              const existingRealIndex = prev.findIndex(m => m.id === updatedMessage.id);
+              
+              if (existingRealIndex !== -1) {
+                // ✅ Já existe com ID real → APENAS ATUALIZAR STATUS
+                console.log(`🔄 [UPDATE] Atualizando status da mensagem existente: ${updatedMessage.id} (${updatedMessage.status})`);
+                const updated = [...prev];
+                // Apenas atualizar campos de status, manter o resto
+                updated[existingRealIndex] = {
+                  ...updated[existingRealIndex],
+                  status: updatedMessage.status,
+                  delivered_at: updatedMessage.delivered_at,
+                  read_at: updatedMessage.read_at
+                };
+                return updated;
+              }
+              
+              // Se não existe com ID real, procurar mensagem temporária
+              const existingTempIndex = prev.findIndex(m => 
+                m.id.startsWith('temp-') && 
+                m.conversation_id === updatedMessage.conversation_id &&
+                m.content === updatedMessage.content &&
+                m.message_type === updatedMessage.message_type
+              );
+              
+              if (existingTempIndex !== -1) {
+                // ✅ Existe mensagem temporária → SUBSTITUIR pela real
+                console.log(`🔄 [UPDATE] Substituindo temporária pela real:`, {
+                  tempId: prev[existingTempIndex].id,
+                  realId: updatedMessage.id
+                });
+                const updated = [...prev];
+                updated[existingTempIndex] = updatedMessage;
+                return updated;
+              }
+              
+              // ⏭️ Se não existe localmente, não adicionar (evita duplicação)
+              console.log(`⏭️ [UPDATE] Mensagem não existe localmente, ignorando (${updatedMessage.id})`);
+              return prev;
+            });
+          } else {
+            // Para mensagens de contato, apenas atualizar
+            updateMessage(updatedMessage.id, updatedMessage);
           }
         }
       )
