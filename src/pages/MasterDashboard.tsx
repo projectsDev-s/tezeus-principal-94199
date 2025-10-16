@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
 import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
 import { AdministracaoUsuarios } from '@/components/modules/AdministracaoUsuarios';
+import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoConfiguracoes';
 import { WebhooksEvolutionConfigMaster } from '@/components/modules/master/WebhooksEvolutionConfigMaster';
 import { EvolutionApiConfigMaster } from '@/components/modules/master/EvolutionApiConfigMaster';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -247,22 +248,26 @@ export default function MasterDashboard() {
           {activePage === 'ds-agent' && <DSAgenteMaster />}
           {activePage === 'filas' && <AutomacoesFilasMaster />}
           {activePage === 'usuarios' && <AdministracaoUsuarios />}
-              {activePage === 'configuracoes' && (
-                <div className="space-y-6">
-                  <Tabs defaultValue="webhooks">
-                    <TabsList>
-                      <TabsTrigger value="webhooks">Webhooks Evolution</TabsTrigger>
-                      <TabsTrigger value="evolution-api">Evolution API</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="webhooks">
-                      <WebhooksEvolutionConfigMaster />
-                    </TabsContent>
-                    <TabsContent value="evolution-api">
-                      <EvolutionApiConfigMaster />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              )}
+          {activePage === 'configuracoes' && (
+            <div className="space-y-6">
+              <Tabs defaultValue="personalizacao">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
+                  <TabsTrigger value="webhooks">Webhooks Evolution</TabsTrigger>
+                  <TabsTrigger value="evolution-api">Evolution API</TabsTrigger>
+                </TabsList>
+                <TabsContent value="personalizacao">
+                  <AdministracaoConfiguracoes />
+                </TabsContent>
+                <TabsContent value="webhooks">
+                  <WebhooksEvolutionConfigMaster />
+                </TabsContent>
+                <TabsContent value="evolution-api">
+                  <EvolutionApiConfigMaster />
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
         </main>
 
         {/* Footer */}
