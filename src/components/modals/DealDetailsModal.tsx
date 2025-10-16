@@ -1465,7 +1465,16 @@ export function DealDetailsModal({
                             Telefone
                           </p>
                           <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            {contactData.phone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3')}
+                            {(() => {
+                              const phone = contactData.phone;
+                              // Se começa com 55 (DDI Brasil)
+                              if (phone.startsWith('55')) {
+                                // +55 21 98765-4321 ou +55 21 8765-4321
+                                return phone.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 $1 $2-$3');
+                              }
+                              // Formato padrão (DDD) 9XXXX-XXXX
+                              return phone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3');
+                            })()}
                           </p>
                         </div>
                       </div>
