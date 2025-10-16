@@ -618,38 +618,34 @@ export const useWhatsAppConversations = () => {
                   created_at: newMessage.created_at
                 };
 
-                // ✅ CRÍTICO: Calcular unread_count baseado nas mensagens reais
+                // ✅ CORREÇÃO: NÃO recalcular unread_count aqui - deixar o backend fazer via trigger
+                // O evento UPDATE da tabela conversations virá com o valor correto
                 const newMessages = [...conv.messages, messageObj];
-                const actualUnreadCount = newMessages.filter(
-                  msg => msg.sender_type === 'contact' && (!msg.read_at || msg.read_at === null)
-                ).length;
 
-                console.log('🔔 NOTIFICAÇÃO DEBUG:', {
+                console.log('📨 [INSERT] Nova mensagem adicionada:', {
                   conversa: conv.contact.name,
                   sender_type: newMessage.sender_type,
                   is_contact: newMessage.sender_type === 'contact',
                   read_at: newMessage.read_at,
-                  is_unread: !newMessage.read_at,
-                  actualUnreadCount,
-                  total_messages: newMessages.length,
-                  messages_de_contact: newMessages.filter(m => m.sender_type === 'contact').length,
-                  messages_nao_lidas: newMessages.filter(m => m.sender_type === 'contact' && !m.read_at).length
+                  current_unread_count: conv.unread_count,
+                  aguardando_update_do_backend: true
                 });
 
                 const updatedConv = {
                   ...conv,
                   messages: newMessages,
-                  unread_count: actualUnreadCount, // ✅ Atualizar contador
+                  // ✅ MANTER unread_count atual - o UPDATE da conversa virá logo em seguida
+                  unread_count: conv.unread_count,
                   last_message: [lastMessage],
                   last_activity_at: newMessage.created_at
                 };
 
-                console.log('✅ Mensagem adicionada e conversa atualizada:', {
+                console.log('✅ Mensagem adicionada (aguardando UPDATE de conversations para atualizar unread_count):', {
                   conversation_id: conv.id,
                   message_id: newMessage.id,
                   sender_type: newMessage.sender_type,
                   total_messages: updatedConv.messages.length,
-                  unread_count: actualUnreadCount
+                  unread_count_mantido: conv.unread_count
                 });
 
                 return updatedConv;
@@ -916,7 +912,7 @@ export const useWhatsAppConversations = () => {
                 const updatedConversation = { 
                   ...conv, 
                   agente_ativo: updatedConv.agente_ativo ?? conv.agente_ativo,
-                  unread_count: updatedConv.unread_count ?? conv.unread_count,
+                  unread_count: updatedConv.unread_count ?? conv.unread_count, // ✅ Fonte da verdade do backend
                   last_activity_at: updatedConv.last_activity_at ?? conv.last_activity_at,
                   status: updatedConv.status ?? conv.status,
                   evolution_instance: updatedConv.evolution_instance ?? conv.evolution_instance,
@@ -924,12 +920,14 @@ export const useWhatsAppConversations = () => {
                   ...(updatedConv.priority !== undefined && { priority: updatedConv.priority })
                 };
                 
-                console.log('📝 Conversa atualizada:', {
+                console.log('✅ [UPDATE conversations] Conversa atualizada com unread_count do backend:', {
                   id: conv.id,
+                  contact: conv.contact.name,
                   old_last_activity: conv.last_activity_at,
                   new_last_activity: updatedConversation.last_activity_at,
-                  old_unread: conv.unread_count,
-                  new_unread: updatedConversation.unread_count
+                  old_unread_LOCAL: conv.unread_count,
+                  new_unread_BACKEND: updatedConversation.unread_count,
+                  fonte: 'trigger do backend'
                 });
                 
                 return updatedConversation;

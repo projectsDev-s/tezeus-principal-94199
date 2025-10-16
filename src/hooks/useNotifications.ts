@@ -72,54 +72,6 @@ export function useNotifications() {
     };
   }, [conversations]);
 
-  // ✅ REALTIME: Ouvir mudanças em conversas
-  useEffect(() => {
-    if (!selectedWorkspace?.workspace_id) return;
-
-    console.log('🔴 Iniciando subscription realtime para notificações...');
-
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversations',
-          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-        },
-        (payload) => {
-          console.log('📡 [Notifications] Conversa atualizada via realtime:', payload);
-          
-          // Recarregar conversas para atualizar notificações
-          fetchConversations();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-        },
-        (payload) => {
-          console.log('📡 [Notifications] Nova mensagem via realtime:', payload);
-          
-          // Recarregar conversas para atualizar notificações
-          fetchConversations();
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔴 [Notifications] Subscription status:', status);
-      });
-
-    return () => {
-      console.log('🔴 [Notifications] Limpando subscription realtime...');
-      supabase.removeChannel(channel);
-    };
-  }, [selectedWorkspace?.workspace_id, fetchConversations]);
-
   // ✅ Tocar som quando totalUnread aumenta
   useEffect(() => {
     if (totalUnread > previousUnreadCount && previousUnreadCount > 0) {
