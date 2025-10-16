@@ -172,27 +172,31 @@ function ActivityItem({
         </div>
       ) : (
         <>
-          <div className="space-y-2 mb-4">
-            <h4 className={cn("font-semibold text-base", isDarkMode ? "text-white" : "text-gray-900")}>
-              {activity.subject}
-            </h4>
-            <p className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-              {format(new Date(activity.scheduled_for), "dd/MM/yyyy HH:mm", {
-                locale: ptBR
-              })}
-            </p>
-            {activity.description && (
-              <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-600")}>
-                {activity.description}
+          <div className="flex gap-4 mb-4">
+            {/* Conteúdo principal à esquerda */}
+            <div className="flex-1 space-y-2">
+              <h4 className={cn("font-semibold text-base", isDarkMode ? "text-white" : "text-gray-900")}>
+                {activity.subject}
+              </h4>
+              <p className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                {format(new Date(activity.scheduled_for), "dd/MM/yyyy HH:mm", {
+                  locale: ptBR
+                })}
               </p>
-            )}
+              {activity.description && (
+                <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-600")}>
+                  {activity.description}
+                </p>
+              )}
+            </div>
             
+            {/* Imagem à direita */}
             {activity.attachment_url && (
-              <div className="mt-3">
+              <div className="flex-shrink-0">
                 <img 
                   src={activity.attachment_url} 
                   alt={activity.attachment_name || "Anexo"}
-                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                  className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
                   onClick={() => onAttachmentClick({ 
                     url: activity.attachment_url!, 
                     name: activity.attachment_name || "Anexo" 
