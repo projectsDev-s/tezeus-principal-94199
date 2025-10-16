@@ -96,24 +96,22 @@ export function useNotifications() {
     
     // Subscription para novas notificações e atualizações
     const notificationsChannel = supabase
-      .channel(`notifications-${workspaceId}-${userId}`, {
-        config: {
-          broadcast: { self: true }
-        }
-      })
+      .channel(`notifications-${workspaceId}-${userId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`
+          table: 'notifications'
         },
-        (payload) => {
-          console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA:', payload.new);
-          console.log('🔔 Tocando som e recarregando...');
-          playNotificationSound();
-          fetchNotifications();
+        (payload: any) => {
+          // Filtrar no cliente
+          if (payload.new.user_id === userId && payload.new.workspace_id === workspaceId) {
+            console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA:', payload.new);
+            console.log('🔔 Tocando som e recarregando...');
+            playNotificationSound();
+            fetchNotifications();
+          }
         }
       )
       .on(
@@ -121,12 +119,14 @@ export function useNotifications() {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`
+          table: 'notifications'
         },
-        (payload) => {
-          console.log('🔔 [Realtime] Notificação atualizada:', payload.new);
-          fetchNotifications();
+        (payload: any) => {
+          // Filtrar no cliente
+          if (payload.new.user_id === userId && payload.new.workspace_id === workspaceId) {
+            console.log('🔔 [Realtime] Notificação atualizada:', payload.new);
+            fetchNotifications();
+          }
         }
       )
       .subscribe((status) => {
