@@ -183,11 +183,9 @@ function ActivityItem({
                   locale: ptBR
                 })}
               </p>
-              {activity.description && (
-                <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-600")}>
-                  {activity.description}
-                </p>
-              )}
+              <p className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-600")}>
+                {activity.description || "Sem descrição"}
+              </p>
             </div>
             
             {/* Imagem à direita */}
