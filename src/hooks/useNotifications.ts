@@ -95,8 +95,12 @@ export function useNotifications() {
     });
     
     // Subscription para novas notificações e atualizações
-    const channel = supabase
-      .channel('schema-db-changes')
+    const notificationsChannel = supabase
+      .channel(`notifications-${workspaceId}-${userId}`, {
+        config: {
+          broadcast: { self: true }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -130,7 +134,7 @@ export function useNotifications() {
 
     return () => {
       console.log('🔕 [useNotifications] Removendo subscription de notificações');
-      supabase.removeChannel(channel);
+      supabase.removeChannel(notificationsChannel);
     };
   }, [selectedWorkspace?.workspace_id, user?.id, playNotificationSound]);
 

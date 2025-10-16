@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
+import { useNotifications } from "@/hooks/useNotifications";
 import { getConnectionColor } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 import { Button } from "@/components/ui/button";
@@ -50,13 +51,13 @@ export function WhatsAppChat({
   isDarkMode = false,
   selectedConversationId
 }: WhatsAppChatProps) {
-  // ✅ USAR APENAS O CONTEXTO - não duplicar subscriptions
-  const { notifications, markContactAsRead } = useRealtimeNotifications();
+  // Usar notificações para saber quais conversas têm mensagens não lidas
+  const { notifications, markContactAsRead } = useNotifications();
   
   // Criar mapa de conversas com notificações não lidas
   const conversationNotifications = useMemo(() => {
     const map = new Map<string, number>();
-    notifications.forEach((notif: any) => {
+    notifications.forEach(notif => {
       const currentCount = map.get(notif.conversationId) || 0;
       map.set(notif.conversationId, currentCount + 1);
     });
