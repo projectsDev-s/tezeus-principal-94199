@@ -895,10 +895,6 @@ export function DealDetailsModal({
               </div>
               
               <div className="flex items-center gap-2">
-                <Badge className="bg-yellow-400 text-black hover:bg-yellow-500 px-3 py-1 text-xs">
-                  Ver Conversas
-                </Badge>
-                
                 {/* Tags do contato */}
                 {contactTags.map(tag => <Badge key={tag.id} variant="outline" className={cn("border-gray-300 px-3 py-1 text-xs group relative", isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-600")} style={{
                 borderColor: tag.color,
