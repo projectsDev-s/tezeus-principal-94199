@@ -99,30 +99,30 @@ export function useNotifications() {
     const userId = user.id;
     const workspaceId = selectedWorkspace.workspace_id;
     
-    console.log('🔔 [useNotifications] Iniciando subscription de notificações:', {
+    console.log('🔔🔔🔔 [useNotifications] CRIANDO SUBSCRIPTION DE NOTIFICAÇÕES:', {
       userId,
-      workspaceId
+      workspaceId,
+      channelName: `notifications-realtime-${workspaceId}-${userId}`
     });
     
     // Subscription para novas notificações e atualizações
     const notificationsChannel = supabase
-      .channel(`notifications-${workspaceId}-${userId}`)
+      .channel(`notifications-realtime-${workspaceId}-${userId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId}`
+          filter: `workspace_id=eq.${workspaceId},user_id=eq.${userId}`
         },
         (payload: any) => {
-          // Filtrar no cliente apenas o user_id
-          if (payload.new.user_id === userId) {
-            console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA:', payload.new);
-            console.log('🔔 Tocando som e recarregando...');
-            playNotificationSound();
-            fetchNotifications();
-          }
+          console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA!', {
+            notification: payload.new,
+            timestamp: new Date().toISOString()
+          });
+          playNotificationSound();
+          fetchNotifications();
         }
       )
       .on(
@@ -131,27 +131,42 @@ export function useNotifications() {
           event: 'UPDATE',
           schema: 'public',
           table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId}`
+          filter: `workspace_id=eq.${workspaceId},user_id=eq.${userId}`
         },
         (payload: any) => {
-          // Filtrar no cliente apenas o user_id
-          if (payload.new.user_id === userId) {
-            console.log('🔔 [Realtime] Notificação atualizada:', payload.new);
-            fetchNotifications();
-          }
+          console.log('🔔 [Realtime] Notificação ATUALIZADA:', {
+            old: payload.old,
+            new: payload.new,
+            timestamp: new Date().toISOString()
+          });
+          fetchNotifications();
         }
       )
       .subscribe((status, err) => {
-        console.log('🔔🔔🔔 [Realtime Notifications] Status:', status);
+        console.log('🔔🔔🔔 [Realtime Notifications] STATUS MUDOU:', {
+          status,
+          error: err,
+          timestamp: new Date().toISOString()
+        });
+        
         if (err) {
-          console.error('🔔❌ [Realtime Notifications] ERRO:', err);
+          console.error('🔔❌ [Realtime Notifications] ERRO NA SUBSCRIPTION:', err);
         }
+        
         if (status === 'SUBSCRIBED') {
-          console.log('🔔✅ [Realtime Notifications] Canal conectado com sucesso!');
+          console.log('🔔✅✅✅ [Realtime Notifications] SUBSCRIPTION ATIVA E FUNCIONANDO!', {
+            channel: `notifications-realtime-${workspaceId}-${userId}`,
+            filters: {
+              workspace_id: workspaceId,
+              user_id: userId
+            }
+          });
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('🔔❌ [Realtime Notifications] ERRO NO CANAL');
+          console.error('🔔❌ [Realtime Notifications] ERRO NO CANAL - RECONECTANDO...');
         } else if (status === 'CLOSED') {
           console.error('🔔❌ [Realtime Notifications] CANAL FECHADO');
+        } else if (status === 'TIMED_OUT') {
+          console.error('🔔❌ [Realtime Notifications] TIMEOUT NA CONEXÃO');
         }
       });
 
@@ -159,7 +174,7 @@ export function useNotifications() {
       console.log('🔕 [useNotifications] Removendo subscription de notificações');
       supabase.removeChannel(notificationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id, user?.id]); // Removido playNotificationSound das dependências
+  }, [selectedWorkspace?.workspace_id, user?.id, playNotificationSound, fetchNotifications]);
 
   const getAvatarInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
