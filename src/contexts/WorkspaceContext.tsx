@@ -35,25 +35,43 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
   // ✅ CORREÇÃO CRÍTICA: Workspace selection logic sem alternância no refresh
   useEffect(() => {
+    console.log('🔍 WorkspaceContext: useEffect triggered', {
+      workspacesLength: workspaces.length,
+      isLoadingWorkspaces,
+      hasInitialized,
+      userRole,
+      selectedWorkspace: selectedWorkspace?.name
+    });
+
     // Só executar após workspaces serem carregados
-    if (workspaces.length === 0 || isLoadingWorkspaces) {
-      console.log('⏳ Aguardando carregamento de workspaces...');
+    if (isLoadingWorkspaces) {
+      console.log('⏳ WorkspaceContext: Aguardando carregamento de workspaces...');
+      return;
+    }
+
+    // Se não há workspaces, limpar seleção e marcar como inicializado
+    if (workspaces.length === 0) {
+      console.log('⚠️ WorkspaceContext: Nenhum workspace disponível');
+      setSelectedWorkspaceState(null);
+      localStorage.removeItem('selectedWorkspace');
+      setHasInitialized(true);
       return;
     }
 
     // Executar apenas uma vez após carregar workspaces
     if (hasInitialized) {
+      console.log('✅ WorkspaceContext: Já inicializado, pulando');
       return;
     }
 
     // REGRA MASTER: Usuário master NÃO deve ter workspace auto-selecionado
     if (userRole === 'master') {
-      console.log('🎩 Usuário master detectado - workspace não será auto-selecionado');
+      console.log('🎩 WorkspaceContext: Usuário master detectado - workspace não será auto-selecionado');
       setHasInitialized(true);
       return;
     }
 
-    console.log('✅ Workspaces carregados:', workspaces.map(w => w.name));
+    console.log('✅ WorkspaceContext: Workspaces carregados:', workspaces.map(w => `${w.name} (${w.workspace_id})`));
 
     // PRIORIDADE 1: Restaurar do localStorage (fonte de verdade)
     const stored = localStorage.getItem('selectedWorkspace');
@@ -63,32 +81,32 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         const matchingWorkspace = workspaces.find(w => w.workspace_id === parsed.workspace_id);
         
         if (matchingWorkspace) {
-          console.log('✅ Restaurando workspace do localStorage:', matchingWorkspace.name);
+          console.log('✅ WorkspaceContext: Restaurando workspace do localStorage:', matchingWorkspace.name);
           setSelectedWorkspaceState(matchingWorkspace);
           setHasInitialized(true);
           return;
         } else {
-          console.log('⚠️ Workspace do localStorage não encontrado na lista, limpando');
+          console.log('⚠️ WorkspaceContext: Workspace do localStorage não encontrado na lista, limpando');
           localStorage.removeItem('selectedWorkspace');
         }
       } catch (error) {
-        console.error('❌ Erro ao parsear localStorage:', error);
+        console.error('❌ WorkspaceContext: Erro ao parsear localStorage:', error);
         localStorage.removeItem('selectedWorkspace');
       }
     }
 
     // PRIORIDADE 2: Se tem exatamente 1 workspace, auto-selecionar
     if (workspaces.length === 1) {
-      console.log('🎯 Auto-selecionando único workspace:', workspaces[0].name);
+      console.log('🎯 WorkspaceContext: Auto-selecionando único workspace:', workspaces[0].name, workspaces[0].workspace_id);
       setSelectedWorkspace(workspaces[0]);
       setHasInitialized(true);
       return;
     }
 
     // PRIORIDADE 3: Múltiplos workspaces, aguardar seleção manual
-    console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
+    console.log('📋 WorkspaceContext: Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
     setHasInitialized(true);
-  }, [workspaces, isLoadingWorkspaces]);
+  }, [workspaces, isLoadingWorkspaces, hasInitialized, userRole]);
 
   // Reset hasInitialized quando workspaces mudam (detecta mudança no array)
   useEffect(() => {

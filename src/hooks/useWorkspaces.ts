@@ -18,6 +18,7 @@ export function useWorkspaces() {
 
   const fetchWorkspaces = async () => {
     if (!user) {
+      console.log('⚠️ useWorkspaces: No user, skipping fetch');
       setWorkspaces([]);
       setContextWorkspaces([]);
       setIsLoadingWorkspaces(false);
@@ -26,17 +27,19 @@ export function useWorkspaces() {
 
     // Check cache first
     const cached = getCache();
-    if (cached && !isExpired()) {
-      console.log('✅ Usando workspaces em cache');
+    if (cached && !isExpired() && cached.length > 0) {
+      console.log('✅ useWorkspaces: Using cached workspaces:', cached.length);
       setWorkspaces(cached);
       setContextWorkspaces(cached);
       setIsLoadingWorkspaces(false);
       return;
     }
 
+    console.log('🔄 useWorkspaces: Fetching workspaces for user:', user.email);
     setIsLoading(true);
     setIsLoadingWorkspaces(true);
     try {
+      console.log('📡 useWorkspaces: Calling list-user-workspaces...');
       const data = await retry(async () => {
         const { data, error } = await supabase.functions.invoke('list-user-workspaces', {
           headers: {
@@ -44,21 +47,37 @@ export function useWorkspaces() {
             'x-system-user-email': user.email || ''
           }
         });
-        if (error) throw error;
+        if (error) {
+          console.error('❌ useWorkspaces: Error from edge function:', error);
+          throw error;
+        }
         return data;
       });
 
-      // Transform the data to match expected format
-      const workspaceData = data?.workspaces?.map((w: any) => ({
-        workspace_id: w.workspace_id || w.id,
-        name: w.name,
-        slug: w.slug,
-        cnpj: w.cnpj,
-        created_at: w.created_at,
-        updated_at: w.updated_at,
-        connections_count: w.connections_count || 0
-      })) || [];
+      if (!data?.workspaces) {
+        console.error('❌ useWorkspaces: No workspaces data received');
+        throw new Error('No workspaces data received');
+      }
 
+      console.log('📦 useWorkspaces: Received workspaces:', data.workspaces);
+
+      // Transform the data to match expected format with fallback
+      const workspaceData = data?.workspaces?.map((w: any) => {
+        const workspace = {
+          workspace_id: w.workspace_id || w.id,
+          name: w.name,
+          slug: w.slug,
+          cnpj: w.cnpj,
+          created_at: w.created_at,
+          updated_at: w.updated_at,
+          connections_count: w.connections_count || 0
+        };
+        console.log('✅ useWorkspaces: Transformed workspace:', workspace.name, workspace.workspace_id);
+        return workspace;
+      }) || [];
+
+      console.log('✅ useWorkspaces: Final workspaces:', workspaceData);
+      
       // Workspaces fetched
       setWorkspaces(workspaceData);
       setContextWorkspaces(workspaceData);
@@ -66,7 +85,7 @@ export function useWorkspaces() {
 
       // Fallback: buscar connections_count diretamente se não veio da Edge function
       if (workspaceData.some((w: any) => !w.connections_count && w.connections_count !== 0)) {
-        // Fetching connections count as fallback
+        console.log('🔄 useWorkspaces: Fetching connections count as fallback...');
         try {
           const { data: connectionsData } = await supabase
             .from('connections')
@@ -86,17 +105,16 @@ export function useWorkspaces() {
           setWorkspaces(updatedWorkspaces);
           setContextWorkspaces(updatedWorkspaces);
         } catch (fallbackError) {
-          // Fallback connections count failed
-          // Não mostrar erro para fallback, apenas usar os workspaces sem connection count
+          console.error('⚠️ useWorkspaces: Fallback connections count failed');
         }
       }
     } catch (error) {
-      console.error('Error fetching workspaces:', error);
+      console.error('❌ useWorkspaces: Error fetching workspaces:', error);
       
       // Use expired cache if available
       const cached = getCache();
       if (cached) {
-        console.log('⚠️ Usando cache expirado devido ao erro');
+        console.log('⚠️ useWorkspaces: Using expired cache due to error');
         setWorkspaces(cached);
         setContextWorkspaces(cached);
       } else if (!workspaces.length) {
@@ -105,6 +123,8 @@ export function useWorkspaces() {
           description: "Falha ao carregar empresas",
           variant: "destructive"
         });
+        setWorkspaces([]);
+        setContextWorkspaces([]);
       }
     } finally {
       setIsLoading(false);
