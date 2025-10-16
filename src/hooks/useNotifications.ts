@@ -102,11 +102,12 @@ export function useNotifications() {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications'
+          table: 'notifications',
+          filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
-          // Filtrar no cliente
-          if (payload.new.user_id === userId && payload.new.workspace_id === workspaceId) {
+          // Filtrar no cliente apenas o user_id
+          if (payload.new.user_id === userId) {
             console.log('🔔🔔🔔 [Realtime] NOVA NOTIFICAÇÃO RECEBIDA:', payload.new);
             console.log('🔔 Tocando som e recarregando...');
             playNotificationSound();
@@ -119,11 +120,12 @@ export function useNotifications() {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'notifications'
+          table: 'notifications',
+          filter: `workspace_id=eq.${workspaceId}`
         },
         (payload: any) => {
-          // Filtrar no cliente
-          if (payload.new.user_id === userId && payload.new.workspace_id === workspaceId) {
+          // Filtrar no cliente apenas o user_id
+          if (payload.new.user_id === userId) {
             console.log('🔔 [Realtime] Notificação atualizada:', payload.new);
             fetchNotifications();
           }
