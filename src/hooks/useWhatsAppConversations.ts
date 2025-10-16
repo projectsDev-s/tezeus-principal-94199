@@ -624,21 +624,31 @@ export const useWhatsAppConversations = () => {
                   aguardando_update_do_backend: true
                 });
 
+                // ✅ CRÍTICO: Atualizar unread_count localmente (UPDATE nunca vem para mensagens recebidas)
+                const isContactMessage = newMessage.sender_type === 'contact';
+                const isAgentMessage = newMessage.sender_type === 'agent' || newMessage.sender_type === 'system';
+                
+                const newUnreadCount = isContactMessage 
+                  ? (conv.unread_count || 0) + 1  // ✅ Incrementar para mensagens de contato
+                  : isAgentMessage 
+                    ? 0                            // ✅ Zerar para mensagens do agente
+                    : conv.unread_count;           // ✅ Manter para outros tipos
+                
                 const updatedConv = {
                   ...conv,
                   messages: newMessages,
-                  // ✅ MANTER unread_count atual - o UPDATE da conversa virá logo em seguida
-                  unread_count: conv.unread_count,
+                  unread_count: newUnreadCount,
                   last_message: [lastMessage],
                   last_activity_at: newMessage.created_at
                 };
 
-                console.log('✅ Mensagem adicionada (aguardando UPDATE de conversations para atualizar unread_count):', {
+                console.log('✅ [INSERT] Unread count atualizado localmente:', {
                   conversation_id: conv.id,
-                  message_id: newMessage.id,
+                  contact: conv.contact.name,
                   sender_type: newMessage.sender_type,
-                  total_messages: updatedConv.messages.length,
-                  unread_count_mantido: conv.unread_count
+                  old_unread: conv.unread_count,
+                  new_unread: newUnreadCount,
+                  action: isContactMessage ? 'incrementou' : isAgentMessage ? 'zerou' : 'manteve'
                 });
 
                 return updatedConv;
