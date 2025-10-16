@@ -64,17 +64,14 @@ export const Login = () => {
           variant: "destructive"
         });
       } else {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando...",
-        });
-        
-        // ✅ Para Admin/User, salvar workspace antes de redirecionar
+        // ✅ CRÍTICO: Buscar e salvar workspace ANTES de qualquer redirecionamento
         const currentUserStr = localStorage.getItem('currentUser');
         if (currentUserStr) {
           try {
             const loggedUser = JSON.parse(currentUserStr);
             const userRole = loggedUser?.profile;
+            
+            console.log('🔄 Fetching workspace for user:', loggedUser.email);
             
             if (userRole === 'admin' || userRole === 'user') {
               const { data, error } = await supabase.functions.invoke('list-user-workspaces', {
@@ -82,6 +79,11 @@ export const Login = () => {
                   'x-system-user-id': loggedUser.id,
                   'x-system-user-email': loggedUser.email || ''
                 }
+              });
+              
+              console.log('📡 Workspace fetch response:', { 
+                error: error ? 'ERROR' : 'OK', 
+                workspacesCount: data?.workspaces?.length || 0 
               });
               
               if (!error && data?.workspaces && data.workspaces.length > 0) {
@@ -95,15 +97,22 @@ export const Login = () => {
                   connections_count: data.workspaces[0].connections_count || 0
                 };
                 
-                console.log('💾 Salvando workspace no login:', userWorkspace.name);
+                console.log('✅ Workspace salvo no login:', userWorkspace.name);
                 localStorage.setItem('selectedWorkspace', JSON.stringify(userWorkspace));
+              } else {
+                console.warn('⚠️ Nenhum workspace encontrado para o usuário');
               }
             }
           } catch (error) {
-            console.error('Erro ao buscar workspace no login:', error);
+            console.error('❌ Erro ao buscar workspace no login:', error);
           }
         }
         
+        // ✅ SÓ AGORA disparar toast e redirecionamento
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando...",
+        });
         setLoginSuccess(true);
       }
     } catch (error) {

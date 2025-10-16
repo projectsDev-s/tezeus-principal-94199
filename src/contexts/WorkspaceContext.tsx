@@ -33,13 +33,15 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // ✅ CORREÇÃO CRÍTICA: Workspace selection logic sem alternância no refresh
+  // ✅ CORREÇÃO CRÍTICA: Workspace selection logic com verificação antecipada de localStorage
   useEffect(() => {
-    // Só executar após workspaces serem carregados
-    if (workspaces.length === 0 || isLoadingWorkspaces) {
-      console.log('⏳ Aguardando carregamento de workspaces...');
-      return;
-    }
+    console.log('🔍 WorkspaceContext: useEffect triggered', {
+      workspacesLength: workspaces.length,
+      isLoadingWorkspaces,
+      userRole,
+      selectedWorkspace: selectedWorkspace?.name || 'null',
+      hasLocalStorage: localStorage.getItem('selectedWorkspace') ? 'exists' : 'missing'
+    });
 
     // REGRA MASTER: Usuário master NÃO deve ter workspace auto-selecionado
     if (userRole === 'master') {
@@ -47,28 +49,30 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       return;
     }
 
-    // Se já tem workspace selecionado, não fazer nada
-    if (selectedWorkspace) {
-      console.log('✅ Workspace já selecionado:', selectedWorkspace.name);
-      return;
-    }
-
-    console.log('✅ Workspaces carregados:', workspaces.map(w => w.name));
-
-    // PRIORIDADE 1: Restaurar do localStorage (fonte de verdade)
+    // ✅ PRIORIDADE 0: Verificar localStorage SEMPRE PRIMEIRO (antes de aguardar workspaces)
     const stored = localStorage.getItem('selectedWorkspace');
-    if (stored) {
+    if (stored && !selectedWorkspace) {
       try {
         const parsed = JSON.parse(stored);
-        const matchingWorkspace = workspaces.find(w => w.workspace_id === parsed.workspace_id);
+        console.log('💾 Restaurando workspace do localStorage:', parsed.name);
         
-        if (matchingWorkspace) {
-          console.log('✅ Restaurando workspace do localStorage:', matchingWorkspace.name);
-          setSelectedWorkspaceState(matchingWorkspace);
-          return;
+        // Se workspaces já carregou, confirmar se workspace ainda é válido
+        if (workspaces.length > 0) {
+          const matchingWorkspace = workspaces.find(w => w.workspace_id === parsed.workspace_id);
+          if (matchingWorkspace) {
+            console.log('✅ Workspace confirmado na lista:', matchingWorkspace.name);
+            setSelectedWorkspaceState(matchingWorkspace);
+            return;
+          } else {
+            console.log('⚠️ Workspace do localStorage não encontrado na lista, limpando');
+            localStorage.removeItem('selectedWorkspace');
+            setSelectedWorkspaceState(null);
+          }
         } else {
-          console.log('⚠️ Workspace do localStorage não encontrado na lista, limpando');
-          localStorage.removeItem('selectedWorkspace');
+          // Workspaces ainda não carregou, setar temporariamente
+          console.log('⚡ Usando workspace do localStorage temporariamente (workspaces ainda carregando)');
+          setSelectedWorkspaceState(parsed);
+          return;
         }
       } catch (error) {
         console.error('❌ Erro ao parsear localStorage:', error);
@@ -76,14 +80,35 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       }
     }
 
-    // PRIORIDADE 2: Se tem exatamente 1 workspace, auto-selecionar
+    // Se já tem workspace selecionado E workspaces carregou, validar
+    if (selectedWorkspace && workspaces.length > 0) {
+      const exists = workspaces.find(w => w.workspace_id === selectedWorkspace.workspace_id);
+      if (exists) {
+        console.log('✅ Workspace já selecionado e confirmado:', selectedWorkspace.name);
+        return;
+      } else {
+        console.log('⚠️ Workspace selecionado não está na lista, resetando');
+        setSelectedWorkspaceState(null);
+        localStorage.removeItem('selectedWorkspace');
+      }
+    }
+
+    // Aguardar workspaces carregar
+    if (workspaces.length === 0 || isLoadingWorkspaces) {
+      console.log('⏳ Aguardando carregamento de workspaces...');
+      return;
+    }
+
+    console.log('✅ Workspaces carregados:', workspaces.map(w => w.name));
+
+    // PRIORIDADE 1: Se tem exatamente 1 workspace, auto-selecionar
     if (workspaces.length === 1) {
       console.log('🎯 Auto-selecionando único workspace:', workspaces[0].name);
       setSelectedWorkspace(workspaces[0]);
       return;
     }
 
-    // PRIORIDADE 3: Múltiplos workspaces, aguardar seleção manual
+    // PRIORIDADE 2: Múltiplos workspaces, aguardar seleção manual
     console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
   }, [workspaces, isLoadingWorkspaces, userRole, selectedWorkspace]);
 
