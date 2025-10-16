@@ -108,6 +108,32 @@ export default function TesteNotificacao() {
       return;
     }
 
+    addLog('🔵 Buscando IDs válidos para o teste...', 'info');
+
+    // Buscar uma conversa existente
+    const { data: conversations } = await supabase
+      .from('conversations')
+      .select('id, contact_id')
+      .eq('workspace_id', selectedWorkspace.workspace_id)
+      .limit(1);
+
+    if (!conversations || conversations.length === 0) {
+      addLog('❌ Nenhuma conversa encontrada neste workspace', 'error');
+      return;
+    }
+
+    // Buscar uma mensagem da conversa
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('id')
+      .eq('conversation_id', conversations[0].id)
+      .limit(1);
+
+    if (!messages || messages.length === 0) {
+      addLog('❌ Nenhuma mensagem encontrada', 'error');
+      return;
+    }
+
     addLog('🔵 Inserindo notificação de teste...', 'info');
 
     const { data, error } = await supabase
@@ -115,9 +141,9 @@ export default function TesteNotificacao() {
       .insert({
         workspace_id: selectedWorkspace.workspace_id,
         user_id: user.id,
-        conversation_id: crypto.randomUUID(),
-        contact_id: crypto.randomUUID(),
-        message_id: crypto.randomUUID(),
+        conversation_id: conversations[0].id,
+        contact_id: conversations[0].contact_id,
+        message_id: messages[0].id,
         title: 'TESTE REALTIME',
         content: `Testando realtime ${new Date().toISOString()}`,
         message_type: 'text',
