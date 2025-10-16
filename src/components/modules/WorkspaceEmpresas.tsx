@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,10 +39,11 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
   const { workspaces, isLoading, deleteWorkspace, fetchWorkspaces } = useWorkspaces();
   const { isMaster, isAdmin } = useWorkspaceRole();
   const { userRole } = useAuth(); // Adicionar userRole como fallback
+  const { selectedWorkspace: currentWorkspace } = useWorkspace(); // Pegar workspace atual
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<{ id: string; name: string } | null>(null);
+  const [selectedWorkspaceForConfig, setSelectedWorkspaceForConfig] = useState<{ id: string; name: string } | null>(null);
   const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<any>(null);
@@ -51,7 +53,7 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
   };
 
   const handleConfigClick = (workspace: { workspace_id: string; name: string }) => {
-    setSelectedWorkspace({ id: workspace.workspace_id, name: workspace.name });
+    setSelectedWorkspaceForConfig({ id: workspace.workspace_id, name: workspace.name });
     setShowConfigModal(true);
   };
 
@@ -100,13 +102,16 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
     }
   };
 
+  // Filtrar para mostrar apenas a empresa atual quando não for master acessando o painel master
+  const filteredWorkspaces = workspaces.filter(w => w.workspace_id === currentWorkspace?.workspace_id);
+
   if (isLoading) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Empresas</h1>
+          <h1 className="text-2xl font-semibold">Minha Empresa</h1>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
@@ -129,12 +134,12 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Empresas</h1>
+          <h1 className="text-2xl font-semibold">Minha Empresa</h1>
           <p className="text-muted-foreground">
-            Gerencie suas empresas e workspaces
+            Informações e configurações da empresa atual
           </p>
         </div>
-        {(isMaster || userRole === 'master') && (
+        {false && ( // Removido botão "Nova Empresa" desta página
           <Button onClick={() => setShowCreateModal(true)} className="gap-2">
             <Plus className="w-4 h-4" />
             Nova Empresa
@@ -142,9 +147,14 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {workspaces.map((workspace) => (
-          <Card key={workspace.workspace_id} className="hover:shadow-lg transition-shadow">
+      {filteredWorkspaces.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Nenhuma empresa encontrada.</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4">
+          {filteredWorkspaces.map((workspace) => (
+            <Card key={workspace.workspace_id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -234,22 +244,18 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
           </Card>
         ))}
       </div>
+      )}
 
-      {workspaces.length === 0 && (
-        <div className="text-center py-12">
+      {filteredWorkspaces.length === 0 && (
+        <Card className="p-8 text-center">
           <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">Nenhuma empresa encontrada</h3>
-          <p className="text-muted-foreground mb-4">
-            {(isMaster || userRole === 'master') ? "Crie sua primeira empresa para começar" : "Nenhuma empresa atribuída"}
+          <p className="text-muted-foreground">
+            Entre em contato com o administrador para obter acesso.
           </p>
-          {(isMaster || userRole === 'master') && (
-            <Button onClick={() => setShowCreateModal(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Criar Primeira Empresa
-            </Button>
-          )}
-        </div>
+        </Card>
       )}
+
 
       <CreateWorkspaceModal 
         open={showCreateModal} 
@@ -278,12 +284,12 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedWorkspace && (
+      {selectedWorkspaceForConfig && (
         <WorkspaceConfigModal
           open={showConfigModal}
           onOpenChange={setShowConfigModal}
-          workspaceId={selectedWorkspace.id}
-          workspaceName={selectedWorkspace.name}
+          workspaceId={selectedWorkspaceForConfig.id}
+          workspaceName={selectedWorkspaceForConfig.name}
         />
       )}
     </div>

@@ -150,7 +150,7 @@ export function Sidebar({
     icon: <AudioLines className="w-5 h-5" />
   }, {
     id: "workspace-empresas",
-    label: "Empresas",
+    label: "Minha Empresa",
     icon: <Building2 className="w-5 h-5" />
   }, {
     id: "crm-negocios",
