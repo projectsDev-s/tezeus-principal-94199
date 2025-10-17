@@ -195,15 +195,6 @@ verify_jwt = false
 [functions.configure-evolution-webhook]
 verify_jwt = false
 
-[functions.test-webhook-config]
-verify_jwt = false
-
-[functions.fix-webhook]
-verify_jwt = false
-
-[functions.debug-webhook]
-verify_jwt = false
-
 [functions.webhook-to-n8n]
 verify_jwt = false
 
