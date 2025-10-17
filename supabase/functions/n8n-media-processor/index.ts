@@ -240,7 +240,8 @@ serve(async (req) => {
       
       // Mapear para tipos aceitos pelo Supabase Storage
       const mimeMap: Record<string, { mime: string; extension: string }> = {
-        'audio/ogg': { mime: 'audio/ogg', extension: 'ogg' },
+        // Áudios OGG não são suportados pelo Supabase - mapear para audio/webm
+        'audio/ogg': { mime: 'audio/webm', extension: 'ogg' },
         'audio/mpeg': { mime: 'audio/mpeg', extension: 'mp3' },
         'audio/mp3': { mime: 'audio/mpeg', extension: 'mp3' },
         'audio/wav': { mime: 'audio/wav', extension: 'wav' },
@@ -254,7 +255,7 @@ serve(async (req) => {
         'application/pdf': { mime: 'application/pdf', extension: 'pdf' },
       };
       
-      return mimeMap[cleanMime] || { mime: cleanMime, extension: 'bin' };
+      return mimeMap[cleanMime] || { mime: 'application/octet-stream', extension: 'bin' };
     }
 
     // Função para detectar MIME type baseado no conteúdo (magic numbers)
