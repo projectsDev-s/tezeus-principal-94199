@@ -337,7 +337,6 @@ serve(async (req) => {
       instanceName: instanceName,
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
-      syncFullHistory: true,
       number: phoneNumber || undefined,
 
       settings: {
@@ -346,7 +345,6 @@ serve(async (req) => {
         alwaysOnline: false,
         readMessages: false,
         readStatus: false,
-        sync_full_history: true,
         webhookByEvents: true,  // 👈 redundante dentro de settings para compatibilidade
         webhookBase64: true     // 👈 redundante dentro de settings para compatibilidade
       },
@@ -373,7 +371,6 @@ serve(async (req) => {
     console.log('📦 Evolution payload configuration:', {
       instanceName,
       number: phoneNumber || 'not provided',
-      syncFullHistory: evolutionPayload.syncFullHistory,
       webhookByEvents: evolutionPayload.webhookByEvents,
       webhookBase64: evolutionPayload.webhookBase64,
       historyRecovery,
