@@ -237,8 +237,6 @@ export default function MasterDashboard() {
                       <WorkspaceCard
                         key={workspace.workspace_id}
                         workspace={workspace}
-                        usersCount={0}
-                        conversationsCount={0}
                         onLogin={handleLogin}
                         onViewReports={handleViewUsers}
                         onViewWorkspace={handleViewWorkspace}

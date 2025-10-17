@@ -1,13 +1,13 @@
-import { Building2, Users, MessageSquare, LogIn, BarChart3, Eye, Settings } from 'lucide-react';
+import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Workspace } from '@/contexts/WorkspaceContext';
+import { useWorkspaceStats } from '@/hooks/useWorkspaceStats';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface WorkspaceCardProps {
   workspace: Workspace;
-  usersCount?: number;
-  conversationsCount?: number;
   onLogin: (workspace: Workspace) => void;
   onViewReports: (workspace: Workspace) => void;
   onViewWorkspace: (workspace: Workspace) => void;
@@ -16,13 +16,12 @@ interface WorkspaceCardProps {
 
 export function WorkspaceCard({
   workspace,
-  usersCount = 0,
-  conversationsCount = 0,
   onLogin,
   onViewReports,
   onViewWorkspace,
   onViewConfig
 }: WorkspaceCardProps) {
+  const { stats, isLoading } = useWorkspaceStats(workspace.workspace_id);
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200">
       <CardHeader>
@@ -43,14 +42,23 @@ export function WorkspaceCard({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="h-4 w-4" />
-          <span>{usersCount} usuários</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MessageSquare className="h-4 w-4" />
-          <span>{conversationsCount} conversas ativas</span>
-        </div>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-32" />
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span>{stats.usersCount} usuários</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Briefcase className="h-4 w-4" />
+              <span>{stats.activeDealsCount} negócios ativos</span>
+            </div>
+          </>
+        )}
       </CardContent>
 
       <CardFooter className="flex flex-col gap-2">
