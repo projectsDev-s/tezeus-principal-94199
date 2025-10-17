@@ -337,7 +337,7 @@ serve(async (req) => {
       instanceName: instanceName,
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
-      syncFullHistory: true,  // raiz
+      syncFullHistory: true,
       number: phoneNumber || undefined,
 
       settings: {
@@ -346,7 +346,9 @@ serve(async (req) => {
         alwaysOnline: false,
         readMessages: false,
         readStatus: false,
-        sync_full_history: true, // snake_case
+        sync_full_history: true,
+        webhookByEvents: true,  // 👈 redundante dentro de settings para compatibilidade
+        webhookBase64: true     // 👈 redundante dentro de settings para compatibilidade
       },
 
       webhook: {
@@ -363,7 +365,7 @@ serve(async (req) => {
         ]
       },
 
-      // 👇 Estes DOIS precisam estar na raiz em camelCase
+      // 👇 raiz também (camelCase)
       webhookByEvents: true,
       webhookBase64: true
     };
@@ -371,13 +373,15 @@ serve(async (req) => {
     console.log('📦 Evolution payload configuration:', {
       instanceName,
       number: phoneNumber || 'not provided',
-      syncFullHistory: true,
-      webhook_by_events: true,
-      webhook_base64: true,
+      syncFullHistory: evolutionPayload.syncFullHistory,
+      webhookByEvents: evolutionPayload.webhookByEvents,
+      webhookBase64: evolutionPayload.webhookBase64,
       historyRecovery,
       historyDays,
       webhookEvents: evolutionPayload.webhook.events
     });
+    
+    console.log('📤 Full payload being sent to Evolution API:', JSON.stringify(evolutionPayload, null, 2));
 
     // Primeiro fetch descartado, usando só o evolutionPayload abaixo
 
