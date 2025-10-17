@@ -470,13 +470,11 @@ serve(async (req) => {
           }
         };
         
-        // ✅ CRÍTICO: Aceitar evolution_key_id e ATUALIZAR external_id
+        // ✅ Salvar evolution_key_id e evolution_short_key_id para rastreamento
         const evolutionKeyId = n8nData.evolution_key_id || n8nData.key?.id || n8nData.keyId;
         if (evolutionKeyId) {
           updateFields.evolution_key_id = evolutionKeyId;
-          // ✅ ATUALIZAR external_id com evolution_key_id para deduplicação de webhooks
-          updateFields.external_id = evolutionKeyId;
-          console.log(`🔄 [${requestId}] Atualizando external_id: ${external_id} → ${evolutionKeyId}`);
+          console.log(`✅ [${requestId}] Salvando evolution_key_id: ${evolutionKeyId}`);
         }
         
         if (n8nData.evolution_short_key_id) {
