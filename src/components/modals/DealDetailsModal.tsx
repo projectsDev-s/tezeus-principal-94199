@@ -300,6 +300,9 @@ export function DealDetailsModal({
   } : null);
   const [isMovingCard, setIsMovingCard] = useState(false);
   const [targetStepAnimation, setTargetStepAnimation] = useState<string | null>(null);
+  const [cardDescription, setCardDescription] = useState<string>("");
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
   const { toast } = useToast();
   const { selectedPipeline, refreshCurrentPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
@@ -618,6 +621,7 @@ export function DealDetailsModal({
             id, 
             pipeline_id, 
             column_id,
+            description,
             pipelines (
               id, 
               name, 
@@ -631,6 +635,13 @@ export function DealDetailsModal({
 
         if (allCards && allCards.length > 0) {
           setAvailableCards(allCards);
+          
+          // Buscar descrição do card atual
+          const currentCard = allCards.find(c => c.id === cardId);
+          if (currentCard) {
+            setCardDescription(currentCard.description || "");
+            console.log('📝 Descrição carregada:', currentCard.description);
+          }
           
           // Extrair pipelines únicos
           const uniquePipelines = allCards.reduce((acc: any[], cardItem: any) => {
@@ -1094,6 +1105,38 @@ export function DealDetailsModal({
       setSelectedPipelineId(newPipelineId);
       setSelectedCardId(cardInPipeline.id);
       setSelectedColumnId(cardInPipeline.column_id);
+      setCardDescription(cardInPipeline.description || "");
+    }
+  };
+
+  // Função para salvar a descrição do card
+  const handleSaveDescription = async () => {
+    if (!selectedCardId) return;
+    
+    setIsSavingDescription(true);
+    try {
+      const { error } = await supabase
+        .from('pipeline_cards')
+        .update({ description: cardDescription })
+        .eq('id', selectedCardId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Descrição salva",
+        description: "A descrição do negócio foi atualizada com sucesso.",
+      });
+      
+      setIsEditingDescription(false);
+    } catch (error) {
+      console.error('Erro ao salvar descrição:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a descrição.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingDescription(false);
     }
   };
   return (
@@ -1209,6 +1252,72 @@ export function DealDetailsModal({
                   {isLoadingData ? 'Carregando...' : (selectedPipeline?.name || 'Pipeline não identificado')}
                 </div>
               </div>
+
+              {/* Descrição do Negócio */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                    Descrição
+                  </label>
+                  {!isEditingDescription && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditingDescription(true)}
+                      className={cn("h-7 text-xs", isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600")}
+                    >
+                      Editar
+                    </Button>
+                  )}
+                </div>
+                
+                {isEditingDescription ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={cardDescription}
+                      onChange={(e) => setCardDescription(e.target.value)}
+                      placeholder="Adicione uma descrição para este negócio..."
+                      rows={4}
+                      className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingDescription(false);
+                          // Restaurar descrição original ao cancelar
+                          const currentCard = availableCards.find(c => c.id === selectedCardId);
+                          if (currentCard) {
+                            setCardDescription(currentCard.description || "");
+                          }
+                        }}
+                        disabled={isSavingDescription}
+                        className={cn(isDarkMode ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "")}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveDescription}
+                        disabled={isSavingDescription}
+                      >
+                        {isSavingDescription ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "px-4 py-3 rounded-lg border min-h-[100px]",
+                    isDarkMode 
+                      ? "bg-[#2d2d2d] border-gray-600 text-gray-300" 
+                      : "bg-gray-50 border-gray-200 text-gray-600"
+                  )}>
+                    {cardDescription || "Sem descrição"}
+                  </div>
+                )}
+              </div>
+
 
               {/* Pipeline Timeline - Baseado na imagem de referência */}
               <div className="space-y-6">
