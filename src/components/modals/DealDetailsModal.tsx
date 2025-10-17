@@ -379,9 +379,17 @@ export function DealDetailsModal({
 
   // Converter colunas em steps de progresso
   useEffect(() => {
+    console.log('🔄 [Timeline] Atualizando steps:', { 
+      columnsCount: columns.length, 
+      selectedColumnId,
+      columns: columns.map(c => ({ id: c.id, name: c.name }))
+    });
+    
     if (columns.length > 0 && selectedColumnId) {
       const sortedColumns = [...columns].sort((a, b) => a.order_position - b.order_position);
       const currentIndex = sortedColumns.findIndex(col => col.id === selectedColumnId);
+      
+      console.log('📍 [Timeline] Coluna atual encontrada no índice:', currentIndex);
       
       const steps: PipelineStep[] = sortedColumns.map((column, index) => ({
         id: column.id,
@@ -391,7 +399,14 @@ export function DealDetailsModal({
         isCompleted: currentIndex >= 0 && index < currentIndex
       }));
       
+      console.log('✅ [Timeline] Steps gerados:', steps.length);
       setPipelineSteps(steps);
+    } else if (columns.length === 0) {
+      console.warn('⚠️ [Timeline] Nenhuma coluna carregada ainda');
+      setPipelineSteps([]);
+    } else if (!selectedColumnId) {
+      console.warn('⚠️ [Timeline] selectedColumnId está vazio');
+      setPipelineSteps([]);
     }
   }, [columns, selectedColumnId]);
 
