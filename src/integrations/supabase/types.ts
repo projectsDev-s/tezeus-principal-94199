@@ -1594,6 +1594,52 @@ export type Database = {
           },
         ]
       }
+      queue_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          order_position: number | null
+          queue_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          order_position?: number | null
+          queue_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          order_position?: number | null
+          queue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_users_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "system_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "system_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       queues: {
         Row: {
           ai_agent_id: string | null
@@ -1604,6 +1650,7 @@ export type Database = {
           greeting_message: string | null
           id: string
           is_active: boolean
+          last_assigned_user_index: number | null
           name: string
           order_position: number | null
           updated_at: string
@@ -1618,6 +1665,7 @@ export type Database = {
           greeting_message?: string | null
           id?: string
           is_active?: boolean
+          last_assigned_user_index?: number | null
           name: string
           order_position?: number | null
           updated_at?: string
@@ -1632,6 +1680,7 @@ export type Database = {
           greeting_message?: string | null
           id?: string
           is_active?: boolean
+          last_assigned_user_index?: number | null
           name?: string
           order_position?: number | null
           updated_at?: string
