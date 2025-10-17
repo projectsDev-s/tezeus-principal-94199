@@ -212,6 +212,30 @@ serve(async (req) => {
     
     console.log('Arquivo obtido com sucesso - Tamanho:', uint8Array.length, 'bytes');
 
+    // Função para normalizar MIME types
+    function normalizeMimeType(mimeType: string): { mime: string; extension: string } {
+      // Remover espaços e parâmetros extras (como codecs)
+      const cleanMime = mimeType.split(';')[0].trim();
+      
+      // Mapear para tipos aceitos pelo Supabase Storage
+      const mimeMap: Record<string, { mime: string; extension: string }> = {
+        'audio/ogg': { mime: 'audio/ogg', extension: 'ogg' },
+        'audio/mpeg': { mime: 'audio/mpeg', extension: 'mp3' },
+        'audio/mp3': { mime: 'audio/mpeg', extension: 'mp3' },
+        'audio/wav': { mime: 'audio/wav', extension: 'wav' },
+        'audio/webm': { mime: 'audio/webm', extension: 'webm' },
+        'image/jpeg': { mime: 'image/jpeg', extension: 'jpg' },
+        'image/jpg': { mime: 'image/jpeg', extension: 'jpg' },
+        'image/png': { mime: 'image/png', extension: 'png' },
+        'image/webp': { mime: 'image/webp', extension: 'webp' },
+        'video/mp4': { mime: 'video/mp4', extension: 'mp4' },
+        'video/webm': { mime: 'video/webm', extension: 'webm' },
+        'application/pdf': { mime: 'application/pdf', extension: 'pdf' },
+      };
+      
+      return mimeMap[cleanMime] || { mime: cleanMime, extension: 'bin' };
+    }
+
     // Função para detectar MIME type baseado no conteúdo (magic numbers)
     function detectMimeTypeFromBuffer(buffer: Uint8Array): string | null {
       const header = Array.from(buffer.slice(0, 12)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -280,32 +304,17 @@ serve(async (req) => {
       return mimeMap[ext] || 'application/octet-stream';
     }
 
-    // Detectar MIME type final
+    // Detectar MIME type final e normalizar
     let detectedMimeType = detectMimeTypeFromBuffer(uint8Array);
-    let finalMimeType = detectedMimeType || mimeType || 'application/octet-stream';
+    let rawMimeType = detectedMimeType || mimeType || 'application/octet-stream';
     
-    // Converter tipos MIME não suportados pelo Supabase Storage
-    if (finalMimeType === 'audio/ogg') {
-      finalMimeType = 'audio/webm'; // Supabase não suporta audio/ogg, usar webm
-    }
+    // Normalizar MIME type (remover codecs e parâmetros extras)
+    const { mime: finalMimeType, extension: defaultExtension } = normalizeMimeType(rawMimeType);
     
-    // Determinar extensão
-    let fileExtension = 'unknown';
-    if (finalMimeType === 'image/jpeg') fileExtension = 'jpg';
-    else if (finalMimeType === 'image/png') fileExtension = 'png';
-    else if (finalMimeType === 'video/mp4') fileExtension = 'mp4';
-    else if (finalMimeType === 'audio/mpeg') fileExtension = 'mp3';
-    else if (finalMimeType === 'audio/webm') fileExtension = 'webm';
-    else if (finalMimeType === 'audio/ogg') fileExtension = 'webm'; // Fallback para OGG
-    else if (finalMimeType === 'application/pdf') fileExtension = 'pdf';
-    else if (finalMimeType === 'text/plain') fileExtension = 'txt';
-    else if (finalMimeType === 'application/xml') fileExtension = 'xml';
-    else if (finalMimeType === 'application/json') fileExtension = 'json';
-    else if (finalMimeType.includes('wordprocessingml')) fileExtension = 'docx';
-    else if (finalMimeType.includes('spreadsheetml')) fileExtension = 'xlsx';
-    else if (finalMimeType.includes('presentationml')) fileExtension = 'pptx';
-    else if (fileName) {
-      fileExtension = fileName.split('.').pop()?.toLowerCase() || 'unknown';
+    // Determinar extensão do arquivo
+    let fileExtension = defaultExtension;
+    if (fileName && fileName.includes('.')) {
+      fileExtension = fileName.split('.').pop()?.toLowerCase() || defaultExtension;
     }
 
     // Gerar nome único para evitar conflitos
@@ -318,7 +327,8 @@ serve(async (req) => {
     const storagePath = `messages/${finalFileName}`;
 
     console.log('Upload details:', {
-      finalMimeType,
+      originalMimeType: rawMimeType,
+      normalizedMimeType: finalMimeType,
       fileExtension,
       finalFileName,
       storagePath
@@ -353,18 +363,20 @@ serve(async (req) => {
     console.log('📨 Mensagem existente encontrada - atualizando mídia:', existingMessage.id);
     
     // APENAS UPDATE - nunca INSERT
+    // Usar o ID da mensagem encontrada (UUID do banco)
     const { error: updateError } = await supabase
       .from('messages')
       .update({
         file_url: publicUrl,
         mime_type: finalMimeType,
+        file_name: finalFileName,
         metadata: {
           original_file_name: finalFileName,
           file_size: uint8Array.length,
           processed_at: new Date().toISOString()
         }
       })
-      .eq('external_id', messageId);
+      .eq('id', existingMessage.id);
 
     if (updateError) {
       console.error('❌ Erro ao atualizar mensagem:', updateError);
