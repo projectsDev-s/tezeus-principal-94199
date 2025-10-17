@@ -129,7 +129,7 @@ export function CreateActivityModal({
         throw new Error('Workspace não encontrado para este contato');
       }
 
-      const activityData = {
+      const activityData: any = {
         contact_id: contactId,
         workspace_id: contactData.workspace_id,
         type: formData.type,
@@ -140,8 +140,12 @@ export function CreateActivityModal({
         duration_minutes: formData.durationMinutes,
         attachment_name: attachedFile?.name || null,
         attachment_url: null, // Implementar upload de arquivo se necessário
-        pipeline_card_id: pipelineCardId || null, // Vincular ao negócio se fornecido
       };
+
+      // Apenas adicionar pipeline_card_id se ele existir
+      if (pipelineCardId) {
+        activityData.pipeline_card_id = pipelineCardId;
+      }
 
       const { data: activity, error } = await supabase
         .from('activities')
