@@ -1805,9 +1805,22 @@ export function WhatsAppChat({
                 </div> : <div className="flex items-end gap-2">
                   <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
               if (!selectedConversation) return;
+              
+              // MUTEX: Prevenir duplicação baseado na URL do arquivo
+              const messageKey = `media-${selectedConversation.id}-${fileUrl}`;
+              if (sendingRef.current.has(messageKey)) {
+                console.log('⏭️ Ignorando envio duplicado de mídia');
+                return;
+              }
+              sendingRef.current.add(messageKey);
+              
               const caption = messageText.trim();
+              
+              // Usar UUID único para prevenir duplicação
+              const clientMessageId = crypto.randomUUID();
+              
               const optimisticMessage = {
-                id: `temp-media-${Date.now()}`,
+                id: clientMessageId,
                 conversation_id: selectedConversation.id,
                 content: caption || `[${mediaType.toUpperCase()}]`,
                 message_type: mediaType as any,
@@ -1819,8 +1832,10 @@ export function WhatsAppChat({
                 status: 'sending' as const,
                 workspace_id: selectedWorkspace?.workspace_id || ''
               };
+              
               addMessage(optimisticMessage);
               if (caption) setMessageText('');
+              
               try {
                 const {
                   data: sendResult,
@@ -1834,7 +1849,7 @@ export function WhatsAppChat({
                     sender_type: 'agent',
                     file_url: fileUrl,
                     file_name: file.name,
-                    clientMessageId: crypto.randomUUID() // ✅ ETAPA 2: clientMessageId
+                    clientMessageId: clientMessageId
                   },
                   headers: {
                     'x-system-user-id': user?.id || '',
@@ -1842,6 +1857,7 @@ export function WhatsAppChat({
                     'x-system-user-email': user?.email || ''
                   }
                 });
+                
                 if (error) {
                   console.error('Erro ao enviar mídia:', error);
                   toast({
@@ -1871,6 +1887,9 @@ export function WhatsAppChat({
                   status: 'failed',
                   content: `❌ ${optimisticMessage.content}`
                 });
+              } finally {
+                // Remover do MUTEX após 1 segundo
+                setTimeout(() => sendingRef.current.delete(messageKey), 1000);
               }
             }} />
                   
