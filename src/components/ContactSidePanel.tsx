@@ -100,7 +100,8 @@ export function ContactSidePanel({
     cards: contactCards,
     currentPipeline,
     transferToPipeline,
-    isLoading: cardsLoading
+    isLoading: cardsLoading,
+    fetchContactCards
   } = useContactPipelineCards(contact?.id || null);
   const {
     createCard
@@ -877,6 +878,9 @@ export function ContactSidePanel({
               title: "Negócio criado",
               description: `Negócio "${contactData.name}" criado com sucesso!`
             });
+
+            // 5. Atualizar lista de cards do contato
+            await fetchContactCards();
 
             setIsCreateDealModalOpen(false);
           } catch (error: any) {
