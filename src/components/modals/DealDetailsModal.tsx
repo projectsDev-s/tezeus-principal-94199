@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -278,6 +279,7 @@ export function DealDetailsModal({
   // Hook otimizado para usuários com cache - filtrado por workspace e sem masters
   const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache(workspaceId, ['user', 'admin']);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [pipelineSteps, setPipelineSteps] = useState<PipelineStep[]>([]);
   const [contactPipelines, setContactPipelines] = useState<any[]>([]);
   const [pipelineCardsCount, setPipelineCardsCount] = useState(0);
@@ -359,13 +361,22 @@ export function DealDetailsModal({
   // Carregar dados quando modal abrir - usando referência confiável do card
   useEffect(() => {
     if (isOpen && cardId) {
-      console.log('🚀 Modal aberto com dados do card:', {
-        cardId,
-        currentColumnId,
-        currentPipelineId,
-        contactNumber
-      });
-      fetchCardData();
+      console.log('🚀 Modal aberto - iniciando preloading dos dados...');
+      setIsInitialLoading(true);
+      
+      const loadAllData = async () => {
+        try {
+          await Promise.all([
+            fetchCardData(),
+            contactId && fetchActivities(contactId)
+          ]);
+        } finally {
+          setIsInitialLoading(false);
+          console.log('✅ Preloading concluído');
+        }
+      };
+      
+      loadAllData();
     }
   }, [isOpen, cardId]);
 
@@ -540,9 +551,7 @@ export function DealDetailsModal({
         description: `Movido para ${targetPipeline?.name} - ${targetColumn?.name}`,
       });
 
-      // Forçar refresh do pipeline atual para remover o card da visualização
-      console.log('🔄 Forçando refresh do pipeline atual...');
-      await refreshCurrentPipeline();
+      // Card movido com sucesso - o contexto já irá atualizar a visualização
 
       // Pequeno delay para usuário ver o feedback antes do modal fechar
       setTimeout(() => {
@@ -1184,7 +1193,31 @@ export function DealDetailsModal({
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
-          {activeTab === "negocios" && <div className="space-y-6">
+          {isInitialLoading ? (
+            /* Skeleton de Loading */
+            <div className="space-y-6 animate-pulse">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+              <div className="space-y-4">
+                <Skeleton className="h-5 w-32" />
+                <div className="flex justify-between gap-4">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="flex flex-col items-center space-y-2 flex-1">
+                      <Skeleton className="w-12 h-12 rounded-full" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            </div>
+          ) : activeTab === "negocios" && <div className="space-y-6">
               {/* Pipeline Atual - Nome do Pipeline ao invés de select */}
               <div className="space-y-2">
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
@@ -1547,7 +1580,7 @@ export function DealDetailsModal({
               </div>
             </div>}
 
-          {activeTab === "historico" && <div className="space-y-4">
+          {isInitialLoading ? null : activeTab === "historico" && <div className="space-y-4">
               <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
                 Histórico de Atividades Concluídas
               </h3>
@@ -1594,7 +1627,7 @@ export function DealDetailsModal({
                 </div>}
             </div>}
 
-          {activeTab === "contato" && <div className="space-y-6">
+          {isInitialLoading ? null : activeTab === "contato" && <div className="space-y-6">
               {/* Informações de Contato */}
               <div className="space-y-4">
                 <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
