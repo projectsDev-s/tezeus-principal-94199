@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info } from "lucide-react";
+import { ChatModal } from "./ChatModal";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -257,6 +258,8 @@ export function DealDetailsModal({
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   const [confirmLossAction, setConfirmLossAction] = useState<any>(null);
   const [isExecutingAction, setIsExecutingAction] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<string>("");
   
   // Estados para o formulário de atividade integrado
   const [activityForm, setActivityForm] = useState({
@@ -602,7 +605,7 @@ export function DealDetailsModal({
       // PASSO 1: SEMPRE buscar dados atuais do card do banco (fonte da verdade)
       const { data: currentCard, error: cardError } = await supabase
         .from('pipeline_cards')
-        .select('id, pipeline_id, column_id, contact_id, title, description, value, status')
+        .select('id, pipeline_id, column_id, contact_id, conversation_id, title, description, value, status')
         .eq('id', cardId)
         .maybeSingle(); // Usar maybeSingle() ao invés de single()
 
@@ -629,13 +632,14 @@ export function DealDetailsModal({
       console.log('🔄 [3/4] Estados atualizados com dados do banco');
       
       let contactIdToUse: string | null = currentCard.contact_id;
+      let conversationIdFromCard: string | null = currentCard.conversation_id;
       
       // Se já temos dados do contato, buscar os dados completos
       if (initialContactData) {
         contactIdToUse = initialContactData.id;
         setContactId(initialContactData.id);
         
-        // Buscar dados completos do contato
+        // Buscar dados completos do contato incluindo conversation_id
         const { data: fullContact } = await supabase
           .from('contacts')
           .select('id, name, email, phone, profile_image_url, workspace_id')
@@ -661,6 +665,11 @@ export function DealDetailsModal({
         // Fallback: buscar todos os dados se não tivermos dados iniciais
         await fetchAdditionalCardData();
         contactIdToUse = contactId;
+      }
+      
+      // Armazenar conversation_id se disponível
+      if (conversationIdFromCard) {
+        setConversationId(conversationIdFromCard);
       }
       
       // SEMPRE buscar os pipelines do contato (independente do fluxo acima)
@@ -1185,9 +1194,21 @@ export function DealDetailsModal({
                 <DialogTitle className={cn("text-xl font-semibold text-left", isDarkMode ? "text-white" : "text-gray-900")}>
                   {contactData?.name || dealName}
                 </DialogTitle>
-                <p className={cn("text-sm text-left", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                  {contactData?.phone || contactNumber}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className={cn("text-sm text-left", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                    {contactData?.phone || contactNumber}
+                  </p>
+                  {conversationId && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setIsChatModalOpen(true)}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center gap-2">
@@ -1838,6 +1859,17 @@ export function DealDetailsModal({
         onClose={() => setShowMinutePicker(false)}
         onMinuteSelect={handleMinuteSelect}
         isDarkMode={isDarkMode}
+      />
+      
+      {/* Modal de Chat */}
+      <ChatModal
+        isOpen={isChatModalOpen}
+        onClose={() => setIsChatModalOpen(false)}
+        conversationId={conversationId}
+        contactName={contactData?.name || dealName}
+        contactPhone={contactData?.phone || contactNumber}
+        contactAvatar={contactData?.profile_image_url || ""}
+        contactId={contactId}
       />
     </Dialog>
     
