@@ -632,7 +632,7 @@ export function ContactSidePanel({
                           Pipeline
                         </CardTitle>
                         <Button size="sm" variant="ghost" onClick={() => setIsCreateDealModalOpen(true)} className="h-8">
-                          <Plus className="h-3 w-3 mr-1" /> Vincular
+                          <Plus className="h-3 w-3 mr-1" /> Criar Negócio
                         </Button>
                       </div>
                     </CardHeader>
