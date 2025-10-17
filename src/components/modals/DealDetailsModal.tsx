@@ -1692,6 +1692,13 @@ export function DealDetailsModal({
                 })}
                       </p>
                       
+                      {/* Descrição da atividade */}
+                      {activity.description && (
+                        <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                          {activity.description}
+                        </p>
+                      )}
+                      
                       {/* Imagens anexadas */}
                       {activity.attachment_url && (
                         <div className="mt-3">
