@@ -822,26 +822,19 @@ export function DealDetailsModal({
     try {
       console.log('📋 Buscando atividades para contact_id:', contactId, 'card_id:', selectedCardId);
       
-      // Buscar atividades vinculadas AO CARD ESPECÍFICO ou sem vínculo (globais)
-      // EXCLUINDO atividades de outros cards
+      // Buscar TODAS as atividades do contato incluindo description
       const { data: allContactActivities, error } = await supabase
         .from('activities')
-        .select(`
-          id,
-          type,
-          subject,
-          scheduled_for,
-          responsible_id,
-          is_completed,
-          attachment_url,
-          attachment_name,
-          pipeline_card_id,
-          description
-        `)
+        .select('*')
         .eq('contact_id', contactId)
         .order('scheduled_for', { ascending: true });
         
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar atividades:', error);
+        throw error;
+      }
+      
+      console.log('📥 Atividades brutas do banco:', allContactActivities);
       
       // Filtrar no frontend para garantir isolamento correto
       const data = allContactActivities?.filter(activity => {
