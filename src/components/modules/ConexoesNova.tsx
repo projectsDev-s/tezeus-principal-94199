@@ -483,33 +483,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   };
 
-  const enableBase64 = async (instanceName: string) => {
-    try {
-      toast({
-        title: 'Ativando base64...',
-        description: 'Configurando webhook para receber mídias',
-      });
-
-      const { data, error } = await supabase.functions.invoke('force-enable-base64', {
-        body: { instanceName }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Base64 ativado!',
-        description: 'O webhook agora está configurado para receber mídias em base64',
-      });
-    } catch (error) {
-      console.error('Error enabling base64:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao ativar base64',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const connectInstance = async (connection: Connection) => {
     try {
       setIsConnecting(true);
@@ -1147,40 +1120,27 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                     </Button>
                   </div>
                   
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-2">
                     {connection.status === 'connected' ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => enableBase64(connection.instance_name)}
-                          className="flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          Ativar Base64
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => disconnectInstance(connection)}
-                          disabled={isDisconnecting}
-                          className="flex items-center gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                        >
-                          {isDisconnecting ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                              Desconectando...
-                            </>
-                          ) : (
-                            <>
-                              <Wifi className="w-4 h-4" />
-                              Desconectar
-                            </>
-                          )}
-                        </Button>
-                      </>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => disconnectInstance(connection)}
+                        disabled={isDisconnecting}
+                        className="flex items-center gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                      >
+                        {isDisconnecting ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            Desconectando...
+                          </>
+                        ) : (
+                          <>
+                            <Wifi className="w-4 h-4" />
+                            Desconectar
+                          </>
+                        )}
+                      </Button>
                     ) : (
                       <Button
                         variant="outline"
