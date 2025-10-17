@@ -483,10 +483,11 @@ serve(async (req) => {
           updateFields.evolution_short_key_id = n8nData.evolution_short_key_id;
         }
         
+        // ✅ CORREÇÃO: Buscar por external_id, não por id
         const { error: updateError } = await supabase
           .from('messages')
           .update(updateFields)
-          .eq('id', external_id);
+          .eq('external_id', external_id);
 
         if (updateError) {
           console.error(`⚠️ [${requestId}] Failed to save evolution IDs from N8N:`, updateError);
