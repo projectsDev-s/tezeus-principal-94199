@@ -1022,6 +1022,9 @@ export function DealDetailsModal({
         description: `A atividade "${activityForm.subject}" foi agendada.`,
       });
 
+      // Recarregar atividades para mostrar a nova na lista
+      await fetchActivities(contactId);
+
       // Resetar formulário
       setActivityForm({
         type: "Lembrete",
