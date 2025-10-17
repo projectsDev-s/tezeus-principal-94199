@@ -126,14 +126,35 @@ serve(async (req) => {
     console.log(`🔄 Processando mensagem ${isOutbound ? 'OUTBOUND' : 'INBOUND'} - external_id: ${messageId}`);
     console.log(`📋 Direction: ${messageDirection}, Sender Type: ${sender_type}, Is Outbound: ${isOutbound}`);
 
-    console.log('🔍 Buscando mensagem existente por messageId (ID direto):', messageId);
+    console.log('🔍 Buscando mensagem existente por messageId:', messageId);
     
-    // Buscar mensagem diretamente pelo ID (evolution-webhook-v2 passa o ID, não external_id)
-    const { data: existingMessage, error: searchError } = await supabase
-      .from('messages')
-      .select('id, external_id, workspace_id, content, conversation_id')
-      .eq('id', messageId)
-      .maybeSingle();
+    // Detectar se messageId é UUID ou external_id
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId);
+    
+    let existingMessage;
+    let searchError;
+    
+    if (isUUID) {
+      // Buscar por ID (UUID)
+      console.log('📌 messageId é UUID válido, buscando por id');
+      const result = await supabase
+        .from('messages')
+        .select('id, external_id, workspace_id, content, conversation_id')
+        .eq('id', messageId)
+        .maybeSingle();
+      existingMessage = result.data;
+      searchError = result.error;
+    } else {
+      // Buscar por external_id (string alfanumérica curta do WhatsApp)
+      console.log('📌 messageId não é UUID, buscando por external_id');
+      const result = await supabase
+        .from('messages')
+        .select('id, external_id, workspace_id, content, conversation_id')
+        .eq('external_id', messageId)
+        .maybeSingle();
+      existingMessage = result.data;
+      searchError = result.error;
+    }
 
     if (searchError) {
       console.error('❌ Erro ao buscar mensagem:', searchError);
@@ -148,7 +169,7 @@ serve(async (req) => {
     }
 
     if (!existingMessage) {
-      console.log(`❌ Mensagem não encontrada - ID:`, messageId);
+      console.log(`❌ Mensagem não encontrada - messageId:`, messageId);
       
       return new Response(JSON.stringify({
         success: false,
