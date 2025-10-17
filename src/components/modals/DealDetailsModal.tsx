@@ -578,9 +578,46 @@ export function DealDetailsModal({
   const fetchCardData = async () => {
     setIsLoadingData(true);
     try {
-      console.log('🔍 Buscando dados do card:', cardId);
+      console.log('🔍 [Modal] Buscando dados ATUALIZADOS do card:', cardId);
       
-      let contactIdToUse: string | null = null;
+      // CRÍTICO: Buscar dados atuais do card DIRETAMENTE do banco
+      // para garantir que temos column_id e pipeline_id corretos
+      const { data: currentCard, error: currentCardError } = await supabase
+        .from('pipeline_cards')
+        .select('id, column_id, pipeline_id, contact_id')
+        .eq('id', cardId)
+        .maybeSingle();
+      
+      if (currentCardError) {
+        console.error('❌ [Modal] Erro ao buscar card:', currentCardError);
+        throw currentCardError;
+      }
+      
+      if (!currentCard) {
+        console.error('❌ [Modal] Card não encontrado:', cardId);
+        toast({
+          title: "Erro",
+          description: "Card não encontrado",
+          variant: "destructive",
+        });
+        onClose();
+        return;
+      }
+      
+      console.log('✅ [Modal] Dados ATUAIS do card:', currentCard);
+      
+      // Atualizar estados com dados atuais do banco
+      setSelectedCardId(currentCard.id);
+      setSelectedColumnId(currentCard.column_id);
+      setSelectedPipelineId(currentCard.pipeline_id);
+      
+      console.log('🎯 [Modal] Estados atualizados:', {
+        cardId: currentCard.id,
+        columnId: currentCard.column_id,
+        pipelineId: currentCard.pipeline_id
+      });
+      
+      let contactIdToUse: string | null = currentCard.contact_id;
       
       // Se já temos dados do contato, buscar os dados completos
       if (initialContactData) {
@@ -617,7 +654,7 @@ export function DealDetailsModal({
       
       // SEMPRE buscar os pipelines do contato (independente do fluxo acima)
       if (contactIdToUse) {
-        console.log('🔍 Buscando pipelines do contato:', contactIdToUse);
+        console.log('🔍 [Modal] Buscando pipelines do contato:', contactIdToUse);
         
         const { data: allCards, error: allCardsError } = await supabase
           .from('pipeline_cards')
@@ -634,7 +671,7 @@ export function DealDetailsModal({
           .eq('contact_id', contactIdToUse)
           .eq('status', 'aberto');
 
-        console.log('📊 Cards do contato:', { allCards, allCardsError, count: allCards?.length });
+        console.log('📊 [Modal] Cards do contato:', { allCards, allCardsError, count: allCards?.length });
 
         if (allCards && allCards.length > 0) {
           setAvailableCards(allCards);
@@ -648,7 +685,7 @@ export function DealDetailsModal({
             return acc;
           }, []);
           
-          console.log('🔄 Pipelines únicos encontrados:', uniquePipelines);
+          console.log('🔄 [Modal] Pipelines únicos encontrados:', uniquePipelines);
           
           setContactPipelines(uniquePipelines);
           setPipelineCardsCount(allCards.length);
