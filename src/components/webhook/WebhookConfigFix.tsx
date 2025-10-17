@@ -2,46 +2,36 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
-import { useWebhookFix, WebhookFixResult } from '@/hooks/useWebhookFix';
+import { useUpdateWebhooks } from '@/hooks/useUpdateWebhooks';
 import { useState } from 'react';
 
 export const WebhookConfigFix = () => {
-  const { isFixing, fixWebhookConfiguration } = useWebhookFix();
-  const [results, setResults] = useState<WebhookFixResult[]>([]);
-  const [summary, setSummary] = useState<{ total: number; success: number; errors: number; skipped: number } | null>(null);
+  const { isUpdating, updateAllWebhooks } = useUpdateWebhooks();
+  const [results, setResults] = useState<any[]>([]);
+  const [summary, setSummary] = useState<{ total: number; successful: number; failed: number } | null>(null);
 
-  const handleFix = async () => {
-    const response = await fixWebhookConfiguration();
+  const handleUpdate = async () => {
+    const response = await updateAllWebhooks();
     if (response) {
       setResults(response.results);
       setSummary(response.summary);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'skipped':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      default:
-        return null;
-    }
+  const getStatusIcon = (success: boolean) => {
+    return success ? (
+      <CheckCircle className="h-4 w-4 text-green-500" />
+    ) : (
+      <XCircle className="h-4 w-4 text-red-500" />
+    );
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <Badge variant="outline" className="text-green-700 border-green-200">Sucesso</Badge>;
-      case 'error':
-        return <Badge variant="destructive">Erro</Badge>;
-      case 'skipped':
-        return <Badge variant="secondary">Ignorado</Badge>;
-      default:
-        return null;
-    }
+  const getStatusBadge = (success: boolean) => {
+    return success ? (
+      <Badge variant="default" className="bg-green-500">Sucesso</Badge>
+    ) : (
+      <Badge variant="destructive">Erro</Badge>
+    );
   };
 
   return (
@@ -49,80 +39,74 @@ export const WebhookConfigFix = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <RefreshCw className="h-5 w-5" />
-          Corrigir Configuração de Webhook
+          Atualizar Webhooks - Habilitar Base64
         </CardTitle>
         <CardDescription>
-          Corrige a configuração de webhook de todas as instâncias para rotear através da função Supabase para o N8N
+          Atualiza todas as instâncias existentes para habilitar recebimento de mídia em base64
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-yellow-800">Problema Identificado</h4>
-              <p className="text-sm text-yellow-700 mt-1">
-                As instâncias estão configuradas para enviar webhooks diretamente para o N8N. 
-                Elas devem enviar para nossa função Supabase que roteia para o N8N.
-              </p>
-            </div>
+        <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+          <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+          <div className="text-sm text-blue-900 dark:text-blue-100">
+            <p className="font-medium mb-1">Por que executar esta atualização?</p>
+            <p>Esta função corrige as instâncias existentes para receber mídia (áudios, imagens, vídeos) em formato base64, permitindo que o N8N processe os arquivos sem precisar fazer download adicional.</p>
           </div>
         </div>
 
         <Button 
-          onClick={handleFix} 
-          disabled={isFixing}
+          onClick={handleUpdate} 
+          disabled={isUpdating}
           className="w-full"
         >
-          {isFixing ? (
+          {isUpdating ? (
             <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Corrigindo Configuração...
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Atualizando...
             </>
           ) : (
             <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Corrigir Configuração de Webhook
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar Todas as Instâncias
             </>
           )}
         </Button>
 
         {summary && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="font-medium text-green-800 mb-2">Resumo da Correção</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Total:</span>
-                <span className="font-medium ml-1">{summary.total}</span>
-              </div>
-              <div>
-                <span className="text-green-600">Sucesso:</span>
-                <span className="font-medium ml-1">{summary.success}</span>
-              </div>
-              <div>
-                <span className="text-red-600">Erros:</span>
-                <span className="font-medium ml-1">{summary.errors}</span>
-              </div>
-              <div>
-                <span className="text-yellow-600">Ignorados:</span>
-                <span className="font-medium ml-1">{summary.skipped}</span>
-              </div>
+          <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="text-center">
+              <p className="text-2xl font-bold">{summary.total}</p>
+              <p className="text-xs text-muted-foreground">Total</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">{summary.successful}</p>
+              <p className="text-xs text-muted-foreground">Sucesso</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-red-600">{summary.failed}</p>
+              <p className="text-xs text-muted-foreground">Erros</p>
             </div>
           </div>
         )}
 
         {results.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium">Resultados por Instância</h4>
-            <div className="max-h-60 overflow-y-auto space-y-2">
+            <h4 className="font-medium">Resultados por Instância:</h4>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
               {results.map((result, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(result.status)}
-                    <span className="font-medium">{result.instance}</span>
+                    {getStatusIcon(result.success)}
+                    <span className="font-mono text-sm">{result.instance_name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(result.status)}
+                    {getStatusBadge(result.success)}
+                    {result.status && (
+                      <Badge variant="outline">Status: {result.status}</Badge>
+                    )}
                   </div>
                 </div>
               ))}
@@ -130,13 +114,13 @@ export const WebhookConfigFix = () => {
           </div>
         )}
 
-        <div className="text-sm text-gray-500">
-          <p>
-            <strong>URL correta:</strong> https://zldeaozqxjwvzgrblyrh.supabase.co/functions/v1/evolution-webhook
-          </p>
-          <p className="mt-1">
-            Esta função recebe os webhooks do Evolution API e os roteia para o N8N conforme configurado.
-          </p>
+        <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded">
+          <p className="font-medium">ℹ️ Configuração aplicada:</p>
+          <ul className="list-disc list-inside space-y-0.5 ml-2">
+            <li>webhook_base64: true ✅</li>
+            <li>webhook_by_events: true ✅</li>
+            <li>URL: evolution-webhook-v2</li>
+          </ul>
         </div>
       </CardContent>
     </Card>
