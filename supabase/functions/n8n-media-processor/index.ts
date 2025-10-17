@@ -64,7 +64,7 @@ serve(async (req) => {
     
     // Priorizar campos diretos do evolution-webhook-v2, depois mapear do N8N
     const messageId = directMessageId || external_id;
-    const mediaUrl = directFileUrl || directMediaUrl; // fileUrl do evolution-webhook-v2 ou mediaUrl do N8N
+    const mediaUrl = directFileUrl || directMediaUrl || fileUrl; // fileUrl do evolution-webhook-v2, mediaUrl ou fileUrl do N8N
     const base64 = directBase64 || content;
     const fileName = directFileName || file_name;
     const mimeType = directMimeType || mime_type;

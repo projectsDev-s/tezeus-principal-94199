@@ -110,7 +110,7 @@ serve(async (req) => {
             const mediaProcessorResponse = await supabase.functions.invoke('n8n-media-processor', {
               body: {
                 messageId: messageId,
-                mediaUrl: fileUrl,
+                fileUrl: fileUrl,
                 fileName: fileName,
                 mimeType: messageType === 'image' ? 'image/jpeg' : 'application/octet-stream',
                 direction: 'outbound'
@@ -129,9 +129,13 @@ serve(async (req) => {
               });
             }
 
-            if (mediaProcessorResponse.data?.data?.publicUrl) {
-              processedFileUrl = mediaProcessorResponse.data.data.publicUrl;
-              console.log(`✅ [${messageId}] Media processed successfully, using processed URL`);
+            // Verificar estrutura de retorno
+            const processedUrl = mediaProcessorResponse.data?.fileUrl || 
+                                mediaProcessorResponse.data?.data?.publicUrl;
+            
+            if (processedUrl) {
+              processedFileUrl = processedUrl;
+              console.log(`✅ [${messageId}] Media processed successfully: ${processedUrl}`);
             } else {
               console.log(`⚠️ [${messageId}] Media processor didn't return processed URL, using original`);
             }

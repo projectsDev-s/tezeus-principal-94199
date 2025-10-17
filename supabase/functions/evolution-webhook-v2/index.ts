@@ -918,22 +918,25 @@ serve(async (req) => {
               }
             };
             
-            // Chamar o n8n-media-processor de forma assíncrona
-            try {
-              const { data: processResult, error: processError } = await supabase.functions.invoke(
-                'n8n-media-processor',
-                {
-                  body: mediaPayload
-                }
-              );
-              
-              if (processError) {
-                console.error(`❌ [${requestId}] Error calling n8n-media-processor:`, processError);
-              } else {
-                console.log(`✅ [${requestId}] Media processing triggered:`, processResult);
+            // Chamar o n8n-media-processor e aguardar processamento
+            const { data: processResult, error: processError } = await supabase.functions.invoke(
+              'n8n-media-processor',
+              {
+                body: mediaPayload
               }
-            } catch (error) {
-              console.error(`❌ [${requestId}] Exception calling n8n-media-processor:`, error);
+            );
+            
+            if (processError) {
+              console.error(`❌ [${requestId}] Error calling n8n-media-processor:`, processError);
+            } else if (processResult?.fileUrl) {
+              // Atualizar a mensagem com o fileUrl processado
+              await supabase
+                .from('messages')
+                .update({ file_url: processResult.fileUrl })
+                .eq('id', newMessage.id);
+              console.log(`✅ [${requestId}] Media processed and updated: ${processResult.fileUrl}`);
+            } else {
+              console.log(`⚠️ [${requestId}] Media processing triggered but no fileUrl returned:`, processResult);
             }
           }
 
