@@ -889,9 +889,6 @@ export function ContactSidePanel({
               description: "Negócio criado com sucesso!"
             });
 
-            // 6. Atualizar a lista de cards do contato
-            await fetchContactCards();
-
             setIsCreateDealModalOpen(false);
           } catch (error) {
             console.error('Erro ao criar negócio:', error);
