@@ -360,7 +360,7 @@ serve(async (req) => {
     
     const storagePath = `messages/${finalFileName}`;
 
-    console.log('Upload details:', {
+    console.log('📤 Upload details (usando MIME normalizado):', {
       originalMimeType: rawMimeType,
       normalizedMimeType: finalMimeType,
       fileExtension,
@@ -368,11 +368,12 @@ serve(async (req) => {
       storagePath
     });
 
-    // Upload para Supabase Storage
+    // Upload para Supabase Storage usando o MIME type normalizado
+    console.log('🚀 Iniciando upload com contentType:', finalMimeType);
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('whatsapp-media')
       .upload(storagePath, uint8Array, {
-        contentType: finalMimeType,
+        contentType: finalMimeType, // Já está normalizado (audio/ogg -> audio/webm)
         upsert: false
       });
 
