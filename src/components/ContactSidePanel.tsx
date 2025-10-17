@@ -898,13 +898,15 @@ export function ContactSidePanel({
 
             if (cardError) throw cardError;
 
-            // Recarregar os cards do contato para mostrar o novo negócio imediatamente
-            await fetchContactCards();
-
             toast({
               title: "Sucesso",
               description: "Negócio criado com sucesso!"
             });
+
+            // Aguardar um momento para o banco processar, então recarregar os cards
+            setTimeout(async () => {
+              await fetchContactCards();
+            }, 500);
 
             setIsCreateDealModalOpen(false);
           } catch (error) {
