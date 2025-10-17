@@ -330,8 +330,9 @@ export function DealDetailsModal({
       
       // Reset de todos os estados para valores iniciais
       setSelectedCardId(cardId);
-      setSelectedColumnId(currentColumnId);
-      setSelectedPipelineId(currentPipelineId);
+      // NÃO usar props aqui - deixar vazio e aguardar fetchCardData popular com dados do banco
+      setSelectedColumnId("");
+      setSelectedPipelineId("");
       setActiveTab("negocios");
       setActivities([]);
       setContactTags([]);
@@ -356,7 +357,7 @@ export function DealDetailsModal({
         });
       }
     }
-  }, [cardId, currentColumnId, currentPipelineId]);
+  }, [cardId]); // Remover dependência de props desatualizados
 
   // Carregar dados quando modal abrir - usando referência confiável do card
   useEffect(() => {
@@ -391,8 +392,21 @@ export function DealDetailsModal({
   // Converter colunas em steps de progresso
   useEffect(() => {
     if (columns.length > 0 && selectedColumnId) {
+      console.log('🎯 [4/4] Montando timeline:', {
+        totalColunas: columns.length,
+        selectedColumnId,
+        colunaEncontrada: columns.find(c => c.id === selectedColumnId)?.name
+      });
+      
       const sortedColumns = [...columns].sort((a, b) => a.order_position - b.order_position);
       const currentIndex = sortedColumns.findIndex(col => col.id === selectedColumnId);
+      
+      if (currentIndex === -1) {
+        console.warn('⚠️ Coluna selecionada não encontrada nas colunas carregadas!', {
+          selectedColumnId,
+          columnIds: columns.map(c => c.id)
+        });
+      }
       
       const steps: PipelineStep[] = sortedColumns.map((column, index) => ({
         id: column.id,
@@ -403,6 +417,9 @@ export function DealDetailsModal({
       }));
       
       setPipelineSteps(steps);
+      console.log('✅ Timeline montada com sucesso:', steps.length, 'steps');
+    } else if (columns.length === 0 && selectedColumnId) {
+      console.warn('⚠️ selectedColumnId definido mas nenhuma coluna carregada ainda');
     }
   }, [columns, selectedColumnId]);
 
@@ -573,9 +590,31 @@ export function DealDetailsModal({
   const fetchCardData = async () => {
     setIsLoadingData(true);
     try {
-      console.log('🔍 Buscando dados do card:', cardId);
+      console.log('🔍 [1/4] Iniciando busca de dados do card:', cardId);
+      console.log('📋 Props recebidos:', { currentPipelineId, currentColumnId });
       
-      let contactIdToUse: string | null = null;
+      // PASSO 1: SEMPRE buscar dados atuais do card do banco (fonte da verdade)
+      const { data: currentCard, error: cardError } = await supabase
+        .from('pipeline_cards')
+        .select('id, pipeline_id, column_id, contact_id, title, description, value, status')
+        .eq('id', cardId)
+        .single();
+
+      if (cardError) throw cardError;
+      
+      console.log('✅ [2/4] Card encontrado no banco:', {
+        cardId: currentCard.id,
+        pipeline_id: currentCard.pipeline_id,
+        column_id: currentCard.column_id,
+        contact_id: currentCard.contact_id
+      });
+
+      // PASSO 2: Atualizar estados com dados REAIS do banco (ignorar props)
+      setSelectedPipelineId(currentCard.pipeline_id);
+      setSelectedColumnId(currentCard.column_id);
+      console.log('🔄 [3/4] Estados atualizados com dados do banco');
+      
+      let contactIdToUse: string | null = currentCard.contact_id;
       
       // Se já temos dados do contato, buscar os dados completos
       if (initialContactData) {
