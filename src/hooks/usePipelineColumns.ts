@@ -12,15 +12,12 @@ export function usePipelineColumns(pipelineId: string | null) {
 
   const fetchColumns = async () => {
     if (!pipelineId) {
-      console.log('⚠️ [usePipelineColumns] pipelineId vazio, limpando colunas');
       setColumns([]);
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('🔄 [usePipelineColumns] Buscando colunas para pipeline:', pipelineId);
-      
       const headers = getHeaders();
       
       const { data, error } = await supabase.functions.invoke(`pipeline-management/columns?pipeline_id=${pipelineId}`, {
@@ -29,17 +26,14 @@ export function usePipelineColumns(pipelineId: string | null) {
       });
 
       if (error) throw error;
-      
-      console.log('✅ [usePipelineColumns] Colunas carregadas:', data?.length || 0);
       setColumns(data || []);
     } catch (error) {
-      console.error('❌ [usePipelineColumns] Error fetching columns:', error);
+      console.error('Error fetching columns:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar colunas",
         variant: "destructive",
       });
-      setColumns([]);
     } finally {
       setIsLoading(false);
     }

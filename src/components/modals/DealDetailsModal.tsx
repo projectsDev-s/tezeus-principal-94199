@@ -365,8 +365,6 @@ export function DealDetailsModal({
         currentPipelineId,
         contactNumber
       });
-      console.log('🔄 Modal aberto, atualizando todos os dados...');
-      // Recarregar todos os dados do card ao abrir
       fetchCardData();
     }
   }, [isOpen, cardId]);
@@ -381,17 +379,9 @@ export function DealDetailsModal({
 
   // Converter colunas em steps de progresso
   useEffect(() => {
-    console.log('🔄 [Timeline] Atualizando steps:', { 
-      columnsCount: columns.length, 
-      selectedColumnId,
-      columns: columns.map(c => ({ id: c.id, name: c.name }))
-    });
-    
     if (columns.length > 0 && selectedColumnId) {
       const sortedColumns = [...columns].sort((a, b) => a.order_position - b.order_position);
       const currentIndex = sortedColumns.findIndex(col => col.id === selectedColumnId);
-      
-      console.log('📍 [Timeline] Coluna atual encontrada no índice:', currentIndex);
       
       const steps: PipelineStep[] = sortedColumns.map((column, index) => ({
         id: column.id,
@@ -401,14 +391,7 @@ export function DealDetailsModal({
         isCompleted: currentIndex >= 0 && index < currentIndex
       }));
       
-      console.log('✅ [Timeline] Steps gerados:', steps.length);
       setPipelineSteps(steps);
-    } else if (columns.length === 0) {
-      console.warn('⚠️ [Timeline] Nenhuma coluna carregada ainda');
-      setPipelineSteps([]);
-    } else if (!selectedColumnId) {
-      console.warn('⚠️ [Timeline] selectedColumnId está vazio');
-      setPipelineSteps([]);
     }
   }, [columns, selectedColumnId]);
 
@@ -557,8 +540,9 @@ export function DealDetailsModal({
         description: `Movido para ${targetPipeline?.name} - ${targetColumn?.name}`,
       });
 
-      // O real-time vai atualizar automaticamente o Kanban
-      console.log('✅ Real-time vai sincronizar o estado do Kanban');
+      // Forçar refresh do pipeline atual para remover o card da visualização
+      console.log('🔄 Forçando refresh do pipeline atual...');
+      await refreshCurrentPipeline();
 
       // Pequeno delay para usuário ver o feedback antes do modal fechar
       setTimeout(() => {
@@ -580,46 +564,9 @@ export function DealDetailsModal({
   const fetchCardData = async () => {
     setIsLoadingData(true);
     try {
-      console.log('🔍 [Modal] Buscando dados ATUALIZADOS do card:', cardId);
+      console.log('🔍 Buscando dados do card:', cardId);
       
-      // CRÍTICO: Buscar dados atuais do card DIRETAMENTE do banco
-      // para garantir que temos column_id e pipeline_id corretos
-      const { data: currentCard, error: currentCardError } = await supabase
-        .from('pipeline_cards')
-        .select('id, column_id, pipeline_id, contact_id')
-        .eq('id', cardId)
-        .maybeSingle();
-      
-      if (currentCardError) {
-        console.error('❌ [Modal] Erro ao buscar card:', currentCardError);
-        throw currentCardError;
-      }
-      
-      if (!currentCard) {
-        console.error('❌ [Modal] Card não encontrado:', cardId);
-        toast({
-          title: "Erro",
-          description: "Card não encontrado",
-          variant: "destructive",
-        });
-        onClose();
-        return;
-      }
-      
-      console.log('✅ [Modal] Dados ATUAIS do card:', currentCard);
-      
-      // Atualizar estados com dados atuais do banco
-      setSelectedCardId(currentCard.id);
-      setSelectedColumnId(currentCard.column_id);
-      setSelectedPipelineId(currentCard.pipeline_id);
-      
-      console.log('🎯 [Modal] Estados atualizados:', {
-        cardId: currentCard.id,
-        columnId: currentCard.column_id,
-        pipelineId: currentCard.pipeline_id
-      });
-      
-      let contactIdToUse: string | null = currentCard.contact_id;
+      let contactIdToUse: string | null = null;
       
       // Se já temos dados do contato, buscar os dados completos
       if (initialContactData) {
@@ -656,7 +603,7 @@ export function DealDetailsModal({
       
       // SEMPRE buscar os pipelines do contato (independente do fluxo acima)
       if (contactIdToUse) {
-        console.log('🔍 [Modal] Buscando pipelines do contato:', contactIdToUse);
+        console.log('🔍 Buscando pipelines do contato:', contactIdToUse);
         
         const { data: allCards, error: allCardsError } = await supabase
           .from('pipeline_cards')
@@ -673,7 +620,7 @@ export function DealDetailsModal({
           .eq('contact_id', contactIdToUse)
           .eq('status', 'aberto');
 
-        console.log('📊 [Modal] Cards do contato:', { allCards, allCardsError, count: allCards?.length });
+        console.log('📊 Cards do contato:', { allCards, allCardsError, count: allCards?.length });
 
         if (allCards && allCards.length > 0) {
           setAvailableCards(allCards);
@@ -687,7 +634,7 @@ export function DealDetailsModal({
             return acc;
           }, []);
           
-          console.log('🔄 [Modal] Pipelines únicos encontrados:', uniquePipelines);
+          console.log('🔄 Pipelines únicos encontrados:', uniquePipelines);
           
           setContactPipelines(uniquePipelines);
           setPipelineCardsCount(allCards.length);
