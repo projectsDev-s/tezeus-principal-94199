@@ -37,7 +37,10 @@ export function AutomacoesFilas() {
     try {
       const { data, error } = await supabase
         .from('queues')
-        .select('*')
+        .select(`
+          *,
+          queue_users (count)
+        `)
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .order('created_at', { ascending: false });
 
@@ -137,7 +140,9 @@ export function AutomacoesFilas() {
                       {fila.name}
                     </div>
                   </TableCell>
-                  <TableCell>1</TableCell>
+                  <TableCell>
+                    {(fila as any).queue_users?.[0]?.count || 0}
+                  </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {fila.greeting_message || fila.description || '-'}
                   </TableCell>

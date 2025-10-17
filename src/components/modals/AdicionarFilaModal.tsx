@@ -131,10 +131,10 @@ export function AdicionarFilaModal({
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dados" className="text-yellow-600 data-[state=active]:bg-yellow-100 data-[state=active]:text-yellow-800">
-              DADOS DA FILA
+            <TabsTrigger value="dados">
+              Dados da Fila
             </TabsTrigger>
-            <TabsTrigger value="usuarios">USUÁRIOS DA FILA</TabsTrigger>
+            <TabsTrigger value="usuarios" disabled>Usuários da Fila</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 mt-6">
@@ -220,7 +220,8 @@ export function AdicionarFilaModal({
 
           <TabsContent value="usuarios" className="space-y-4 mt-6">
             <div className="text-center py-12 text-muted-foreground">
-              <p>Configuração de usuários da fila em desenvolvimento...</p>
+              <p className="text-lg mb-2">Salve a fila primeiro</p>
+              <p className="text-sm">Após criar a fila, você poderá adicionar usuários</p>
             </div>
           </TabsContent>
         </Tabs>

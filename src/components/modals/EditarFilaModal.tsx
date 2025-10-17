@@ -8,8 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Palette, ChevronDown } from "lucide-react";
+import { Palette, ChevronDown, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useQueueUsers } from "@/hooks/useQueueUsers";
+import { AdicionarUsuarioFilaModal } from "./AdicionarUsuarioFilaModal";
+import { QueueUsersList } from "./QueueUsersList";
 
 interface Fila {
   id: string;
@@ -55,6 +58,7 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
   
   // Form state
   const [nome, setNome] = useState("");
@@ -63,6 +67,14 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
   const [distribuicao, setDistribuicao] = useState("");
   const [agenteId, setAgenteId] = useState("");
   const [mensagemSaudacao, setMensagemSaudacao] = useState("");
+
+  const {
+    users: queueUsers,
+    loading: loadingUsers,
+    loadQueueUsers,
+    addUsersToQueue,
+    removeUserFromQueue,
+  } = useQueueUsers(fila?.id);
 
   const loadAIAgents = async () => {
     try {
@@ -137,143 +149,145 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
   useEffect(() => {
     if (open) {
       loadAIAgents();
-      loadFilaData();
+      if (fila) {
+        loadFilaData();
+        loadQueueUsers();
+      }
     } else {
       resetForm();
     }
-  }, [open, fila]);
+  }, [open, fila, loadQueueUsers]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar fila</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar fila</DialogTitle>
+          </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dados" className="text-yellow-600 data-[state=active]:bg-yellow-100 data-[state=active]:text-yellow-800">
-              DADOS DA FILA
-            </TabsTrigger>
-            <TabsTrigger value="usuarios">USUÁRIOS DA FILA</TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dados">
+                Dados da Fila
+              </TabsTrigger>
+              <TabsTrigger value="usuarios">Usuários da Fila</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="dados" className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">
-                  Nome <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="nome"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Nome da fila"
-                  className="border-red-200 focus:border-red-400"
-                />
-                <span className="text-xs text-red-500">Required</span>
-              </div>
+            <TabsContent value="dados" className="space-y-4 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">
+                    Nome <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Nome da fila"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label>Cor</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <div 
-                        className="w-4 h-4 rounded mr-2"
-                        style={{ backgroundColor: cor }}
-                      />
-                      <Palette className="w-4 h-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="grid grid-cols-5 gap-2">
-                      {colors.map((color) => (
-                        <button
-                          key={color}
-                          className="w-8 h-8 rounded border-2 border-gray-200 hover:border-gray-400"
-                          style={{ backgroundColor: color }}
-                          onClick={() => setCor(color)}
+                <div className="space-y-2">
+                  <Label>Cor</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <div 
+                          className="w-4 h-4 rounded mr-2"
+                          style={{ backgroundColor: cor }}
                         />
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                        <Palette className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64">
+                      <div className="grid grid-cols-5 gap-2">
+                        {colors.map((color) => (
+                          <button
+                            key={color}
+                            className="w-8 h-8 rounded border-2 border-gray-200 hover:border-gray-400"
+                            style={{ backgroundColor: color }}
+                            onClick={() => setCor(color)}
+                          />
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ordem">Ordem da fila (Bot)</Label>
+                  <Input
+                    id="ordem"
+                    value={ordem}
+                    onChange={(e) => setOrdem(e.target.value)}
+                    placeholder="Ordem da fila"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ordem">Ordem da fila (Bot)</Label>
-                <Input
-                  id="ordem"
-                  value={ordem}
-                  onChange={(e) => setOrdem(e.target.value)}
-                  placeholder="Ordem da fila"
+                <Label>Distribuição automática</Label>
+                <Select value={distribuicao} onValueChange={setDistribuicao}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a distribuição automática" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {distributionOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>DS Agente</Label>
+                <Select value={agenteId} onValueChange={setAgenteId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um agente" />
+                    <ChevronDown className="w-4 h-4" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aiAgents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mensagem">Mensagem de saudação</Label>
+                <Textarea
+                  id="mensagem"
+                  value={mensagemSaudacao}
+                  onChange={(e) => setMensagemSaudacao(e.target.value)}
+                  placeholder="Digite a mensagem de saudação..."
+                  rows={6}
+                  className="resize-none"
                 />
               </div>
-            </div>
+            </TabsContent>
 
-            <div className="space-y-2">
-              <Label>Distribuição automática</Label>
-              <Select value={distribuicao} onValueChange={setDistribuicao}>
-                <SelectTrigger className="w-full bg-yellow-50 border-yellow-200">
-                  <SelectValue placeholder="Selecione a distribuição automática" />
-                </SelectTrigger>
-                <SelectContent>
-                  {distributionOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <TabsContent value="usuarios" className="space-y-4 mt-6">
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddUserModal(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar usuário à fila
+                </Button>
+              </div>
 
-            <div className="space-y-2">
-              <Label>DS Agente</Label>
-              <Select value={agenteId} onValueChange={setAgenteId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um agente" />
-                  <ChevronDown className="w-4 h-4" />
-                </SelectTrigger>
-                <SelectContent>
-                  {aiAgents.map((agent) => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mensagem">Mensagem de saudação</Label>
-              <Textarea
-                id="mensagem"
-                value={mensagemSaudacao}
-                onChange={(e) => setMensagemSaudacao(e.target.value)}
-                placeholder="Digite a mensagem de saudação..."
-                rows={6}
-                className="resize-none"
+              <QueueUsersList 
+                users={queueUsers}
+                onRemoveUser={removeUserFromQueue}
               />
-            </div>
-          </TabsContent>
+            </TabsContent>
+          </Tabs>
 
-          <TabsContent value="usuarios" className="space-y-4 mt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Configuração de usuários da fila em desenvolvimento...</p>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex justify-between items-center pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            Opções
-            <Button variant="ghost" size="sm" className="ml-2 text-yellow-600">
-              + Adicionar
-            </Button>
-          </div>
-          
-          <div className="flex space-x-2">
+          <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button 
               variant="outline" 
               onClick={() => onOpenChange(false)}
@@ -284,13 +298,19 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
             <Button 
               onClick={handleSubmit}
               disabled={loading || !nome.trim()}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black"
             >
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <AdicionarUsuarioFilaModal
+        open={showAddUserModal}
+        onOpenChange={setShowAddUserModal}
+        onAddUsers={addUsersToQueue}
+        excludeUserIds={queueUsers.map(qu => qu.user_id)}
+      />
+    </>
   );
 }
