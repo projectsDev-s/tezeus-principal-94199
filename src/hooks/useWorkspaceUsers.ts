@@ -22,7 +22,6 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
     try {
       console.log('🔄 Buscando usuários do workspace via edge function:', workspaceId);
       
-      // Usar a edge function que já implementa autenticação correta
       const { data, error } = await supabase.functions.invoke('manage-workspace-members', {
         body: { 
           action: 'list',
@@ -44,7 +43,6 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
       const members = data.members || [];
       console.log(`📋 Encontrados ${members.length} membros do workspace`);
 
-      // Extrair dados dos usuários
       const allUsers: WorkspaceUser[] = members
         .filter((member: any) => member.user)
         .map((member: any) => ({
@@ -55,7 +53,6 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
 
       console.log(`✅ ${allUsers.length} usuários carregados:`, allUsers.map(u => `${u.name} (${u.profile})`));
 
-      // Filtrar por perfil se especificado
       const filteredUsers = filterProfiles
         ? allUsers.filter(user => filterProfiles.includes(user.profile as 'user' | 'admin' | 'master'))
         : allUsers;
@@ -79,7 +76,7 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
       console.warn('⚠️ useWorkspaceUsers: sem workspace ID');
       setUsers([]);
     }
-  }, [workspaceId, loadUsers]);
+  }, [workspaceId, filterProfiles]);
 
   return {
     users,
