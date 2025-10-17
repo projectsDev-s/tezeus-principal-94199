@@ -915,16 +915,55 @@ export default function PipelineConfiguracao({
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                   Tipo do Pipeline
                 </label>
-                <Select value={pipelineType} onValueChange={setPipelineType}>
-                  <SelectTrigger className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="padrao">Padrão</SelectItem>
-                    <SelectItem value="vendas">Vendas</SelectItem>
-                    <SelectItem value="suporte">Suporte</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={pipelineType} onValueChange={setPipelineType}>
+                    <SelectTrigger className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="padrao">Padrão</SelectItem>
+                      <SelectItem value="vendas">Vendas</SelectItem>
+                      <SelectItem value="suporte">Suporte</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={async () => {
+                      if (!selectedPipeline?.id) return;
+                      
+                      try {
+                        const { error } = await supabase
+                          .from('pipelines')
+                          .update({
+                            name: pipelineName,
+                            type: pipelineType
+                          })
+                          .eq('id', selectedPipeline.id);
+                        
+                        if (error) throw error;
+                        
+                        toast({
+                          title: "Sucesso",
+                          description: "Pipeline atualizado com sucesso"
+                        });
+                        
+                        // Atualizar contexto
+                        if (refreshCurrentPipeline) {
+                          await refreshCurrentPipeline();
+                        }
+                      } catch (error) {
+                        console.error('Erro ao atualizar pipeline:', error);
+                        toast({
+                          title: "Erro",
+                          description: "Erro ao atualizar pipeline",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black"
+                  >
+                    Salvar
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
