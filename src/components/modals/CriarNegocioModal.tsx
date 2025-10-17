@@ -121,7 +121,7 @@ export function CriarNegocioModal({
   }, [columns]);
 
   // Validar se pode habilitar botão criar
-  const canCreate = selectedLead && selectedResponsible && selectedPipeline && selectedColumn && value;
+  const canCreate = selectedLead && selectedResponsible && selectedPipeline && selectedColumn;
 
   const handleSubmit = async () => {
     if (!canCreate) return;
@@ -132,7 +132,7 @@ export function CriarNegocioModal({
       pipeline: selectedPipeline,
       product: selectedProduct || null,
       column: selectedColumn,
-      value: parseFloat(value)
+      value: value ? parseFloat(value) : 0
     };
     
     if (onCreateBusiness) {
@@ -283,7 +283,7 @@ export function CriarNegocioModal({
           {/* Campo de valor */}
           <div>
             <Label htmlFor="value" className="text-sm text-muted-foreground">
-              Valor
+              Valor (Opcional)
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
