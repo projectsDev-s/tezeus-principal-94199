@@ -540,9 +540,8 @@ export function DealDetailsModal({
         description: `Movido para ${targetPipeline?.name} - ${targetColumn?.name}`,
       });
 
-      // Forçar refresh do pipeline atual para remover o card da visualização
-      console.log('🔄 Forçando refresh do pipeline atual...');
-      await refreshCurrentPipeline();
+      // O real-time vai atualizar automaticamente o Kanban
+      console.log('✅ Real-time vai sincronizar o estado do Kanban');
 
       // Pequeno delay para usuário ver o feedback antes do modal fechar
       setTimeout(() => {
