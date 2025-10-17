@@ -234,13 +234,16 @@ serve(async (req) => {
           assignedUserName = userData?.name || null;
         }
 
+        // Extrair conversation_tags ANTES do spread para não perder
+        const conversationTags = conv.conversation_tags || [];
+        
         return {
           ...conv,
           connection_id: conv.connection_id,
           connection: connectionData || null, // ✅ Garantido
           last_message: lastMessage || [],
           assigned_user_name: assignedUserName,
-          conversation_tags: conv.conversation_tags || []
+          conversation_tags: conversationTags // ✅ Preservar tags explicitamente
         };
       })
     );
