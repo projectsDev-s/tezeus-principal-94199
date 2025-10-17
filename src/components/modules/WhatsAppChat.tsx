@@ -1341,25 +1341,9 @@ export function WhatsAppChat({
                   </Select>
                 </div>
 
-                {/* Filtro por Agente */}
-                <div className="px-2">
-                  <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                    <SelectTrigger className="w-full h-8 text-xs">
-                      <SelectValue placeholder="Filtrar por agente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os agentes</SelectItem>
-                      {queuesLoading ? <SelectItem value="__loading__" disabled>Carregando...</SelectItem> : queues.length === 0 ? <SelectItem value="__empty__" disabled>Nenhum agente</SelectItem> : queues.filter(queue => queue.ai_agent_id && queue.ai_agent).map(queue => <SelectItem key={queue.ai_agent!.id} value={queue.ai_agent!.id}>
-                            {queue.ai_agent!.name}
-                          </SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Botão Limpar */}
-                {(selectedTag || selectedAgent) && <div className="px-2 pt-1">
+                {selectedTag && <div className="px-2 pt-1">
                     <Button variant="outline" size="sm" onClick={() => {
-                setSelectedAgent("");
                 setSelectedTag("");
               }} className="w-full h-7 text-xs">
                       Limpar filtros
