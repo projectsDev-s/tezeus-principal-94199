@@ -813,7 +813,82 @@ export function ContactSidePanel({
       </AlertDialog>
 
       {/* Modal de Criar Negócio */}
-      <CriarNegocioModal open={isCreateDealModalOpen} onOpenChange={setIsCreateDealModalOpen} preSelectedContactId={contact.id} preSelectedContactName={contact.name} />
+      <CriarNegocioModal 
+        open={isCreateDealModalOpen} 
+        onOpenChange={setIsCreateDealModalOpen} 
+        preSelectedContactId={contact.id} 
+        preSelectedContactName={contact.name}
+        onCreateBusiness={async (business) => {
+          try {
+            // 1. Buscar dados do contato
+            const { data: contactData, error: contactError } = await supabase
+              .from('contacts')
+              .select('id, name, phone, profile_image_url')
+              .eq('id', business.lead)
+              .single();
+              
+            if (contactError || !contactData?.phone) {
+              throw new Error('Contato não encontrado');
+            }
+
+            // 2. Verificar conversa existente
+            const { data: existingConv } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('contact_id', business.lead)
+              .eq('workspace_id', selectedWorkspace?.workspace_id)
+              .eq('status', 'open')
+              .limit(1)
+              .single();
+
+            let conversationId = existingConv?.id;
+
+            // 3. Criar conversa se não existir
+            if (!conversationId && contactData.phone) {
+              const { data: convData, error: convError } = await supabase.functions.invoke('create-quick-conversation', {
+                body: {
+                  phoneNumber: contactData.phone,
+                  orgId: selectedWorkspace?.workspace_id
+                }
+              });
+              
+              if (!convError && convData?.conversationId) {
+                conversationId = convData.conversationId;
+              }
+            }
+
+            // 4. Criar card no pipeline
+            await createCard({
+              column_id: business.column,
+              contact_id: business.lead,
+              conversation_id: conversationId,
+              responsible_user_id: business.responsible,
+              value: business.value,
+              title: contactData.name || 'Novo negócio',
+              description: 'Card criado através do painel de contatos',
+              contact: {
+                id: contactData.id,
+                name: contactData.name,
+                profile_image_url: contactData.profile_image_url
+              }
+            } as any);
+
+            toast({
+              title: "Negócio criado",
+              description: `Negócio "${contactData.name}" criado com sucesso!`
+            });
+
+            setIsCreateDealModalOpen(false);
+          } catch (error: any) {
+            console.error('Erro ao criar negócio:', error);
+            toast({
+              title: "Erro",
+              description: error.message || "Não foi possível criar o negócio",
+              variant: "destructive"
+            });
+          }
+        }}
+      />
 
       {/* Modais de visualização de mídia */}
       {viewingMedia && getFileType(viewingMedia.name, viewingMedia.type) === 'image' && <ImageModal isOpen={true} onClose={() => setViewingMedia(null)} imageUrl={viewingMedia.url} fileName={viewingMedia.name} />}
