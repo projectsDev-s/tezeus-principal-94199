@@ -301,7 +301,7 @@ export function DealDetailsModal({
   const [isMovingCard, setIsMovingCard] = useState(false);
   const [targetStepAnimation, setTargetStepAnimation] = useState<string | null>(null);
   const { toast } = useToast();
-  const { selectedPipeline, refreshCurrentPipeline } = usePipelinesContext();
+  const { selectedPipeline, moveCardOptimistic } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   const { getHeaders } = useWorkspaceHeaders();
   
@@ -447,24 +447,17 @@ export function DealDetailsModal({
       setIsMovingCard(true);
       setTargetStepAnimation(targetColumnId);
       
-      console.log('🎯 Movendo card para coluna:', targetColumnId);
+      console.log('🎯 [Timeline] Movendo card via contexto:', {
+        cardId: selectedCardId,
+        fromColumn: selectedColumnId,
+        toColumn: targetColumnId
+      });
       
-      // Aguardar animação (500ms)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // ✅ USAR O CONTEXTO em vez de UPDATE direto
+      await moveCardOptimistic(selectedCardId, targetColumnId);
       
-      // Atualizar card no banco
-      const { error } = await supabase
-        .from('pipeline_cards')
-        .update({ column_id: targetColumnId })
-        .eq('id', selectedCardId);
-
-      if (error) throw error;
-
-      // Atualizar estado local
+      // Atualizar estado local do modal
       setSelectedColumnId(targetColumnId);
-      
-      // Atualizar o pipeline no contexto
-      await refreshCurrentPipeline?.();
       
       toast({
         title: "Card movido com sucesso",
