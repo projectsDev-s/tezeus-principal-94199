@@ -23,6 +23,7 @@ import { ImageModal } from './chat/ImageModal';
 import { PdfModal } from './chat/PdfModal';
 import { VideoModal } from './chat/VideoModal';
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 interface Contact {
   id: string;
   name: string;
@@ -107,6 +108,7 @@ export function ContactSidePanel({
   const {
     selectedWorkspace
   } = useWorkspace();
+  const { getHeaders } = useWorkspaceHeaders();
   const {
     observations: realObservations,
     addObservation,
@@ -876,22 +878,25 @@ export function ContactSidePanel({
               throw new Error('Coluna selecionada não encontrada');
             }
 
-            // 5. Criar o card no pipeline com dados do contato
-            await createCard({
-              column_id: business.column,
-              contact_id: business.lead,
-              conversation_id: conversationId,
-              responsible_user_id: business.responsible,
-              value: business.value,
-              title: contactData.name || 'Novo negócio',
-              description: 'Card criado através do formulário de negócios',
-              // Passar dados do contato para renderização otimista
-              contact: {
-                id: contactData.id,
-                name: contactData.name,
-                profile_image_url: contactData.profile_image_url
+            // 6. Criar o card DIRETAMENTE na edge function com o pipeline correto
+            const headers = getHeaders();
+
+            const { data: newCard, error: cardError } = await supabase.functions.invoke('pipeline-management/cards', {
+              method: 'POST',
+              headers,
+              body: {
+                pipeline_id: business.pipeline, // CRÍTICO: usar o pipeline selecionado pelo usuário
+                column_id: business.column,
+                contact_id: business.lead,
+                conversation_id: conversationId,
+                responsible_user_id: business.responsible,
+                value: business.value,
+                title: contactData.name || 'Novo negócio',
+                description: 'Card criado através do formulário de negócios',
               }
-            } as any);
+            });
+
+            if (cardError) throw cardError;
 
             toast({
               title: "Sucesso",
