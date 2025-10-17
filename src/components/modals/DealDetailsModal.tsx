@@ -365,6 +365,8 @@ export function DealDetailsModal({
         currentPipelineId,
         contactNumber
       });
+      console.log('🔄 Modal aberto, atualizando todos os dados...');
+      // Recarregar todos os dados do card ao abrir
       fetchCardData();
     }
   }, [isOpen, cardId]);
