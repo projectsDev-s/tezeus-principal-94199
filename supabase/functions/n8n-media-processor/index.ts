@@ -326,12 +326,24 @@ serve(async (req) => {
       return mimeMap[ext] || 'application/octet-stream';
     }
 
-    // Detectar MIME type final e normalizar
+    // Detectar MIME type final
     let detectedMimeType = detectMimeTypeFromBuffer(uint8Array);
     let rawMimeType = detectedMimeType || mimeType || 'application/octet-stream';
     
-    // Normalizar MIME type (remover codecs e parâmetros extras)
+    console.log('🔍 MIME Type antes da normalização:', {
+      fromPayload: mimeType,
+      fromBuffer: detectedMimeType,
+      rawMimeTypeUsed: rawMimeType
+    });
+    
+    // CRÍTICO: Sempre normalizar o MIME type para tipos aceitos pelo Supabase Storage
     const { mime: finalMimeType, extension: defaultExtension } = normalizeMimeType(rawMimeType);
+    
+    console.log('✅ MIME Type após normalização:', {
+      original: rawMimeType,
+      normalized: finalMimeType,
+      extension: defaultExtension
+    });
     
     // Determinar extensão do arquivo
     let fileExtension = defaultExtension;
