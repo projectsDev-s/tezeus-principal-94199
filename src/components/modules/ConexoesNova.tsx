@@ -340,6 +340,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         phone_number: phoneNumber?.trim() || null,
         auto_create_crm_card: createCrmCard,
         default_pipeline_id: selectedPipeline || null,
+        queue_id: selectedQueueId || null,
       };
 
       console.log('Updating connection with data:', updateData);
@@ -388,6 +389,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setHistoryRecovery(connection.history_recovery);
     setCreateCrmCard(connection.auto_create_crm_card || false);
     setSelectedPipeline(connection.default_pipeline_id || '');
+    setSelectedQueueId(connection.queue_id || '');
     setIsEditMode(true);
     setIsCreateModalOpen(true);
   };

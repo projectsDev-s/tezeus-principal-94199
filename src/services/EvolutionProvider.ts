@@ -17,6 +17,7 @@ interface ConnectionUpdateRequest {
   phone_number?: string;
   auto_create_crm_card?: boolean;
   default_pipeline_id?: string;
+  queue_id?: string;
 }
 
 interface ConnectionResponse {

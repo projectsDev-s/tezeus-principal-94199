@@ -14,6 +14,7 @@ export interface Connection {
   workspace_id: string;
   auto_create_crm_card?: boolean;
   default_pipeline_id?: string;
+  queue_id?: string;
   is_default?: boolean;
   metadata?: {
     remote_id?: string;

@@ -19,7 +19,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { connectionId, phone_number, auto_create_crm_card, default_pipeline_id } = await req.json();
+    const { connectionId, phone_number, auto_create_crm_card, default_pipeline_id, queue_id } = await req.json();
 
     console.log('update-connection: Received data:', { 
       connectionId, 
@@ -47,6 +47,10 @@ serve(async (req) => {
 
     if (default_pipeline_id !== undefined) {
       updateData.default_pipeline_id = default_pipeline_id;
+    }
+
+    if (queue_id !== undefined) {
+      updateData.queue_id = queue_id;
     }
 
     console.log('update-connection: Updating with data:', updateData);
