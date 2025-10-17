@@ -588,6 +588,12 @@ export function DealDetailsModal({
     }
   };
   const fetchCardData = async () => {
+    // Validar cardId antes de prosseguir
+    if (!cardId) {
+      console.error('❌ cardId é inválido:', cardId);
+      return;
+    }
+
     setIsLoadingData(true);
     try {
       console.log('🔍 [1/4] Iniciando busca de dados do card:', cardId);
@@ -598,9 +604,17 @@ export function DealDetailsModal({
         .from('pipeline_cards')
         .select('id, pipeline_id, column_id, contact_id, title, description, value, status')
         .eq('id', cardId)
-        .single();
+        .maybeSingle(); // Usar maybeSingle() ao invés de single()
 
-      if (cardError) throw cardError;
+      if (cardError) {
+        console.error('❌ Erro ao buscar card:', cardError);
+        throw cardError;
+      }
+      
+      if (!currentCard) {
+        console.error('❌ Card não encontrado:', cardId);
+        throw new Error('Card não encontrado');
+      }
       
       console.log('✅ [2/4] Card encontrado no banco:', {
         cardId: currentCard.id,
@@ -694,9 +708,20 @@ export function DealDetailsModal({
       
     } catch (error) {
       console.error('❌ Erro ao buscar dados do card:', error);
+      
+      // Mostrar detalhes do erro
+      if (error && typeof error === 'object') {
+        console.error('Detalhes do erro:', {
+          message: (error as any).message,
+          details: (error as any).details,
+          hint: (error as any).hint,
+          code: (error as any).code
+        });
+      }
+      
       toast({
-        title: "Erro",
-        description: "Erro interno ao carregar dados.",
+        title: "Erro ao carregar negócio",
+        description: "Não foi possível carregar os dados do negócio. Tente novamente.",
         variant: "destructive",
       });
     } finally {
