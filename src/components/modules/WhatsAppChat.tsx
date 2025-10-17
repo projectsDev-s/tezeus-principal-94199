@@ -207,14 +207,51 @@ export function WhatsAppChat({
     if (selectedTag && selectedTag !== "all") {
       console.log('🏷️ Filtro por tag ativo:', selectedTag);
       console.log('📋 Conversas antes do filtro:', filtered.length);
-      console.log('🔍 Primeira conversa estrutura:', filtered[0]?.conversation_tags);
+      
+      // DEBUG: Mostrar estrutura completa das tags na primeira conversa
+      if (filtered.length > 0 && filtered[0]?.conversation_tags) {
+        console.log('🔍 Estrutura completa de conversation_tags:', 
+          JSON.stringify(filtered[0].conversation_tags, null, 2)
+        );
+      }
+      
       filtered = filtered.filter(conv => {
-        const hasTag = conv.conversation_tags?.some((ct: any) => ct.tag_id === selectedTag);
-        if (hasTag) {
-          console.log('✅ Conversa com tag encontrada:', conv.contact.name);
+        // Verificar se conversation_tags existe e é um array
+        if (!Array.isArray(conv.conversation_tags) || conv.conversation_tags.length === 0) {
+          console.log('⚠️ Conversa sem tags:', conv.contact.name);
+          return false;
         }
-        return hasTag || false;
+        
+        // Normalizar selectedTag para comparação
+        const normalizedSelectedTag = selectedTag.trim().toLowerCase();
+        
+        // Verificar se alguma tag corresponde
+        const hasTag = conv.conversation_tags.some((ct: any) => {
+          // Tentar diferentes estruturas possíveis
+          const tagId = (ct.tag_id || ct.tags?.id || '').trim().toLowerCase();
+          const matches = tagId === normalizedSelectedTag;
+          
+          if (matches) {
+            console.log('✅ Match encontrado!', {
+              conversa: conv.contact.name,
+              tagId: ct.tag_id,
+              tagName: ct.tags?.name,
+              selectedTag
+            });
+          }
+          
+          return matches;
+        });
+        
+        if (!hasTag) {
+          console.log('❌ Sem match:', conv.contact.name, 'Tags:', 
+            conv.conversation_tags.map((ct: any) => ct.tags?.name || ct.tag_id).join(', ')
+          );
+        }
+        
+        return hasTag;
       });
+      
       console.log('📋 Conversas após filtro:', filtered.length);
     }
 
