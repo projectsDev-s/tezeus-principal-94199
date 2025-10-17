@@ -6,6 +6,11 @@ interface Tag {
   name: string;
   color: string;
   contact_count?: number;
+  contact_tags?: Array<{
+    id: string;
+    contact_id: string;
+    created_by: string | null;
+  }>;
 }
 
 export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
@@ -79,7 +84,8 @@ export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
           id: item.id,
           name: item.name,
           color: item.color,
-          contact_count: contacts.size
+          contact_count: contacts.size,
+          contact_tags: item.contact_tags
         };
       }) || [];
 
