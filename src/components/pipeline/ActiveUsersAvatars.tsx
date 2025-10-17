@@ -17,9 +17,18 @@ interface ActiveUsersAvatarsProps {
   isLoading: boolean;
   maxVisible?: number;
   className?: string;
+  selectedUserIds?: string[];
+  onUserClick?: (userId: string) => void;
 }
 
-export function ActiveUsersAvatars({ users, isLoading, maxVisible = 5, className }: ActiveUsersAvatarsProps) {
+export function ActiveUsersAvatars({ 
+  users, 
+  isLoading, 
+  maxVisible = 5, 
+  className,
+  selectedUserIds = [],
+  onUserClick
+}: ActiveUsersAvatarsProps) {
   // Generate initials from user name
   const getInitials = (name: string) => {
     return name
@@ -65,33 +74,54 @@ export function ActiveUsersAvatars({ users, isLoading, maxVisible = 5, className
   return (
     <TooltipProvider>
       <div className={cn("flex items-center -space-x-2", className)}>
-        {visibleUsers.map((user, index) => (
-          <Tooltip key={user.id}>
-            <TooltipTrigger asChild>
-              <div className="relative">
-                <Avatar className="w-10 h-10 border-2 border-background hover:z-10 transition-transform hover:scale-110 cursor-pointer">
-                  {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
-                  <AvatarFallback className={cn("text-xs font-medium", getAvatarColor(index))}>
-                    {getInitials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-                {user.dealCount > 1 && (
-                  <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium border border-background">
-                    {user.dealCount}
-                  </div>
-                )}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-center">
-                <p className="font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {user.dealCount} negócio{user.dealCount > 1 ? "s" : ""} ativo{user.dealCount > 1 ? "s" : ""}
-                </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        ))}
+        {visibleUsers.map((user, index) => {
+          const isSelected = selectedUserIds.includes(user.id);
+          
+          return (
+            <Tooltip key={user.id}>
+              <TooltipTrigger asChild>
+                <div 
+                  className="relative"
+                  onClick={() => onUserClick?.(user.id)}
+                >
+                  <Avatar className={cn(
+                    "w-10 h-10 border-2 hover:z-10 transition-all cursor-pointer",
+                    isSelected 
+                      ? "border-primary ring-2 ring-primary ring-offset-2 scale-110" 
+                      : "border-background hover:scale-110"
+                  )}>
+                    {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
+                    <AvatarFallback className={cn(
+                      "text-xs font-medium",
+                      isSelected ? "opacity-100" : "opacity-90",
+                      getAvatarColor(index)
+                    )}>
+                      {getInitials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {user.dealCount > 1 && (
+                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium border border-background">
+                      {user.dealCount}
+                    </div>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-center">
+                  <p className="font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {user.dealCount} negócio{user.dealCount > 1 ? "s" : ""} ativo{user.dealCount > 1 ? "s" : ""}
+                  </p>
+                  {isSelected && (
+                    <p className="text-xs text-primary font-medium mt-1">
+                      ✓ Filtrado
+                    </p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
 
         {remainingCount > 0 && (
           <Tooltip>

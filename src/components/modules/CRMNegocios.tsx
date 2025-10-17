@@ -590,6 +590,7 @@ function CRMNegociosContent({
     id: string;
     name: string;
   } | null>(null);
+  const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([]);
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -615,6 +616,14 @@ function CRMNegociosContent({
     // Filtrar por termo de busca
     if (searchTerm) {
       columnCards = columnCards.filter(card => card.title.toLowerCase().includes(searchTerm.toLowerCase()) || card.description?.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    // 🎯 FILTRAR POR RESPONSÁVEIS SELECIONADOS
+    if (selectedResponsibleIds.length > 0) {
+      columnCards = columnCards.filter(card => {
+        // Verificar se o card tem responsible_user_id nos responsáveis selecionados
+        return card.responsible_user_id && selectedResponsibleIds.includes(card.responsible_user_id);
+      });
     }
 
     // Filtrar por tags selecionadas
@@ -988,7 +997,37 @@ function CRMNegociosContent({
               </div>
               
               {/* Avatar Group - Usuários com conversas ativas */}
-              <ActiveUsersAvatars users={activeUsers} isLoading={isLoadingActiveUsers} maxVisible={5} className="ml-2 flex-shrink-0" />
+              <ActiveUsersAvatars 
+                users={activeUsers} 
+                isLoading={isLoadingActiveUsers} 
+                maxVisible={5} 
+                className="ml-2 flex-shrink-0"
+                selectedUserIds={selectedResponsibleIds}
+                onUserClick={(userId) => {
+                  setSelectedResponsibleIds(prev => {
+                    if (prev.includes(userId)) {
+                      // Remove do filtro se já estiver selecionado
+                      return prev.filter(id => id !== userId);
+                    } else {
+                      // Adiciona ao filtro
+                      return [...prev, userId];
+                    }
+                  });
+                }}
+              />
+              
+              {/* Botão Apagar Filtros - aparece quando há filtros ativos */}
+              {selectedResponsibleIds.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedResponsibleIds([])}
+                  className="ml-2 flex-shrink-0 text-xs"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Apagar filtros
+                </Button>
+              )}
             </div>
             
             {/* + Coluna Button - Only show if pipeline exists and user can manage columns */}
