@@ -332,22 +332,23 @@ serve(async (req) => {
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
 
-    // ✅ PAYLOAD CORRETO conforme documentação Evolution API v2
-    // settings vai separado de config/webhook
+    // ✅ PAYLOAD CORRIGIDO conforme documentação Evolution API
     const evolutionPayload = {
       instanceName: instanceName,
       integration: "WHATSAPP-BAILEYS",
       qrcode: true,
-      syncFullHistory: true,  // ✅ Na raiz do payload (mais confiável)
-      number: phoneNumber || undefined,  // ✅ Número de telefone do WhatsApp
+      syncFullHistory: true,  // raiz
+      number: phoneNumber || undefined,
+
       settings: {
         rejectCall: false,
         groupsIgnore: false,
         alwaysOnline: false,
         readMessages: false,
         readStatus: false,
-        sync_full_history: true,  // ✅ snake_case conforme API Evolution v2
+        sync_full_history: true, // snake_case
       },
+
       webhook: {
         url: webhookUrl,
         headers: {
@@ -359,10 +360,12 @@ serve(async (req) => {
           "MESSAGES_UPSERT",
           "QRCODE_UPDATED",
           "CONNECTION_UPDATE",
-        ],
-        webhook_by_events: true,
+        ]
       },
-      webhookBase64: true, // ✅ Na raiz, camelCase conforme Evolution API
+
+      // 👇 Estes DOIS precisam estar na raiz em camelCase
+      webhookByEvents: true,
+      webhookBase64: true
     };
     
     console.log('📦 Evolution payload configuration:', {
