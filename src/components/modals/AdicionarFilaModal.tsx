@@ -8,11 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Palette, ChevronDown, UserPlus, X } from "lucide-react";
+import { Palette, ChevronDown, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AdicionarUsuarioFilaModal } from "./AdicionarUsuarioFilaModal";
-import { useWorkspaceUsers } from "@/hooks/useWorkspaceUsers";
+import { QueueUsersList } from "./QueueUsersList";
 
 interface AdicionarFilaModalProps {
   open: boolean;
@@ -49,8 +49,20 @@ export function AdicionarFilaModal({
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
   const [showError, setShowError] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const { users } = useWorkspaceUsers(selectedWorkspace?.workspace_id || '');
+  const [queueUsers, setQueueUsers] = useState<Array<{
+    id: string;
+    queue_id: string;
+    user_id: string;
+    order_position: number;
+    created_at: string;
+    system_users?: {
+      id: string;
+      name: string;
+      email: string;
+      avatar?: string;
+      profile: string;
+    };
+  }>>([]);
 
   // Form state
   const [nome, setNome] = useState("");
@@ -80,7 +92,7 @@ export function AdicionarFilaModal({
     setMensagemSaudacao("");
     setActiveTab("dados");
     setShowError(false);
-    setSelectedUsers([]);
+    setQueueUsers([]);
   };
   const handleSubmit = async () => {
     if (!nome.trim()) {
@@ -116,16 +128,16 @@ export function AdicionarFilaModal({
       if (error) throw error;
 
       // Adicionar usuários selecionados à fila
-      if (newQueue && selectedUsers.length > 0) {
-        const queueUsers = selectedUsers.map((userId, index) => ({
+      if (newQueue && queueUsers.length > 0) {
+        const queueUsersData = queueUsers.map((qu) => ({
           queue_id: newQueue.id,
-          user_id: userId,
-          order_position: index
+          user_id: qu.user_id,
+          order_position: qu.order_position
         }));
 
         const { error: usersError } = await supabase
           .from('queue_users')
-          .insert(queueUsers);
+          .insert(queueUsersData);
 
         if (usersError) {
           console.error('Erro ao adicionar usuários:', usersError);
@@ -150,7 +162,10 @@ export function AdicionarFilaModal({
       resetForm();
     }
   }, [open]);
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar fila</DialogTitle>
@@ -245,78 +260,74 @@ export function AdicionarFilaModal({
             </div>
           </TabsContent>
 
-          <TabsContent value="usuarios" className="space-y-4 mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-medium">Usuários na Fila</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddUserModal(true)}
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Adicionar Usuário
-              </Button>
-            </div>
+            <TabsContent value="usuarios" className="space-y-4 mt-6">
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddUserModal(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar usuário à fila
+                </Button>
+              </div>
 
-            {selectedUsers.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg mb-2">Nenhum usuário adicionado</p>
-                <p className="text-sm">Clique em "Adicionar Usuário" para começar</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {selectedUsers.map((userId, index) => {
-                  const user = users.find(u => u.id === userId);
-                  return (
-                    <div key={userId} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground">#{index + 1}</span>
-                        <span className="font-medium">{user?.name || 'Usuário'}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedUsers(prev => prev.filter(id => id !== userId))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
+              <QueueUsersList 
+                users={queueUsers}
+                onRemoveUser={(userId) => {
+                  setQueueUsers(prev => prev.filter(qu => qu.user_id !== userId));
+                }}
+              />
+            </TabsContent>
         </Tabs>
 
-        <div className="flex justify-between items-center pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            Opções
-            <Button variant="ghost" size="sm" className="ml-2 text-yellow-600">
-              + Adicionar
-            </Button>
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={loading || !nome.trim()} className="bg-yellow-500 hover:bg-yellow-600 text-black">
+            <Button 
+              onClick={handleSubmit}
+              disabled={loading || !nome.trim()}
+            >
               {loading ? "Criando..." : "Adicionar"}
             </Button>
           </div>
-        </div>
-
-        {showAddUserModal && (
-          <AdicionarUsuarioFilaModal
-            open={showAddUserModal}
-            onOpenChange={setShowAddUserModal}
-            excludeUserIds={selectedUsers}
-            onAddUsers={async (userIds) => {
-              setSelectedUsers(prev => [...prev, ...userIds]);
-              setShowAddUserModal(false);
-            }}
-          />
-        )}
       </DialogContent>
-    </Dialog>;
+    </Dialog>
+
+    <AdicionarUsuarioFilaModal
+      open={showAddUserModal}
+      onOpenChange={setShowAddUserModal}
+      onAddUsers={async (userIds) => {
+        // Buscar os dados dos usuários do workspace
+        const { data: usersData } = await supabase
+          .from('system_users')
+          .select('id, name, email, avatar, profile')
+          .in('id', userIds);
+
+        const newUsers = userIds.map((userId, index) => {
+          const userData = usersData?.find(u => u.id === userId);
+          return {
+            id: `temp-${userId}`, // ID temporário
+            queue_id: '', // Será preenchido ao criar a fila
+            user_id: userId,
+            order_position: queueUsers.length + index,
+            created_at: new Date().toISOString(),
+            system_users: userData ? {
+              id: userData.id,
+              name: userData.name || '',
+              email: userData.email || '',
+              avatar: userData.avatar,
+              profile: userData.profile || 'user'
+            } : undefined
+          };
+        });
+        
+        setQueueUsers(prev => [...prev, ...newUsers]);
+        setShowAddUserModal(false);
+      }}
+      excludeUserIds={queueUsers.map(qu => qu.user_id)}
+    />
+    </>
+  );
 }
