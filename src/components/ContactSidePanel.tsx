@@ -93,19 +93,14 @@ export function ContactSidePanel({
     pipelines
   } = usePipelines();
   const {
-    columns,
-    fetchColumns
-  } = usePipelineColumns(null);
-  const {
     cards: contactCards,
     currentPipeline,
     transferToPipeline,
     isLoading: cardsLoading,
     fetchContactCards
   } = useContactPipelineCards(contact?.id || null);
-  const {
-    createCard
-  } = usePipelineCards(null);
+  const { createCard } = usePipelineCards(currentPipeline?.id || null);
+  const { columns } = usePipelineColumns(currentPipeline?.id || null);
   const {
     toast
   } = useToast();
@@ -820,45 +815,59 @@ export function ContactSidePanel({
         preSelectedContactId={contact.id} 
         preSelectedContactName={contact.name}
         onCreateBusiness={async (business) => {
+          if (!selectedWorkspace) {
+            toast({
+              title: "Erro",
+              description: "Workspace não selecionado",
+              variant: "destructive"
+            });
+            return;
+          }
+
           try {
-            // 1. Buscar dados do contato
+            // 1. Buscar dados completos do contato
             const { data: contactData, error: contactError } = await supabase
               .from('contacts')
-              .select('id, name, phone, profile_image_url')
+              .select('*')
               .eq('id', business.lead)
               .single();
-              
-            if (contactError || !contactData?.phone) {
-              throw new Error('Contato não encontrado');
+
+            if (contactError) throw contactError;
+
+            // 2. Verificar se já existe conversa ativa (para reusar se existir)
+            const { data: existingConversations, error: convError } = await supabase
+              .from('conversations')
+              .select('id, status')
+              .eq('contact_id', business.lead)
+              .eq('workspace_id', selectedWorkspace.workspace_id)
+              .eq('status', 'open');
+
+            if (convError) {
+              console.error('Erro ao verificar conversas existentes:', convError);
             }
 
-            // 2. Verificar conversa existente
-            const { data: existingConv } = await supabase
-              .from('conversations')
-              .select('id')
-              .eq('contact_id', business.lead)
-              .eq('workspace_id', selectedWorkspace?.workspace_id)
-              .eq('status', 'open')
-              .limit(1)
-              .single();
+            // Se existe conversa, reusar. Se não existe, criar nova
+            let conversationId = existingConversations?.[0]?.id;
 
-            let conversationId = existingConv?.id;
-
-            // 3. Criar conversa se não existir
-            if (!conversationId && contactData.phone) {
-              const { data: convData, error: convError } = await supabase.functions.invoke('create-quick-conversation', {
+            // 3. Criar conversa apenas se não existe
+            if (!conversationId) {
+              const { data: conversationData, error: conversationError } = await supabase.functions.invoke('create-quick-conversation', {
                 body: {
                   phoneNumber: contactData.phone,
-                  orgId: selectedWorkspace?.workspace_id
+                  orgId: selectedWorkspace.workspace_id
                 }
               });
-              
-              if (!convError && convData?.conversationId) {
-                conversationId = convData.conversationId;
-              }
+              if (conversationError) throw conversationError;
+              conversationId = conversationData?.conversationId;
             }
 
-            // 4. Criar card no pipeline
+            // 4. Validar se a coluna selecionada existe
+            const targetColumn = columns.find(col => col.id === business.column);
+            if (!targetColumn) {
+              throw new Error('Coluna selecionada não encontrada');
+            }
+
+            // 5. Criar o card no pipeline com dados do contato
             await createCard({
               column_id: business.column,
               contact_id: business.lead,
@@ -866,7 +875,8 @@ export function ContactSidePanel({
               responsible_user_id: business.responsible,
               value: business.value,
               title: contactData.name || 'Novo negócio',
-              description: 'Card criado através do painel de contatos',
+              description: 'Card criado através do formulário de negócios',
+              // Passar dados do contato para renderização otimista
               contact: {
                 id: contactData.id,
                 name: contactData.name,
@@ -875,19 +885,16 @@ export function ContactSidePanel({
             } as any);
 
             toast({
-              title: "Negócio criado",
-              description: `Negócio "${contactData.name}" criado com sucesso!`
+              title: "Sucesso",
+              description: "Negócio criado com sucesso!"
             });
 
-            // 5. Atualizar lista de cards do contato
-            await fetchContactCards();
-
             setIsCreateDealModalOpen(false);
-          } catch (error: any) {
+          } catch (error) {
             console.error('Erro ao criar negócio:', error);
             toast({
               title: "Erro",
-              description: error.message || "Não foi possível criar o negócio",
+              description: error instanceof Error ? error.message : "Erro ao criar negócio",
               variant: "destructive"
             });
           }
