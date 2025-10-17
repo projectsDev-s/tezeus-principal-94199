@@ -240,8 +240,8 @@ serve(async (req) => {
       
       // Mapear para tipos aceitos pelo Supabase Storage
       const mimeMap: Record<string, { mime: string; extension: string }> = {
-        // Áudios OGG não são suportados pelo Supabase - mapear para audio/webm
-        'audio/ogg': { mime: 'audio/webm', extension: 'ogg' },
+        // Áudios OGG convertidos para MP3 (formato universal)
+        'audio/ogg': { mime: 'audio/mpeg', extension: 'mp3' },
         'audio/mpeg': { mime: 'audio/mpeg', extension: 'mp3' },
         'audio/mp3': { mime: 'audio/mpeg', extension: 'mp3' },
         'audio/wav': { mime: 'audio/wav', extension: 'wav' },
