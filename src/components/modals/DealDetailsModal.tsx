@@ -298,6 +298,8 @@ export function DealDetailsModal({
     phone: initialContactData.phone || contactNumber,
     profile_image_url: initialContactData.profile_image_url || null
   } : null);
+  const [isMovingCard, setIsMovingCard] = useState(false);
+  const [targetStepAnimation, setTargetStepAnimation] = useState<string | null>(null);
   const { toast } = useToast();
   const { selectedPipeline, refreshCurrentPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
@@ -435,6 +437,50 @@ export function DealDetailsModal({
     } catch (error) {
       console.error('❌ Error fetching pipeline actions:', error);
       setPipelineActions([]);
+    }
+  };
+
+  const handleMoveToColumn = async (targetColumnId: string, targetStepIndex: number) => {
+    if (isMovingCard || targetColumnId === selectedColumnId) return;
+    
+    try {
+      setIsMovingCard(true);
+      setTargetStepAnimation(targetColumnId);
+      
+      console.log('🎯 Movendo card para coluna:', targetColumnId);
+      
+      // Aguardar animação (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Atualizar card no banco
+      const { error } = await supabase
+        .from('pipeline_cards')
+        .update({ column_id: targetColumnId })
+        .eq('id', selectedCardId);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setSelectedColumnId(targetColumnId);
+      
+      // Atualizar o pipeline no contexto
+      await refreshCurrentPipeline?.();
+      
+      toast({
+        title: "Card movido com sucesso",
+        description: `Movido para ${pipelineSteps[targetStepIndex]?.name || 'nova etapa'}`,
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao mover card:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível mover o card",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMovingCard(false);
+      setTargetStepAnimation(null);
     }
   };
 
@@ -1238,6 +1284,7 @@ export function DealDetailsModal({
                           const isActive = index === currentStepIndex;
                           const isFuture = currentStepIndex >= 0 && index > currentStepIndex;
                           const isPast = currentStepIndex >= 0 && index < currentStepIndex;
+                          const isAnimating = targetStepAnimation === step.id;
                           
                           return (
                             <div 
@@ -1245,23 +1292,29 @@ export function DealDetailsModal({
                               className="flex flex-col items-center justify-start z-20"
                               style={{ flex: '1' }}
                             >
-                              <div 
+                              <button
+                                onClick={() => !isMovingCard && handleMoveToColumn(step.id, index)}
+                                disabled={isMovingCard || isActive}
                                 className={cn(
-                                  "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all duration-300",
-                                  isActive && "bg-yellow-400 border-yellow-400 text-black",
-                                  (isPast || isFuture) && "bg-white border-gray-300 text-gray-500",
-                                  isDarkMode && (isPast || isFuture) && "bg-gray-700 border-gray-600 text-gray-400"
+                                  "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all duration-500",
+                                  "focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2",
+                                  isActive && "bg-yellow-400 border-yellow-400 text-black shadow-lg",
+                                  isAnimating && "animate-pulse bg-yellow-300 border-yellow-300 scale-110",
+                                  (isPast || isFuture) && !isAnimating && "bg-white border-gray-300 text-gray-500 hover:bg-yellow-100 hover:border-yellow-300 hover:scale-105 cursor-pointer",
+                                  isDarkMode && (isPast || isFuture) && !isAnimating && "bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600 hover:border-yellow-500",
+                                  (isMovingCard || isActive) && "cursor-not-allowed opacity-60"
                                 )}
                               >
                                 <span className="font-bold">{index + 1}</span>
-                              </div>
+                              </button>
                               
                               <div className="mt-3 text-center" style={{ maxWidth: '90px' }}>
                                 <p 
                                   className={cn(
-                                    "text-xs font-medium leading-tight",
+                                    "text-xs font-medium leading-tight transition-colors duration-300",
                                     isActive && "text-yellow-600 font-bold",
-                                    (isPast || isFuture) && "text-gray-500"
+                                    isAnimating && "text-yellow-500 font-bold",
+                                    (isPast || isFuture) && !isAnimating && "text-gray-500"
                                   )}
                                 >
                                   {step.name}
