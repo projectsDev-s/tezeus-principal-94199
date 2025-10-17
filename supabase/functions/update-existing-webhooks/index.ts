@@ -66,8 +66,8 @@ serve(async (req) => {
         
         const webhookBody = {
           url: `${supabaseUrl}/functions/v1/evolution-webhook-v2`,
-          webhook_by_events: false,
-          webhook_base64: false,
+          webhook_by_events: true,
+          webhook_base64: true,
           events: [
             "APPLICATION_STARTUP",
             "QRCODE_UPDATED",
