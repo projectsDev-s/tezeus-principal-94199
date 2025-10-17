@@ -75,11 +75,14 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               url: webhookUrl,
-              webhook_by_events: false,
+              webhook_by_events: true,
+              webhook_base64: true,
               events: [
                 'QRCODE_UPDATED',
-                'CONNECTION_UPDATE', 
-                'MESSAGES_UPSERT'
+                'CONNECTION_UPDATE',
+                'MESSAGES_UPSERT',
+                'MESSAGES_UPDATE',
+                'SEND_MESSAGE'
               ]
             })
           }
