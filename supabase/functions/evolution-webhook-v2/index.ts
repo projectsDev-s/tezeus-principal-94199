@@ -870,6 +870,73 @@ serve(async (req) => {
             .select('id')
             .single();
 
+          // ✅ DETECTAR E PROCESSAR MÍDIA AUTOMATICAMENTE
+          const hasMedia = messageData.message?.audioMessage?.url ||
+                           messageData.message?.imageMessage?.url ||
+                           messageData.message?.videoMessage?.url ||
+                           messageData.message?.documentMessage?.url;
+          
+          if (hasMedia && newMessage?.id) {
+            console.log(`📎 [${requestId}] Media detected, calling n8n-media-processor`);
+            
+            // Preparar payload para o n8n-media-processor
+            const mediaPayload = {
+              messageId: newMessage.id,
+              conversationId: conversationId,
+              workspaceId: workspaceId,
+              contactId: contactId,
+              phoneNumber: sanitizedPhone,
+              
+              // Dados da mídia
+              fileUrl: messageData.message?.audioMessage?.url ||
+                       messageData.message?.imageMessage?.url ||
+                       messageData.message?.videoMessage?.url ||
+                       messageData.message?.documentMessage?.url,
+              
+              mimeType: messageData.message?.audioMessage?.mimetype ||
+                        messageData.message?.imageMessage?.mimetype ||
+                        messageData.message?.videoMessage?.mimetype ||
+                        messageData.message?.documentMessage?.mimetype,
+              
+              fileName: messageData.message?.documentMessage?.fileName || 
+                        `media_${Date.now()}`,
+              
+              messageType: messageData.message?.audioMessage ? 'audio' :
+                           messageData.message?.imageMessage ? 'image' : 
+                           messageData.message?.videoMessage ? 'video' :
+                           messageData.message?.documentMessage ? 'document' : 'unknown',
+              
+              // Metadados adicionais
+              metadata: {
+                duration: messageData.message?.audioMessage?.seconds,
+                fileSize: messageData.message?.audioMessage?.fileLength ||
+                          messageData.message?.imageMessage?.fileLength ||
+                          messageData.message?.videoMessage?.fileLength ||
+                          messageData.message?.documentMessage?.fileLength,
+                isPTT: messageData.message?.audioMessage?.ptt,
+                waveform: messageData.message?.audioMessage?.waveform
+              }
+            };
+            
+            // Chamar o n8n-media-processor de forma assíncrona
+            try {
+              const { data: processResult, error: processError } = await supabase.functions.invoke(
+                'n8n-media-processor',
+                {
+                  body: mediaPayload
+                }
+              );
+              
+              if (processError) {
+                console.error(`❌ [${requestId}] Error calling n8n-media-processor:`, processError);
+              } else {
+                console.log(`✅ [${requestId}] Media processing triggered:`, processResult);
+              }
+            } catch (error) {
+              console.error(`❌ [${requestId}] Exception calling n8n-media-processor:`, error);
+            }
+          }
+
           // Update conversation timestamp
           await supabase
             .from('conversations')

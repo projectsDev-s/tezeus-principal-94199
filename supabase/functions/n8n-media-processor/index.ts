@@ -32,10 +32,11 @@ serve(async (req) => {
       });
     }
     
-    // Mapear campos do N8N para os campos esperados pela função
+    // Mapear campos do N8N e evolution-webhook-v2 para os campos esperados pela função
     const {
-      // Campos diretos (se vier da API)
+      // Campos diretos do evolution-webhook-v2
       messageId: directMessageId,
+      fileUrl: directFileUrl,
       mediaUrl: directMediaUrl,
       base64: directBase64,
       fileName: directFileName,
@@ -43,6 +44,9 @@ serve(async (req) => {
       conversationId: directConversationId,
       phoneNumber: directPhoneNumber,
       workspaceId: directWorkspaceId,
+      messageType: directMessageType,
+      contactId: directContactId,
+      metadata: directMetadata,
       
       // Campos do N8N (mapeamento)
       external_id,
@@ -58,15 +62,18 @@ serve(async (req) => {
       direction
     } = payload;
     
-    // Priorizar campos diretos, depois mapear do N8N
+    // Priorizar campos diretos do evolution-webhook-v2, depois mapear do N8N
     const messageId = directMessageId || external_id;
-    const mediaUrl = directMediaUrl; // N8N não envia URL, só base64
+    const mediaUrl = directFileUrl || directMediaUrl; // fileUrl do evolution-webhook-v2 ou mediaUrl do N8N
     const base64 = directBase64 || content;
     const fileName = directFileName || file_name;
     const mimeType = directMimeType || mime_type;
     const conversationId = directConversationId;
     const phoneNumber = directPhoneNumber || phone_number;
     const workspaceId = directWorkspaceId || workspace_id;
+    const messageType = directMessageType || message_type;
+    const contactId = directContactId;
+    const metadata = directMetadata;
     const messageDirection = direction;
     
     console.log('N8N Media Processor - Dados mapeados:', { 
@@ -77,8 +84,12 @@ serve(async (req) => {
       mimeType, 
       workspaceId,
       conversationId,
+      messageType,
+      contactId,
+      phoneNumber,
       direction: messageDirection,
-      sender_type
+      sender_type,
+      metadata
     });
 
     const supabase = createClient(
@@ -86,27 +97,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // REGRA CRÍTICA: n8n-media-processor APENAS atualiza mensagens existentes para OUTBOUND
-    // Para INBOUND, pode criar novas mensagens se necessário
+    // VALIDAÇÃO: messageId é obrigatório
     if (!messageId) {
       console.log('❌ Sem messageId - não é possível processar');
       return new Response(JSON.stringify({
         success: false,
-        error: 'messageId/external_id obrigatório para processamento'
+        error: 'messageId obrigatório para processamento'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    // VALIDAÇÃO CRÍTICA: Se não há dados de mídia (base64 ou mediaUrl), 
-    // não devemos processar mensagens de texto simples
-    if (!base64 && !mediaUrl && !fileName && !mimeType) {
+    // VALIDAÇÃO: Se não há dados de mídia (base64 ou mediaUrl), retornar sucesso sem processar
+    if (!base64 && !mediaUrl) {
       console.log('⚠️ Nenhum dado de mídia encontrado - pulando processamento');
       return new Response(JSON.stringify({
         success: true,
         message: 'Nenhum dado de mídia para processar - mensagem de texto simples',
-        external_id: messageId
+        messageId: messageId
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -117,47 +126,21 @@ serve(async (req) => {
     console.log(`🔄 Processando mensagem ${isOutbound ? 'OUTBOUND' : 'INBOUND'} - external_id: ${messageId}`);
     console.log(`📋 Direction: ${messageDirection}, Sender Type: ${sender_type}, Is Outbound: ${isOutbound}`);
 
-    console.log('🔍 Buscando mensagem existente por external_id:', messageId);
+    console.log('🔍 Buscando mensagem existente por messageId (ID direto):', messageId);
     
-    // Implementar retry para aguardar a mensagem aparecer no banco (condição de corrida)
-    let existingMessage = null;
-    let searchError = null;
-    let attempts = 0;
-    const maxAttempts = 5;
-    const retryDelay = 500; // 500ms entre tentativas
-    
-    while (attempts < maxAttempts && !existingMessage) {
-      attempts++;
-      console.log(`⏳ Tentativa ${attempts}/${maxAttempts} - Buscando mensagem...`);
-      
-      const { data, error } = await supabase
-        .from('messages')
-        .select('id, external_id, workspace_id, content')
-        .eq('external_id', messageId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('❌ Erro ao buscar mensagem:', error);
-        searchError = error;
-        break;
-      }
-
-      if (data) {
-        existingMessage = data;
-        console.log(`✅ Mensagem encontrada na tentativa ${attempts}:`, existingMessage.id);
-        break;
-      }
-
-      if (attempts < maxAttempts) {
-        console.log(`⏳ Mensagem não encontrada, aguardando ${retryDelay}ms antes da próxima tentativa...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-      }
-    }
+    // Buscar mensagem diretamente pelo ID (evolution-webhook-v2 passa o ID, não external_id)
+    const { data: existingMessage, error: searchError } = await supabase
+      .from('messages')
+      .select('id, external_id, workspace_id, content, conversation_id')
+      .eq('id', messageId)
+      .maybeSingle();
 
     if (searchError) {
+      console.error('❌ Erro ao buscar mensagem:', searchError);
       return new Response(JSON.stringify({
         success: false,
-        error: 'Erro ao buscar mensagem existente'
+        error: 'Erro ao buscar mensagem existente',
+        details: searchError.message
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -165,181 +148,20 @@ serve(async (req) => {
     }
 
     if (!existingMessage) {
-      console.log(`⚠️ Mensagem não encontrada após ${maxAttempts} tentativas - external_id:`, messageId);
+      console.log(`❌ Mensagem não encontrada - ID:`, messageId);
       
-      // Usar a variável isOutbound já definida anteriormente
-      
-      if (isOutbound) {
-        console.log(`❌ [OUTBOUND] Mensagem deveria existir no banco mas não foi encontrada - external_id: ${messageId}`);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Mensagem outbound não encontrada no banco de dados',
-          external_id: messageId,
-          details: 'Mensagens enviadas do sistema devem ser salvas antes de chamar o media processor'
-        }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      
-      // APENAS para mensagens INBOUND (recebidas) - criar nova mensagem
-      console.log(`📥 [INBOUND] Criando nova mensagem para external_id: ${messageId}`);
-      
-      if (!workspaceId || !phoneNumber) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'workspace_id e phone_number são obrigatórios para criar nova mensagem inbound',
-          external_id: messageId
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Buscar ou criar contato
-      let contact = null;
-      const { data: existingContact } = await supabase
-        .from('contacts')
-        .select('id')
-        .eq('phone', phoneNumber)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
-
-      if (existingContact) {
-        contact = existingContact;
-      } else {
-        const { data: newContact, error: contactError } = await supabase
-          .from('contacts')
-          .insert({
-            phone: phoneNumber,
-            workspace_id: workspaceId,
-            name: contact_name || phoneNumber
-          })
-          .select('id')
-          .single();
-
-        if (contactError) {
-          console.error('❌ Erro ao criar contato:', contactError);
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Falha ao criar contato'
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-        contact = newContact;
-      }
-
-      // Buscar ou criar conversa
-      let conversation = null;
-      const { data: existingConversation } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('contact_id', contact.id)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
-
-      if (existingConversation) {
-        conversation = existingConversation;
-      } else {
-        const { data: newConversation, error: conversationError } = await supabase
-          .from('conversations')
-          .insert({
-            contact_id: contact.id,
-            workspace_id: workspaceId,
-            status: 'open'
-          })
-          .select('id')
-          .single();
-
-        if (conversationError) {
-          console.error('❌ Erro ao criar conversa:', conversationError);
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Falha ao criar conversa'
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-        conversation = newConversation;
-      }
-
-      // Criar a mensagem INBOUND - detectar tipo correto baseado no MIME type
-      let messageType = 'text';
-      if (mimeType) {
-        if (mimeType.startsWith('image/')) messageType = 'image';
-        else if (mimeType.startsWith('video/')) messageType = 'video';
-        else if (mimeType.startsWith('audio/')) messageType = 'audio';
-        else if (mimeType === 'application/pdf' || mimeType.includes('document')) messageType = 'document';
-      }
-      
-      const { data: newMessage, error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          external_id: messageId,
-          conversation_id: conversation.id,
-          workspace_id: workspaceId,
-          content: fileName || 'Documento',
-          message_type: messageType,
-          sender_type: 'contact', // SEMPRE contact para mensagens INBOUND
-          created_at: new Date().toISOString()
-        })
-        .select('id, external_id, workspace_id, content')
-        .single();
-
-      if (messageError) {
-        console.error('❌ Erro ao criar mensagem inbound:', messageError);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Falha ao criar mensagem inbound'
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      existingMessage = newMessage;
-      console.log('✅ Nova mensagem INBOUND criada:', existingMessage.id);
-    }
-
-    // Verificar se é mensagem de texto (sem mídia)
-    if (!base64 && !mediaUrl) {
-      console.log('📝 Processando mensagem de texto - external_id:', messageId);
-      
-      // Para mensagens de texto, apenas confirmar que foi processada pelo N8N
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({
-          metadata: {
-            processed_by_n8n: true,
-            processed_at: new Date().toISOString()
-          }
-        })
-        .eq('external_id', messageId);
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar mensagem de texto:', updateError);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Falha ao processar mensagem de texto'
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      console.log('✅ Mensagem de texto processada:', existingMessage.id);
       return new Response(JSON.stringify({
-        success: true,
-        messageId: existingMessage.id,
-        action: 'text_message_processed',
-        content: existingMessage.content
+        success: false,
+        error: 'Mensagem não encontrada no banco de dados',
+        messageId: messageId,
+        details: 'A mensagem deve ser criada pelo evolution-webhook-v2 antes de processar a mídia'
       }), {
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log(`✅ Mensagem encontrada: ${existingMessage.id}`);
 
     // Preparar bytes a partir de base64 ou URL para mensagens de mídia
     let uint8Array: Uint8Array;
