@@ -881,6 +881,9 @@ export function ContactSidePanel({
 
             // 5. Atualizar lista de cards do contato
             await fetchContactCards();
+            
+            // 6. Forçar refresh da página para atualizar o kanban
+            window.location.reload();
 
             setIsCreateDealModalOpen(false);
           } catch (error: any) {
