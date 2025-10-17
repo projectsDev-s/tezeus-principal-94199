@@ -835,7 +835,8 @@ export function DealDetailsModal({
           is_completed,
           attachment_url,
           attachment_name,
-          pipeline_card_id
+          pipeline_card_id,
+          description
         `)
         .eq('contact_id', contactId)
         .order('scheduled_for', { ascending: true });
