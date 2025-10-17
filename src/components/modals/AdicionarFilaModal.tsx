@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Palette, ChevronDown } from "lucide-react";
+import { Palette, ChevronDown, UserPlus, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { AdicionarUsuarioFilaModal } from "./AdicionarUsuarioFilaModal";
+import { useWorkspaceUsers } from "@/hooks/useWorkspaceUsers";
 
 interface AdicionarFilaModalProps {
   open: boolean;
@@ -46,6 +48,9 @@ export function AdicionarFilaModal({
   const [activeTab, setActiveTab] = useState("dados");
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
   const [showError, setShowError] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const { users } = useWorkspaceUsers(selectedWorkspace?.workspace_id || '');
 
   // Form state
   const [nome, setNome] = useState("");
@@ -75,6 +80,7 @@ export function AdicionarFilaModal({
     setMensagemSaudacao("");
     setActiveTab("dados");
     setShowError(false);
+    setSelectedUsers([]);
   };
   const handleSubmit = async () => {
     if (!nome.trim()) {
@@ -91,7 +97,7 @@ export function AdicionarFilaModal({
     setShowError(false);
     setLoading(true);
     try {
-      const { error } = await supabase
+      const { data: newQueue, error } = await supabase
         .from('queues')
         .insert({
           name: nome.trim(),
@@ -103,9 +109,30 @@ export function AdicionarFilaModal({
           greeting_message: mensagemSaudacao.trim() || null,
           workspace_id: selectedWorkspace.workspace_id,
           is_active: true
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Adicionar usuários selecionados à fila
+      if (newQueue && selectedUsers.length > 0) {
+        const queueUsers = selectedUsers.map((userId, index) => ({
+          queue_id: newQueue.id,
+          user_id: userId,
+          order_position: index
+        }));
+
+        const { error: usersError } = await supabase
+          .from('queue_users')
+          .insert(queueUsers);
+
+        if (usersError) {
+          console.error('Erro ao adicionar usuários:', usersError);
+          toast.error("Fila criada, mas houve erro ao adicionar usuários");
+        }
+      }
+
       toast.success("Fila criada com sucesso!");
       resetForm();
       onSuccess();
@@ -134,7 +161,7 @@ export function AdicionarFilaModal({
             <TabsTrigger value="dados">
               Dados da Fila
             </TabsTrigger>
-            <TabsTrigger value="usuarios" disabled>Usuários da Fila</TabsTrigger>
+            <TabsTrigger value="usuarios">Usuários da Fila</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 mt-6">
@@ -219,10 +246,45 @@ export function AdicionarFilaModal({
           </TabsContent>
 
           <TabsContent value="usuarios" className="space-y-4 mt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-lg mb-2">Salve a fila primeiro</p>
-              <p className="text-sm">Após criar a fila, você poderá adicionar usuários</p>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-medium">Usuários na Fila</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddUserModal(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adicionar Usuário
+              </Button>
             </div>
+
+            {selectedUsers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-lg mb-2">Nenhum usuário adicionado</p>
+                <p className="text-sm">Clique em "Adicionar Usuário" para começar</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {selectedUsers.map((userId, index) => {
+                  const user = users.find(u => u.id === userId);
+                  return (
+                    <div key={userId} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground">#{index + 1}</span>
+                        <span className="font-medium">{user?.name || 'Usuário'}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedUsers(prev => prev.filter(id => id !== userId))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
@@ -243,6 +305,18 @@ export function AdicionarFilaModal({
             </Button>
           </div>
         </div>
+
+        {showAddUserModal && (
+          <AdicionarUsuarioFilaModal
+            open={showAddUserModal}
+            onOpenChange={setShowAddUserModal}
+            excludeUserIds={selectedUsers}
+            onAddUsers={async (userIds) => {
+              setSelectedUsers(prev => [...prev, ...userIds]);
+              setShowAddUserModal(false);
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>;
 }
