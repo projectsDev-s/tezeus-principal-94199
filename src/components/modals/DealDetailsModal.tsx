@@ -98,6 +98,15 @@ function ActivityItem({
   });
   const { toast } = useToast();
 
+  // Atualizar o formulário quando a atividade mudar (garante que description apareça corretamente)
+  useEffect(() => {
+    setEditActivityForm({
+      subject: activity.subject,
+      description: activity.description || "",
+      scheduled_for: activity.scheduled_for
+    });
+  }, [activity.id, activity.subject, activity.description, activity.scheduled_for]);
+
   const handleSaveActivity = async () => {
     try {
       const { error } = await supabase
