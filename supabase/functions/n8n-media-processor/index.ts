@@ -345,19 +345,23 @@ serve(async (req) => {
       extension: defaultExtension
     });
     
-    // Determinar extensão do arquivo
-    let fileExtension = defaultExtension;
-    if (fileName && fileName.includes('.')) {
-      fileExtension = fileName.split('.').pop()?.toLowerCase() || defaultExtension;
-    }
-
+    // SEMPRE usar a extensão do MIME normalizado (independente do fileName original)
+    const fileExtension = defaultExtension;
+    
     // Gerar nome único para evitar conflitos
     const timestamp = Date.now();
     const randomId = crypto.randomUUID().split('-')[0];
-    const finalFileName = fileName ? 
-      `${timestamp}_${randomId}_${fileName}` : 
-      `${timestamp}_${randomId}_media.${fileExtension}`;
     
+    // Extrair nome base sem extensão se fileName existir
+    let baseName = 'media';
+    if (fileName) {
+      baseName = fileName.includes('.') 
+        ? fileName.substring(0, fileName.lastIndexOf('.'))
+        : fileName;
+    }
+    
+    // SEMPRE usar a extensão do MIME normalizado
+    const finalFileName = `${timestamp}_${randomId}_${baseName}.${fileExtension}`;
     const storagePath = `messages/${finalFileName}`;
 
     console.log('📤 Upload details (usando MIME normalizado):', {
