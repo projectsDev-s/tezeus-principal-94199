@@ -861,8 +861,17 @@ export function ContactSidePanel({
               conversationId = conversationData?.conversationId;
             }
 
-            // 4. Validar se a coluna selecionada existe
-            const targetColumn = columns.find(col => col.id === business.column);
+            // 4. Buscar colunas do pipeline SELECIONADO pelo usuário (não do currentPipeline)
+            const { data: pipelineColumns, error: columnsError } = await supabase
+              .from('pipeline_columns')
+              .select('*')
+              .eq('pipeline_id', business.pipeline)
+              .order('order_position');
+
+            if (columnsError) throw columnsError;
+
+            // 5. Validar se a coluna selecionada existe
+            const targetColumn = pipelineColumns?.find(col => col.id === business.column);
             if (!targetColumn) {
               throw new Error('Coluna selecionada não encontrada');
             }
