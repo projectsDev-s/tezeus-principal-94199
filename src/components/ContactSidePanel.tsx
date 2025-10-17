@@ -898,6 +898,9 @@ export function ContactSidePanel({
 
             if (cardError) throw cardError;
 
+            // Recarregar os cards do contato para mostrar o novo negócio imediatamente
+            await fetchContactCards();
+
             toast({
               title: "Sucesso",
               description: "Negócio criado com sucesso!"
