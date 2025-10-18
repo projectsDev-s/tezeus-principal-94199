@@ -307,6 +307,30 @@ serve(async (req) => {
                 .select('id')
                 .single();
               conversationId = newConversation?.id;
+
+              // 🎯 DISTRIBUIR CONVERSA PARA FILA (se conexão tiver fila configurada)
+              if (conversationId && resolvedConnectionId) {
+                console.log(`🎯 [${requestId}] Nova conversa criada, iniciando distribuição de fila`);
+                
+                try {
+                  const { data: assignResult, error: assignError } = await supabase.functions.invoke('assign-conversation-to-queue', {
+                    body: {
+                      conversation_id: conversationId,
+                      queue_id: null // Será detectado automaticamente pela conexão
+                    }
+                  });
+
+                  if (assignError) {
+                    console.error(`⚠️ [${requestId}] Erro ao atribuir conversa à fila (não-bloqueante):`, assignError);
+                  } else if (assignResult?.success) {
+                    console.log(`✅ [${requestId}] Conversa atribuída via fila: ${assignResult.queue_name}, usuário: ${assignResult.assigned_user_id}`);
+                  } else {
+                    console.log(`ℹ️ [${requestId}] Conversa não atribuída: ${assignResult?.message || 'sem fila configurada'}`);
+                  }
+                } catch (error) {
+                  console.error(`❌ [${requestId}] Erro ao invocar assign-conversation-to-queue:`, error);
+                }
+              }
             }
 
             // Create message with Evolution message ID as external_id

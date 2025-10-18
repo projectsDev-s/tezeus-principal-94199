@@ -168,6 +168,40 @@ serve(async (req) => {
 
       conversationId = newConversation.id
       console.log(`Created new conversation with ID: ${conversationId}`)
+
+      // 🎯 DISTRIBUIR CONVERSA PARA FILA PADRÃO DO WORKSPACE (se existir)
+      try {
+        console.log(`🎯 Verificando fila padrão do workspace: ${workspaceId}`);
+        
+        // Buscar fila padrão do workspace (primeira ativa, ou pela conexão padrão)
+        const { data: defaultConnection } = await supabase
+          .from('connections')
+          .select('queue_id, instance_name')
+          .eq('workspace_id', workspaceId)
+          .eq('is_default', true)
+          .maybeSingle();
+
+        const defaultQueueId = defaultConnection?.queue_id;
+
+        if (defaultQueueId) {
+          const { data: assignResult, error: assignError } = await supabase.functions.invoke('assign-conversation-to-queue', {
+            body: {
+              conversation_id: conversationId,
+              queue_id: defaultQueueId
+            }
+          });
+
+          if (assignError) {
+            console.error(`⚠️ Erro ao atribuir conversa à fila padrão (não-bloqueante):`, assignError);
+          } else if (assignResult?.success) {
+            console.log(`✅ Conversa atribuída via fila padrão: ${assignResult.queue_name}, usuário: ${assignResult.assigned_user_id}`);
+          }
+        } else {
+          console.log(`ℹ️ Nenhuma fila padrão configurada para o workspace`);
+        }
+      } catch (error) {
+        console.error(`❌ Erro ao atribuir conversa à fila (não-bloqueante):`, error);
+      }
     } else {
       console.log(`Using existing conversation with ID: ${conversationId}`)
     }
