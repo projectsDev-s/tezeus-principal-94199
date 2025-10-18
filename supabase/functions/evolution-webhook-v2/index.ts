@@ -558,6 +558,21 @@ serve(async (req) => {
           
           if (existingContact) {
             contact = existingContact;
+            
+            // Buscar foto se nunca foi atualizada ou se faz mais de 7 dias
+            const shouldFetchPhoto = !existingContact.profile_image_updated_at || 
+              (new Date().getTime() - new Date(existingContact.profile_image_updated_at).getTime()) > 7 * 24 * 60 * 60 * 1000;
+            
+            if (shouldFetchPhoto) {
+              console.log(`📸 [${requestId}] Triggering profile photo fetch for existing contact`);
+              supabase.functions.invoke('fetch-contact-profile-image', {
+                body: { 
+                  phone: phoneNumber, 
+                  contactId: existingContact.id,
+                  workspaceId 
+                }
+              }).catch(err => console.error(`⚠️ [${requestId}] Photo fetch failed:`, err));
+            }
           } else {
             // Criar novo contato usando pushName do WhatsApp
             const pushName = messageData.pushName || phoneNumber;
@@ -572,6 +587,16 @@ serve(async (req) => {
               .single();
             contact = newContact;
             console.log(`👤 [${requestId}] New contact created: ${contact?.id} with name: ${pushName}`);
+            
+            // Buscar foto automaticamente para novo contato
+            console.log(`📸 [${requestId}] Triggering profile photo fetch for new contact`);
+            supabase.functions.invoke('fetch-contact-profile-image', {
+              body: { 
+                phone: phoneNumber, 
+                contactId: newContact?.id,
+                workspaceId 
+              }
+            }).catch(err => console.error(`⚠️ [${requestId}] Photo fetch failed:`, err));
           }
           
           if (contact) {
