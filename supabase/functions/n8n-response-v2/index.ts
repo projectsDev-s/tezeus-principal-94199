@@ -313,22 +313,121 @@ serve(async (req) => {
                 console.log(`🎯 [${requestId}] Nova conversa criada, iniciando distribuição de fila`);
                 
                 try {
-                  const { data: assignResult, error: assignError } = await supabase.functions.invoke('assign-conversation-to-queue', {
-                    body: {
-                      conversation_id: conversationId,
-                      queue_id: null // Será detectado automaticamente pela conexão
-                    }
-                  });
+                  // Buscar queue_id da conexão
+                  const { data: connection } = await supabase
+                    .from('connections')
+                    .select('queue_id')
+                    .eq('id', resolvedConnectionId)
+                    .single();
 
-                  if (assignError) {
-                    console.error(`⚠️ [${requestId}] Erro ao atribuir conversa à fila (não-bloqueante):`, assignError);
-                  } else if (assignResult?.success) {
-                    console.log(`✅ [${requestId}] Conversa atribuída via fila: ${assignResult.queue_name}, usuário: ${assignResult.assigned_user_id}`);
+                  if (connection?.queue_id) {
+                    console.log(`📋 [${requestId}] Conexão vinculada à fila: ${connection.queue_id}`);
+                    
+                    // Buscar fila e suas configurações
+                    const { data: queue } = await supabase
+                      .from('queues')
+                      .select('id, name, distribution_type, last_assigned_user_index, ai_agent_id')
+                      .eq('id', connection.queue_id)
+                      .eq('is_active', true)
+                      .single();
+
+                    if (queue) {
+                      console.log(`🔧 [${requestId}] Fila encontrada: ${queue.name}, tipo: ${queue.distribution_type}`);
+                      
+                      // Buscar usuários ativos da fila
+                      const { data: queueUsers } = await supabase
+                        .from('queue_users')
+                        .select(`
+                          user_id,
+                          order_position,
+                          system_users!inner(id, status)
+                        `)
+                        .eq('queue_id', queue.id)
+                        .eq('system_users.status', 'active')
+                        .order('order_position', { ascending: true });
+
+                      if (queueUsers && queueUsers.length > 0) {
+                        console.log(`👥 [${requestId}] ${queueUsers.length} usuários ativos na fila`);
+                        
+                        let selectedUserId = null;
+                        let newIndex = queue.last_assigned_user_index || 0;
+
+                        // Selecionar usuário baseado no tipo de distribuição
+                        switch (queue.distribution_type) {
+                          case 'sequencial':
+                            newIndex = ((queue.last_assigned_user_index || 0) + 1) % queueUsers.length;
+                            selectedUserId = queueUsers[newIndex].user_id;
+                            console.log(`🔄 [${requestId}] Distribuição sequencial - índice: ${newIndex}, usuário: ${selectedUserId}`);
+                            
+                            // Atualizar índice para próxima distribuição
+                            await supabase
+                              .from('queues')
+                              .update({ last_assigned_user_index: newIndex })
+                              .eq('id', queue.id);
+                            break;
+
+                          case 'aleatoria':
+                            const randomIndex = Math.floor(Math.random() * queueUsers.length);
+                            selectedUserId = queueUsers[randomIndex].user_id;
+                            console.log(`🎲 [${requestId}] Distribuição aleatória - índice: ${randomIndex}, usuário: ${selectedUserId}`);
+                            break;
+
+                          case 'ordenada':
+                            selectedUserId = queueUsers[0].user_id;
+                            console.log(`📌 [${requestId}] Distribuição ordenada - primeiro usuário: ${selectedUserId}`);
+                            break;
+
+                          case 'nao_distribuir':
+                            console.log(`⏸️ [${requestId}] Fila configurada para não distribuir automaticamente`);
+                            break;
+
+                          default:
+                            console.log(`⚠️ [${requestId}] Tipo de distribuição desconhecido: ${queue.distribution_type}`);
+                        }
+
+                        if (selectedUserId) {
+                          // Atualizar conversa com assigned_user_id (ACEITAR AUTOMATICAMENTE)
+                          const { error: updateError } = await supabase
+                            .from('conversations')
+                            .update({
+                              assigned_user_id: selectedUserId,
+                              assigned_at: new Date().toISOString(),
+                              queue_id: connection.queue_id,
+                              status: 'open',
+                              agente_ativo: queue.ai_agent_id ? true : false
+                            })
+                            .eq('id', conversationId);
+
+                          if (updateError) {
+                            console.error(`❌ [${requestId}] Erro ao atribuir conversa:`, updateError);
+                          } else {
+                            console.log(`✅ [${requestId}] Conversa ACEITA automaticamente para usuário ${selectedUserId}`);
+
+                            // Registrar atribuição em conversation_assignments
+                            await supabase
+                              .from('conversation_assignments')
+                              .insert({
+                                conversation_id: conversationId,
+                                to_assigned_user_id: selectedUserId,
+                                from_assigned_user_id: null,
+                                changed_by: selectedUserId,
+                                action: 'assign'
+                              });
+
+                            console.log(`📝 [${requestId}] Atribuição registrada: fila ${queue.name} → usuário ${selectedUserId}`);
+                          }
+                        }
+                      } else {
+                        console.log(`⚠️ [${requestId}] Fila ${queue.name} não possui usuários ativos`);
+                      }
+                    } else {
+                      console.log(`ℹ️ [${requestId}] Fila ${connection.queue_id} não está ativa`);
+                    }
                   } else {
-                    console.log(`ℹ️ [${requestId}] Conversa não atribuída: ${assignResult?.message || 'sem fila configurada'}`);
+                    console.log(`ℹ️ [${requestId}] Conexão não está vinculada a nenhuma fila`);
                   }
                 } catch (error) {
-                  console.error(`❌ [${requestId}] Erro ao invocar assign-conversation-to-queue:`, error);
+                  console.error(`❌ [${requestId}] Erro ao processar distribuição de fila (não-bloqueante):`, error);
                 }
               }
             }
