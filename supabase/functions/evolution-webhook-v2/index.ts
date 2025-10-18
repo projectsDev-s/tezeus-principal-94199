@@ -523,6 +523,7 @@ serve(async (req) => {
           external_id: evolutionMessageId,
           evolution_key_id: evolutionKeyId,
           instance: instanceName,
+          connection_id: connectionData?.id,
           direction: 'inbound',
           requires_processing: true,
           message_type: messageData.message?.audioMessage ? 'audio' :
