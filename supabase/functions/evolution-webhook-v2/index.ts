@@ -916,29 +916,10 @@ serve(async (req) => {
                 isPTT: messageData.message?.audioMessage?.ptt,
                 waveform: messageData.message?.audioMessage?.waveform
               }
-            };
-            
-            // Chamar o n8n-media-processor e aguardar processamento
-            const { data: processResult, error: processError } = await supabase.functions.invoke(
-              'n8n-media-processor',
-              {
-                body: mediaPayload
-              }
-            );
-            
-            if (processError) {
-              console.error(`❌ [${requestId}] Error calling n8n-media-processor:`, processError);
-            } else if (processResult?.fileUrl) {
-              // Atualizar a mensagem com o fileUrl processado
-              await supabase
-                .from('messages')
-                .update({ file_url: processResult.fileUrl })
-                .eq('id', newMessage.id);
-              console.log(`✅ [${requestId}] Media processed and updated: ${processResult.fileUrl}`);
-            } else {
-              console.log(`⚠️ [${requestId}] Media processing triggered but no fileUrl returned:`, processResult);
-            }
-          }
+          };
+          
+          console.log(`📤 [${requestId}] Mensagem de mídia salva sem file_url, N8N fará o processamento`);
+        }
 
           // Update conversation timestamp
           await supabase

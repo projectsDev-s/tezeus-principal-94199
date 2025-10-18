@@ -460,6 +460,8 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             id: updatedMessage.id,
             sender_type: updatedMessage.sender_type,
             status: updatedMessage.status,
+            file_url: updatedMessage.file_url,
+            message_type: updatedMessage.message_type,
             content_preview: updatedMessage.content?.substring(0, 30)
           });
           
@@ -469,16 +471,21 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             return;
           }
           
-          // ✅ APENAS ATUALIZAR STATUS (sem lógica de substituição)
-          console.log('🔄 [UPDATE] Atualizando apenas status da mensagem:', {
+          // ✅ Atualizar TODA a mensagem (incluindo file_url processado pelo Media Processor)
+          console.log('🔄 [UPDATE] Atualizando mensagem completa:', {
             id: updatedMessage.id,
-            status: updatedMessage.status
+            status: updatedMessage.status,
+            has_file_url: !!updatedMessage.file_url
           });
           
           updateMessage(updatedMessage.id, {
+            ...updatedMessage,
             status: updatedMessage.status,
             delivered_at: updatedMessage.delivered_at,
-            read_at: updatedMessage.read_at
+            read_at: updatedMessage.read_at,
+            file_url: updatedMessage.file_url,
+            file_name: updatedMessage.file_name,
+            mime_type: updatedMessage.mime_type
           });
         }
       )
