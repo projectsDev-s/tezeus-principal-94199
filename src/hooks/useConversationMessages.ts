@@ -64,10 +64,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   
   // ✅ DEDUP: Prevenir processamento duplicado de mensagens
   const seenRef = useRef<Set<string>>(new Set());
-  
-  // ✅ REFS: Para evitar recreação da subscription ao mudar addMessage/updateMessage
-  const addMessageRef = useRef<((message: WhatsAppMessage) => void) | null>(null);
-  const updateMessageRef = useRef<((messageId: string, updates: Partial<WhatsAppMessage>) => void) | null>(null);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -84,9 +80,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return;
     }
 
-    // ✅ CRÍTICO: Definir conversationId ANTES de carregar (para ativar Realtime)
-    setCurrentConversationId(conversationId);
-
     // ✅ SEMPRE invalidar cache ao carregar inicial (buscar dados frescos)
     const cacheKey = `${selectedWorkspace.workspace_id}:${conversationId}`;
     cacheRef.current.delete(cacheKey);
@@ -95,6 +88,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     setMessages([]);
     setHasMore(true);
     setCursorBefore(null);
+    setCurrentConversationId(conversationId);
 
     try {
       const headers = getHeaders();
@@ -361,15 +355,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       cacheRef.current.delete(cacheKey);
     }
    }, [selectedWorkspace?.workspace_id, currentConversationId]);
-  
-  // ✅ Atualizar refs quando as funções mudarem
-  useEffect(() => {
-    addMessageRef.current = addMessage;
-  }, [addMessage]);
-  
-  useEffect(() => {
-    updateMessageRef.current = updateMessage;
-  }, [updateMessage]);
 
   // Limpar cache quando o workspace muda (sem recarregar automaticamente)
   useEffect(() => {
@@ -431,7 +416,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             
             if (existingById) {
               console.log('🔄 [INSERT] Mensagem otimista encontrada por ID, substituindo...');
-              updateMessageRef.current?.(existingById.id, {
+              updateMessage(existingById.id, {
                 ...newMessage,
                 id: newMessage.id
               });
@@ -454,7 +439,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           // Verificar se é do workspace atual
           if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
             console.log('✅ [INSERT useConversationMessages] Workspace correto, chamando addMessage...');
-            addMessageRef.current?.(newMessage);
+            addMessage(newMessage);
           } else {
             console.log('❌ [INSERT useConversationMessages] Workspace diferente, ignorando mensagem');
           }
@@ -477,7 +462,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             status: updatedMessage.status,
             file_url: updatedMessage.file_url,
             message_type: updatedMessage.message_type,
-            TIMESTAMP_REALTIME: new Date().toISOString(),
             content_preview: updatedMessage.content?.substring(0, 30)
           });
           
@@ -494,7 +478,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             has_file_url: !!updatedMessage.file_url
           });
           
-          updateMessageRef.current?.(updatedMessage.id, {
+          updateMessage(updatedMessage.id, {
             ...updatedMessage,
             status: updatedMessage.status,
             delivered_at: updatedMessage.delivered_at,
@@ -503,8 +487,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             file_name: updatedMessage.file_name,
             mime_type: updatedMessage.mime_type
           });
-          
-          console.log('✅ [UPDATE] updateMessage foi chamado, React deve re-render agora');
         }
       )
       .subscribe();
@@ -513,7 +495,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       console.log('🔕 Limpando subscription da conversa:', currentConversationId);
       supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+  }, [selectedWorkspace?.workspace_id, currentConversationId, addMessage, updateMessage]);
 
   return {
     messages,
