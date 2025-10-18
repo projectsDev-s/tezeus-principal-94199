@@ -559,18 +559,19 @@ serve(async (req) => {
           if (existingContact) {
             contact = existingContact;
           } else {
-            // Criar novo contato
+            // Criar novo contato usando pushName do WhatsApp
+            const pushName = messageData.pushName || phoneNumber;
             const { data: newContact } = await supabase
               .from('contacts')
               .insert({
                 phone: phoneNumber,
                 workspace_id: workspaceId,
-                name: phoneNumber
+                name: pushName
               })
               .select('id')
               .single();
             contact = newContact;
-            console.log(`👤 [${requestId}] New contact created: ${contact?.id}`);
+            console.log(`👤 [${requestId}] New contact created: ${contact?.id} with name: ${pushName}`);
           }
           
           if (contact) {
