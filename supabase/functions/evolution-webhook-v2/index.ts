@@ -170,6 +170,15 @@ serve(async (req) => {
     const EVENT = String(payload.event || '').toUpperCase().replace(/\./g, '_');
     console.log(`📊 [${requestId}] Instance: ${instanceName}, Event: "${payload.event}" → normalized: "${EVENT}"`);
     
+    // 🔍 LOG COMPLETO DO PAYLOAD PARA DIAGNÓSTICO DE EVENTOS DE LEITURA
+    console.log(`🔍 [${requestId}] FULL PAYLOAD FOR DEBUGGING:`);
+    console.log(JSON.stringify({
+      event: payload.event,
+      instance: payload.instance,
+      data: payload.data,
+      timestamp: new Date().toISOString()
+    }, null, 2));
+    
     // ✅ DEDUP: Verificar se já processamos esse evento recentemente
     const dedupKey = `${EVENT}:${payload.data?.keyId || payload.data?.messageId || payload.data?.key?.id || Date.now()}`;
     if (checkDedup(dedupKey)) {
