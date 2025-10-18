@@ -543,32 +543,48 @@ serve(async (req) => {
         
         console.log(`✅ [${requestId}] Metadata prepared for N8N processing:`, processedData);
         
-        // 🎯 DISTRIBUIÇÃO DE FILA: Atribuir conversa automaticamente quando mensagem chegar
+        // 🎯 AUTO-CRIAÇÃO DE CONVERSA COM DISTRIBUIÇÃO DE FILA (apenas para NOVAS conversas)
         if (connectionData?.id && phoneNumber) {
-          console.log(`🔍 [${requestId}] Checking for queue assignment...`);
+          console.log(`🔍 [${requestId}] Checking if conversation needs to be created with queue assignment...`);
           
           // Buscar/criar contato
-          const { data: contact, error: contactError } = await supabase
+          let contact;
+          const { data: existingContact } = await supabase
             .from('contacts')
             .select('id')
             .eq('phone', phoneNumber)
             .eq('workspace_id', workspaceId)
             .maybeSingle();
           
-          if (contactError) {
-            console.error(`❌ [${requestId}] Error fetching contact:`, contactError);
-          } else if (contact) {
-            // Buscar conversa existente
-            const { data: conversation, error: convError } = await supabase
+          if (existingContact) {
+            contact = existingContact;
+          } else {
+            // Criar novo contato
+            const { data: newContact } = await supabase
+              .from('contacts')
+              .insert({
+                phone: phoneNumber,
+                workspace_id: workspaceId,
+                name: phoneNumber
+              })
+              .select('id')
+              .single();
+            contact = newContact;
+            console.log(`👤 [${requestId}] New contact created: ${contact?.id}`);
+          }
+          
+          if (contact) {
+            // Verificar se conversa já existe
+            const { data: existingConversation } = await supabase
               .from('conversations')
-              .select('id, assigned_user_id, queue_id')
+              .select('id')
               .eq('contact_id', contact.id)
               .eq('connection_id', connectionData.id)
               .eq('workspace_id', workspaceId)
               .maybeSingle();
             
-            if (!convError && conversation && !conversation.assigned_user_id) {
-              console.log(`🎯 [${requestId}] Found unassigned conversation ${conversation.id}, attempting queue distribution...`);
+            if (!existingConversation) {
+              console.log(`🆕 [${requestId}] No existing conversation found, creating NEW conversation with queue assignment...`);
               
               // Buscar queue_id da conexão
               const { data: connection } = await supabase
@@ -576,6 +592,10 @@ serve(async (req) => {
                 .select('queue_id')
                 .eq('id', connectionData.id)
                 .single();
+              
+              let selectedUserId = null;
+              let queueId = null;
+              let agenteAtivo = false;
               
               if (connection?.queue_id) {
                 // Buscar fila e usuários
@@ -586,7 +606,7 @@ serve(async (req) => {
                   .eq('is_active', true)
                   .single();
                 
-                if (queue) {
+                if (queue && queue.distribution_type !== 'nenhuma') {
                   const { data: queueUsers } = await supabase
                     .from('queue_users')
                     .select('user_id, order_position, system_users!inner(status)')
@@ -596,8 +616,6 @@ serve(async (req) => {
                   
                   if (queueUsers && queueUsers.length > 0) {
                     // Selecionar usuário baseado em distribution_type
-                    let selectedUserId;
-                    
                     switch (queue.distribution_type) {
                       case 'sequencial':
                         const nextIndex = ((queue.last_assigned_user_index || 0) + 1) % queueUsers.length;
@@ -616,47 +634,63 @@ serve(async (req) => {
                         break;
                     }
                     
-                    if (selectedUserId) {
-                      // Update conversa COM assigned_user_id
-                      const { error: updateError } = await supabase
-                        .from('conversations')
-                        .update({
-                          assigned_user_id: selectedUserId,
-                          assigned_at: new Date().toISOString(),
-                          queue_id: connection.queue_id,
-                          status: 'open',
-                          agente_ativo: queue.ai_agent_id ? true : false
-                        })
-                        .eq('id', conversation.id);
-                      
-                      if (!updateError) {
-                        // Registrar atribuição
-                        await supabase
-                          .from('conversation_assignments')
-                          .insert({
-                            conversation_id: conversation.id,
-                            to_assigned_user_id: selectedUserId,
-                            from_assigned_user_id: null,
-                            changed_by: selectedUserId,
-                            action: 'assign'
-                          });
-                        
-                        console.log(`✅ [${requestId}] Conversa ${conversation.id} atribuída para ${selectedUserId} via fila ${queue.name} (${queue.distribution_type})`);
-                      } else {
-                        console.error(`❌ [${requestId}] Error updating conversation:`, updateError);
-                      }
-                    }
+                    queueId = queue.id;
+                    agenteAtivo = queue.ai_agent_id ? true : false;
                   } else {
                     console.log(`⚠️ [${requestId}] No active users in queue ${queue.name}`);
                   }
                 } else {
-                  console.log(`⚠️ [${requestId}] Queue not found or inactive`);
+                  console.log(`ℹ️ [${requestId}] Queue has distribution_type 'nenhuma' or inactive`);
                 }
               } else {
                 console.log(`ℹ️ [${requestId}] Connection has no queue configured`);
               }
-            } else if (conversation?.assigned_user_id) {
-              console.log(`ℹ️ [${requestId}] Conversation already assigned to user ${conversation.assigned_user_id}`);
+              
+              // Criar nova conversa COM ou SEM atribuição
+              const conversationData: any = {
+                contact_id: contact.id,
+                connection_id: connectionData.id,
+                workspace_id: workspaceId,
+                status: 'open'
+              };
+              
+              if (selectedUserId) {
+                conversationData.assigned_user_id = selectedUserId;
+                conversationData.assigned_at = new Date().toISOString();
+                conversationData.queue_id = queueId;
+                conversationData.agente_ativo = agenteAtivo;
+              }
+              
+              const { data: newConversation, error: createError } = await supabase
+                .from('conversations')
+                .insert(conversationData)
+                .select('id')
+                .single();
+              
+              if (!createError && newConversation) {
+                console.log(`✅ [${requestId}] NEW conversation ${newConversation.id} created${selectedUserId ? ` and assigned to user ${selectedUserId}` : ' WITHOUT assignment'}`);
+                
+                // Adicionar conversation_id aos metadados para N8N
+                processedData.conversation_id = newConversation.id;
+                
+                // Se atribuído, registrar no log de assignments
+                if (selectedUserId) {
+                  await supabase
+                    .from('conversation_assignments')
+                    .insert({
+                      conversation_id: newConversation.id,
+                      to_assigned_user_id: selectedUserId,
+                      from_assigned_user_id: null,
+                      changed_by: selectedUserId,
+                      action: 'assign'
+                    });
+                }
+              } else {
+                console.error(`❌ [${requestId}] Error creating conversation:`, createError);
+              }
+            } else {
+              console.log(`ℹ️ [${requestId}] Conversation already exists: ${existingConversation.id} (manual assignment only)`);
+              processedData.conversation_id = existingConversation.id;
             }
           }
         }
