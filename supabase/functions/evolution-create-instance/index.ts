@@ -344,13 +344,13 @@ serve(async (req) => {
         groupsIgnore: false,
         alwaysOnline: false,
         readMessages: false,
-        readStatus: false,
-        webhookByEvents: true,  // 👈 redundante dentro de settings para compatibilidade
-        webhookBase64: true     // 👈 redundante dentro de settings para compatibilidade
+        readStatus: false
       },
 
       webhook: {
         url: webhookUrl,
+        byEvents: false,  // ✅ Dentro do webhook (snake_case)
+        base64: true,     // ✅ Habilita recebimento de mídia em base64
         headers: {
           apikey: token,
           "Content-Type": "application/json",
@@ -361,11 +361,7 @@ serve(async (req) => {
           "QRCODE_UPDATED",
           "CONNECTION_UPDATE",
         ]
-      },
-
-      // 👇 raiz também (camelCase)
-      webhookByEvents: true,
-      webhookBase64: true
+      }
     };
     
     console.log('📦 Evolution payload configuration:', {
