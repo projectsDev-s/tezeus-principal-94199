@@ -542,6 +542,124 @@ serve(async (req) => {
         };
         
         console.log(`✅ [${requestId}] Metadata prepared for N8N processing:`, processedData);
+        
+        // 🎯 DISTRIBUIÇÃO DE FILA: Atribuir conversa automaticamente quando mensagem chegar
+        if (connectionData?.id && phoneNumber) {
+          console.log(`🔍 [${requestId}] Checking for queue assignment...`);
+          
+          // Buscar/criar contato
+          const { data: contact, error: contactError } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('phone', phoneNumber)
+            .eq('workspace_id', workspaceId)
+            .maybeSingle();
+          
+          if (contactError) {
+            console.error(`❌ [${requestId}] Error fetching contact:`, contactError);
+          } else if (contact) {
+            // Buscar conversa existente
+            const { data: conversation, error: convError } = await supabase
+              .from('conversations')
+              .select('id, assigned_user_id, queue_id')
+              .eq('contact_id', contact.id)
+              .eq('connection_id', connectionData.id)
+              .eq('workspace_id', workspaceId)
+              .maybeSingle();
+            
+            if (!convError && conversation && !conversation.assigned_user_id) {
+              console.log(`🎯 [${requestId}] Found unassigned conversation ${conversation.id}, attempting queue distribution...`);
+              
+              // Buscar queue_id da conexão
+              const { data: connection } = await supabase
+                .from('connections')
+                .select('queue_id')
+                .eq('id', connectionData.id)
+                .single();
+              
+              if (connection?.queue_id) {
+                // Buscar fila e usuários
+                const { data: queue } = await supabase
+                  .from('queues')
+                  .select('id, name, distribution_type, last_assigned_user_index, ai_agent_id')
+                  .eq('id', connection.queue_id)
+                  .eq('is_active', true)
+                  .single();
+                
+                if (queue) {
+                  const { data: queueUsers } = await supabase
+                    .from('queue_users')
+                    .select('user_id, order_position, system_users!inner(status)')
+                    .eq('queue_id', queue.id)
+                    .eq('system_users.status', 'active')
+                    .order('order_position', { ascending: true });
+                  
+                  if (queueUsers && queueUsers.length > 0) {
+                    // Selecionar usuário baseado em distribution_type
+                    let selectedUserId;
+                    
+                    switch (queue.distribution_type) {
+                      case 'sequencial':
+                        const nextIndex = ((queue.last_assigned_user_index || 0) + 1) % queueUsers.length;
+                        selectedUserId = queueUsers[nextIndex].user_id;
+                        await supabase.from('queues').update({ last_assigned_user_index: nextIndex }).eq('id', queue.id);
+                        console.log(`📋 [${requestId}] Sequential: selected user at index ${nextIndex}`);
+                        break;
+                      case 'aleatoria':
+                        const randomIndex = Math.floor(Math.random() * queueUsers.length);
+                        selectedUserId = queueUsers[randomIndex].user_id;
+                        console.log(`🎲 [${requestId}] Random: selected user at index ${randomIndex}`);
+                        break;
+                      case 'ordenada':
+                        selectedUserId = queueUsers[0].user_id;
+                        console.log(`📌 [${requestId}] Ordered: selected first user`);
+                        break;
+                    }
+                    
+                    if (selectedUserId) {
+                      // Update conversa COM assigned_user_id
+                      const { error: updateError } = await supabase
+                        .from('conversations')
+                        .update({
+                          assigned_user_id: selectedUserId,
+                          assigned_at: new Date().toISOString(),
+                          queue_id: connection.queue_id,
+                          status: 'open',
+                          agente_ativo: queue.ai_agent_id ? true : false
+                        })
+                        .eq('id', conversation.id);
+                      
+                      if (!updateError) {
+                        // Registrar atribuição
+                        await supabase
+                          .from('conversation_assignments')
+                          .insert({
+                            conversation_id: conversation.id,
+                            to_assigned_user_id: selectedUserId,
+                            from_assigned_user_id: null,
+                            changed_by: selectedUserId,
+                            action: 'assign'
+                          });
+                        
+                        console.log(`✅ [${requestId}] Conversa ${conversation.id} atribuída para ${selectedUserId} via fila ${queue.name} (${queue.distribution_type})`);
+                      } else {
+                        console.error(`❌ [${requestId}] Error updating conversation:`, updateError);
+                      }
+                    }
+                  } else {
+                    console.log(`⚠️ [${requestId}] No active users in queue ${queue.name}`);
+                  }
+                } else {
+                  console.log(`⚠️ [${requestId}] Queue not found or inactive`);
+                }
+              } else {
+                console.log(`ℹ️ [${requestId}] Connection has no queue configured`);
+              }
+            } else if (conversation?.assigned_user_id) {
+              console.log(`ℹ️ [${requestId}] Conversation already assigned to user ${conversation.assigned_user_id}`);
+            }
+          }
+        }
       }
     } else if (workspaceId && payload.data?.key?.fromMe === true && EVENT === 'MESSAGES_UPSERT') {
       console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), capturing evolution_short_key_id`);
