@@ -1088,16 +1088,21 @@ export function WhatsAppChat({
         return;
       }
 
-      // Find and select the conversation
+      // Find and select the conversation (aguardar realtime atualizar)
       setTimeout(() => {
         const conversation = conversations.find(conv => conv.id === data.conversationId);
         if (conversation) {
           handleSelectConversation(conversation);
         } else {
-          // Refresh conversations if not found
-          window.location.reload();
+          // Aguardar realtime atualizar (sem reload)
+          console.log('⏳ Aguardando subscription atualizar lista de conversas...');
+          // Tentar novamente após 2s
+          setTimeout(() => {
+            const retryConv = conversations.find(conv => conv.id === data.conversationId);
+            if (retryConv) handleSelectConversation(retryConv);
+          }, 2000);
         }
-      }, 1000);
+      }, 500);
       setQuickPhoneNumber("");
       toast({
         title: "Conversa criada",
