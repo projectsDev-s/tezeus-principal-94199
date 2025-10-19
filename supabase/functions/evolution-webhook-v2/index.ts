@@ -255,36 +255,58 @@ serve(async (req) => {
         if (msg) {
           console.log(`✅ [${requestId}] Found message via ${searchStrategy}`);
           
+          // Hierarquia de status para prevenir regressões
+          const STATUS_HIERARCHY: Record<string, number> = {
+            'sending': 0,
+            'sent': 1,
+            'delivered': 2,
+            'read': 3
+          };
+          
           // Mapear status da Evolution para nosso schema
           const newStatus = status === 'READ' ? 'read' : 
                            status === 'DELIVERY_ACK' ? 'delivered' : 
                            status === 'SERVER_ACK' ? 'sent' : msg.status;
           
-          const updateFields: any = { status: newStatus };
+          // Verificar hierarquia para prevenir regressões
+          const currentLevel = STATUS_HIERARCHY[msg.status] || 0;
+          const newLevel = STATUS_HIERARCHY[newStatus] || 0;
           
-          // Garantir que AMBOS os evolution IDs estejam preenchidos
-          if (!msg.evolution_key_id) {
-            updateFields.evolution_key_id = messageKeyId;
-          }
-          if (!msg.evolution_short_key_id) {
-            updateFields.evolution_short_key_id = messageKeyId;
-          }
-          
-          // Atualizar timestamps conforme o status
-          if (status === 'DELIVERY_ACK') updateFields.delivered_at = new Date().toISOString();
-          if (status === 'READ') updateFields.read_at = new Date().toISOString();
-          
-          // Executar update no banco
-          const { error: updateError } = await supabase
-            .from('messages')
-            .update(updateFields)
-            .eq('id', msg.id);
-          
-          if (updateError) {
-            console.error(`❌ [${requestId}] Error updating message:`, updateError);
+          if (newLevel < currentLevel) {
+            console.log(`⏭️ [${requestId}] Ignorando regressão de status: ${msg.status} (level ${currentLevel}) → ${newStatus} (level ${newLevel})`);
+            // Não atualizar - manter status atual
+            updatedMessage = msg;
           } else {
-            updatedMessage = { ...msg, ...updateFields };
-            console.log(`✅ [${requestId}] Message updated: ${msg.status} → ${newStatus}`);
+            const updateFields: any = { status: newStatus };
+            
+            // Garantir que AMBOS os evolution IDs estejam preenchidos
+            if (!msg.evolution_key_id) {
+              updateFields.evolution_key_id = messageKeyId;
+            }
+            if (!msg.evolution_short_key_id) {
+              updateFields.evolution_short_key_id = messageKeyId;
+            }
+            
+            // Atualizar timestamps conforme o status (somente se ainda não existem)
+            if (status === 'DELIVERY_ACK' && !msg.delivered_at) {
+              updateFields.delivered_at = new Date().toISOString();
+            }
+            if (status === 'READ' && !msg.read_at) {
+              updateFields.read_at = new Date().toISOString();
+            }
+            
+            // Executar update no banco
+            const { error: updateError } = await supabase
+              .from('messages')
+              .update(updateFields)
+              .eq('id', msg.id);
+            
+            if (updateError) {
+              console.error(`❌ [${requestId}] Error updating message:`, updateError);
+            } else {
+              updatedMessage = { ...msg, ...updateFields };
+              console.log(`✅ [${requestId}] Message updated: ${msg.status} (level ${currentLevel}) → ${newStatus} (level ${newLevel})`);
+            }
           }
         } else {
           console.log(`⚠️ [${requestId}] Message NOT found: ${messageKeyId}`);
