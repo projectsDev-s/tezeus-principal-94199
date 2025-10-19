@@ -715,7 +715,6 @@ serve(async (req) => {
       status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
-    }
 
   } catch (error) {
     console.error(`❌ [${requestId}] Unexpected error:`, error);
