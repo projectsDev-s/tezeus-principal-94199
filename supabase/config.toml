@@ -224,3 +224,6 @@ verify_jwt = false
 
 [functions.evolution-trigger-history-sync]
 verify_jwt = false
+
+[functions.n8n-queue-distribution]
+verify_jwt = false
