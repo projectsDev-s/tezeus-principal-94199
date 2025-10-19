@@ -21,6 +21,12 @@ interface WhatsAppMessage {
   external_id?: string;
   metadata?: any;
   workspace_id?: string;
+  reply_to_message_id?: string;
+  quoted_message?: {
+    id: string;
+    content: string;
+    sender_type: 'contact' | 'agent';
+  };
 }
 
 interface UseConversationMessagesReturn {

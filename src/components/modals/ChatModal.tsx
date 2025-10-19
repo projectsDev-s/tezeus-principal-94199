@@ -19,6 +19,7 @@ import { ForwardMessageModal } from '@/components/modals/ForwardMessageModal';
 import { AcceptConversationButton } from '@/components/chat/AcceptConversationButton';
 import { EndConversationButton } from '@/components/chat/EndConversationButton';
 import { ContactSidePanel } from '@/components/ContactSidePanel';
+import { ReplyPreview } from '@/components/chat/ReplyPreview';
 import { useConversationMessages } from '@/hooks/useConversationMessages';
 import { useConversationAccept } from '@/hooks/useConversationAccept';
 import { useConversationEnd } from '@/hooks/useConversationEnd';
@@ -58,6 +59,12 @@ interface WhatsAppMessage {
   workspace_id?: string;
   delivered_at?: string | null;
   read_at?: string | null;
+  reply_to_message_id?: string;
+  quoted_message?: {
+    id: string;
+    content: string;
+    sender_type: 'contact' | 'agent';
+  };
 }
 
 // Mapear status do Evolution para status do componente
@@ -103,6 +110,7 @@ export function ChatModal({
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [fullConversation, setFullConversation] = useState<WhatsAppConversation | null>(null);
+  const [replyingTo, setReplyingTo] = useState<WhatsAppMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLElement | null>(null);
   const { toast } = useToast();
@@ -203,7 +211,15 @@ export function ChatModal({
         sender_id: user?.id,
         created_at: new Date().toISOString(),
         status: 'sending' as const,
-        workspace_id: selectedWorkspace?.workspace_id || ''
+        workspace_id: selectedWorkspace?.workspace_id || '',
+        ...(replyingTo && {
+          reply_to_message_id: replyingTo.id,
+          quoted_message: {
+            id: replyingTo.id,
+            content: replyingTo.content,
+            sender_type: replyingTo.sender_type
+          }
+        })
       };
       addMessage(optimisticMessage);
       
@@ -214,7 +230,15 @@ export function ChatModal({
           message_type: 'text',
           sender_id: user?.id,
           sender_type: 'agent',
-          clientMessageId: clientMessageId
+          clientMessageId: clientMessageId,
+          ...(replyingTo && {
+            reply_to_message_id: replyingTo.id,
+            quoted_message: {
+              id: replyingTo.id,
+              content: replyingTo.content,
+              sender_type: replyingTo.sender_type
+            }
+          })
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -236,6 +260,7 @@ export function ChatModal({
       // ✅ Atualizar status para 'sent'
       if (sendResult.success) {
         updateMessage(clientMessageId, { status: 'sent' });
+        setReplyingTo(null); // Limpar reply após envio bem-sucedido
         console.log('✅ Mensagem marcada como "sent":', { clientMessageId });
       }
     } catch (error) {
@@ -572,6 +597,15 @@ export function ChatModal({
     });
   };
 
+  const handleReply = (message: WhatsAppMessage) => {
+    setReplyingTo(message);
+    // Focar no input após definir a mensagem para resposta
+    setTimeout(() => {
+      const input = document.querySelector<HTMLInputElement>('input[placeholder="Digite sua mensagem..."]');
+      input?.focus();
+    }, 100);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 gap-0">
@@ -769,7 +803,7 @@ export function ChatModal({
                       {!selectionMode && (
                         <MessageContextMenu
                           onForward={() => handleMessageForward(message.id)}
-                          onReply={() => {/* TODO */}}
+                          onReply={() => handleReply(message)}
                           onDownload={message.file_url ? () => {
                             const link = document.createElement('a');
                             link.href = message.file_url!;
@@ -783,9 +817,21 @@ export function ChatModal({
                         />
                       )}
                       
+                      {/* Mostrar mensagem quotada se existir */}
+                      {message.quoted_message && (
+                        <div className="mb-2 p-2 bg-background/50 rounded border-l-2 border-primary">
+                          <span className="text-xs font-medium text-primary">
+                            {message.quoted_message.sender_type === 'contact' ? contactName : 'Você'}
+                          </span>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {message.quoted_message.content}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Renderizar conteúdo baseado no tipo */}
                       {message.message_type !== 'text' && message.file_url ? (
-                        <MediaViewer 
+                        <MediaViewer
                           fileUrl={message.file_url} 
                           fileName={message.file_name} 
                           messageType={message.message_type} 
@@ -826,6 +872,15 @@ export function ChatModal({
               </div>
             )}
           </ScrollArea>
+
+          {/* Reply Preview */}
+          {replyingTo && (
+            <ReplyPreview
+              message={replyingTo}
+              contactName={contactName}
+              onCancel={() => setReplyingTo(null)}
+            />
+          )}
 
           {/* Input area funcional */}
           <div className="p-4 border-t border-border">

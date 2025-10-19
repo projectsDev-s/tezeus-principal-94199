@@ -35,6 +35,7 @@ import { MessageContextMenu } from "@/components/chat/MessageContextMenu";
 import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
 import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
+import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
@@ -247,6 +248,7 @@ export function WhatsAppChat({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<any>(null);
 
   // Usar a função de filtro unificada
   const filteredConversations = getFilteredConversations();
@@ -309,7 +311,15 @@ export function WhatsAppChat({
         sender_id: user?.id,
         created_at: new Date().toISOString(),
         status: 'sending' as const,
-        workspace_id: selectedWorkspace?.workspace_id || ''
+        workspace_id: selectedWorkspace?.workspace_id || '',
+        ...(replyingTo && {
+          reply_to_message_id: replyingTo.id,
+          quoted_message: {
+            id: replyingTo.id,
+            content: replyingTo.content,
+            sender_type: replyingTo.sender_type
+          }
+        })
       };
       addMessage(optimisticMessage);
       
@@ -323,7 +333,15 @@ export function WhatsAppChat({
           message_type: 'text',
           sender_id: user?.id,
           sender_type: 'agent',
-          clientMessageId: clientMessageId // ✅ Backend vai usar isso como external_id
+          clientMessageId: clientMessageId, // ✅ Backend vai usar isso como external_id
+          ...(replyingTo && {
+            reply_to_message_id: replyingTo.id,
+            quoted_message: {
+              id: replyingTo.id,
+              content: replyingTo.content,
+              sender_type: replyingTo.sender_type
+            }
+          })
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -347,6 +365,7 @@ export function WhatsAppChat({
         updateMessage(clientMessageId, {
           status: 'sent'
         });
+        setReplyingTo(null); // Limpar reply após envio
         console.log('✅ Mensagem marcada como "sent":', { clientMessageId });
       }
     } catch (error) {
@@ -1135,6 +1154,15 @@ export function WhatsAppChat({
     }
   };
 
+  // Handler para responder mensagem
+  const handleReply = (message: any) => {
+    setReplyingTo(message);
+    setTimeout(() => {
+      const input = document.querySelector<HTMLInputElement>('input[placeholder="Digite sua mensagem..."]');
+      input?.focus();
+    }, 100);
+  };
+
   // Efeito para selecionar conversa via notificação
   useEffect(() => {
     if (selectedConversationId && conversations.length > 0) {
@@ -1734,7 +1762,7 @@ export function WhatsAppChat({
                      
                      <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary px-2 py-1.5" : "bg-primary text-primary-foreground px-2 py-1.5")}>
                       {/* Menu de contexto */}
-                      {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => {/* TODO: implementar resposta */}} onDownload={message.file_url ? () => {
+                      {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => handleReply(message)} onDownload={message.file_url ? () => {
                   const link = document.createElement('a');
                   link.href = message.file_url!;
                   link.download = message.file_name || 'download';
@@ -1744,6 +1772,18 @@ export function WhatsAppChat({
                   document.body.removeChild(link);
                 } : undefined} hasDownload={!!message.file_url} />}
                       
+                      {/* Mostrar mensagem quotada se existir */}
+                      {(message as any).quoted_message && (
+                        <div className="mb-2 p-2 bg-background/50 rounded border-l-2 border-primary">
+                          <span className="text-xs font-medium text-primary">
+                            {(message as any).quoted_message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'}
+                          </span>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {(message as any).quoted_message.content}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Renderizar conteúdo baseado no tipo */}
                       {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
                     <p className="text-sm break-words flex-1">{message.content}</p>
@@ -1771,6 +1811,15 @@ export function WhatsAppChat({
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
+
+            {/* Reply Preview */}
+            {replyingTo && (
+              <ReplyPreview
+                message={replyingTo}
+                contactName={selectedConversation.contact.name}
+                onCancel={() => setReplyingTo(null)}
+              />
+            )}
 
             {/* Campo de entrada de mensagem */}
             <div className="p-4 border-t border-border relative">
