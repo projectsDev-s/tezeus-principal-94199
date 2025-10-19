@@ -565,6 +565,57 @@ serve(async (req) => {
         
         console.log(`✅ [${requestId}] Metadata prepared for N8N processing:`, processedData);
         
+        // ✅ AUTO-CRIAR CARD NO CRM (se habilitado na conexão)
+        if (connectionData?.auto_create_crm_card && processedData?.requires_processing) {
+          console.log(`🎯 [${requestId}] Auto-criação de card habilitada - processando...`);
+          
+          try {
+            // Buscar a conversa mais recente para este número
+            const { data: conversation, error: convError } = await supabase
+              .from('conversations')
+              .select('id, contact_id')
+              .eq('workspace_id', workspaceId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (convError) {
+              console.error(`❌ [${requestId}] Erro ao buscar conversa:`, convError);
+            } else if (conversation) {
+              console.log(`📋 [${requestId}] Chamando smart-pipeline-card-manager:`, {
+                contactId: conversation.contact_id,
+                conversationId: conversation.id,
+                workspaceId: workspaceId,
+                pipelineId: connectionData.default_pipeline_id
+              });
+              
+              const { data: cardResult, error: cardError } = await supabase.functions.invoke(
+                'smart-pipeline-card-manager',
+                {
+                  body: {
+                    contactId: conversation.contact_id,
+                    conversationId: conversation.id,
+                    workspaceId: workspaceId,
+                    pipelineId: connectionData.default_pipeline_id
+                  }
+                }
+              );
+              
+              if (cardError) {
+                console.error(`❌ [${requestId}] Erro ao criar/atualizar card:`, cardError);
+              } else {
+                console.log(`✅ [${requestId}] Card ${cardResult?.action} com sucesso:`, cardResult?.card?.id);
+              }
+            } else {
+              console.warn(`⚠️ [${requestId}] Nenhuma conversa encontrada para criar card`);
+            }
+          } catch (cardCreationError) {
+            console.error(`❌ [${requestId}] Exceção ao processar auto-criação de card:`, cardCreationError);
+          }
+        } else if (connectionData?.auto_create_crm_card) {
+          console.log(`ℹ️ [${requestId}] Auto-criação habilitada mas mensagem não requer processamento`);
+        }
+        
       }
     } else if (workspaceId && payload.data?.key?.fromMe === true && EVENT === 'MESSAGES_UPSERT') {
       console.log(`📤 [${requestId}] Outbound message detected (messages.upsert), capturing evolution_short_key_id`);
