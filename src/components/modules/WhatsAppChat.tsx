@@ -1394,7 +1394,9 @@ export function WhatsAppChat({
             const lastActivity = getActivityDisplay(conversation);
             const initials = getInitials(conversation.contact?.name || conversation.contact?.phone || 'U');
             const avatarColor = getAvatarColor(conversation.contact?.name || conversation.contact?.phone || 'U');
-            return <li key={conversation.id} className="list-none">
+            // ✅ CRÍTICO: Key dinâmica para forçar re-render do card quando conversa atualizar
+            const cardKey = `${conversation.id}-${conversation._updated_at || 0}-${conversation.last_activity_at}`;
+            return <li key={cardKey} className="list-none">
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
                       <div className={cn("relative flex items-center px-4 py-2 cursor-pointer rounded-lg transition-all duration-300 ease-in-out border-b border-border/50", "group-hover/list:opacity-30 hover:!opacity-100 hover:shadow-lg hover:scale-[1.02] hover:translate-x-1 hover:bg-white hover:z-10", selectedConversation?.id === conversation.id && "bg-muted !opacity-100")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>

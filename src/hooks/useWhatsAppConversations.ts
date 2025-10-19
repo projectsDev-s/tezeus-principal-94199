@@ -696,10 +696,14 @@ export const useWhatsAppConversations = () => {
           sender_type: updatedMessage.sender_type
         });
         
-        // ✅ APENAS ATUALIZAR STATUS (não adicionar novas mensagens)
+        // ✅ ATUALIZAR STATUS E FORÇAR RE-RENDER DO CARD
         setConversations(prev => prev.map(conv => {
           if (conv.id === updatedMessage.conversation_id) {
-            return {
+            // ✅ ATUALIZAR last_message se esta mensagem for a mais recente
+            const isLastMessage = conv.messages.length > 0 && 
+              conv.messages[conv.messages.length - 1].id === updatedMessage.id;
+            
+            const updatedConv = {
               ...conv,
               messages: conv.messages.map(msg => 
                 msg.id === updatedMessage.id 
@@ -710,8 +714,21 @@ export const useWhatsAppConversations = () => {
                       delivered_at: updatedMessage.delivered_at
                     }
                   : msg
-              )
+              ),
+              _updated_at: Date.now() // ✅ FORÇAR RE-RENDER
             };
+            
+            // ✅ Atualizar last_message para refletir no card
+            if (isLastMessage && updatedMessage.content) {
+              updatedConv.last_message = [{
+                content: updatedMessage.content,
+                message_type: updatedMessage.message_type,
+                sender_type: updatedMessage.sender_type,
+                created_at: updatedMessage.created_at
+              }];
+            }
+            
+            return updatedConv;
           }
           return conv;
         }));
@@ -921,14 +938,17 @@ export const useWhatsAppConversations = () => {
                   status: updatedConv.status ?? conv.status,
                   evolution_instance: updatedConv.evolution_instance ?? conv.evolution_instance,
                   ...(updatedConv.assigned_user_id !== undefined && { assigned_user_id: updatedConv.assigned_user_id }),
-                  ...(updatedConv.priority !== undefined && { priority: updatedConv.priority })
+                  ...(updatedConv.priority !== undefined && { priority: updatedConv.priority }),
+                  _updated_at: Date.now() // ✅ FORÇAR RE-RENDER DO CARD
                 };
                 
-                console.log('✅ [UPDATE] Conversa atualizada:', {
+                console.log('✅ [UPDATE conversations] Card atualizado:', {
                   id: conv.id,
                   contact: conv.contact.name,
                   old_unread: conv.unread_count,
-                  new_unread: updatedConversation.unread_count
+                  new_unread: updatedConversation.unread_count,
+                  old_last_activity: conv.last_activity_at,
+                  new_last_activity: updatedConversation.last_activity_at
                 });
                 
                 return updatedConversation;
@@ -946,6 +966,15 @@ export const useWhatsAppConversations = () => {
               const timeA = new Date(a.last_activity_at).getTime();
               const timeB = new Date(b.last_activity_at).getTime();
               return timeB - timeA;
+            });
+            
+            console.log('🔄 [UPDATE conversations] Lista reordenada:', {
+              total: sorted.length,
+              primeiras_5: sorted.slice(0, 5).map(c => ({
+                nome: c.contact.name,
+                last_activity: c.last_activity_at,
+                _updated_at: c._updated_at
+              }))
             });
             
             console.log('🔄 [UPDATE] Array atualizado:', {
