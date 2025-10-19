@@ -1088,19 +1088,22 @@ export function WhatsAppChat({
         return;
       }
 
-      // Find and select the conversation (aguardar realtime atualizar)
+      // Atualizar lista imediatamente
+      await fetchConversations();
+      
+      // Find and select the conversation
       setTimeout(() => {
         const conversation = conversations.find(conv => conv.id === data.conversationId);
         if (conversation) {
           handleSelectConversation(conversation);
         } else {
-          // Aguardar realtime atualizar (sem reload)
-          console.log('⏳ Aguardando subscription atualizar lista de conversas...');
-          // Tentar novamente após 2s
-          setTimeout(() => {
+          // Tentar novamente após refetch
+          console.log('⏳ Aguardando lista atualizar...');
+          setTimeout(async () => {
+            await fetchConversations();
             const retryConv = conversations.find(conv => conv.id === data.conversationId);
             if (retryConv) handleSelectConversation(retryConv);
-          }, 2000);
+          }, 1000);
         }
       }, 500);
       setQuickPhoneNumber("");
