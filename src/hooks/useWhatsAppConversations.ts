@@ -736,7 +736,7 @@ export const useWhatsAppConversations = () => {
           console.log('🔔 Nova conversa criada:', newConv);
           
           // Buscar dados completos da nova conversa
-          const { data: conversationData } = await supabase
+          const { data: conversationData, error: convError } = await supabase
             .from('conversations')
             .select(`
               id,
@@ -747,7 +747,10 @@ export const useWhatsAppConversations = () => {
               created_at,
               evolution_instance,
               contact_id,
-              contacts!inner (
+              workspace_id,
+              connection_id,
+              assigned_user_id,
+              contacts!conversations_contact_id_fkey (
                 id,
                 name,
                 phone,
@@ -756,36 +759,64 @@ export const useWhatsAppConversations = () => {
               )
             `)
             .eq('id', newConv.id)
+            .eq('workspace_id', workspaceId)
             .single();
 
-          if (conversationData && conversationData.contacts) {
+          if (convError) {
+            console.error('❌ Erro ao buscar dados da conversa:', convError);
+            return;
+          }
+
+          console.log('✅ Dados da nova conversa recebidos:', conversationData);
+
+          if (conversationData && conversationData.contacts && Array.isArray(conversationData.contacts) && conversationData.contacts.length > 0) {
+            const contact = conversationData.contacts[0];
             const newConversation: WhatsAppConversation = {
               id: conversationData.id,
               contact: {
-                id: conversationData.contacts.id,
-                name: conversationData.contacts.name,
-                phone: conversationData.contacts.phone,
-                email: conversationData.contacts.email,
-                profile_image_url: conversationData.contacts.profile_image_url,
+                id: contact.id,
+                name: contact.name,
+                phone: contact.phone,
+                email: contact.email,
+                profile_image_url: contact.profile_image_url,
               },
               agente_ativo: conversationData.agente_ativo,
               status: conversationData.status as 'open' | 'closed' | 'pending',
-              unread_count: conversationData.unread_count,
+              unread_count: conversationData.unread_count || 0,
               last_activity_at: conversationData.last_activity_at,
               created_at: conversationData.created_at,
               evolution_instance: (conversationData as any).evolution_instance ?? null,
+              connection_id: (conversationData as any).connection_id ?? null,
+              assigned_user_id: (conversationData as any).assigned_user_id ?? null,
               messages: [],
+              last_message: [],
             };
+
+            console.log('➕ Adicionando nova conversa à lista:', {
+              id: newConversation.id,
+              contact: newConversation.contact.name,
+              phone: newConversation.contact.phone
+            });
 
             setConversations(prev => {
               const exists = prev.some(conv => conv.id === newConversation.id);
-              if (exists) return prev;
+              if (exists) {
+                console.log('⚠️ Conversa já existe na lista, ignorando');
+                return prev;
+              }
               
-              return [newConversation, ...prev].sort((a, b) => 
+              const updated = [newConversation, ...prev].sort((a, b) => 
                 new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
               );
+
+              console.log('✅ Lista atualizada com nova conversa. Total:', updated.length);
+
+              return updated;
             });
+          } else {
+            console.error('❌ Dados da conversa ou contato não encontrados');
           }
+
         }
       )
       .on('postgres_changes', {
