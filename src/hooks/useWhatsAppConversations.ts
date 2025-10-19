@@ -554,10 +554,19 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'messages',
-        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+        table: 'messages'
+        // ✅ SEM FILTRO - Filtrar no cliente
       }, (payload) => {
         const newMessage = payload.new as any;
+        
+        // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
+        if (newMessage.workspace_id !== workspaceId) {
+          console.log('⏭️ [Realtime] Mensagem de outro workspace ignorada:', {
+            message_workspace: newMessage.workspace_id,
+            current_workspace: workspaceId
+          });
+          return;
+        }
         
         console.log('📨 [INSERT useWhatsAppConversations] Nova mensagem recebida:', {
           id: newMessage.id,
@@ -670,10 +679,16 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'messages',
-        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+        table: 'messages'
+        // ✅ SEM FILTRO - Filtrar no cliente
       }, (payload) => {
         const updatedMessage = payload.new as any;
+        
+        // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
+        if (updatedMessage.workspace_id !== workspaceId) {
+          console.log('⏭️ [Realtime] Update de mensagem de outro workspace ignorado');
+          return;
+        }
         
         console.log('🔄 [UPDATE messages] Mensagem atualizada via realtime:', {
           id: updatedMessage.id,
@@ -723,15 +738,27 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'conversations',
-        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+        table: 'conversations'
+        // ✅ SEM FILTRO - Filtrar no cliente
       },
         async (payload) => {
           // Realtime: New conversation received
           const newConv = payload.new as any;
           
+          // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
+          if (newConv.workspace_id !== workspaceId) {
+            console.log('⏭️ [Realtime] Conversa de outro workspace ignorada:', {
+              conversation_workspace: newConv.workspace_id,
+              current_workspace: workspaceId
+            });
+            return;
+          }
+          
           // Só processar conversas do WhatsApp
-          if (newConv.canal !== 'whatsapp') return;
+          if (newConv.canal !== 'whatsapp') {
+            console.log('⏭️ [Realtime] Conversa não-WhatsApp ignorada:', newConv.canal);
+            return;
+          }
           
           console.log('🔔 Nova conversa criada:', newConv);
           
@@ -822,25 +849,34 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'conversations',
-        filter: `workspace_id=eq.${workspaceId}` // ✅ FILTRO NO POSTGRES
+        table: 'conversations'
+        // ✅ SEM FILTRO - Filtrar no cliente
       }, (payload) => {
           try {
-            console.log('🔄 Realtime: Conversa atualizada (REPLICA IDENTITY FULL):', {
-              id: payload.new?.id,
-              workspace_id: payload.new?.workspace_id,
-              unread_count: payload.new?.unread_count,
-              status: payload.new?.status,
-              agente_ativo: payload.new?.agente_ativo,
-              last_activity_at: payload.new?.last_activity_at,
-              assigned_user_id: payload.new?.assigned_user_id,
-              current_workspace: selectedWorkspace?.workspace_id,
-              old_last_activity: payload.old?.last_activity_at,
-              new_last_activity: payload.new?.last_activity_at
-            });
-            
             const updatedConv = payload.new as any;
             const oldConv = payload.old as any;
+            
+            // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
+            if (updatedConv?.workspace_id !== workspaceId) {
+              console.log('⏭️ [Realtime] Update de conversa de outro workspace ignorado:', {
+                conversation_workspace: updatedConv?.workspace_id,
+                current_workspace: workspaceId
+              });
+              return;
+            }
+            
+            console.log('🔄 Realtime: Conversa atualizada (REPLICA IDENTITY FULL):', {
+              id: updatedConv?.id,
+              workspace_id: updatedConv?.workspace_id,
+              unread_count: updatedConv?.unread_count,
+              status: updatedConv?.status,
+              agente_ativo: updatedConv?.agente_ativo,
+              last_activity_at: updatedConv?.last_activity_at,
+              assigned_user_id: updatedConv?.assigned_user_id,
+              current_workspace: selectedWorkspace?.workspace_id,
+              old_last_activity: oldConv?.last_activity_at,
+              new_last_activity: updatedConv?.last_activity_at
+            });
             
             if (!updatedConv) {
               console.log('⚠️ Payload.new é null - ignorando evento');
@@ -927,14 +963,24 @@ export const useWhatsAppConversations = () => {
         }
       )
       .subscribe((status) => {
+        console.log('🔌 [Realtime Conversations] Status da subscription:', status, 'para workspace:', workspaceId);
         if (status === 'SUBSCRIBED') {
-          // Real-time subscription active
+          console.log('✅ [Realtime Conversations] Canal conectado com sucesso');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('❌ [Realtime Conversations] Erro na conexão:', status);
+          console.warn('⚠️ Realtime falhou - considere implementar polling como fallback');
         }
-        // Channel errors handled silently
       });
 
     // Monitor subscription status
-    messagesChannel.subscribe();
+    messagesChannel.subscribe((status) => {
+      console.log('🔌 [Realtime Messages] Status da subscription:', status, 'para workspace:', workspaceId);
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ [Realtime Messages] Canal conectado com sucesso');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error('❌ [Realtime Messages] Erro na conexão:', status);
+      }
+    });
 
     // ✅ CLEANUP: Garantir remoção adequada dos canais
     return () => {
