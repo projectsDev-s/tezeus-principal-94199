@@ -129,9 +129,6 @@ serve(async (req) => {
       // ❌ NÃO PROCESSAR LOCALMENTE - Apenas encaminhar para N8N
       console.log(`🔄 [${requestId}] Enviando para N8N processar (sem processamento local)`);
       processedData = null;
-      } else if (workspaceId && payload.data?.key?.fromMe === true) {
-        console.log(`📤 [${requestId}] Outbound message detected, skipping local processing (will be handled by N8N response)`);
-      }
 
       // Forward to N8N with processed data
       if (webhookUrl) {
@@ -182,9 +179,10 @@ serve(async (req) => {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
-    } else {
-      // N8N Response Processing - Only process if from N8N
-      console.log(`🎯 [${requestId}] Processing N8N response payload`);
+    }
+    
+    // N8N Response Processing - Only process if from N8N
+    console.log(`🎯 [${requestId}] Processing N8N response payload`);
     console.log(`📋 [${requestId}] Full payload structure:`, JSON.stringify(payload, null, 2));
     console.log(`🔍 [${requestId}] Auth header: ${authHeader ? 'present' : 'missing'}`);
     console.log(`🔍 [${requestId}] Expected auth: ${expectedAuth}`);
