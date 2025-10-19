@@ -144,13 +144,34 @@ serve(async (req) => {
     if (!conversationId) {
       console.log('📡 Creating new conversation for contact:', contactId);
 
+      // 🔌 Buscar conexão padrão ativa para o workspace
+      const { data: defaultConnection } = await supabase
+        .from('connections')
+        .select('id, instance_name')
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'connected')
+        .order('is_default', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!defaultConnection) {
+        console.warn(`⚠️ Nenhuma conexão ativa encontrada para workspace ${workspaceId}`);
+      }
+
       const conversationData: any = {
         contact_id: contactId,
         status: 'open',
         workspace_id: workspaceId,
         canal: 'whatsapp',
-        agente_ativo: false
+        agente_ativo: false,
+        connection_id: defaultConnection?.id || null,
+        evolution_instance: defaultConnection?.instance_name || null
       }
+
+      console.log('📦 Conversation data:', {
+        connection_id: conversationData.connection_id,
+        evolution_instance: conversationData.evolution_instance
+      });
 
       const { data: newConversation, error: conversationError } = await supabase
         .from('conversations')
