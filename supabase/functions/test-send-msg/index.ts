@@ -33,7 +33,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log(`📨 [${requestId}] Received body:`, JSON.stringify(body, null, 2));
     
-    const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name, clientMessageId } = body;
+    const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name, clientMessageId, reply_to_message_id, quoted_message } = body;
 
     // Para mensagens de mídia, ignorar placeholders como [IMAGE], [VIDEO], etc
     const isMediaMessage = message_type && message_type !== 'text';
@@ -376,6 +376,27 @@ serve(async (req) => {
     
     console.log(`📤 [${requestId}] Enviando mensagem EXCLUSIVAMENTE via N8N`);
 
+    // Buscar dados completos da mensagem original se reply_to_message_id for fornecido
+    let fullQuotedMessage = quoted_message;
+    if (reply_to_message_id && !quoted_message) {
+      console.log(`🔍 [${requestId}] Buscando mensagem original para reply: ${reply_to_message_id}`);
+      const { data: originalMsg } = await supabase
+        .from('messages')
+        .select('content, sender_type, external_id, evolution_key_id')
+        .eq('id', reply_to_message_id)
+        .single();
+      
+      if (originalMsg) {
+        fullQuotedMessage = {
+          id: reply_to_message_id,
+          content: originalMsg.content,
+          sender_type: originalMsg.sender_type,
+          external_id: originalMsg.external_id || originalMsg.evolution_key_id
+        };
+        console.log(`✅ [${requestId}] Mensagem original encontrada:`, fullQuotedMessage);
+      }
+    }
+
     // ✅ CHAMAR APENAS O N8N - Evolution será chamado pelo N8N
     try {
       const n8nPayload = {
@@ -394,7 +415,9 @@ serve(async (req) => {
         instance_name: instance_name,
         evolution_url: evolutionUrl,
         evolution_api_key: evolutionApiKey,
-        request_id: requestId
+        request_id: requestId,
+        reply_to_message_id: reply_to_message_id || null,
+        quoted_message: fullQuotedMessage || null
       };
 
       console.log(`🌐 [${requestId}] Calling N8N webhook:`, n8nWebhookUrl.substring(0, 50) + '...');

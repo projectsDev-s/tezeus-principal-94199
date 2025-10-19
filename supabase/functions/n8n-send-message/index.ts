@@ -32,7 +32,9 @@ serve(async (req) => {
       evolutionInstance: evolutionInstanceFromBody,
       conversationId,
       workspaceId,
-      external_id 
+      external_id,
+      reply_to_message_id,
+      quoted_message
     } = requestBodyCache;
     
     receivedMessageId = messageId;
@@ -185,13 +187,30 @@ serve(async (req) => {
       });
     }
 
+    // Preparar estrutura de quotação (reply) se fornecida
+    let quotedStructure = null;
+    if (reply_to_message_id && quoted_message) {
+      console.log(`💬 [${messageId}] Preparando reply para mensagem: ${quoted_message.external_id}`);
+      quotedStructure = {
+        key: {
+          remoteJid: `${contactPhone}@s.whatsapp.net`,
+          fromMe: quoted_message.sender_type === 'agent',
+          id: quoted_message.external_id || reply_to_message_id
+        },
+        message: {
+          conversation: quoted_message.content
+        }
+      };
+    }
+
     // Preparar payload para N8N baseado no tipo de mensagem
     let evolutionMessage: any = {};
     let evolutionMessageType = 'conversation';
 
     if (messageType === 'text' || !fileUrl) {
       evolutionMessage = {
-        conversation: content ?? ''
+        conversation: content ?? '',
+        ...(quotedStructure && { quoted: quotedStructure })
       };
       evolutionMessageType = 'conversation';
     } else if (messageType === 'image') {
@@ -201,7 +220,8 @@ serve(async (req) => {
           url: fileUrl,
           caption: content || '',
           fileName: fileName || 'image.jpg'
-        }
+        },
+        ...(quotedStructure && { quoted: quotedStructure })
       };
     } else if (messageType === 'video') {
       evolutionMessageType = 'videoMessage';
@@ -210,7 +230,8 @@ serve(async (req) => {
           url: fileUrl,
           caption: content || '',
           fileName: fileName || 'video.mp4'
-        }
+        },
+        ...(quotedStructure && { quoted: quotedStructure })
       };
     } else if (messageType === 'audio') {
       evolutionMessageType = 'audioMessage';
@@ -218,7 +239,8 @@ serve(async (req) => {
         audioMessage: {
           url: fileUrl,
           fileName: fileName || 'audio.ogg'
-        }
+        },
+        ...(quotedStructure && { quoted: quotedStructure })
       };
     } else if (messageType === 'document' || messageType === 'file') {
       evolutionMessageType = 'documentMessage';
@@ -227,10 +249,14 @@ serve(async (req) => {
           url: fileUrl,
           caption: content || '',
           fileName: fileName || 'document'
-        }
+        },
+        ...(quotedStructure && { quoted: quotedStructure })
       };
     } else {
-      evolutionMessage = { conversation: content ?? '' };
+      evolutionMessage = { 
+        conversation: content ?? '',
+        ...(quotedStructure && { quoted: quotedStructure })
+      };
       evolutionMessageType = 'conversation';
     }
 
