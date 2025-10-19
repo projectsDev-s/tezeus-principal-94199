@@ -182,10 +182,9 @@ serve(async (req) => {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
-    }
-
-    // N8N Response Processing - Only process if from N8N
-    console.log(`🎯 [${requestId}] Processing N8N response payload`);
+    } else {
+      // N8N Response Processing - Only process if from N8N
+      console.log(`🎯 [${requestId}] Processing N8N response payload`);
     console.log(`📋 [${requestId}] Full payload structure:`, JSON.stringify(payload, null, 2));
     console.log(`🔍 [${requestId}] Auth header: ${authHeader ? 'present' : 'missing'}`);
     console.log(`🔍 [${requestId}] Expected auth: ${expectedAuth}`);
@@ -718,6 +717,7 @@ serve(async (req) => {
       status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+    }
 
   } catch (error) {
     console.error(`❌ [${requestId}] Unexpected error:`, error);
