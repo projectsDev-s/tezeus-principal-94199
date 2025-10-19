@@ -185,7 +185,6 @@ serve(async (req) => {
     }
 
     // N8N Response Processing - Only process if from N8N
-    try {
     console.log(`🎯 [${requestId}] Processing N8N response payload`);
     console.log(`📋 [${requestId}] Full payload structure:`, JSON.stringify(payload, null, 2));
     console.log(`🔍 [${requestId}] Auth header: ${authHeader ? 'present' : 'missing'}`);
