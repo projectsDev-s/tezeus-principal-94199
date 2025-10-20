@@ -1272,7 +1272,7 @@ export function DealDetailsModal({
                     disabled={isExecutingAction}
                     className={action.deal_state === 'Ganho' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
                   >
-                    {isExecutingAction ? 'Processando...' : action.deal_state}
+                    {isExecutingAction ? 'Processando...' : action.action_name}
                   </Button>
                 ));
               })()}
