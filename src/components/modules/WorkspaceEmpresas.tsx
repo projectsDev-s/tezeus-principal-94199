@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Building2, Users, Settings, Calendar, MapPin, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Plus, Building2, Users, Settings, Calendar, MapPin, MoreVertical, Edit, Trash2, Cable } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -235,8 +235,8 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
                     className="flex-1 gap-2"
                     onClick={() => handleConfigClick(workspace)}
                   >
-                    <Settings className="w-4 h-4" />
-                    Config
+                    <Cable className="w-4 h-4" />
+                    Conexões
                   </Button>
                 </div>
               )}
