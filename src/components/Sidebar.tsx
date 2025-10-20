@@ -290,8 +290,8 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Workspace Info - Only show for admin/user roles */}
-      {!hasRole(['master']) && selectedWorkspace && (
+      {/* Workspace Info - Show for all users when workspace is selected */}
+      {selectedWorkspace && (
         <div className={`flex-shrink-0 border-b border-sidebar-border ${
           isCollapsed ? 'px-2 py-2' : 'px-4 py-3 bg-muted/50'
         }`}>
