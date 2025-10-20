@@ -19,6 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspaceRelatorios } from '@/components/modules/WorkspaceRelatorios';
 import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
 import { WorkspaceConfigModal } from '@/components/modals/WorkspaceConfigModal';
+import { CreateWorkspaceModal } from '@/components/modals/CreateWorkspaceModal';
+import { Plus } from 'lucide-react';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ export default function MasterDashboard() {
   const [selectedWorkspaceForModal, setSelectedWorkspaceForModal] = useState<Workspace | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [selectedWorkspaceForConfig, setSelectedWorkspaceForConfig] = useState<Workspace | null>(null);
+  const [createWorkspaceModalOpen, setCreateWorkspaceModalOpen] = useState(false);
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -189,6 +192,12 @@ export default function MasterDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {activePage === 'workspaces' && (
+                <Button onClick={() => setCreateWorkspaceModalOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Empresa
+                </Button>
+              )}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -305,6 +314,12 @@ export default function MasterDashboard() {
           workspaceName={selectedWorkspaceForConfig.name}
         />
       )}
+
+      {/* Modal de Criar Empresa */}
+      <CreateWorkspaceModal 
+        open={createWorkspaceModalOpen} 
+        onOpenChange={setCreateWorkspaceModalOpen}
+      />
     </div>
   );
 }
