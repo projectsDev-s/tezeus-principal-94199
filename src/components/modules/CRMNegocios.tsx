@@ -957,38 +957,35 @@ function CRMNegociosContent({
                   <Settings className="w-5 h-5" />
                 </Button>}
               
-              {/* Pipeline Name */}
+              {/* Pipeline Selector */}
               <div className="mr-2 flex-shrink-0">
                 {isLoading ? (
                   <Skeleton className="h-10 w-[200px]" />
-                ) : selectedPipeline ? (
-                  <h2 className={cn("text-lg font-bold px-3 py-2", isDarkMode ? "text-white" : "text-foreground")}>
-                    {selectedPipeline.name}
-                  </h2>
+                ) : pipelines && pipelines.length > 0 ? (
+                  <Select 
+                    value={selectedPipeline?.id || ""} 
+                    onValueChange={(value) => {
+                      const pipeline = pipelines.find(p => p.id === value);
+                      if (pipeline) {
+                        selectPipeline(pipeline);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={cn("w-[200px] h-10 font-bold", isDarkMode ? "bg-card text-white border-border" : "bg-background")}>
+                      <SelectValue placeholder="Selecione um pipeline" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-background">
+                      {pipelines.map((pipeline) => (
+                        <SelectItem key={pipeline.id} value={pipeline.id}>
+                          {pipeline.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
                 )}
               </div>
-              
-              {/* Plus Button */}
-              {canManagePipelines(selectedWorkspace?.workspace_id) && <Button size="icon" variant="ghost" className={cn("h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0", isDarkMode ? "text-orange-400 hover:bg-orange-400/10" : "text-orange-500 hover:bg-orange-500/10")} onClick={() => setIsCriarPipelineModalOpen(true)}>
-                  <Plus className="w-5 h-5" />
-                </Button>}
-
-              {/* Indicador de Realtime */}
-              {selectedPipeline && <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-medium">Conectado em tempo real</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Mudanças aparecerão instantaneamente para todos
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>}
 
               {/* Filtrar Button */}
               <div className="relative flex-shrink-0">
