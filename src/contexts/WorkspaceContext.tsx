@@ -9,6 +9,7 @@ export interface Workspace {
   created_at: string;
   updated_at: string;
   connections_count: number;
+  is_active?: boolean;
 }
 
 export interface WorkspaceContextType {

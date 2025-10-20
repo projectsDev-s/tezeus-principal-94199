@@ -36,7 +36,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
-  const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace, clearCache } = useWorkspaces();
+  const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace, toggleWorkspaceStatus, clearCache } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,6 +51,9 @@ export default function MasterDashboard() {
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [toggleActiveDialogOpen, setToggleActiveDialogOpen] = useState(false);
+  const [workspaceToToggle, setWorkspaceToToggle] = useState<Workspace | null>(null);
+  const [toggleConfirmationText, setToggleConfirmationText] = useState('');
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -137,6 +140,36 @@ export default function MasterDashboard() {
       } finally {
         setIsRefreshing(false);
       }
+    }
+  };
+
+  const handleToggleActive = (workspace: Workspace) => {
+    setWorkspaceToToggle(workspace);
+    setToggleActiveDialogOpen(true);
+    setToggleConfirmationText('');
+  };
+
+  const confirmToggleActive = async () => {
+    if (!workspaceToToggle) return;
+    
+    setIsRefreshing(true);
+    try {
+      await toggleWorkspaceStatus(
+        workspaceToToggle.workspace_id, 
+        !(workspaceToToggle.is_active !== false)
+      );
+      setToggleActiveDialogOpen(false);
+      setWorkspaceToToggle(null);
+      setToggleConfirmationText('');
+      
+      // Refresh com delay
+      setTimeout(async () => {
+        clearCache?.();
+        await fetchWorkspaces();
+        setIsRefreshing(false);
+      }, 500);
+    } catch (error) {
+      setIsRefreshing(false);
     }
   };
 
@@ -322,6 +355,7 @@ export default function MasterDashboard() {
                         onViewConfig={handleViewConfig}
                         onEdit={handleEditWorkspace}
                         onDelete={handleDeleteWorkspace}
+                        onToggleActive={handleToggleActive}
                       />
                     ))}
                   </div>
@@ -444,6 +478,79 @@ export default function MasterDashboard() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Excluir Empresa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert Dialog de Inativar/Ativar */}
+      <AlertDialog
+        open={toggleActiveDialogOpen}
+        onOpenChange={(open) => {
+          setToggleActiveDialogOpen(open);
+          if (!open) {
+            setToggleConfirmationText('');
+            setWorkspaceToToggle(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {workspaceToToggle?.is_active !== false ? '⚠️ Inativar Empresa' : '✅ Ativar Empresa'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Tem certeza que deseja <strong>{workspaceToToggle?.is_active !== false ? 'inativar' : 'ativar'}</strong> a empresa{' '}
+                <strong>"{workspaceToToggle?.name}"</strong>?
+              </p>
+              {workspaceToToggle?.is_active !== false && (
+                <>
+                  <p className="text-orange-600 font-semibold">
+                    Ao inativar a empresa:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Todos os usuários (exceto masters) serão deslogados imediatamente</li>
+                    <li>Todas as instâncias WhatsApp serão desconectadas</li>
+                    <li>Novos logins serão bloqueados</li>
+                    <li>Os dados permanecerão intactos</li>
+                    <li>Você pode reativar a empresa a qualquer momento</li>
+                  </ul>
+                  <div className="space-y-2">
+                    <Label htmlFor="toggle-confirmation">
+                      Para confirmar, digite <strong>"inativar empresa"</strong> no campo abaixo:
+                    </Label>
+                    <Input
+                      id="toggle-confirmation"
+                      type="text"
+                      placeholder="Digite 'inativar empresa' para confirmar"
+                      value={toggleConfirmationText}
+                      onChange={(e) => setToggleConfirmationText(e.target.value)}
+                      autoComplete="off"
+                      className="border-orange-500 focus-visible:ring-orange-500"
+                    />
+                  </div>
+                </>
+              )}
+              {workspaceToToggle?.is_active === false && (
+                <p className="text-green-600 font-semibold">
+                  A empresa será reativada e os usuários poderão fazer login normalmente.
+                </p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleActive}
+              disabled={workspaceToToggle?.is_active !== false && toggleConfirmationText !== 'inativar empresa'}
+              className={
+                workspaceToToggle?.is_active !== false
+                  ? 'bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }
+            >
+              {workspaceToToggle?.is_active !== false ? 'Inativar Empresa' : 'Ativar Empresa'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

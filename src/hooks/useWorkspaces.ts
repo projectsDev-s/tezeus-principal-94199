@@ -253,6 +253,38 @@ export function useWorkspaces() {
     }
   };
 
+  const toggleWorkspaceStatus = async (workspaceId: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase.functions.invoke('manage-workspaces', {
+        body: { action: 'toggle-active', workspaceId, isActive },
+        headers: {
+          'x-system-user-id': user?.id || '',
+          'x-system-user-email': user?.email || ''
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const statusText = isActive ? 'ativada' : 'inativada';
+      toast({
+        title: "Sucesso",
+        description: `Empresa ${statusText} com sucesso`
+      });
+
+      fetchWorkspaces(); // Refresh list
+    } catch (error) {
+      console.error('Error toggling workspace status:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao alterar status da empresa",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   return {
     workspaces,
     isLoading,
@@ -260,6 +292,7 @@ export function useWorkspaces() {
     createWorkspace,
     updateWorkspace,
     deleteWorkspace,
+    toggleWorkspaceStatus,
     clearCache: () => setCache(null) // Adicionar função para limpar cache
   };
 }

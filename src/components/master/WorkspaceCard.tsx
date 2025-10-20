@@ -1,4 +1,4 @@
-import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings, MoreVertical, Edit, Trash2, BanIcon, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ interface WorkspaceCardProps {
   onViewConfig?: (workspace: Workspace) => void;
   onEdit?: (workspace: Workspace) => void;
   onDelete?: (workspace: Workspace) => void;
+  onToggleActive?: (workspace: Workspace) => void;
 }
 
 export function WorkspaceCard({
@@ -29,7 +30,8 @@ export function WorkspaceCard({
   onViewWorkspace,
   onViewConfig,
   onEdit,
-  onDelete
+  onDelete,
+  onToggleActive
 }: WorkspaceCardProps) {
   const { stats, isLoading } = useWorkspaceStats(workspace.workspace_id);
   return (
@@ -44,7 +46,13 @@ export function WorkspaceCard({
             <Badge variant="outline" className="text-xs">
               {workspace.connections_count || 0} conexões
             </Badge>
-            {(onEdit || onDelete) && (
+            <Badge 
+              variant={workspace.is_active !== false ? 'default' : 'destructive'}
+              className="text-xs"
+            >
+              {workspace.is_active !== false ? 'Ativa' : 'Inativa'}
+            </Badge>
+            {(onEdit || onDelete || onToggleActive) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -56,6 +64,24 @@ export function WorkspaceCard({
                     <DropdownMenuItem onClick={() => onEdit(workspace)}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
+                    </DropdownMenuItem>
+                  )}
+                  {onToggleActive && (
+                    <DropdownMenuItem 
+                      onClick={() => onToggleActive(workspace)}
+                      className={workspace.is_active !== false ? 'text-orange-600' : 'text-green-600'}
+                    >
+                      {workspace.is_active !== false ? (
+                        <>
+                          <BanIcon className="mr-2 h-4 w-4" />
+                          Inativar
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Ativar
+                        </>
+                      )}
                     </DropdownMenuItem>
                   )}
                   {onDelete && (

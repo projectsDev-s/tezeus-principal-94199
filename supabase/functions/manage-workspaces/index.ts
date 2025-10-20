@@ -12,8 +12,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, workspaceId, name, cnpj, connectionLimit } = await req.json();
-    console.log('Request received:', { action, workspaceId, name, cnpj, connectionLimit });
+    const { action, workspaceId, name, cnpj, connectionLimit, isActive } = await req.json();
+    console.log('Request received:', { action, workspaceId, name, cnpj, connectionLimit, isActive });
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -255,6 +255,75 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ message: 'Workspace excluído com sucesso' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'toggle-active') {
+      if (!workspaceId) {
+        return new Response(
+          JSON.stringify({ error: 'Workspace ID é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Atualizar status is_active
+      const { error: toggleError } = await supabase
+        .from('workspaces')
+        .update({ is_active: isActive, updated_at: new Date().toISOString() })
+        .eq('id', workspaceId);
+
+      if (toggleError) {
+        console.error('Error toggling workspace status:', toggleError);
+        return new Response(
+          JSON.stringify({ error: 'Falha ao alterar status da empresa' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Se estiver inativando, forçar logout de usuários e desconectar instâncias
+      if (!isActive) {
+        console.log('Workspace being deactivated, forcing logout and disconnecting instances...');
+        
+        // Forçar logout de usuários não-masters
+        try {
+          const { data: logoutData, error: logoutError } = await supabase.functions.invoke(
+            'force-logout-workspace-users',
+            { body: { workspaceId } }
+          );
+          
+          if (logoutError) {
+            console.error('Error forcing logout:', logoutError);
+          } else {
+            console.log('Logout result:', logoutData);
+          }
+        } catch (logoutErr) {
+          console.error('Exception forcing logout:', logoutErr);
+        }
+
+        // Desconectar instâncias WhatsApp
+        try {
+          const { data: disconnectData, error: disconnectError } = await supabase.functions.invoke(
+            'disconnect-workspace-instances',
+            { body: { workspaceId } }
+          );
+          
+          if (disconnectError) {
+            console.error('Error disconnecting instances:', disconnectError);
+          } else {
+            console.log('Disconnect result:', disconnectData);
+          }
+        } catch (disconnectErr) {
+          console.error('Exception disconnecting instances:', disconnectErr);
+        }
+      }
+
+      const statusText = isActive ? 'ativada' : 'inativada';
+      return new Response(
+        JSON.stringify({ 
+          message: `Empresa ${statusText} com sucesso`,
+          isActive 
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
