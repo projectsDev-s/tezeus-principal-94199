@@ -81,7 +81,21 @@ serve(async (req) => {
       // Buscar mensagens da conversa
       let messagesQuery = supabase
         .from('messages')
-        .select('*')
+        .select(`
+          id,
+          content,
+          sender_type,
+          sender_id,
+          message_type,
+          file_url,
+          file_name,
+          mime_type,
+          external_id,
+          evolution_key_id,
+          created_at,
+          status,
+          metadata
+        `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
       

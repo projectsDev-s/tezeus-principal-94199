@@ -10,6 +10,11 @@ interface WhatsAppMessage {
   message_type: 'text' | 'image' | 'audio' | 'document' | 'video' | 'sticker';
   file_url?: string;
   file_name?: string;
+  external_id?: string;
+  evolution_key_id?: string;
+  mime_type?: string;
+  status?: string;
+  metadata?: any;
 }
 
 interface Contact {
