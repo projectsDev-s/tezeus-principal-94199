@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useParams } from 'react-router-dom';
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over } from "@dnd-kit/core";
@@ -749,7 +750,21 @@ function CRMNegociosContent({
     setIsDealDetailsModalOpen(true);
   };
   const handlePipelineCreate = async (nome: string, tipo: string) => {
-    await createPipeline(nome, tipo);
+    try {
+      await createPipeline(nome, tipo);
+      toast({
+        title: "Pipeline criado",
+        description: `Pipeline "${nome}" criado com sucesso`,
+      });
+      setIsCriarPipelineModalOpen(false);
+    } catch (error) {
+      console.error('Erro ao criar pipeline:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o pipeline",
+        variant: "destructive",
+      });
+    }
   };
   const handleColumnCreate = async (nome: string, cor: string) => {
     await createColumn(nome, cor);
