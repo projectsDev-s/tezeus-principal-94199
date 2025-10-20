@@ -1079,6 +1079,7 @@ export type Database = {
           metadata: Json | null
           mime_type: string | null
           origem_resposta: string | null
+          quoted_message: Json | null
           read_at: string | null
           sender_id: string | null
           sender_type: string
@@ -1100,6 +1101,7 @@ export type Database = {
           metadata?: Json | null
           mime_type?: string | null
           origem_resposta?: string | null
+          quoted_message?: Json | null
           read_at?: string | null
           sender_id?: string | null
           sender_type: string
@@ -1121,6 +1123,7 @@ export type Database = {
           metadata?: Json | null
           mime_type?: string | null
           origem_resposta?: string | null
+          quoted_message?: Json | null
           read_at?: string | null
           sender_id?: string | null
           sender_type?: string
