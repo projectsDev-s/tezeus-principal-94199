@@ -22,13 +22,13 @@ export function useWorkspaceStats(workspaceId: string) {
     try {
       setIsLoading(true);
 
-      // Buscar número de usuários do workspace (EXCLUINDO MASTERS e membros ocultos)
-      // Masters são sempre is_hidden = true
+      // Buscar número de usuários do workspace (EXCLUINDO MASTERS)
+      // Masters são identificados pelo role 'master', não por is_hidden
       const { count: usersCount, error: membersError } = await supabase
         .from('workspace_members')
         .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceId)
-        .eq('is_hidden', false);
+        .neq('role', 'master');
 
       if (membersError) {
         console.error('Error counting workspace members:', membersError);
