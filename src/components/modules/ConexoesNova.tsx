@@ -833,7 +833,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                   <p>
                     {!canCreateConnections(workspaceId) 
                       ? 'Você não tem permissão para criar conexões' 
-                      : `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})`
+                      : `Seu Limite de Conexões é ${usage?.limit || 1}`
                     }
                   </p>
                 </TooltipContent>
