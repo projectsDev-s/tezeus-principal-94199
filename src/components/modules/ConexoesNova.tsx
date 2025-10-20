@@ -67,13 +67,25 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
 
   // Helper function to build navigation paths
   const getNavigationPath = (path: string) => {
+    console.log('🔍 getNavigationPath Debug:', {
+      userRole,
+      urlWorkspaceId,
+      propWorkspaceId: workspaceId,
+      path,
+      currentUrl: window.location.pathname
+    });
+
     if (userRole === 'master') {
       // Para usuários master, sempre usar o workspaceId da URL ou da prop
       const currentWorkspaceId = urlWorkspaceId || workspaceId;
+      console.log('✅ Master detectado, usando workspaceId:', currentWorkspaceId);
       if (currentWorkspaceId) {
-        return `/workspace/${currentWorkspaceId}${path}`;
+        const finalPath = `/workspace/${currentWorkspaceId}${path}`;
+        console.log('🎯 Navegando para:', finalPath);
+        return finalPath;
       }
     }
+    console.log('👤 Não é master ou sem workspaceId, navegando para:', path);
     return path;
   };
 
