@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft } from 'lucide-react';
+import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +16,16 @@ import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoCo
 import { WebhooksEvolutionConfigMaster } from '@/components/modules/master/WebhooksEvolutionConfigMaster';
 import { EvolutionApiConfigMaster } from '@/components/modules/master/EvolutionApiConfigMaster';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { WorkspaceRelatorios } from '@/components/modules/WorkspaceRelatorios';
 import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
 import { WorkspaceConfigModal } from '@/components/modals/WorkspaceConfigModal';
@@ -25,7 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
-  const { workspaces, isLoading, fetchWorkspaces } = useWorkspaces();
+  const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +45,9 @@ export default function MasterDashboard() {
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [selectedWorkspaceForConfig, setSelectedWorkspaceForConfig] = useState<Workspace | null>(null);
   const [createWorkspaceModalOpen, setCreateWorkspaceModalOpen] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -105,6 +118,45 @@ export default function MasterDashboard() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleEditWorkspace = async (workspace: Workspace) => {
+    // Buscar connection limit para esta workspace
+    const { data: limitData } = await supabase
+      .from('workspace_limits')
+      .select('connection_limit')
+      .eq('workspace_id', workspace.workspace_id)
+      .single();
+    
+    setEditingWorkspace({
+      ...workspace,
+      connectionLimit: limitData?.connection_limit || 1
+    });
+    setCreateWorkspaceModalOpen(true);
+  };
+
+  const handleDeleteWorkspace = (workspace: Workspace) => {
+    setWorkspaceToDelete(workspace);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (workspaceToDelete) {
+      try {
+        await deleteWorkspace(workspaceToDelete.workspace_id);
+        setDeleteDialogOpen(false);
+        setWorkspaceToDelete(null);
+      } catch (error) {
+        // Error handled in hook
+      }
+    }
+  };
+
+  const handleCreateModalClose = (open: boolean) => {
+    setCreateWorkspaceModalOpen(open);
+    if (!open) {
+      setEditingWorkspace(null);
+    }
   };
 
   return (
@@ -274,6 +326,8 @@ export default function MasterDashboard() {
                         onViewReports={handleViewUsers}
                         onViewWorkspace={handleViewWorkspace}
                         onViewConfig={handleViewConfig}
+                        onEdit={handleEditWorkspace}
+                        onDelete={handleDeleteWorkspace}
                       />
                     ))}
                   </div>
@@ -339,11 +393,39 @@ export default function MasterDashboard() {
         />
       )}
 
-      {/* Modal de Criar Empresa */}
+      {/* Modal de Criar/Editar Empresa */}
       <CreateWorkspaceModal 
         open={createWorkspaceModalOpen} 
-        onOpenChange={setCreateWorkspaceModalOpen}
+        onOpenChange={handleCreateModalClose}
+        workspace={editingWorkspace ? {
+          workspace_id: editingWorkspace.workspace_id,
+          name: editingWorkspace.name,
+          cnpj: editingWorkspace.cnpj,
+          connectionLimit: (editingWorkspace as any).connectionLimit || 1
+        } : undefined}
       />
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              ⚠️ Tem certeza que deseja excluir a empresa "{workspaceToDelete?.name}"?<br/>
+              Esta ação não pode ser desfeita e irá deletar permanentemente TODOS os dados relacionados: conversas, contatos, conexões, configurações, tags, etc.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

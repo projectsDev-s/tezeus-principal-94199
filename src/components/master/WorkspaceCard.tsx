@@ -1,10 +1,16 @@
-import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings } from 'lucide-react';
+import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Workspace } from '@/contexts/WorkspaceContext';
 import { useWorkspaceStats } from '@/hooks/useWorkspaceStats';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface WorkspaceCardProps {
   workspace: Workspace;
@@ -12,6 +18,8 @@ interface WorkspaceCardProps {
   onViewReports: (workspace: Workspace) => void;
   onViewWorkspace: (workspace: Workspace) => void;
   onViewConfig?: (workspace: Workspace) => void;
+  onEdit?: (workspace: Workspace) => void;
+  onDelete?: (workspace: Workspace) => void;
 }
 
 export function WorkspaceCard({
@@ -19,7 +27,9 @@ export function WorkspaceCard({
   onLogin,
   onViewReports,
   onViewWorkspace,
-  onViewConfig
+  onViewConfig,
+  onEdit,
+  onDelete
 }: WorkspaceCardProps) {
   const { stats, isLoading } = useWorkspaceStats(workspace.workspace_id);
   return (
@@ -30,9 +40,37 @@ export function WorkspaceCard({
             <Building2 className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{workspace.name}</CardTitle>
           </div>
-          <Badge variant="outline" className="text-xs">
-            {workspace.connections_count || 0} conexões
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {workspace.connections_count || 0} conexões
+            </Badge>
+            {(onEdit || onDelete) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="z-50">
+                  {onEdit && (
+                    <DropdownMenuItem onClick={() => onEdit(workspace)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(workspace)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
         {workspace.cnpj && (
           <CardDescription className="text-xs">
