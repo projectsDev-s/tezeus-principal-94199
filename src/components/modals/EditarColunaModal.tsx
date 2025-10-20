@@ -60,11 +60,10 @@ export function EditarColunaModal({
       setIsLoading(true);
       const headers = getHeaders();
 
-      const { error } = await supabase.functions.invoke('pipeline-management/columns', {
+      const { error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
         method: 'PUT',
         headers,
         body: {
-          column_id: columnId,
           name: name.trim(),
           color,
         },
