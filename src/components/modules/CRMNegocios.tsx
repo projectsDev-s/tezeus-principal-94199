@@ -957,26 +957,17 @@ function CRMNegociosContent({
                   <Settings className="w-5 h-5" />
                 </Button>}
               
-              {/* Pipeline Select */}
-              <div className="min-w-[200px] mr-2 flex-shrink-0">
-                {isLoading ? <Skeleton className="h-10 w-full" /> : <Select value={selectedPipeline?.id || ""} onValueChange={value => {
-                const pipeline = pipelines.find(p => p.id === value);
-                if (pipeline) {
-                  selectPipeline(pipeline);
-                  // Limpar filtros ao mudar de pipeline
-                  setAppliedFilters(null);
-                  setSearchTerm("");
-                }
-              }}>
-                    <SelectTrigger className={cn("h-10 border-gray-300 focus:border-primary focus:ring-primary", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
-                      <SelectValue placeholder="Selecione um pipeline" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pipelines.map(pipeline => <SelectItem key={pipeline.id} value={pipeline.id}>
-                          <span className="font-bold">{pipeline.name}</span>
-                        </SelectItem>)}
-                    </SelectContent>
-                  </Select>}
+              {/* Pipeline Name */}
+              <div className="mr-2 flex-shrink-0">
+                {isLoading ? (
+                  <Skeleton className="h-10 w-[200px]" />
+                ) : selectedPipeline ? (
+                  <h2 className={cn("text-lg font-bold px-3 py-2", isDarkMode ? "text-white" : "text-foreground")}>
+                    {selectedPipeline.name}
+                  </h2>
+                ) : (
+                  <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
+                )}
               </div>
               
               {/* Plus Button */}
