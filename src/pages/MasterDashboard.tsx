@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -21,10 +21,11 @@ import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
 import { WorkspaceConfigModal } from '@/components/modals/WorkspaceConfigModal';
 import { CreateWorkspaceModal } from '@/components/modals/CreateWorkspaceModal';
 import { Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
-  const { workspaces, isLoading } = useWorkspaces();
+  const { workspaces, isLoading, fetchWorkspaces } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +41,29 @@ export default function MasterDashboard() {
     navigate('/dashboard');
     return null;
   }
+
+  // Realtime subscription para atualizar lista automaticamente
+  useEffect(() => {
+    const channel = supabase
+      .channel('workspaces-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workspaces'
+        },
+        () => {
+          console.log('🔄 Workspace change detected, refreshing list...');
+          fetchWorkspaces();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchWorkspaces]);
 
   // Filtrar workspaces com base na busca
   const filteredWorkspaces = useMemo(() => {
