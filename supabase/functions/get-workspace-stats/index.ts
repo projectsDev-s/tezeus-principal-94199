@@ -19,6 +19,69 @@ serve(async (req) => {
     // Use service role to bypass RLS
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Check if this is a single workspace request
+    const { workspaceId } = await req.json().catch(() => ({}));
+
+    if (workspaceId) {
+      // Single workspace stats request
+      console.log('📊 Getting stats for workspace:', workspaceId);
+
+      // Count users (excluding masters)
+      const { count: usersCount, error: usersError } = await supabase
+        .from('workspace_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .neq('role', 'master');
+
+      if (usersError) {
+        console.error('Error counting users:', usersError);
+        throw usersError;
+      }
+
+      console.log('📊 Users count:', usersCount);
+
+      // Get pipelines for this workspace
+      const { data: pipelines, error: pipelinesError } = await supabase
+        .from('pipelines')
+        .select('id')
+        .eq('workspace_id', workspaceId);
+
+      if (pipelinesError) {
+        console.error('Error fetching pipelines:', pipelinesError);
+        throw pipelinesError;
+      }
+
+      // Count active deals
+      let activeDealsCount = 0;
+      if (pipelines && pipelines.length > 0) {
+        const pipelineIds = pipelines.map(p => p.id);
+        
+        const { count, error: dealsError } = await supabase
+          .from('pipeline_cards')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'aberto')
+          .in('pipeline_id', pipelineIds);
+
+        if (dealsError) {
+          console.error('Error counting deals:', dealsError);
+          throw dealsError;
+        }
+        
+        activeDealsCount = count || 0;
+      }
+
+      console.log('📊 Active deals count:', activeDealsCount);
+
+      return new Response(
+        JSON.stringify({
+          usersCount: usersCount || 0,
+          activeDealsCount
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Original code for all workspaces
     // Get user info from headers
     const userId = req.headers.get('x-system-user-id');
     const userEmail = req.headers.get('x-system-user-email');

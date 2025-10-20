@@ -22,55 +22,21 @@ export function useWorkspaceStats(workspaceId: string) {
     try {
       setIsLoading(true);
 
-      // Buscar número de usuários do workspace (EXCLUINDO MASTERS)
-      // Masters são identificados pelo role 'master', não por is_hidden
-      const { count: usersCount, error: membersError } = await supabase
-        .from('workspace_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId)
-        .neq('role', 'master');
+      // Usar edge function para bypass RLS e contar corretamente
+      const { data, error } = await supabase.functions.invoke('get-workspace-stats', {
+        body: { workspaceId }
+      });
 
-      if (membersError) {
-        console.error('Error counting workspace members:', membersError);
-        throw membersError;
+      if (error) {
+        console.error('Error fetching workspace stats:', error);
+        throw error;
       }
 
-      console.log('📊 useWorkspaceStats: Users count (excluding masters):', usersCount);
-
-      // Buscar pipelines do workspace
-      const { data: pipelines, error: pipelinesError } = await supabase
-        .from('pipelines')
-        .select('id')
-        .eq('workspace_id', workspaceId);
-
-      if (pipelinesError) {
-        console.error('Error fetching pipelines:', pipelinesError);
-        throw pipelinesError;
-      }
-
-      // Buscar número de negócios ativos
-      let dealsCount = 0;
-      if (pipelines && pipelines.length > 0) {
-        const pipelineIds = pipelines.map(p => p.id);
-        
-        const { count, error: dealsError } = await supabase
-          .from('pipeline_cards')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'aberto')
-          .in('pipeline_id', pipelineIds);
-
-        if (dealsError) {
-          console.error('Error counting active deals:', dealsError);
-          throw dealsError;
-        }
-        dealsCount = count || 0;
-      }
-
-      console.log('📊 useWorkspaceStats: Active deals count:', dealsCount);
+      console.log('📊 useWorkspaceStats: Stats received:', data);
 
       setStats({
-        usersCount: usersCount || 0,
-        activeDealsCount: dealsCount,
+        usersCount: data?.usersCount || 0,
+        activeDealsCount: data?.activeDealsCount || 0,
       });
     } catch (error) {
       console.error('Error fetching workspace stats:', error);
