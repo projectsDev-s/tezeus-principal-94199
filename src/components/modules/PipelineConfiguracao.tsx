@@ -915,17 +915,10 @@ export default function PipelineConfiguracao({
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                   Tipo do Pipeline
                 </label>
-                <div className="flex gap-2">
-                  <Select value={pipelineType} onValueChange={setPipelineType}>
-                    <SelectTrigger className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="padrao">Padrão</SelectItem>
-                      <SelectItem value="vendas">Vendas</SelectItem>
-                      <SelectItem value="suporte">Suporte</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex gap-2 items-center">
+                  <p className={cn("text-base font-medium px-3 py-2", isDarkMode ? "text-white" : "text-foreground")}>
+                    {pipelineType === 'padrao' ? 'Padrão' : pipelineType === 'vendas' ? 'Vendas' : 'Suporte'}
+                  </p>
                   <Button
                     onClick={async () => {
                       if (!selectedPipeline?.id) return;
