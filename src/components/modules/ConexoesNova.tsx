@@ -22,6 +22,7 @@ import { useWorkspaceRole } from '@/hooks/useWorkspaceRole';
 import { usePipelinesContext } from '@/contexts/PipelinesContext';
 import { useNavigate } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
+import { useAuth } from '@/hooks/useAuth';
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -61,6 +62,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { canCreateConnections } = useWorkspaceRole();
   const navigate = useNavigate();
   const { queues } = useQueues();
+  const { userRole } = useAuth();
+
+  // Helper function to build navigation paths
+  const getNavigationPath = (path: string) => {
+    if (userRole === 'master' && workspaceId) {
+      return `/workspace/${workspaceId}${path}`;
+    }
+    return path;
+  };
 
   // Debug: Log usage changes
   useEffect(() => {
@@ -980,7 +990,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate('/crm-negocios')}
+                            onClick={() => navigate(getNavigationPath('/crm-negocios'))}
                             className="gap-1"
                           >
                             Criar Pipeline
