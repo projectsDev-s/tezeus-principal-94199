@@ -1005,17 +1005,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                           <span className="text-sm text-muted-foreground flex-1">
                             Nenhum pipeline encontrado para esta empresa
                           </span>
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="gap-1"
-                          >
-                            <Link to={getNavigationPath('/crm-negocios')}>
-                              Criar Pipeline
-                              <ArrowRight className="h-3 w-3" />
-                            </Link>
-                          </Button>
                         </div>
                       )}
                     </div>
