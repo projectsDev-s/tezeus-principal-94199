@@ -615,7 +615,11 @@ function CRMNegociosContent({
 
     // Filtrar por termo de busca
     if (searchTerm) {
-      columnCards = columnCards.filter(card => card.title.toLowerCase().includes(searchTerm.toLowerCase()) || card.description?.toLowerCase().includes(searchTerm.toLowerCase()));
+      columnCards = columnCards.filter(card => 
+        card.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        card.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.contact?.phone?.includes(searchTerm)
+      );
     }
 
     // 🎯 FILTRAR POR RESPONSÁVEIS SELECIONADOS
