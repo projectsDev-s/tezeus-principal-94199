@@ -66,6 +66,10 @@ interface WhatsAppMessage {
     id: string;
     content: string;
     sender_type: 'contact' | 'agent';
+    message_type?: 'text' | 'image' | 'video' | 'audio' | 'document';
+    file_url?: string;
+    file_name?: string;
+    external_id?: string;
   };
 }
 
