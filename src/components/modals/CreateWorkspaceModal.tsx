@@ -66,6 +66,14 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
     
     try {
       if (isEditing && workspace) {
+        console.log('🚀 Submitting update with data:', {
+          workspaceId: workspace.workspace_id,
+          name: formData.name.trim(),
+          cnpj: formData.cnpj.trim() || undefined,
+          connectionLimit: formData.connectionLimit,
+          userLimit: formData.userLimit,
+        });
+        
         await updateWorkspace(workspace.workspace_id, {
           name: formData.name.trim(),
           cnpj: formData.cnpj.trim() || undefined,
