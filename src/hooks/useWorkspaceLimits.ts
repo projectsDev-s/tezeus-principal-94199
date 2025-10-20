@@ -40,64 +40,44 @@ export function useWorkspaceLimits(workspaceId: string) {
     console.log('🔵 useWorkspaceLimits: Fetching limits for workspace:', workspaceId);
     setIsLoading(true);
     try {
-      // Get workspace limits - use maybeSingle to avoid 406 errors
-      const { data: limitsData, error: limitsError } = await supabase
-        .from('workspace_limits')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .maybeSingle();
-
-      console.log('📊 useWorkspaceLimits: Limits data from DB:', limitsData);
-
-      if (limitsError && limitsError.code !== 'PGRST116') { // Not found error
-        console.error('❌ useWorkspaceLimits: Error fetching limits:', limitsError);
-        throw limitsError;
-      }
-
-      // Get current connection count
-      const { count: connectionCount, error: countError } = await supabase
-        .from('connections')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId);
-
-      console.log('📊 useWorkspaceLimits: Connections count:', connectionCount);
-
-      if (countError) {
-        console.error('❌ useWorkspaceLimits: Error counting connections:', countError);
-        throw countError;
-      }
-
-      const currentLimit = limitsData?.connection_limit || 1;
-      const currentUsage = connectionCount || 0;
-
-      // Get current user count for this workspace
-      const { count: userCount, error: userCountError } = await supabase
-        .from('workspace_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId);
-
-      console.log('📊 useWorkspaceLimits: Users count:', userCount);
-
-      if (userCountError) {
-        console.error('❌ useWorkspaceLimits: Error counting users:', userCountError);
-        throw userCountError;
-      }
-
-      const currentUserLimit = limitsData?.user_limit || 5;
-      const currentUserUsage = userCount || 0;
-
-      console.log('✅ useWorkspaceLimits: Final values - connections:', currentUsage, '/', currentLimit, 'users:', currentUserUsage, '/', currentUserLimit);
-
-      setLimits(limitsData);
-      setUsage({
-        current: currentUsage,
-        limit: currentLimit,
-        canCreateMore: currentUsage < currentLimit
+      // Usar edge function para bypass RLS
+      const { data, error } = await supabase.functions.invoke('get-workspace-limits', {
+        body: { workspaceId }
       });
+
+      if (error) {
+        console.error('❌ Error fetching workspace limits:', error);
+        throw error;
+      }
+
+      console.log('📊 useWorkspaceLimits: Received from edge function:', data);
+
+      const connectionLimit = data?.connectionLimit || 1;
+      const userLimit = data?.userLimit || 5;
+      const currentConnections = data?.connectionsCount || 0;
+      const currentUsers = data?.usersCount || 0;
+
+      console.log('✅ useWorkspaceLimits: Final values - connections:', currentConnections, '/', connectionLimit, 'users:', currentUsers, '/', userLimit);
+
+      setLimits({
+        id: '',
+        workspace_id: workspaceId,
+        connection_limit: connectionLimit,
+        user_limit: userLimit,
+        created_at: '',
+        updated_at: ''
+      });
+      
+      setUsage({
+        current: currentConnections,
+        limit: connectionLimit,
+        canCreateMore: currentConnections < connectionLimit
+      });
+      
       setUserUsage({
-        current: currentUserUsage,
-        limit: currentUserLimit,
-        canCreateMore: currentUserUsage < currentUserLimit
+        current: currentUsers,
+        limit: userLimit,
+        canCreateMore: currentUsers < userLimit
       });
 
     } catch (error) {
