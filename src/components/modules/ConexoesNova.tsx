@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Trash2, Wifi, QrCode, Plus, MoreVertical, Edit3, RefreshCw, Webhook, Star, Bug, ArrowRight } from 'lucide-react';
 import { TestWebhookReceptionModal } from "@/components/modals/TestWebhookReceptionModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { toast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -799,11 +800,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           <h2 className="text-3xl font-bold tracking-tight">Conexões WhatsApp</h2>
           <p className="text-muted-foreground">
             Gerencie suas instâncias de WhatsApp
-            {usage && (
-              <span className="ml-2 text-sm">
-                • {usage.current}/{usage.limit} conexões utilizadas
-              </span>
-            )}
           </p>
         </div>
         
@@ -815,29 +811,35 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           if (!open) resetModal();
           setIsCreateModalOpen(open);
         }}>
-          <DialogTrigger asChild>
-            <Button 
-              disabled={
-                !canCreateConnections(workspaceId) || 
-                !usage?.canCreateMore
-              }
-              title={
-                !canCreateConnections(workspaceId) 
-                  ? 'Você não tem permissão para criar conexões neste workspace' 
-                  : !usage?.canCreateMore 
-                    ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` 
-                    : usage === null
-                    ? 'Carregando limites...'
-                    : ''
-              }
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {usage === null 
-                ? 'Carregando...' 
-                : `Adicionar Instância (${usage.current}/${usage.limit})`
-              }
-            </Button>
-          </DialogTrigger>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-block">
+                  <DialogTrigger asChild>
+                    <Button 
+                      disabled={
+                        !canCreateConnections(workspaceId) || 
+                        !usage?.canCreateMore
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar Conexão
+                    </Button>
+                  </DialogTrigger>
+                </div>
+              </TooltipTrigger>
+              {(!canCreateConnections(workspaceId) || !usage?.canCreateMore) && (
+                <TooltipContent>
+                  <p>
+                    {!canCreateConnections(workspaceId) 
+                      ? 'Você não tem permissão para criar conexões' 
+                      : `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})`
+                    }
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           <DialogContent className="max-w-4xl p-0">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
