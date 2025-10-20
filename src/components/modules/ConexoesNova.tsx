@@ -20,7 +20,7 @@ import type { Connection, HISTORY_RECOVERY_MAP } from '@/types/evolution';
 import { useWorkspaceLimits } from '@/hooks/useWorkspaceLimits';
 import { useWorkspaceRole } from '@/hooks/useWorkspaceRole';
 import { usePipelinesContext } from '@/contexts/PipelinesContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -63,11 +63,16 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const navigate = useNavigate();
   const { queues } = useQueues();
   const { userRole } = useAuth();
+  const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
 
   // Helper function to build navigation paths
   const getNavigationPath = (path: string) => {
-    if (userRole === 'master' && workspaceId) {
-      return `/workspace/${workspaceId}${path}`;
+    if (userRole === 'master') {
+      // Para usuários master, sempre usar o workspaceId da URL ou da prop
+      const currentWorkspaceId = urlWorkspaceId || workspaceId;
+      if (currentWorkspaceId) {
+        return `/workspace/${currentWorkspaceId}${path}`;
+      }
     }
     return path;
   };
