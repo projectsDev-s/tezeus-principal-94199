@@ -611,12 +611,15 @@ export function DealDetailsModal({
       console.log('🔍 [1/4] Iniciando busca de dados do card:', cardId);
       console.log('📋 Props recebidos:', { currentPipelineId, currentColumnId });
       
-      // PASSO 1: SEMPRE buscar dados atuais do card do banco (fonte da verdade)
-      const { data: currentCard, error: cardError } = await supabase
-        .from('pipeline_cards')
-        .select('id, pipeline_id, column_id, contact_id, conversation_id, title, description, value, status')
-        .eq('id', cardId)
-        .maybeSingle(); // Usar maybeSingle() ao invés de single()
+      // PASSO 1: Buscar dados do card usando a edge function
+      const headers = getHeaders();
+      const { data: currentCard, error: cardError } = await supabase.functions.invoke(
+        `pipeline-management/cards?id=${cardId}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
       if (cardError) {
         console.error('❌ Erro ao buscar card:', cardError);

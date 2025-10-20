@@ -406,9 +406,47 @@ serve(async (req) => {
       case 'cards':
         if (method === 'GET') {
           const pipelineId = url.searchParams.get('pipeline_id');
+          const cardId = url.searchParams.get('id');
+          
+          // Se tiver cardId, buscar card específico
+          if (cardId) {
+            const { data: card, error } = await supabaseClient
+              .from('pipeline_cards')
+              .select(`
+                *,
+                contact:contacts(
+                  *,
+                  contact_tags(
+                    tag_id,
+                    tags!contact_tags_tag_id_fkey(id, name, color)
+                  )
+                ),
+                conversation:conversations(
+                  *,
+                  connection:connections!conversations_connection_id_fkey(
+                    id,
+                    instance_name,
+                    phone_number,
+                    status,
+                    metadata
+                  )
+                ),
+                responsible_user:system_users!responsible_user_id(id, name)
+              `)
+              .eq('id', cardId)
+              .eq('workspace_id', workspaceId)
+              .maybeSingle();
+
+            if (error) throw error;
+            return new Response(JSON.stringify(card), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          
+          // Caso contrário, buscar todos os cards do pipeline
           if (!pipelineId) {
             return new Response(
-              JSON.stringify({ error: 'Pipeline ID required' }),
+              JSON.stringify({ error: 'Pipeline ID or Card ID required' }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
