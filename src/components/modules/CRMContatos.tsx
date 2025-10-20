@@ -749,14 +749,11 @@ export function CRMContatos() {
             <div>
               <Label>Telefone</Label>
               <div className="flex gap-2">
-                <Select defaultValue="BR">
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BR">BR +55</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input 
+                  value="+55" 
+                  disabled 
+                  className="w-20"
+                />
                 <Input 
                   value={editingContact?.phone || ""} 
                   onChange={isCreateMode ? (e => setEditingContact(prev => prev ? {
