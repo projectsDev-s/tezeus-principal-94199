@@ -37,7 +37,7 @@ export function ReplyPreview({ message, contactName, onCancel }: ReplyPreviewPro
             }}
           />
           <span className="text-xs text-muted-foreground truncate">
-            {message.file_name || '📷 Imagem'}
+            📷 Imagem
           </span>
         </div>
       );
@@ -51,7 +51,7 @@ export function ReplyPreview({ message, contactName, onCancel }: ReplyPreviewPro
             <Video className="h-6 w-6 text-muted-foreground" />
           </div>
           <span className="text-xs text-muted-foreground truncate">
-            {message.file_name || '🎥 Vídeo'}
+            🎥 Vídeo
           </span>
         </div>
       );
@@ -79,7 +79,7 @@ export function ReplyPreview({ message, contactName, onCancel }: ReplyPreviewPro
             <FileText className="h-6 w-6 text-destructive" />
           </div>
           <span className="text-xs text-muted-foreground truncate">
-            {message.file_name || '📄 Documento'}
+            📄 Documento
           </span>
         </div>
       );

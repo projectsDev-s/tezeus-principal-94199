@@ -31,7 +31,7 @@ export function QuotedMessagePreview({ quotedMessage, senderName }: QuotedMessag
             }}
           />
           <span className="text-xs text-muted-foreground truncate">
-            {quotedMessage.file_name || '📷 Imagem'}
+            📷 Imagem
           </span>
         </div>
       );
@@ -45,7 +45,7 @@ export function QuotedMessagePreview({ quotedMessage, senderName }: QuotedMessag
             <Video className="h-6 w-6 text-muted-foreground" />
           </div>
           <span className="text-xs text-muted-foreground truncate">
-            {quotedMessage.file_name || '🎥 Vídeo'}
+            🎥 Vídeo
           </span>
         </div>
       );
@@ -73,7 +73,7 @@ export function QuotedMessagePreview({ quotedMessage, senderName }: QuotedMessag
             <FileText className="h-6 w-6 text-destructive" />
           </div>
           <span className="text-xs text-muted-foreground truncate">
-            {quotedMessage.file_name || '📄 Documento'}
+            📄 Documento
           </span>
         </div>
       );
