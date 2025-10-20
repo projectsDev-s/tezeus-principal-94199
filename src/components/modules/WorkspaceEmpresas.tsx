@@ -61,28 +61,33 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
     console.log('📝 Opening edit modal for workspace:', workspace);
     
     try {
-      // Buscar os limites diretamente da tabela workspace_limits
-      const { data: limitData, error } = await supabase
-        .from('workspace_limits')
-        .select('connection_limit, user_limit')
-        .eq('workspace_id', workspace.workspace_id)
-        .maybeSingle();
+      // Usar edge function que tem service role
+      const { data: result, error } = await supabase.functions.invoke('get-workspace-limits', {
+        body: { workspaceId: workspace.workspace_id }
+      });
       
       if (error) {
         console.error('❌ Error fetching workspace limits:', error);
+        return;
       }
       
-      console.log('📊 Limits data from database:', limitData);
+      console.log('📊 Raw result from edge function:', result);
+      
+      // Os valores vêm como connectionLimit e userLimit do edge function
+      const connectionLimit = result?.connectionLimit ?? 0;
+      const userLimit = result?.userLimit ?? 0;
+      
+      console.log('🔍 Extracted values - connectionLimit:', connectionLimit, 'userLimit:', userLimit);
       
       const workspaceData = {
         workspace_id: workspace.workspace_id,
         name: workspace.name,
         cnpj: workspace.cnpj,
-        connectionLimit: limitData?.connection_limit ?? 0,
-        userLimit: limitData?.user_limit ?? 0
+        connectionLimit: connectionLimit,
+        userLimit: userLimit
       };
       
-      console.log('📝 Setting editing workspace:', workspaceData);
+      console.log('✅ Final workspace data being set:', workspaceData);
       
       setEditingWorkspace(workspaceData);
       setShowCreateModal(true);
