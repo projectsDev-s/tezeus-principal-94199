@@ -422,18 +422,8 @@ export function CRMContatos() {
           }
         }
 
-        // Add to local state
-        const newContact: Contact = {
-          id: newContactData.id,
-          name: newContactData.name,
-          phone: newContactData.phone || '',
-          email: newContactData.email || '',
-          createdAt: format(new Date(newContactData.created_at), 'dd/MM/yyyy HH:mm:ss'),
-          tags: [],
-          profile_image_url: newContactData.profile_image_url,
-          extra_info: {}
-        };
-        setContacts(prev => [newContact, ...prev]);
+        // O contato será adicionado automaticamente pelo realtime subscription
+        // Removido a adição manual para evitar duplicação
         toast({
           title: "Contato criado",
           description: "O novo contato foi adicionado com sucesso."
