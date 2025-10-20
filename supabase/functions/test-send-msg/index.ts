@@ -314,6 +314,8 @@ serve(async (req) => {
         status: 'sending',
         origem_resposta: 'manual',
         external_id: external_id, // ✅ Salvar clientMessageId como external_id
+        ...(reply_to_message_id && { reply_to_message_id }),
+        ...(quoted_message && { quoted_message }),
         metadata: {
           source: 'test-send-msg-pre-save',
           request_id: requestId,
