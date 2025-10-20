@@ -143,7 +143,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
           {/* Seleção de data */}
           <div>
             <Label htmlFor="date-filter" className="text-sm font-medium">
-              Filtrar por data
+              Filtrar por data de Criação
             </Label>
             <Popover open={showCalendar} onOpenChange={setShowCalendar}>
               <PopoverTrigger asChild>
