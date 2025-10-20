@@ -30,6 +30,9 @@ import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useCargos } from "@/hooks/useCargos";
+import { AdicionarEditarUsuarioModal } from "./AdicionarEditarUsuarioModal";
+import { DeletarUsuarioModal } from "./DeletarUsuarioModal";
+import { useSystemUsers } from "@/hooks/useSystemUsers";
 
 interface WorkspaceUsersModalProps {
   open: boolean;
@@ -60,6 +63,10 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
   const [selectedCargos, setSelectedCargos] = useState<string[]>([]);
   const [showCargoDropdown, setShowCargoDropdown] = useState(false);
   const [cargos, setCargos] = useState<any[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<any>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; memberId: string } | null>(null);
   
   // Form data for new user
   const [formData, setFormData] = useState({
@@ -75,6 +82,7 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
   const { connections, isLoading: connectionsLoading } = useWorkspaceConnections(workspaceId);
   const { toast } = useToast();
   const { listCargos, loading: cargosLoading } = useCargos();
+  const { deleteUser } = useSystemUsers();
 
   // Load cargos when modal opens
   useEffect(() => {
@@ -205,14 +213,52 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
     }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (confirm('Tem certeza que deseja remover este membro?')) {
-      try {
-        await removeMember(memberId);
-      } catch (error) {
-        // Error handled in hook
-      }
+  const handleRemoveMember = async (member: WorkspaceMember) => {
+    setUserToDelete({
+      id: member.user_id,
+      name: member.user?.name || 'N/A',
+      memberId: member.id
+    });
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      await deleteUser(userToDelete.id);
+      await removeMember(userToDelete.memberId);
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso"
+      });
+    } catch (error) {
+      // Error handled in hook
     }
+  };
+
+  const handleEditUser = (member: WorkspaceMember) => {
+    if (member.user) {
+      setUserToEdit({
+        id: member.user_id,
+        name: member.user.name,
+        email: member.user.email,
+        profile: member.user.profile,
+        phone: member.user.phone || '',
+        default_channel: (member.user as any).default_channel || '',
+        cargo_ids: (member.user as any).cargo_ids || []
+      });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditModalOpen(false);
+    setUserToEdit(null);
+    // Refresh members list
+    window.location.reload();
   };
 
   return (
@@ -510,14 +556,14 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => setEditingMember(editingMember?.id === member.id ? null : member)}
+                            onClick={() => handleEditUser(member)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleRemoveMember(member.id)}
+                            onClick={() => handleRemoveMember(member)}
                           >
                             <Trash className="w-4 h-4" />
                           </Button>
@@ -531,6 +577,25 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
           </div>
         </div>
       </DialogContent>
+
+      {/* Modal de Editar Usuário */}
+      <AdicionarEditarUsuarioModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        editingUser={userToEdit}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Modal de Deletar Usuário */}
+      <DeletarUsuarioModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setUserToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        userName={userToDelete?.name || ''}
+      />
     </Dialog>
   );
 }
