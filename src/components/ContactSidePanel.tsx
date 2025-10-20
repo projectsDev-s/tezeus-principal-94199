@@ -18,12 +18,14 @@ import { useContactExtraInfo } from '@/hooks/useContactExtraInfo';
 import { CriarNegocioModal } from './modals/CriarNegocioModal';
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceContactFields } from "@/hooks/useWorkspaceContactFields";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ImageModal } from './chat/ImageModal';
 import { PdfModal } from './chat/PdfModal';
 import { VideoModal } from './chat/VideoModal';
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
+import { Separator } from "@/components/ui/separator";
 interface Contact {
   id: string;
   name: string;
@@ -123,6 +125,11 @@ export function ContactSidePanel({
     fields: extraFields,
     saveFields: saveExtraFields
   } = useContactExtraInfo(contact?.id || null, selectedWorkspace?.workspace_id || '');
+  
+  // Hook para campos obrigatórios do workspace
+  const { fields: workspaceFields } = useWorkspaceContactFields(
+    selectedWorkspace?.workspace_id || null
+  );
   const deals: Deal[] = contactCards.map(card => ({
     id: card.id,
     title: card.title,
@@ -551,9 +558,87 @@ export function ContactSidePanel({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {/* Lista de campos existentes - Cards compactos */}
+                      {/* Campos obrigatórios do workspace */}
+                      {workspaceFields.length > 0 && (
+                        <>
+                          <div className="space-y-3">
+                            {workspaceFields.map((field) => {
+                              const currentValue = customFields.find(f => f.key === field.field_name)?.value || '';
+                              const fieldIndex = customFields.findIndex(f => f.key === field.field_name);
+                              
+                              return (
+                                <div key={field.id} className="group relative p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                  <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 text-yellow-700 dark:text-yellow-400">
+                                      <Pin className="h-4 w-4" />
+                                    </div>
+                                    
+                                    <div className="flex-1 space-y-1 min-w-0">
+                                      <p className="text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
+                                        {field.field_name} *
+                                      </p>
+                                      
+                                      {editingFieldIndex === fieldIndex && editingFieldType === 'value' ? (
+                                        <input
+                                          type="text"
+                                          value={currentValue}
+                                          onChange={(e) => {
+                                            if (fieldIndex !== -1) {
+                                              updateCustomField(fieldIndex, 'value', e.target.value);
+                                            } else {
+                                              setCustomFields(prev => [...prev, { key: field.field_name, value: e.target.value }]);
+                                            }
+                                          }}
+                                          onBlur={async () => {
+                                            setEditingFieldIndex(null);
+                                            setEditingFieldType(null);
+                                            await handleSaveCustomFields();
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.currentTarget.blur();
+                                            }
+                                          }}
+                                          autoFocus
+                                          className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-yellow-600 pb-0.5"
+                                        />
+                                      ) : (
+                                        <p
+                                          onDoubleClick={() => {
+                                            if (fieldIndex === -1) {
+                                              setCustomFields(prev => [...prev, { key: field.field_name, value: '' }]);
+                                              setTimeout(() => {
+                                                setEditingFieldIndex(customFields.length);
+                                                setEditingFieldType('value');
+                                              }, 0);
+                                            } else {
+                                              setEditingFieldIndex(fieldIndex);
+                                              setEditingFieldType('value');
+                                            }
+                                          }}
+                                          className="text-sm font-normal text-yellow-700 dark:text-yellow-300 cursor-pointer truncate"
+                                          title="Clique duas vezes para editar"
+                                        >
+                                          {currentValue || 'Clique para adicionar'}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          <Separator className="my-4" />
+                        </>
+                      )}
+
+                      {/* Lista de campos opcionais - Cards compactos */}
                       <div className="space-y-3">
-                        {customFields.map((field, index) => <div key={index} className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all">
+                        {customFields.filter(field => !workspaceFields.some(wf => wf.field_name === field.key)).map((field, index) => {
+                          const originalIndex = customFields.findIndex(f => f.key === field.key && f.value === field.value);
+                          return (
+                            <div key={originalIndex} className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all">
                             <div className="flex items-start gap-3">
                               {/* Ícone dinâmico */}
                               <div className="mt-0.5 text-muted-foreground">
@@ -562,7 +647,7 @@ export function ContactSidePanel({
                               
                               <div className="flex-1 space-y-1 min-w-0">
                                 {/* Label do campo - EDITÁVEL com double-click */}
-                                {editingFieldIndex === index && editingFieldType === 'key' ? <input type="text" value={field.key} onChange={e => updateCustomField(index, 'key', e.target.value)} onBlur={async () => {
+                                {editingFieldIndex === originalIndex && editingFieldType === 'key' ? <input type="text" value={field.key} onChange={e => updateCustomField(originalIndex, 'key', e.target.value)} onBlur={async () => {
                               setEditingFieldIndex(null);
                               setEditingFieldType(null);
                               await handleSaveCustomFields();
@@ -570,15 +655,15 @@ export function ContactSidePanel({
                               if (e.key === 'Enter') {
                                 e.currentTarget.blur();
                               }
-                            }} autoFocus className="w-full text-xs font-bold uppercase tracking-wide bg-transparent border-none outline-none border-b-2 border-primary pb-0.5" /> : <p className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer" onDoubleClick={() => {
-                              setEditingFieldIndex(index);
+                             }} autoFocus className="w-full text-xs font-bold uppercase tracking-wide bg-transparent border-none outline-none border-b-2 border-primary pb-0.5" /> : <p className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer" onDoubleClick={() => {
+                              setEditingFieldIndex(originalIndex);
                               setEditingFieldType('key');
                             }} title="Clique duas vezes para editar">
                                     {field.key}
                                   </p>}
                                 
                                 {/* Valor editável com underline inline */}
-                                {editingFieldIndex === index && editingFieldType === 'value' ? <input type="text" value={field.value} onChange={e => updateCustomField(index, 'value', e.target.value)} onBlur={async () => {
+                                {editingFieldIndex === originalIndex && editingFieldType === 'value' ? <input type="text" value={field.value} onChange={e => updateCustomField(originalIndex, 'value', e.target.value)} onBlur={async () => {
                               setEditingFieldIndex(null);
                               setEditingFieldType(null);
                               await handleSaveCustomFields();
@@ -586,8 +671,8 @@ export function ContactSidePanel({
                               if (e.key === 'Enter') {
                                 e.currentTarget.blur();
                               }
-                            }} autoFocus className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-primary pb-0.5" /> : <p onDoubleClick={() => {
-                              setEditingFieldIndex(index);
+                             }} autoFocus className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-primary pb-0.5" /> : <p onDoubleClick={() => {
+                              setEditingFieldIndex(originalIndex);
                               setEditingFieldType('value');
                             }} className="text-sm font-normal text-muted-foreground cursor-pointer truncate" title="Clique duas vezes para editar">
                                     {field.value || 'Clique para adicionar'}
@@ -595,11 +680,13 @@ export function ContactSidePanel({
                               </div>
                               
                               {/* Botão delete - visível apenas no hover */}
-                              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={() => handleRemoveCustomField(index)}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={() => handleRemoveCustomField(originalIndex)}>
                                 <X className="h-3 w-3 text-muted-foreground" />
                               </Button>
                             </div>
-                          </div>)}
+                          </div>
+                          );
+                        })}
                       </div>
 
                       {/* Adicionar novo campo */}
