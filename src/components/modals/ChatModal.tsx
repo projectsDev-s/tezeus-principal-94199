@@ -55,6 +55,7 @@ interface WhatsAppMessage {
   created_at: string;
   status?: string;
   external_id?: string;
+  evolution_key_id?: string;
   metadata?: any;
   workspace_id?: string;
   delivered_at?: string | null;
@@ -215,9 +216,10 @@ export function ChatModal({
         ...(replyingTo && {
           reply_to_message_id: replyingTo.id,
           quoted_message: {
-            id: replyingTo.id,
+            id: replyingTo.external_id || replyingTo.evolution_key_id || replyingTo.id,
             content: replyingTo.content,
-            sender_type: replyingTo.sender_type
+            sender_type: replyingTo.sender_type,
+            external_id: replyingTo.external_id || replyingTo.evolution_key_id
           }
         })
       };
@@ -234,9 +236,10 @@ export function ChatModal({
           ...(replyingTo && {
             reply_to_message_id: replyingTo.id,
             quoted_message: {
-              id: replyingTo.id,
+              id: replyingTo.external_id || replyingTo.evolution_key_id || replyingTo.id,
               content: replyingTo.content,
-              sender_type: replyingTo.sender_type
+              sender_type: replyingTo.sender_type,
+              external_id: replyingTo.external_id || replyingTo.evolution_key_id
             }
           })
         },
