@@ -45,6 +45,8 @@ interface Database {
           permissions?: string[];
         };
         Update: {
+          name?: string;
+          color?: string;
           permissions?: string[];
           order_position?: number;
         };
@@ -323,7 +325,7 @@ serve(async (req) => {
 
           const body = await req.json();
           
-          // Prepare update data - accept permissions, order_position, and name
+          // Prepare update data - accept permissions, order_position, name, and color
           const updateData: any = {};
           if (body.permissions !== undefined) {
             updateData.permissions = body.permissions;
@@ -336,6 +338,9 @@ serve(async (req) => {
           }
           if (body.name !== undefined) {
             updateData.name = body.name;
+          }
+          if (body.color !== undefined) {
+            updateData.color = body.color;
           }
           
           console.log('🔄 Updating column:', columnId, 'with data:', updateData);
