@@ -64,7 +64,8 @@ export function useWorkspaces() {
         cnpj: w.cnpj,
         created_at: w.created_at,
         updated_at: w.updated_at,
-        connections_count: w.connections_count || 0
+        connections_count: w.connections_count || 0,
+        is_active: w.is_active !== false
       })) || [];
 
       console.log('📦 useWorkspaces: Transformed workspaces:', workspaceData.map(w => w.name));
