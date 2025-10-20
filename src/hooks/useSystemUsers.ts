@@ -180,7 +180,7 @@ export const useSystemUsers = () => {
       const { data, error } = await supabase.functions.invoke('manage-system-user', {
         body: {
           action: 'delete',
-          userData: { id: userId }
+          userId: userId
         }
       });
 
