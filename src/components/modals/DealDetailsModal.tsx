@@ -316,11 +316,19 @@ export function DealDetailsModal({
   const [targetStepAnimation, setTargetStepAnimation] = useState<string | null>(null);
   const { toast } = useToast();
   const { selectedPipeline, moveCardOptimistic } = usePipelinesContext();
-  const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
+  const { columns, isLoading: isLoadingColumns, fetchColumns } = usePipelineColumns(selectedPipelineId);
   const { getHeaders } = useWorkspaceHeaders();
   
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
+  
+  // Recarregar colunas quando o modal abrir ou pipeline mudar
+  useEffect(() => {
+    if (isOpen && selectedPipelineId) {
+      console.log('🔄 Recarregando colunas do pipeline:', selectedPipelineId);
+      fetchColumns();
+    }
+  }, [isOpen, selectedPipelineId, fetchColumns]);
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
