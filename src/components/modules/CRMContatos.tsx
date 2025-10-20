@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X, Mail, MapPin, Home, Globe, FileText } from "lucide-react";
+import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X, Mail, MapPin, Home, Globe, FileText, Pin } from "lucide-react";
 import { ContactTags } from "@/components/chat/ContactTags";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -23,6 +23,9 @@ import { DeletarTicketModal } from "@/components/modals/DeletarTicketModal";
 import { AdicionarTagModal } from "@/components/modals/AdicionarTagModal";
 import { useToast } from "@/components/ui/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceContactFields } from "@/hooks/useWorkspaceContactFields";
+import { ConfigurarCamposObrigatoriosModal } from "@/components/modals/ConfigurarCamposObrigatoriosModal";
+import { Separator } from "@/components/ui/separator";
 interface Contact {
   id: string;
   name: string;
@@ -68,6 +71,7 @@ export function CRMContatos() {
   const [selectedContactForTag, setSelectedContactForTag] = useState<string | null>(null);
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [selectedContactForWhatsApp, setSelectedContactForWhatsApp] = useState<Contact | null>(null);
+  const [isFieldConfigModalOpen, setIsFieldConfigModalOpen] = useState(false);
   const headerCheckboxRef = useRef<HTMLButtonElement>(null);
   const {
     tags
@@ -75,6 +79,11 @@ export function CRMContatos() {
   const {
     toast
   } = useToast();
+  
+  // Hook para campos obrigatórios do workspace
+  const { fields: workspaceFields, refetch: refetchWorkspaceFields } = useWorkspaceContactFields(
+    selectedWorkspace?.workspace_id || null
+  );
 
   // Fetch contacts directly from contacts table
   const fetchContacts = async () => {
@@ -350,6 +359,21 @@ export function CRMContatos() {
       toast({
         title: "Erro de validação",
         description: "O nome é obrigatório.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar campos obrigatórios do workspace
+    const missingFields = workspaceFields.filter(field => {
+      const value = customFields.find(f => f.key === field.field_name)?.value;
+      return !value || value.trim() === '';
+    });
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Campos obrigatórios não preenchidos",
+        description: `Por favor, preencha: ${missingFields.map(f => f.field_name).join(', ')}`,
         variant: "destructive"
       });
       return;
@@ -663,10 +687,15 @@ export function CRMContatos() {
         
         {/* Other controls */}
         <div className="flex items-center gap-2 ml-auto">
-          <div className="flex items-center space-x-1 whitespace-nowrap">
-            <Checkbox id="duplicates" checked={showDuplicates} onCheckedChange={checked => setShowDuplicates(checked === true)} className="h-3 w-3" />
-            <Label htmlFor="duplicates" className="text-xs">Mostrar duplicatas</Label>
-          </div>
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="whitespace-nowrap text-xs h-8 px-3"
+            onClick={() => setIsFieldConfigModalOpen(true)}
+          >
+            <Pin className="h-3 w-3 mr-1" />
+            Pinar Info Adicionais
+          </Button>
           
           <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap text-xs h-8 px-2" onClick={handleAddContact}>
             Adicionar
@@ -844,13 +873,57 @@ export function CRMContatos() {
             } : null)} />
             </div>
             
+            {/* Campos obrigatórios do workspace */}
+            {workspaceFields.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Pin className="h-4 w-4 text-yellow-600" />
+                  Informações Obrigatórias
+                </Label>
+                <div className="space-y-3 mt-2">
+                  {workspaceFields.map((field) => {
+                    const currentValue = customFields.find(f => f.key === field.field_name)?.value || '';
+                    
+                    return (
+                      <div key={field.id} className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <Label className="text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
+                          {field.field_name} *
+                        </Label>
+                        <Input
+                          value={currentValue}
+                          onChange={(e) => {
+                            const exists = customFields.findIndex(f => f.key === field.field_name);
+                            if (exists !== -1) {
+                              setCustomFields(prev => prev.map((f, i) => 
+                                i === exists ? { ...f, value: e.target.value } : f
+                              ));
+                            } else {
+                              setCustomFields(prev => [...prev, { key: field.field_name, value: e.target.value }]);
+                            }
+                          }}
+                          placeholder={`Digite ${field.field_name.toLowerCase()}`}
+                          className="mt-1 border-yellow-400 dark:border-yellow-600"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {workspaceFields.length > 0 && (
+              <Separator className="my-4" />
+            )}
+
             <div>
-              <Label className="text-sm font-medium">Informações adicionais</Label>
+              <Label className="text-sm font-medium">Informações Adicionais (Opcionais)</Label>
               <div className="space-y-3 mt-2">
-                {/* Lista de campos existentes - Cards compactos */}
+                {/* Lista de campos opcionais - Cards compactos */}
                 <div className="space-y-3">
-                  {customFields.map((field, index) => (
-                    <div key={index} className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all">
+                  {customFields.filter(field => !workspaceFields.some(wf => wf.field_name === field.key)).map((field, index) => {
+                    const originalIndex = customFields.findIndex(f => f.key === field.key && f.value === field.value);
+                    return (
+                    <div key={originalIndex} className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all">
                       <div className="flex items-start gap-3">
                         {/* Ícone dinâmico */}
                         <div className="mt-0.5 text-muted-foreground">
@@ -859,11 +932,11 @@ export function CRMContatos() {
                         
                         <div className="flex-1 space-y-1 min-w-0">
                           {/* Label do campo - EDITÁVEL com double-click */}
-                          {editingFieldIndex === index && editingFieldType === 'key' ? (
+                          {editingFieldIndex === originalIndex && editingFieldType === 'key' ? (
                             <input
                               type="text"
                               value={field.key}
-                              onChange={e => updateCustomField(index, 'key', e.target.value)}
+                              onChange={e => updateCustomField(originalIndex, 'key', e.target.value)}
                               onBlur={() => {
                                 setEditingFieldIndex(null);
                                 setEditingFieldType(null);
@@ -880,7 +953,7 @@ export function CRMContatos() {
                             <p
                               className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer"
                               onDoubleClick={() => {
-                                setEditingFieldIndex(index);
+                                setEditingFieldIndex(originalIndex);
                                 setEditingFieldType('key');
                               }}
                               title="Clique duas vezes para editar"
@@ -890,11 +963,11 @@ export function CRMContatos() {
                           )}
                           
                           {/* Valor editável com underline inline */}
-                          {editingFieldIndex === index && editingFieldType === 'value' ? (
+                          {editingFieldIndex === originalIndex && editingFieldType === 'value' ? (
                             <input
                               type="text"
                               value={field.value}
-                              onChange={e => updateCustomField(index, 'value', e.target.value)}
+                              onChange={e => updateCustomField(originalIndex, 'value', e.target.value)}
                               onBlur={() => {
                                 setEditingFieldIndex(null);
                                 setEditingFieldType(null);
@@ -910,7 +983,7 @@ export function CRMContatos() {
                           ) : (
                             <p
                               onDoubleClick={() => {
-                                setEditingFieldIndex(index);
+                                setEditingFieldIndex(originalIndex);
                                 setEditingFieldType('value');
                               }}
                               className="text-sm font-normal text-muted-foreground cursor-pointer truncate"
@@ -926,13 +999,14 @@ export function CRMContatos() {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          onClick={() => handleRemoveCustomField(index)}
+                          onClick={() => handleRemoveCustomField(originalIndex)}
                         >
                           <X className="h-3 w-3 text-muted-foreground" />
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Adicionar novo campo */}
@@ -1010,6 +1084,18 @@ export function CRMContatos() {
             <ProfileImageDebug contactId={debugContact.id} contactName={debugContact.name} contactPhone={debugContact.phone || ''} workspaceId={selectedWorkspace.workspace_id} currentImageUrl={debugContact.profile_image_url || undefined} />
           </DialogContent>
         </Dialog>}
+
+      {/* Modal de configuração de campos obrigatórios */}
+      {selectedWorkspace && (
+        <ConfigurarCamposObrigatoriosModal
+          open={isFieldConfigModalOpen}
+          onClose={() => {
+            setIsFieldConfigModalOpen(false);
+            refetchWorkspaceFields();
+          }}
+          workspaceId={selectedWorkspace.workspace_id}
+        />
+      )}
 
     </div>;
 }

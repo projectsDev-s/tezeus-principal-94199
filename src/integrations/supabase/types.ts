@@ -2129,6 +2129,51 @@ export type Database = {
           },
         ]
       }
+      workspace_contact_fields: {
+        Row: {
+          created_at: string
+          field_name: string
+          field_order: number
+          id: string
+          is_required: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_name: string
+          field_order?: number
+          id?: string
+          is_required?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          field_name?: string
+          field_order?: number
+          id?: string
+          is_required?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_contact_fields_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_contact_fields_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
       workspace_limits: {
         Row: {
           connection_limit: number
@@ -2280,6 +2325,7 @@ export type Database = {
           cnpj: string | null
           created_at: string | null
           id: string
+          is_active: boolean
           name: string
           slug: string | null
           updated_at: string | null
@@ -2288,6 +2334,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           id?: string
+          is_active?: boolean
           name: string
           slug?: string | null
           updated_at?: string | null
@@ -2296,6 +2343,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           slug?: string | null
           updated_at?: string | null
