@@ -43,8 +43,8 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
       const newFormData = {
         name: workspace.name || "",
         cnpj: workspace.cnpj || "",
-        connectionLimit: workspace.connectionLimit || 1,
-        userLimit: workspace.userLimit || 5,
+        connectionLimit: workspace.connectionLimit ?? 1,
+        userLimit: workspace.userLimit ?? 5,
       };
       
       console.log('✅ Setting form data:', newFormData);

@@ -80,8 +80,8 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
         workspace_id: workspace.workspace_id,
         name: workspace.name,
         cnpj: workspace.cnpj,
-        connectionLimit: limitData?.connectionLimit || 1,
-        userLimit: limitData?.userLimit || 5
+        connectionLimit: limitData?.connectionLimit ?? 1,
+        userLimit: limitData?.userLimit ?? 5
       };
       
       console.log('📝 Setting editing workspace:', workspaceData);
