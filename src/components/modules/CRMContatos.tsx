@@ -358,11 +358,17 @@ export function CRMContatos() {
 
     // Validar se telefone já existe (apenas no modo criação)
     if (isCreateMode && editingContact.phone.trim()) {
+      // Sanitizar telefone para validação (adicionar 55 se não tiver)
+      let sanitizedPhone = editingContact.phone.trim();
+      if (sanitizedPhone && !sanitizedPhone.startsWith('55')) {
+        sanitizedPhone = '55' + sanitizedPhone;
+      }
+
       const { data: existingContact } = await supabase
         .from('contacts')
         .select('id, name')
         .eq('workspace_id', selectedWorkspace!.workspace_id)
-        .eq('phone', editingContact.phone.trim())
+        .eq('phone', sanitizedPhone)
         .maybeSingle();
       
       if (existingContact) {
@@ -378,13 +384,19 @@ export function CRMContatos() {
 
     try {
       if (isCreateMode) {
+        // Sanitizar telefone adicionando 55 na frente se não tiver
+        let sanitizedPhone = editingContact.phone.trim();
+        if (sanitizedPhone && !sanitizedPhone.startsWith('55')) {
+          sanitizedPhone = '55' + sanitizedPhone;
+        }
+
         // Create new contact
         const {
           data: newContactData,
           error
         } = await supabase.from('contacts').insert({
           name: editingContact.name.trim(),
-          phone: editingContact.phone.trim() || null,
+          phone: sanitizedPhone || null,
           email: editingContact.email.trim() || null,
           workspace_id: selectedWorkspace!.workspace_id
         }).select().single();
