@@ -1,4 +1,4 @@
-import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings, MoreVertical, Edit, Trash2, BanIcon, CheckCircle } from 'lucide-react';
+import { Building2, Users, Briefcase, LogIn, BarChart3, Eye, Settings, MoreVertical, Edit, Trash2, BanIcon, CheckCircle, Cable } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -149,8 +149,8 @@ export function WorkspaceCard({
             variant="outline"
             size="sm"
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Config
+            <Cable className="h-4 w-4 mr-2" />
+            Conexões
           </Button>
         </div>
       </CardFooter>
