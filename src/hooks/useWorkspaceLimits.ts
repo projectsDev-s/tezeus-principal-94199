@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -22,7 +22,7 @@ export function useWorkspaceLimits(workspaceId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const fetchLimits = async () => {
+  const fetchLimits = useCallback(async () => {
     if (!workspaceId) {
       console.log('🔴 useWorkspaceLimits: workspaceId is null/undefined');
       setIsLoading(false);
@@ -82,11 +82,55 @@ export function useWorkspaceLimits(workspaceId: string) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workspaceId, toast]);
 
   useEffect(() => {
     fetchLimits();
-  }, [workspaceId]);
+  }, [fetchLimits]);
+
+  // Subscribe to realtime changes on connections table
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    console.log('🔔 useWorkspaceLimits: Setting up realtime subscription for workspace:', workspaceId);
+
+    const channel = supabase
+      .channel(`workspace-connections-${workspaceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'connections',
+          filter: `workspace_id=eq.${workspaceId}`
+        },
+        (payload) => {
+          console.log('🔔 Connection change detected:', payload);
+          // Refresh limits whenever a connection is added, updated, or deleted
+          fetchLimits();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workspace_limits',
+          filter: `workspace_id=eq.${workspaceId}`
+        },
+        (payload) => {
+          console.log('🔔 Workspace limit change detected:', payload);
+          // Refresh when the limit itself changes
+          fetchLimits();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔕 useWorkspaceLimits: Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [workspaceId, fetchLimits]);
 
   return {
     limits,
