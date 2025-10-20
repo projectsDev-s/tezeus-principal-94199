@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 
 export interface WhatsAppMessage {
   id: string;
@@ -67,6 +68,7 @@ export const useWhatsAppConversations = () => {
   const [loading, setLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
   const { user, logout } = useAuth();
+  const { getHeaders } = useWorkspaceHeaders();
   
   // ✅ Rastrear último update processado para evitar duplicatas
   const lastUpdateProcessed = useRef<Map<string, number>>(new Map());
@@ -102,19 +104,8 @@ export const useWhatsAppConversations = () => {
         return;
       }
 
-      // Use Edge Function with user authentication headers and workspace context
-      const headers: Record<string, string> = {
-        'x-system-user-id': currentUserData.id,
-        'x-system-user-email': currentUserData.email || ''
-      };
-
-      // Add workspace context - OBRIGATÓRIO para todos os usuários
-      if (selectedWorkspace?.workspace_id) {
-        headers['x-workspace-id'] = selectedWorkspace.workspace_id;
-      } else {
-        // Workspace not selected - awaiting selection
-        return;
-      }
+      // Use Edge Function with workspace headers from URL
+      const headers = getHeaders();
 
       // ✅ CRÍTICO: Use whatsapp-get-conversations-lite (SEM mensagens, COM connection_id)
       const { data: response, error: functionError } = await supabase.functions.invoke(
