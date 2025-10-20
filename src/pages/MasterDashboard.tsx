@@ -48,6 +48,7 @@ export default function MasterDashboard() {
   const [editingWorkspace, setEditingWorkspace] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -120,31 +121,32 @@ export default function MasterDashboard() {
   const confirmDelete = async () => {
     if (workspaceToDelete) {
       try {
+        setIsRefreshing(true);
         await deleteWorkspace(workspaceToDelete.workspace_id);
         setDeleteDialogOpen(false);
         setWorkspaceToDelete(null);
         
         // Limpar cache e atualizar lista
         clearCache?.();
-        setTimeout(() => {
-          fetchWorkspaces();
-        }, 500);
+        await fetchWorkspaces();
       } catch (error) {
         // Error handled in hook
+      } finally {
+        setIsRefreshing(false);
       }
     }
   };
 
-  const handleCreateModalClose = (open: boolean) => {
+  const handleCreateModalClose = async (open: boolean) => {
     setCreateWorkspaceModalOpen(open);
     if (!open) {
       setEditingWorkspace(null);
       
       // Limpar cache e atualizar lista ao fechar modal
+      setIsRefreshing(true);
       clearCache?.();
-      setTimeout(() => {
-        fetchWorkspaces();
-      }, 500);
+      await fetchWorkspaces();
+      setIsRefreshing(false);
     }
   };
 
@@ -283,7 +285,7 @@ export default function MasterDashboard() {
         <main className="flex-1 p-6 overflow-auto">
           {activePage === 'workspaces' ? (
             <>
-              {isLoading ? (
+              {isLoading || isRefreshing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {[...Array(8)].map((_, i) => (
                     <Skeleton key={i} className="h-64 rounded-lg" />
