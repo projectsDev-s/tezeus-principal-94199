@@ -156,85 +156,85 @@ export default function MasterDashboard() {
   return (
     <div className="min-h-screen bg-background flex fixed inset-0">
       {/* Sidebar */}
-      <aside className="w-16 bg-card border-r border-border flex flex-col items-center py-6 gap-4 shrink-0">
+      <aside className="w-48 bg-card border-r border-border flex flex-col py-6 px-3 gap-2 shrink-0">
         <button
           onClick={() => setActivePage('workspaces')}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
             activePage === 'workspaces' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="Empresas"
         >
-          <Building2 className="h-5 w-5" />
+          <Building2 className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Empresas</span>
         </button>
         
         <button
           onClick={() => setActivePage('reports')}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
             activePage === 'reports' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="Relatórios"
         >
-          <BarChart3 className="h-5 w-5" />
+          <BarChart3 className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Relatórios</span>
         </button>
         
         <button
           onClick={() => setActivePage('usuarios')}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
             activePage === 'usuarios' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="Usuários"
         >
-          <UserCircle className="h-5 w-5" />
+          <UserCircle className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Usuários</span>
         </button>
         
         <button
           onClick={() => setActivePage('ds-agent')}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
             activePage === 'ds-agent' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="DS Agent"
         >
-          <BrainCircuit className="h-5 w-5" />
+          <BrainCircuit className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">DS Agent</span>
         </button>
         
         <button
           onClick={() => setActivePage('filas')}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
             activePage === 'filas' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="Filas"
         >
-          <ListOrdered className="h-5 w-5" />
+          <ListOrdered className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Filas</span>
         </button>
         
         <button
           onClick={handleLogout}
-          className="p-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mt-auto"
-          title="Sair"
+          className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mt-auto"
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Sair</span>
         </button>
         
         <button
           onClick={() => setActivePage('configuracoes')}
-          className={`p-3 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
             activePage === 'configuracoes' 
               ? 'bg-primary text-primary-foreground' 
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
-          title="Configurações"
         >
-          <Settings2 className="h-5 w-5" />
+          <Settings2 className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Configurações</span>
         </button>
       </aside>
 
