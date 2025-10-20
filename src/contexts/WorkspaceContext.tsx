@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useLocation } from 'react-router-dom';
 
 export interface Workspace {
   workspace_id: string;
@@ -30,40 +29,25 @@ interface WorkspaceProviderProps {
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const { userRole } = useAuth();
-  const location = useLocation();
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Extrair workspaceId da URL se existir (para Masters)
-  const urlWorkspaceId = React.useMemo(() => {
-    const match = location.pathname.match(/\/workspace\/([^/]+)/);
-    return match ? match[1] : null;
-  }, [location.pathname]);
-
-  // ✅ CORREÇÃO CRÍTICA: Para Masters, priorizar workspace da URL
+  // ✅ CORREÇÃO CRÍTICA: Workspace selection logic com verificação antecipada de localStorage
   useEffect(() => {
     console.log('🔍 WorkspaceContext: useEffect triggered', {
       workspacesLength: workspaces.length,
       isLoadingWorkspaces,
       userRole,
-      urlWorkspaceId,
       selectedWorkspace: selectedWorkspace?.name || 'null',
       hasLocalStorage: localStorage.getItem('selectedWorkspace') ? 'exists' : 'missing'
     });
 
-    // PRIORIDADE MÁXIMA: Se é Master e tem workspace na URL
-    if (userRole === 'master' && urlWorkspaceId && workspaces.length > 0) {
-      const urlWorkspace = workspaces.find(w => w.workspace_id === urlWorkspaceId);
-      if (urlWorkspace) {
-        // Só atualizar se for diferente do atual
-        if (!selectedWorkspace || selectedWorkspace.workspace_id !== urlWorkspaceId) {
-          console.log('🎩 Master: Usando workspace da URL:', urlWorkspace.name);
-          setSelectedWorkspaceState(urlWorkspace);
-        }
-        return;
-      }
+    // REGRA MASTER: Usuário master NÃO deve ter workspace auto-selecionado do localStorage
+    if (userRole === 'master') {
+      console.log('🎩 Usuário master detectado - workspace não será auto-selecionado do localStorage');
+      return;
     }
 
     // ✅ PRIORIDADE 0: Verificar localStorage SEMPRE PRIMEIRO (antes de aguardar workspaces)
@@ -127,7 +111,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
     // PRIORIDADE 2: Múltiplos workspaces, aguardar seleção manual
     console.log('📋 Usuário tem', workspaces.length, 'workspaces, aguardando seleção manual');
-  }, [workspaces, isLoadingWorkspaces, userRole, selectedWorkspace, urlWorkspaceId]);
+  }, [workspaces, isLoadingWorkspaces, userRole, selectedWorkspace]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);
