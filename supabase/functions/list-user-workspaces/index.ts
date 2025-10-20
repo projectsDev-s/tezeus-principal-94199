@@ -139,7 +139,7 @@ serve(async (req) => {
 
       console.log('✅ Found system user:', systemUser.id, 'profile:', systemUser.profile);
 
-      // If user is master, return all workspaces
+      // If user is master, return all workspaces (including inactive ones for management)
       if (systemUser.profile === 'master') {
         console.log('🔐 User is master, fetching all workspaces...');
         
@@ -154,14 +154,30 @@ serve(async (req) => {
           throw new Error(`Failed to fetch workspaces: ${workspacesError.message}`);
         }
 
-        console.log('✅ Returning', workspaces?.length || 0, 'workspaces for master user');
+        // Fetch is_active status for each workspace
+        const { data: workspaceStatuses, error: statusError } = await supabase
+          .from('workspaces')
+          .select('id, is_active')
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+
+        if (statusError) {
+          console.error('❌ Error fetching workspace statuses:', statusError);
+        }
+
+        // Merge is_active into workspaces
+        const workspacesWithStatus = workspaces?.map(w => ({
+          ...w,
+          is_active: workspaceStatuses?.find(s => s.id === w.workspace_id)?.is_active ?? true
+        })) || [];
+
+        console.log('✅ Returning', workspacesWithStatus?.length || 0, 'workspaces for master user');
         return successResponse({ 
-          workspaces: workspaces || [], 
+          workspaces: workspacesWithStatus || [], 
           userRole: 'master' 
         });
       }
 
-      // For admin/user, get workspaces from membership
+      // For admin/user, get workspaces from membership (only active ones)
       console.log('👥 User is not master, fetching workspace memberships...');
       
       const { data: memberships, error: membershipError } = await supabase
@@ -175,10 +191,12 @@ serve(async (req) => {
             slug,
             cnpj,
             created_at,
-            updated_at
+            updated_at,
+            is_active
           )
         `)
-        .eq('user_id', systemUser.id);
+        .eq('user_id', systemUser.id)
+        .eq('workspaces.is_active', true);
 
       if (membershipError) {
         console.error('❌ Error fetching workspace memberships:', membershipError);
@@ -195,6 +213,7 @@ serve(async (req) => {
         cnpj: m.workspaces.cnpj,
         created_at: m.workspaces.created_at,
         updated_at: m.workspaces.updated_at,
+        is_active: m.workspaces.is_active,
         connections_count: 0 // We don't need this for the basic functionality
       })) || [];
 

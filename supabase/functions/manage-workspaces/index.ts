@@ -267,6 +267,8 @@ Deno.serve(async (req) => {
         );
       }
 
+      console.log(`🔄 Toggling workspace ${workspaceId} to is_active: ${isActive}`);
+
       // Atualizar status is_active
       const { error: toggleError } = await supabase
         .from('workspaces')
@@ -280,6 +282,8 @@ Deno.serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      console.log(`✅ Workspace ${workspaceId} updated successfully to is_active: ${isActive}`);
 
       // Se estiver inativando, forçar logout de usuários e desconectar instâncias
       if (!isActive) {
