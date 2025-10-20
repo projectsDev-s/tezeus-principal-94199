@@ -353,7 +353,29 @@ export function CRMContatos() {
       });
       return;
     }
+
     setIsSaving(true);
+
+    // Validar se telefone já existe (apenas no modo criação)
+    if (isCreateMode && editingContact.phone.trim()) {
+      const { data: existingContact } = await supabase
+        .from('contacts')
+        .select('id, name')
+        .eq('workspace_id', selectedWorkspace!.workspace_id)
+        .eq('phone', editingContact.phone.trim())
+        .maybeSingle();
+      
+      if (existingContact) {
+        toast({
+          title: "Telefone já cadastrado",
+          description: `Este número já pertence ao contato "${existingContact.name}".`,
+          variant: "destructive"
+        });
+        setIsSaving(false);
+        return;
+      }
+    }
+
     try {
       if (isCreateMode) {
         // Create new contact
@@ -457,13 +479,23 @@ export function CRMContatos() {
       setEditingContact(null);
       setCustomFields([]);
       setIsCreateMode(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving contact:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar as alterações. Tente novamente.",
-        variant: "destructive"
-      });
+      
+      // Verificar se é erro de constraint único
+      if (error.code === '23505' && error.message?.includes('idx_contacts_phone_workspace')) {
+        toast({
+          title: "Telefone duplicado",
+          description: "Já existe um contato com este número de telefone neste workspace.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erro ao salvar",
+          description: "Ocorreu um erro ao salvar as alterações. Tente novamente.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsSaving(false);
     }
