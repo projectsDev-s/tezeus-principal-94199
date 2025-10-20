@@ -500,12 +500,16 @@ function CRMNegociosContent({
   const {
     selectedWorkspace
   } = useWorkspace();
+  const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
   const {
     canManagePipelines,
     canManageColumns,
     userWorkspaceRole,
     isMaster
   } = useWorkspaceRole();
+  
+  // Para Masters, priorizar workspaceId da URL
+  const effectiveWorkspaceId = isMaster && urlWorkspaceId ? urlWorkspaceId : selectedWorkspace?.workspace_id;
   
   // Debug logs
   useEffect(() => {
@@ -808,7 +812,7 @@ function CRMNegociosContent({
     setIsVincularResponsavelModalOpen(true);
   }, []);
   const handleCreateBusiness = async (business: any) => {
-    if (!selectedPipeline || !selectedWorkspace) {
+    if (!selectedPipeline || !effectiveWorkspaceId) {
       toast({
         title: "Erro",
         description: "Pipeline ou workspace não selecionado",
@@ -830,7 +834,7 @@ function CRMNegociosContent({
       const {
         data: existingConversations,
         error: convError
-      } = await supabase.from('conversations').select('id, status').eq('contact_id', business.lead).eq('workspace_id', selectedWorkspace.workspace_id).eq('status', 'open');
+      } = await supabase.from('conversations').select('id, status').eq('contact_id', business.lead).eq('workspace_id', effectiveWorkspaceId).eq('status', 'open');
       if (convError) {
         console.error('Erro ao verificar conversas existentes:', convError);
       }
@@ -846,7 +850,7 @@ function CRMNegociosContent({
         } = await supabase.functions.invoke('create-quick-conversation', {
           body: {
             phoneNumber: contact.phone,
-            orgId: selectedWorkspace.workspace_id
+            orgId: effectiveWorkspaceId
           }
         });
         if (conversationError) throw conversationError;
@@ -889,7 +893,7 @@ function CRMNegociosContent({
       });
     }
   };
-  if (!selectedWorkspace) {
+  if (!effectiveWorkspaceId) {
     return <div className="p-6">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Selecione um workspace para continuar</p>
@@ -905,7 +909,7 @@ function CRMNegociosContent({
             <h1 className="text-2xl font-bold text-foreground">Negócios</h1>
             <p className="text-muted-foreground">Gerencie seus negócios no pipeline de vendas</p>
           </div>
-          {!isLoading && canManagePipelines(selectedWorkspace?.workspace_id) && <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
+          {!isLoading && canManagePipelines(effectiveWorkspaceId) && <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Criar Pipeline
             </Button>}
