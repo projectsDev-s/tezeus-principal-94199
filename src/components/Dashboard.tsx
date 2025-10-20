@@ -1,6 +1,7 @@
 import { useWorkspaceAnalytics } from "@/hooks/useWorkspaceAnalytics";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceStatusCheck } from "@/hooks/useWorkspaceStatusCheck";
 import { AnalyticsKPICard } from "./dashboard/AnalyticsKPICard";
 import { ConversionChart } from "./dashboard/ConversionChart";
 import { TrendsChart } from "./dashboard/TrendsChart";
@@ -12,6 +13,9 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
   const { analytics, isLoading } = useWorkspaceAnalytics();
   const { selectedWorkspace, isLoadingWorkspaces } = useWorkspace();
   const { userRole } = useAuth();
+
+  // Monitorar status do workspace
+  useWorkspaceStatusCheck();
 
   const isUserRole = userRole === 'user';
   const isMasterRole = userRole === 'master';

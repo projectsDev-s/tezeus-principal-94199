@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceStatusCheck } from "@/hooks/useWorkspaceStatusCheck";
 
 import { Dashboard } from "./Dashboard";
 import { Conversas } from "./modules/Conversas";
@@ -60,6 +61,9 @@ export type ModuleType =
 export function TezeusCRM() {
   // Monitor de sessão global
   useSessionManager();
+  
+  // Monitorar status do workspace
+  useWorkspaceStatusCheck();
   
   const location = useLocation();
   const navigate = useNavigate();

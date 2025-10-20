@@ -67,6 +67,38 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Masters podem fazer login independentemente do status do workspace
+    if (user.profile !== 'master') {
+      // Buscar workspaces do usuário
+      const { data: memberWorkspaces, error: workspaceError } = await supabase
+        .from('workspace_members')
+        .select(`
+          workspaces!inner(is_active)
+        `)
+        .eq('user_id', user.id);
+
+      if (workspaceError) {
+        console.error('Error checking workspace status:', workspaceError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao verificar status da empresa' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Verificar se pelo menos um workspace está ativo
+      const hasActiveWorkspace = memberWorkspaces?.some((m: any) => 
+        m.workspaces?.is_active === true
+      );
+
+      if (!hasActiveWorkspace) {
+        console.log('User workspace is inactive');
+        return new Response(
+          JSON.stringify({ error: 'Sua empresa está inativa. Entre em contato com o administrador.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     console.log('User authenticated successfully:', user.email);
 
     return new Response(

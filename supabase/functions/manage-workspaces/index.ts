@@ -285,6 +285,13 @@ Deno.serve(async (req) => {
       if (!isActive) {
         console.log('Workspace being deactivated, forcing logout and disconnecting instances...');
         
+        const operationResults = {
+          logoutSuccess: false,
+          logoutMessage: '',
+          disconnectSuccess: false,
+          disconnectMessage: ''
+        };
+
         // Forçar logout de usuários não-masters
         try {
           const { data: logoutData, error: logoutError } = await supabase.functions.invoke(
@@ -294,11 +301,15 @@ Deno.serve(async (req) => {
           
           if (logoutError) {
             console.error('Error forcing logout:', logoutError);
+            operationResults.logoutMessage = `Erro ao deslogar usuários: ${logoutError.message}`;
           } else {
             console.log('Logout result:', logoutData);
+            operationResults.logoutSuccess = true;
+            operationResults.logoutMessage = `${logoutData.loggedOut} usuários deslogados`;
           }
-        } catch (logoutErr) {
+        } catch (logoutErr: any) {
           console.error('Exception forcing logout:', logoutErr);
+          operationResults.logoutMessage = `Exceção ao deslogar: ${logoutErr.message}`;
         }
 
         // Desconectar instâncias WhatsApp
@@ -310,12 +321,26 @@ Deno.serve(async (req) => {
           
           if (disconnectError) {
             console.error('Error disconnecting instances:', disconnectError);
+            operationResults.disconnectMessage = `Erro ao desconectar instâncias: ${disconnectError.message}`;
           } else {
             console.log('Disconnect result:', disconnectData);
+            operationResults.disconnectSuccess = true;
+            operationResults.disconnectMessage = `${disconnectData.disconnected} instâncias desconectadas`;
           }
-        } catch (disconnectErr) {
+        } catch (disconnectErr: any) {
           console.error('Exception disconnecting instances:', disconnectErr);
+          operationResults.disconnectMessage = `Exceção ao desconectar: ${disconnectErr.message}`;
         }
+
+        // Retornar com detalhes da operação
+        return new Response(
+          JSON.stringify({ 
+            message: `Empresa inativada com sucesso`,
+            isActive: false,
+            operationDetails: operationResults
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       const statusText = isActive ? 'ativada' : 'inativada';
