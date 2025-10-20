@@ -190,22 +190,11 @@ export function Sidebar({
     const iconElement = React.cloneElement(item.icon as React.ReactElement, {
       className: cn("transition-all duration-300", isCollapsed ? "w-5 h-5" : "w-5 h-5")
     });
-    const menuButton = <button key={item.id} onClick={() => onModuleChange(item.id)} className={cn("w-full flex items-center rounded-md transition-colors relative", isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3", item.group && !isCollapsed && "pl-8", isActive ? "bg-sidebar-active text-sidebar-active-foreground hover:bg-sidebar-active" : "hover:bg-sidebar-accent text-sidebar-foreground")}>
+    const menuButton = <button key={item.id} onClick={() => onModuleChange(item.id)} className={cn("w-full flex items-center rounded-md transition-colors relative gap-3", "px-4 py-3", item.group && "pl-8", isActive ? "bg-sidebar-active text-sidebar-active-foreground hover:bg-sidebar-active" : "hover:bg-sidebar-accent text-sidebar-foreground")}>
         {iconElement}
-        {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+        <span className="text-sm font-medium">{item.label}</span>
       </button>;
-    if (isCollapsed) {
-      return <TooltipProvider key={item.id}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {menuButton}
-            </TooltipTrigger>
-            <TooltipContent side="right" className="ml-2">
-              <p>{item.label}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>;
-    }
+    
     return menuButton;
   };
   const renderGroup = (groupName: string, label: string, items: (MenuItem & {
@@ -213,32 +202,6 @@ export function Sidebar({
   })[]) => {
     const isExpanded = expandedGroups.includes(groupName);
 
-    // No modo colapsado, mostrar nome + setinha
-    if (isCollapsed) {
-      return <TooltipProvider key={groupName}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button onClick={() => {
-              onToggleCollapse(); // Expandir sidebar
-              setExpandedGroups(prev => prev.includes(groupName) ? prev : [...prev, groupName]); // Expandir grupo
-            }} className="w-full flex flex-col items-center p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors">
-                {/* Setinha */}
-                <ChevronRight className="w-4 h-4 mb-1" />
-                
-                {/* Nome do grupo em texto pequeno */}
-                <span className="text-[10px] font-medium text-center leading-tight">
-                  {label}
-                </span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="ml-2">
-              <p>{label}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>;
-    }
-
-    // Modo expandido - comportamento normal
     return <div key={groupName}>
         <button onClick={() => toggleGroup(groupName)} className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-sidebar-accent rounded-md text-sidebar-foreground">
           {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -276,39 +239,30 @@ export function Sidebar({
   const handleMarkContactAsRead = (conversationId: string) => {
     markContactAsRead(conversationId);
   };
-  return <div data-sidebar className={cn("rounded-lg shadow-md m-2 flex flex-col max-h-[calc(100vh-1rem)] transition-all duration-300 ease-in-out relative bg-sidebar border border-sidebar-border", isCollapsed ? "w-28" : "w-64")}>
+  return <div data-sidebar className={cn("rounded-lg shadow-md m-2 flex flex-col max-h-[calc(100vh-1rem)] transition-all duration-300 ease-in-out relative bg-sidebar border border-sidebar-border", "w-64")}>
       {/* Logo */}
-      <div className={cn("flex-shrink-0 border-b", isCollapsed ? "p-3 flex flex-col items-center gap-2" : "p-6 flex items-center justify-between")}>
+      <div className={cn("flex-shrink-0 border-b", "p-6 flex items-center justify-between")}>
         {/* Logo ou Texto */}
-        {customization.logo_url ? <img src={customization.logo_url} alt="Logo do Sistema" className={cn("object-contain transition-all duration-300", isCollapsed ? "h-8 w-8" : "h-10")} /> : <h1 className={cn("font-bold transition-all duration-300 text-sidebar-foreground", isCollapsed ? "text-lg" : "text-2xl")}>
-            {isCollapsed ? "T" : "TEZEUS"}
+        {customization.logo_url ? <img src={customization.logo_url} alt="Logo do Sistema" className="object-contain h-10" /> : <h1 className="font-bold text-2xl text-sidebar-foreground">
+            TEZEUS
           </h1>}
-        
-        {/* Botão de colapso */}
-        <button onClick={onToggleCollapse} className={cn("p-1 hover:bg-accent rounded-md transition-transform duration-300 text-muted-foreground", isCollapsed && "rotate-180")}>
-          <ChevronLeft className="w-5 h-5" />
-        </button>
       </div>
 
       {/* Workspace Info - Only show for admin/user roles */}
       {!hasRole(['master']) && selectedWorkspace && (
-        <div className={`flex-shrink-0 border-b border-sidebar-border ${
-          isCollapsed ? 'px-2 py-2' : 'px-4 py-3 bg-muted/50'
-        }`}>
+        <div className="flex-shrink-0 border-b border-sidebar-border px-4 py-3 bg-muted/50">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">
-                  {selectedWorkspace.name}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">
+                {selectedWorkspace.name}
+              </p>
+              {selectedWorkspace.cnpj && (
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {selectedWorkspace.cnpj}
                 </p>
-                {selectedWorkspace.cnpj && (
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {selectedWorkspace.cnpj}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -340,80 +294,65 @@ export function Sidebar({
       </nav>
 
       {/* Action Icons */}
-      <div className={cn("flex-shrink-0", isCollapsed ? "p-3" : "p-4")}>
-        <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2" : "gap-2 justify-between")}>
-          {/* Botão de notificações com tooltip */}
-          <TooltipProvider>
-            <Tooltip>
-              {totalUnread > 0 ? <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
-                  <PopoverTrigger asChild>
-                    <TooltipTrigger asChild>
-                       <button className="p-2 hover:bg-accent rounded-md relative">
-              <Bell className={cn(isCollapsed ? "w-5 h-5" : "w-5 h-5", "text-muted-foreground")} />
-                        <Badge 
-                          key={`badge-${totalUnread}-${Date.now()}`}
-                          variant="destructive" 
-                          className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0"
-                        >
-                          {totalUnread > 99 ? '99+' : totalUnread}
-                        </Badge>
-                      </button>
-                    </TooltipTrigger>
-                  </PopoverTrigger>
-                  <PopoverContent side="right" align="start" className="p-0 w-auto">
-                    <NotificationTooltip notifications={notifications} totalUnread={totalUnread} getAvatarInitials={getAvatarInitials} getAvatarColor={getAvatarColor} formatTimestamp={formatTimestamp} onNotificationClick={handleNotificationClick} onMarkAllAsRead={handleMarkAllAsRead} onMarkContactAsRead={handleMarkContactAsRead} />
-                  </PopoverContent>
-                </Popover> : <TooltipTrigger asChild>
-                  <button className="p-2 hover:bg-accent rounded-md relative">
-                    <Bell className={cn(isCollapsed ? "w-6 h-6" : "w-5 h-5", "text-muted-foreground")} />
-                  </button>
-                </TooltipTrigger>}
-              {isCollapsed && <TooltipContent side="right">
-                  <p>Notificações</p>
-                </TooltipContent>}
-            </Tooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">
-                  <p>Mensagens</p>
-                </TooltipContent>}
-            </Tooltip>
-          </TooltipProvider>
-          
-          
+      <div className="flex-shrink-0 p-4">
+        <div className="flex items-center gap-2 justify-between">
+          {/* Botão de notificações */}
+          {totalUnread > 0 ? (
+            <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+              <PopoverTrigger asChild>
+                <button className="p-2 hover:bg-accent rounded-md relative">
+                  <Bell className="w-5 h-5 text-muted-foreground" />
+                  <Badge 
+                    key={`badge-${totalUnread}-${Date.now()}`}
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0"
+                  >
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </Badge>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" align="start" className="p-0 w-auto">
+                <NotificationTooltip notifications={notifications} totalUnread={totalUnread} getAvatarInitials={getAvatarInitials} getAvatarColor={getAvatarColor} formatTimestamp={formatTimestamp} onNotificationClick={handleNotificationClick} onMarkAllAsRead={handleMarkAllAsRead} onMarkContactAsRead={handleMarkContactAsRead} />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <button className="p-2 hover:bg-accent rounded-md relative">
+              <Bell className="w-5 h-5 text-muted-foreground" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* User Info */}
-      <div className={cn("flex-shrink-0 rounded-t-lg bg-muted border-t", isCollapsed ? "p-3" : "p-4")}>
-        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3")}>
-          {isCollapsed ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="w-8 h-8 bg-muted rounded-full flex items-center justify-center hover:bg-accent transition-colors">
-                  <User className="w-5 h-5 text-muted-foreground" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="z-50 bg-background" side="right" align="end">
-                {hasRole(['master']) && selectedWorkspace && (
-                  <DropdownMenuItem onClick={handleBackToMasterDashboard}>
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Dashboard Master
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={logout} className="text-destructive">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair
+      <div className="flex-shrink-0 rounded-t-lg bg-muted border-t p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+            <User className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-foreground truncate">{user?.name}</div>
+            <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+            <div className="text-xs text-primary font-medium capitalize">{userRole}</div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-accent rounded-md">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="z-50 bg-background" align="end">
+              {hasRole(['master']) && selectedWorkspace && (
+                <DropdownMenuItem onClick={handleBackToMasterDashboard}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard Master
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
+              )}
+              <DropdownMenuItem onClick={logout} className="text-destructive">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
               <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                 <User className="w-5 h-5 text-muted-foreground" />
               </div>
@@ -439,10 +378,8 @@ export function Sidebar({
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>;
