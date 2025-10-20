@@ -20,7 +20,7 @@ import type { Connection, HISTORY_RECOVERY_MAP } from '@/types/evolution';
 import { useWorkspaceLimits } from '@/hooks/useWorkspaceLimits';
 import { useWorkspaceRole } from '@/hooks/useWorkspaceRole';
 import { usePipelinesContext } from '@/contexts/PipelinesContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -1006,14 +1006,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                             Nenhum pipeline encontrado para esta empresa
                           </span>
                           <Button
-                            type="button"
+                            asChild
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(getNavigationPath('/crm-negocios'))}
                             className="gap-1"
                           >
-                            Criar Pipeline
-                            <ArrowRight className="h-3 w-3" />
+                            <Link to={getNavigationPath('/crm-negocios')}>
+                              Criar Pipeline
+                              <ArrowRight className="h-3 w-3" />
+                            </Link>
                           </Button>
                         </div>
                       )}
