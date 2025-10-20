@@ -119,7 +119,8 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
     setShowCreateModal(open);
     if (!open) {
       setEditingWorkspace(null);
-      // Refresh workspaces list after modal closes
+      // Refresh workspaces list after modal closes to get updated limits
+      console.log('🔄 Modal closed, refreshing workspaces...');
       fetchWorkspaces();
     }
   };
