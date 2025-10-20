@@ -373,73 +373,11 @@ export function AdicionarEditarUsuarioModal({
             </div>
           </div>
 
-          {/* Seleção de Empresa */}
-          <div className="space-y-4">
-            <h3 className="font-medium text-sm text-muted-foreground">Empresa</h3>
-            <div className="space-y-2">
-              <Label htmlFor="workspace">Empresa *</Label>
-              <Select 
-                value={selectedWorkspaceId} 
-                onValueChange={setSelectedWorkspaceId}
-                disabled={workspacesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={workspacesLoading ? "Carregando empresas..." : "Selecione uma empresa"} />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-background border border-border">
-                  {workspaces.length === 0 ? (
-                    <SelectItem value="no-workspaces" disabled>
-                      Nenhuma empresa disponível
-                    </SelectItem>
-                  ) : (
-                    workspaces.map((workspace) => (
-                      <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                        {workspace.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Canal Padrão */}
-          {selectedWorkspaceId && (
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground">Configurações</h3>
-              <div className="space-y-2">
-                <Label htmlFor="default_channel">Canal Padrão</Label>
-                <Select 
-                  value={formData.default_channel} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, default_channel: value }))}
-                  disabled={connectionsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={connectionsLoading ? "Carregando..." : "Selecione uma conexão (opcional)"} />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 bg-background border border-border">
-                    {connections.length === 0 ? (
-                      <SelectItem value="no-connections" disabled>
-                        Nenhuma conexão disponível
-                      </SelectItem>
-                    ) : (
-                      connections.map((connection) => (
-                        <SelectItem key={connection.id} value={connection.id}>
-                          {connection.instance_name} {connection.phone_number ? `— ${connection.phone_number}` : ''} 
-                          {connection.status === 'connected' && ' ✓'}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
           
           <div className="flex gap-2 pt-4">
             <Button 
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.name || !formData.email || !formData.profile || (!isEditing && !formData.senha) || !selectedWorkspaceId}
+              disabled={isSubmitting || !formData.name || !formData.email || !formData.profile || (!isEditing && !formData.senha)}
             >
               {isSubmitting ? (isEditing ? "Salvando..." : "Criando...") : (isEditing ? "Salvar Alterações" : "Criar Usuário")}
             </Button>
