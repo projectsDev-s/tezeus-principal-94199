@@ -296,7 +296,14 @@ Deno.serve(async (req) => {
         try {
           const { data: logoutData, error: logoutError } = await supabase.functions.invoke(
             'force-logout-workspace-users',
-            { body: { workspaceId } }
+            { 
+              body: { workspaceId },
+              headers: {
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                'x-system-user-id': systemUserId,
+                'x-system-user-email': systemUserEmail || ''
+              }
+            }
           );
           
           if (logoutError) {
@@ -305,7 +312,7 @@ Deno.serve(async (req) => {
           } else {
             console.log('Logout result:', logoutData);
             operationResults.logoutSuccess = true;
-            operationResults.logoutMessage = `${logoutData.loggedOut} usuários deslogados`;
+            operationResults.logoutMessage = `${logoutData?.loggedOut || 0} usuários deslogados`;
           }
         } catch (logoutErr: any) {
           console.error('Exception forcing logout:', logoutErr);
@@ -316,7 +323,14 @@ Deno.serve(async (req) => {
         try {
           const { data: disconnectData, error: disconnectError } = await supabase.functions.invoke(
             'disconnect-workspace-instances',
-            { body: { workspaceId } }
+            { 
+              body: { workspaceId },
+              headers: {
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                'x-system-user-id': systemUserId,
+                'x-system-user-email': systemUserEmail || ''
+              }
+            }
           );
           
           if (disconnectError) {
@@ -325,7 +339,7 @@ Deno.serve(async (req) => {
           } else {
             console.log('Disconnect result:', disconnectData);
             operationResults.disconnectSuccess = true;
-            operationResults.disconnectMessage = `${disconnectData.disconnected} instâncias desconectadas`;
+            operationResults.disconnectMessage = `${disconnectData?.disconnected || 0} instâncias desconectadas`;
           }
         } catch (disconnectErr: any) {
           console.error('Exception disconnecting instances:', disconnectErr);
