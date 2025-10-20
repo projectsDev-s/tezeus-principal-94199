@@ -61,27 +61,25 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
     console.log('📝 Opening edit modal for workspace:', workspace);
     
     try {
-      // Use edge function to bypass RLS
-      const { data: limitData, error } = await supabase.functions.invoke('get-workspace-limits', {
-        body: { workspaceId: workspace.workspace_id }
-      });
+      // Buscar os limites diretamente da tabela workspace_limits
+      const { data: limitData, error } = await supabase
+        .from('workspace_limits')
+        .select('connection_limit, user_limit')
+        .eq('workspace_id', workspace.workspace_id)
+        .maybeSingle();
       
       if (error) {
         console.error('❌ Error fetching workspace limits:', error);
-        return;
       }
       
-      console.log('📊 Limits data from edge function:', limitData);
-      console.log('🔍 Type of limitData:', typeof limitData);
-      console.log('🔍 limitData.connectionLimit:', limitData?.connectionLimit);
-      console.log('🔍 limitData.userLimit:', limitData?.userLimit);
+      console.log('📊 Limits data from database:', limitData);
       
       const workspaceData = {
         workspace_id: workspace.workspace_id,
         name: workspace.name,
         cnpj: workspace.cnpj,
-        connectionLimit: limitData?.connectionLimit ?? 0,
-        userLimit: limitData?.userLimit ?? 0
+        connectionLimit: limitData?.connection_limit ?? 0,
+        userLimit: limitData?.user_limit ?? 0
       };
       
       console.log('📝 Setting editing workspace:', workspaceData);
