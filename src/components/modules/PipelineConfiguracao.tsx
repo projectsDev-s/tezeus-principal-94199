@@ -347,7 +347,6 @@ export default function PipelineConfiguracao({
   } = useWorkspace();
   const { toast } = useToast();
   const [pipelineName, setPipelineName] = useState(selectedPipeline?.name || "Vendas");
-  const [pipelineType, setPipelineType] = useState(selectedPipeline?.type || "padrao");
   const [currency, setCurrency] = useState("brl");
   const [selectedColumn, setSelectedColumn] = useState("qualificar");
   const [selectedAutomation, setSelectedAutomation] = useState("");
@@ -904,21 +903,13 @@ export default function PipelineConfiguracao({
                 Configurações Gerais do Pipeline
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                   Nome do Pipeline
                 </label>
-                <Input value={pipelineName} onChange={e => setPipelineName(e.target.value)} className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""} />
-              </div>
-              <div className="space-y-2">
-                <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                  Tipo do Pipeline
-                </label>
-                <div className="flex gap-2 items-center">
-                  <p className={cn("text-base font-medium px-3 py-2", isDarkMode ? "text-white" : "text-foreground")}>
-                    {pipelineType === 'padrao' ? 'Padrão' : pipelineType === 'vendas' ? 'Vendas' : 'Suporte'}
-                  </p>
+                <div className="flex gap-2">
+                  <Input value={pipelineName} onChange={e => setPipelineName(e.target.value)} className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""} />
                   <Button
                     onClick={async () => {
                       if (!selectedPipeline?.id) return;
@@ -927,8 +918,7 @@ export default function PipelineConfiguracao({
                         const { error } = await supabase
                           .from('pipelines')
                           .update({
-                            name: pipelineName,
-                            type: pipelineType
+                            name: pipelineName
                           })
                           .eq('id', selectedPipeline.id);
                         

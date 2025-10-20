@@ -753,9 +753,9 @@ function CRMNegociosContent({
     setSelectedCard(card);
     setIsDealDetailsModalOpen(true);
   };
-  const handlePipelineCreate = async (nome: string, tipo: string) => {
+  const handlePipelineCreate = async (nome: string) => {
     try {
-      await createPipeline(nome, tipo);
+      await createPipeline(nome, 'padrao'); // tipo padrão fixo
       toast({
         title: "Pipeline criado",
         description: `Pipeline "${nome}" criado com sucesso`,

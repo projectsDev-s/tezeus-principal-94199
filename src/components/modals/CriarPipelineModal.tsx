@@ -8,25 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface CriarPipelineModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (nome: string, tipo: string) => void;
+  onSave: (nome: string) => void;
 }
 
 export function CriarPipelineModal({ isOpen, onClose, onSave }: CriarPipelineModalProps) {
   const [nome, setNome] = useState("");
-  const [tipo, setTipo] = useState("");
 
   const handleSave = () => {
-    if (nome.trim() && tipo) {
-      onSave(nome.trim(), tipo);
+    if (nome.trim()) {
+      onSave(nome.trim());
       setNome("");
-      setTipo("");
       onClose();
     }
   };
 
   const handleCancel = () => {
     setNome("");
-    setTipo("");
     onClose();
   };
 
@@ -52,22 +49,6 @@ export function CriarPipelineModal({ isOpen, onClose, onSave }: CriarPipelineMod
               className="w-full"
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="tipo" className="text-sm font-medium text-gray-700">
-              Tipo do pipeline
-            </Label>
-            <Select value={tipo} onValueChange={setTipo}>
-              <SelectTrigger className="w-full bg-yellow-400 hover:bg-yellow-500 text-black border-yellow-500">
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="padrao">Padrão</SelectItem>
-                <SelectItem value="pre-venda">Pré-venda</SelectItem>
-                <SelectItem value="pos-venda">Pós-venda</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         
         <div className="flex justify-end gap-3 pt-4">
@@ -80,7 +61,7 @@ export function CriarPipelineModal({ isOpen, onClose, onSave }: CriarPipelineMod
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={!nome.trim() || !tipo}
+            disabled={!nome.trim()}
             className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium"
           >
             Criar
