@@ -434,7 +434,6 @@ serve(async (req) => {
                 responsible_user:system_users!responsible_user_id(id, name)
               `)
               .eq('id', cardId)
-              .eq('workspace_id', workspaceId)
               .maybeSingle();
 
             if (error) throw error;
