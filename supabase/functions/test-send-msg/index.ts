@@ -388,12 +388,16 @@ serve(async (req) => {
       
       if (originalMsg) {
         fullQuotedMessage = {
-          id: reply_to_message_id,
+          id: originalMsg.external_id || originalMsg.evolution_key_id || reply_to_message_id,
           content: originalMsg.content,
           sender_type: originalMsg.sender_type,
           external_id: originalMsg.external_id || originalMsg.evolution_key_id
         };
-        console.log(`✅ [${requestId}] Mensagem original encontrada:`, fullQuotedMessage);
+        console.log(`✅ [${requestId}] Mensagem original encontrada:`, {
+          ...fullQuotedMessage,
+          database_id: reply_to_message_id,
+          used_external_id: !!originalMsg.external_id
+        });
       }
     }
 
