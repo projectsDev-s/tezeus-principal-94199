@@ -20,6 +20,7 @@ import { AcceptConversationButton } from '@/components/chat/AcceptConversationBu
 import { EndConversationButton } from '@/components/chat/EndConversationButton';
 import { ContactSidePanel } from '@/components/ContactSidePanel';
 import { ReplyPreview } from '@/components/chat/ReplyPreview';
+import { QuotedMessagePreview } from '@/components/chat/QuotedMessagePreview';
 import { useConversationMessages } from '@/hooks/useConversationMessages';
 import { useConversationAccept } from '@/hooks/useConversationAccept';
 import { useConversationEnd } from '@/hooks/useConversationEnd';
@@ -822,14 +823,12 @@ export function ChatModal({
                       
                       {/* Mostrar mensagem quotada se existir */}
                       {message.quoted_message && (
-                        <div className="mb-2 p-2 bg-background/50 rounded border-l-2 border-primary">
-                          <span className="text-xs font-medium text-primary">
-                            {message.quoted_message.sender_type === 'contact' ? contactName : 'Você'}
-                          </span>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {message.quoted_message.content}
-                          </p>
-                        </div>
+                        <QuotedMessagePreview
+                          quotedMessage={message.quoted_message}
+                          senderName={
+                            message.quoted_message.sender_type === 'contact' ? contactName : 'Você'
+                          }
+                        />
                       )}
 
                       {/* Renderizar conteúdo baseado no tipo */}

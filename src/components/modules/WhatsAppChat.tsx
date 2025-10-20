@@ -25,6 +25,7 @@ import { parsePhoneNumber } from 'libphonenumber-js';
 import { MediaViewer } from "@/components/chat/MediaViewer";
 import { MediaUpload } from "@/components/chat/MediaUpload";
 import { QuickItemsModal } from "@/components/modals/QuickItemsModal";
+import { QuotedMessagePreview } from "@/components/chat/QuotedMessagePreview";
 import { PeekConversationModal } from "@/components/modals/PeekConversationModal";
 import { AcceptConversationButton } from "@/components/chat/AcceptConversationButton";
 import { EndConversationButton } from "@/components/chat/EndConversationButton";
@@ -1776,14 +1777,14 @@ export function WhatsAppChat({
                       
                       {/* Mostrar mensagem quotada se existir */}
                       {(message as any).quoted_message && (
-                        <div className="mb-2 p-2 bg-background/50 rounded border-l-2 border-primary">
-                          <span className="text-xs font-medium text-primary">
-                            {(message as any).quoted_message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'}
-                          </span>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {(message as any).quoted_message.content}
-                          </p>
-                        </div>
+                        <QuotedMessagePreview
+                          quotedMessage={(message as any).quoted_message}
+                          senderName={
+                            (message as any).quoted_message.sender_type === 'contact' 
+                              ? selectedConversation.contact.name 
+                              : 'Você'
+                          }
+                        />
                       )}
 
                       {/* Renderizar conteúdo baseado no tipo */}
