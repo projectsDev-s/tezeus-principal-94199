@@ -37,17 +37,23 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
 
   // Update form data when workspace prop changes
   React.useEffect(() => {
+    console.log('🔄 CreateWorkspaceModal: workspace prop changed:', workspace);
+    
     if (workspace) {
-      setFormData({
-        name: workspace.name,
+      const newFormData = {
+        name: workspace.name || "",
         cnpj: workspace.cnpj || "",
         connectionLimit: workspace.connectionLimit || 1,
         userLimit: workspace.userLimit || 5,
-      });
+      };
+      
+      console.log('✅ Setting form data:', newFormData);
+      setFormData(newFormData);
     } else {
+      console.log('🆕 Resetting form data for new workspace');
       setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
     }
-  }, [workspace]);
+  }, [workspace, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

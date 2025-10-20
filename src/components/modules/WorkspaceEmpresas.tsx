@@ -58,20 +58,32 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
   };
 
   const handleEditClick = async (workspace: any) => {
+    console.log('📝 Opening edit modal for workspace:', workspace);
+    
     // Fetch the connection limit and user limit for this workspace
-    const { data: limitData } = await supabase
+    const { data: limitData, error } = await supabase
       .from('workspace_limits')
       .select('connection_limit, user_limit')
       .eq('workspace_id', workspace.workspace_id)
-      .single();
+      .maybeSingle();
     
-    setEditingWorkspace({
+    if (error) {
+      console.error('Error fetching workspace limits:', error);
+    }
+    
+    console.log('📊 Limits data:', limitData);
+    
+    const workspaceData = {
       workspace_id: workspace.workspace_id,
       name: workspace.name,
       cnpj: workspace.cnpj,
       connectionLimit: limitData?.connection_limit || 1,
       userLimit: limitData?.user_limit || 5
-    });
+    };
+    
+    console.log('📝 Setting editing workspace:', workspaceData);
+    
+    setEditingWorkspace(workspaceData);
     setShowCreateModal(true);
   };
 
