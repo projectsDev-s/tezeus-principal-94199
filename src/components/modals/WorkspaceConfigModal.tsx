@@ -1,4 +1,4 @@
-import { Settings, Wifi, Bot, Headphones } from "lucide-react";
+import { Cable, Wifi, Bot, Headphones } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConexoesNova } from "@/components/modules/ConexoesNova";
@@ -18,8 +18,8 @@ export function WorkspaceConfigModal({
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Configurações do Workspace: {workspaceName}
+            <Cable className="w-5 h-5" />
+            Conexões da Empresa: {workspaceName}
           </DialogTitle>
         </DialogHeader>
 
