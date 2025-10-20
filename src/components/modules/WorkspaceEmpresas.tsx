@@ -67,10 +67,14 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
       });
       
       if (error) {
-        console.error('Error fetching workspace limits:', error);
+        console.error('❌ Error fetching workspace limits:', error);
+        return;
       }
       
       console.log('📊 Limits data from edge function:', limitData);
+      console.log('🔍 Type of limitData:', typeof limitData);
+      console.log('🔍 limitData.connectionLimit:', limitData?.connectionLimit);
+      console.log('🔍 limitData.userLimit:', limitData?.userLimit);
       
       const workspaceData = {
         workspace_id: workspace.workspace_id,
@@ -85,7 +89,7 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
       setEditingWorkspace(workspaceData);
       setShowCreateModal(true);
     } catch (error) {
-      console.error('Error in handleEditClick:', error);
+      console.error('❌ Error in handleEditClick:', error);
     }
   };
 
