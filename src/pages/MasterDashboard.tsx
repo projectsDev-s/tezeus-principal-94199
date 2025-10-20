@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -54,39 +54,6 @@ export default function MasterDashboard() {
     navigate('/dashboard');
     return null;
   }
-
-  // Realtime subscription para atualizar lista automaticamente
-  useEffect(() => {
-    if (!fetchWorkspaces || !clearCache) return;
-
-    const channel = supabase
-      .channel('workspaces-realtime-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'workspaces'
-        },
-        (payload) => {
-          console.log('🔄 Workspace change detected:', payload.eventType);
-          // Limpar cache antes de buscar novos dados
-          clearCache();
-          // Usar setTimeout para evitar race conditions
-          setTimeout(() => {
-            fetchWorkspaces();
-          }, 300);
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status);
-      });
-
-    return () => {
-      console.log('🔌 Unsubscribing from workspaces channel');
-      supabase.removeChannel(channel);
-    };
-  }, []); // Dependências vazias para evitar re-renders
 
   // Filtrar workspaces com base na busca
   const filteredWorkspaces = useMemo(() => {
@@ -156,6 +123,12 @@ export default function MasterDashboard() {
         await deleteWorkspace(workspaceToDelete.workspace_id);
         setDeleteDialogOpen(false);
         setWorkspaceToDelete(null);
+        
+        // Limpar cache e atualizar lista
+        clearCache?.();
+        setTimeout(() => {
+          fetchWorkspaces();
+        }, 500);
       } catch (error) {
         // Error handled in hook
       }
@@ -166,6 +139,12 @@ export default function MasterDashboard() {
     setCreateWorkspaceModalOpen(open);
     if (!open) {
       setEditingWorkspace(null);
+      
+      // Limpar cache e atualizar lista ao fechar modal
+      clearCache?.();
+      setTimeout(() => {
+        fetchWorkspaces();
+      }, 500);
     }
   };
 
