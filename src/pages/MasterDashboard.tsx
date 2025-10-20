@@ -57,8 +57,10 @@ export default function MasterDashboard() {
 
   // Realtime subscription para atualizar lista automaticamente
   useEffect(() => {
+    if (!fetchWorkspaces) return;
+
     const channel = supabase
-      .channel('workspaces-changes')
+      .channel('workspaces-realtime-changes')
       .on(
         'postgres_changes',
         {
@@ -66,17 +68,23 @@ export default function MasterDashboard() {
           schema: 'public',
           table: 'workspaces'
         },
-        () => {
-          console.log('🔄 Workspace change detected, refreshing list...');
-          fetchWorkspaces();
+        (payload) => {
+          console.log('🔄 Workspace change detected:', payload.eventType);
+          // Usar setTimeout para evitar race conditions
+          setTimeout(() => {
+            fetchWorkspaces();
+          }, 500);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status);
+      });
 
     return () => {
+      console.log('🔌 Unsubscribing from workspaces channel');
       supabase.removeChannel(channel);
     };
-  }, [fetchWorkspaces]);
+  }, []); // Dependências vazias para evitar re-renders
 
   // Filtrar workspaces com base na busca
   const filteredWorkspaces = useMemo(() => {
