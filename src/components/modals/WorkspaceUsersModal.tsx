@@ -436,7 +436,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                         <TableHead>Email</TableHead>
                         <TableHead>Perfil</TableHead>
                         <TableHead>Cargo</TableHead>
-                        <TableHead>Função</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Adicionado em</TableHead>
                         <TableHead className="w-[100px]">Ações</TableHead>
@@ -445,13 +444,13 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : members.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhum membro encontrado
                     </TableCell>
                   </TableRow>
@@ -488,29 +487,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {editingMember?.id === member.id ? (
-                          <Select 
-                            value={member.role} 
-                            onValueChange={(value: 'user' | 'admin' | 'master') => 
-                              handleUpdateRole(member.id, value)
-                            }
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">Usuário</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge variant={roleVariants[member.role]}>
-                            {roleLabels[member.role]}
-                          </Badge>
-                        )}
                       </TableCell>
 
                       <TableCell>
