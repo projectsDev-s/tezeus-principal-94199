@@ -319,7 +319,10 @@ export function WhatsAppChat({
             id: replyingTo.external_id || replyingTo.evolution_key_id || replyingTo.id,
             content: replyingTo.content,
             sender_type: replyingTo.sender_type,
-            external_id: replyingTo.external_id || replyingTo.evolution_key_id
+            external_id: replyingTo.external_id || replyingTo.evolution_key_id,
+            message_type: replyingTo.message_type,
+            file_url: replyingTo.file_url,
+            file_name: replyingTo.file_name
           }
         })
       };
@@ -342,7 +345,10 @@ export function WhatsAppChat({
               id: replyingTo.external_id || replyingTo.evolution_key_id || replyingTo.id,
               content: replyingTo.content,
               sender_type: replyingTo.sender_type,
-              external_id: replyingTo.external_id || replyingTo.evolution_key_id
+              external_id: replyingTo.external_id || replyingTo.evolution_key_id,
+              message_type: replyingTo.message_type,
+              file_url: replyingTo.file_url,
+              file_name: replyingTo.file_name
             }
           })
         },
