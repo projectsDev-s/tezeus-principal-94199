@@ -124,9 +124,7 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
             <Label htmlFor="connectionLimit">Limite de Conexões *</Label>
             <Input
               id="connectionLimit"
-              type="number"
-              min="1"
-              max="100"
+              type="text"
               value={formData.connectionLimit}
               onChange={(e) => setFormData(prev => ({ ...prev, connectionLimit: parseInt(e.target.value) || 1 }))}
               placeholder="1"
@@ -141,9 +139,7 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
             <Label htmlFor="userLimit">Limite de Usuários *</Label>
             <Input
               id="userLimit"
-              type="number"
-              min="1"
-              max="500"
+              type="text"
               value={formData.userLimit}
               onChange={(e) => setFormData(prev => ({ ...prev, userLimit: parseInt(e.target.value) || 5 }))}
               placeholder="5"
