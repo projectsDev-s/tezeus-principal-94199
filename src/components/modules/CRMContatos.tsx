@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X, Pin } from "lucide-react";
+import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X, Mail, MapPin, Home, Globe, FileText } from "lucide-react";
 import { ContactTags } from "@/components/chat/ContactTags";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -48,12 +48,15 @@ export function CRMContatos() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [customFields, setCustomFields] = useState<Array<{
-    name: string;
+    key: string;
     value: string;
   }>>([]);
-  const [pinnedFields, setPinnedFields] = useState<string[]>([]);
-  const [newFieldName, setNewFieldName] = useState('');
-  const [newFieldValue, setNewFieldValue] = useState('');
+  const [newCustomField, setNewCustomField] = useState({
+    key: '',
+    value: ''
+  });
+  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
+  const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -305,8 +308,7 @@ export function CRMContatos() {
     });
     // Start with empty fields
     setCustomFields([]);
-    setNewFieldName('');
-    setNewFieldValue('');
+    setNewCustomField({ key: '', value: '' });
   };
   const handleEditContact = async (contact: Contact) => {
     setEditingContact(contact);
@@ -324,7 +326,7 @@ export function CRMContatos() {
       if (extraInfoData && extraInfoData.length > 0) {
         // Map database fields to form fields
         const existingFields = extraInfoData.map(field => ({
-          name: field.field_name,
+          key: field.field_name,
           value: field.field_value
         }));
         setCustomFields(existingFields);
@@ -338,8 +340,7 @@ export function CRMContatos() {
     }
     
     // Reset new field inputs
-    setNewFieldName('');
-    setNewFieldValue('');
+    setNewCustomField({ key: '', value: '' });
   };
   const handleSaveContact = async () => {
     if (!editingContact) return;
@@ -404,11 +405,11 @@ export function CRMContatos() {
 
         // Save custom fields to contact_extra_info table
         const fieldsToInsert = customFields
-          .filter(field => field.name.trim() && field.value.trim())
+          .filter(field => field.key.trim() && field.value.trim())
           .map(field => ({
             contact_id: newContactData.id,
             workspace_id: selectedWorkspace!.workspace_id,
-            field_name: field.name.trim(),
+            field_name: field.key.trim(),
             field_value: field.value.trim()
           }));
 
@@ -448,11 +449,11 @@ export function CRMContatos() {
 
         // Insert new extra info fields
         const fieldsToInsert = customFields
-          .filter(field => field.name.trim() && field.value.trim())
+          .filter(field => field.key.trim() && field.value.trim())
           .map(field => ({
             contact_id: editingContact.id,
             workspace_id: selectedWorkspace!.workspace_id,
-            field_name: field.name.trim(),
+            field_name: field.key.trim(),
             field_value: field.value.trim()
           }));
 
@@ -502,42 +503,69 @@ export function CRMContatos() {
       setIsSaving(false);
     }
   };
-  const handlePinField = () => {
-    if (!newFieldName.trim()) return;
-    setPinnedFields(prev => [...prev, newFieldName.trim()]);
-    setNewFieldName('');
-    setNewFieldValue('');
-    toast({
-      title: "Campo fixado",
-      description: "Agora você pode preencher o valor quando precisar"
-    });
-  };
+  const handleAddCustomField = () => {
+    if (!newCustomField.key.trim() || !newCustomField.value.trim()) {
+      toast({
+        title: "Erro",
+        description: "Preencha o nome do campo e o valor",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const removePinnedField = (index: number) => {
-    setPinnedFields(prev => prev.filter((_, i) => i !== index));
-  };
+    const fieldExists = customFields.some(field => field.key.toLowerCase() === newCustomField.key.trim().toLowerCase());
+    if (fieldExists) {
+      toast({
+        title: "Erro",
+        description: "Este campo já existe. Use um nome diferente.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const handleAddNewField = () => {
-    if (!newFieldName.trim() || !newFieldValue.trim()) return;
-    
     setCustomFields(prev => [...prev, {
-      name: newFieldName.trim(),
-      value: newFieldValue.trim()
+      key: newCustomField.key.trim(),
+      value: newCustomField.value.trim()
     }]);
     
-    // Clear inputs
-    setNewFieldName('');
-    setNewFieldValue('');
+    setNewCustomField({ key: '', value: '' });
   };
   
-  const updateCustomField = (index: number, field: 'name' | 'value', value: string) => {
-    setCustomFields(prev => prev.map((item, i) => i === index ? {
-      ...item,
-      [field]: value
-    } : item));
+  const updateCustomField = (index: number, key: string, value: string) => {
+    setCustomFields(customFields.map((field, i) => i === index ? {
+      ...field,
+      [key]: value
+    } : field));
   };
-  const removeCustomField = (index: number) => {
+
+  const handleRemoveCustomField = (index: number) => {
     setCustomFields(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFieldIcon = (fieldKey: string) => {
+    const key = fieldKey.toLowerCase();
+    if (key.includes('email') || key.includes('e-mail')) {
+      return <Mail className="h-4 w-4" />;
+    }
+    if (key.includes('telefone') || key.includes('phone') || key.includes('celular')) {
+      return <Phone className="h-4 w-4" />;
+    }
+    if (key.includes('cep') || key.includes('zip')) {
+      return <MapPin className="h-4 w-4" />;
+    }
+    if (key.includes('endereço') || key.includes('address') || key.includes('rua')) {
+      return <Home className="h-4 w-4" />;
+    }
+    if (key.includes('perfil') || key.includes('tipo') || key.includes('categoria')) {
+      return <User className="h-4 w-4" />;
+    }
+    if (key.includes('país') || key.includes('country') || key.includes('estado')) {
+      return <Globe className="h-4 w-4" />;
+    }
+    if (key.includes('cpf') || key.includes('cnpj') || key.includes('documento')) {
+      return <FileText className="h-4 w-4" />;
+    }
+    return <FileText className="h-4 w-4" />;
   };
 
   const handleAddTagToContact = () => {
@@ -819,82 +847,118 @@ export function CRMContatos() {
             <div>
               <Label className="text-sm font-medium">Informações adicionais</Label>
               <div className="space-y-3 mt-2">
-                
-                {/* Lista de campos fixados (só nome, sem valor) */}
-                {pinnedFields.map((fieldName, index) => (
-                  <div key={`pinned-${index}`} className="flex gap-2 items-center">
-                    <Pin className="h-4 w-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                    <Input 
-                      value={fieldName} 
-                      readOnly
-                      className="flex-1 font-medium bg-muted"
+                {/* Lista de campos existentes - Cards compactos */}
+                <div className="space-y-3">
+                  {customFields.map((field, index) => (
+                    <div key={index} className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all">
+                      <div className="flex items-start gap-3">
+                        {/* Ícone dinâmico */}
+                        <div className="mt-0.5 text-muted-foreground">
+                          {getFieldIcon(field.key)}
+                        </div>
+                        
+                        <div className="flex-1 space-y-1 min-w-0">
+                          {/* Label do campo - EDITÁVEL com double-click */}
+                          {editingFieldIndex === index && editingFieldType === 'key' ? (
+                            <input
+                              type="text"
+                              value={field.key}
+                              onChange={e => updateCustomField(index, 'key', e.target.value)}
+                              onBlur={() => {
+                                setEditingFieldIndex(null);
+                                setEditingFieldType(null);
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              autoFocus
+                              className="w-full text-xs font-bold uppercase tracking-wide bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                            />
+                          ) : (
+                            <p
+                              className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer"
+                              onDoubleClick={() => {
+                                setEditingFieldIndex(index);
+                                setEditingFieldType('key');
+                              }}
+                              title="Clique duas vezes para editar"
+                            >
+                              {field.key}
+                            </p>
+                          )}
+                          
+                          {/* Valor editável com underline inline */}
+                          {editingFieldIndex === index && editingFieldType === 'value' ? (
+                            <input
+                              type="text"
+                              value={field.value}
+                              onChange={e => updateCustomField(index, 'value', e.target.value)}
+                              onBlur={() => {
+                                setEditingFieldIndex(null);
+                                setEditingFieldType(null);
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              autoFocus
+                              className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                            />
+                          ) : (
+                            <p
+                              onDoubleClick={() => {
+                                setEditingFieldIndex(index);
+                                setEditingFieldType('value');
+                              }}
+                              className="text-sm font-normal text-muted-foreground cursor-pointer truncate"
+                              title="Clique duas vezes para editar"
+                            >
+                              {field.value || 'Clique para adicionar'}
+                            </p>
+                          )}
+                        </div>
+                        
+                        {/* Botão delete - visível apenas no hover */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          onClick={() => handleRemoveCustomField(index)}
+                        >
+                          <X className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Adicionar novo campo */}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
                       placeholder="Nome do campo"
+                      value={newCustomField.key}
+                      onChange={e => setNewCustomField(prev => ({ ...prev, key: e.target.value }))}
+                      className="text-sm h-9"
                     />
-                    <Input 
-                      placeholder="Preencher valor..." 
-                      className="flex-1"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => removePinnedField(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                
-                {/* Lista de campos completos (nome + valor) */}
-                {customFields.map((field, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <Pin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <Input 
-                      value={field.name} 
-                      onChange={e => updateCustomField(index, 'name', e.target.value)} 
-                      className="flex-1"
-                      placeholder="Nome do campo"
-                    />
-                    <Input 
-                      value={field.value} 
-                      onChange={e => updateCustomField(index, 'value', e.target.value)} 
-                      className="flex-1"
+                    <Input
                       placeholder="Valor"
+                      value={newCustomField.value}
+                      onChange={e => setNewCustomField(prev => ({ ...prev, value: e.target.value }))}
+                      className="text-sm h-9"
                     />
-                    <Button variant="ghost" size="icon" onClick={() => removeCustomField(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                ))}
-                
-                {/* Inputs para adicionar novo campo */}
-                <div className="flex gap-2 items-center">
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={handlePinField}
-                    disabled={!newFieldName.trim()}
-                    className="text-yellow-500 hover:text-yellow-600"
-                    title="Fixar apenas o nome do campo"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleAddCustomField}
+                    disabled={!newCustomField.key.trim() || !newCustomField.value.trim()}
                   >
-                    <Pin className="h-4 w-4" />
-                  </Button>
-                  <Input 
-                    placeholder="Nome do campo" 
-                    value={newFieldName}
-                    onChange={e => setNewFieldName(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input 
-                    placeholder="Valor" 
-                    value={newFieldValue}
-                    onChange={e => setNewFieldValue(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={handleAddNewField}
-                    disabled={!newFieldName.trim() || !newFieldValue.trim()}
-                    className="text-green-600 hover:text-green-700"
-                    title="Adicionar campo completo"
-                  >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar campo
                   </Button>
                 </div>
               </div>
