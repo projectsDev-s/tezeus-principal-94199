@@ -64,6 +64,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { queues } = useQueues();
   const { userRole } = useAuth();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
+  
+  // Detectar se está na master-dashboard
+  const isInMasterDashboard = window.location.pathname === '/master-dashboard';
 
   // Helper function to build navigation paths
   const getNavigationPath = (path: string) => {
@@ -1005,6 +1008,19 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                           <span className="text-sm text-muted-foreground flex-1">
                             Nenhum pipeline encontrado para esta empresa
                           </span>
+                          {!isInMasterDashboard && (
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                            >
+                              <Link to={getNavigationPath('/crm-negocios')}>
+                                Criar Pipeline
+                                <ArrowRight className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
