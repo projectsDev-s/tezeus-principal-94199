@@ -61,23 +61,23 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
     console.log('📝 Opening edit modal for workspace:', workspace);
     
     try {
-      // Usar edge function que tem service role
-      const { data: result, error } = await supabase.functions.invoke('get-workspace-limits', {
-        body: { workspaceId: workspace.workspace_id }
-      });
+      // Buscar diretamente da tabela ao invés da edge function
+      const { data: limitData, error } = await supabase
+        .from('workspace_limits')
+        .select('connection_limit, user_limit')
+        .eq('workspace_id', workspace.workspace_id)
+        .maybeSingle();
+      
+      console.log('📊 Limits from database:', limitData);
       
       if (error) {
         console.error('❌ Error fetching workspace limits:', error);
-        return;
       }
       
-      console.log('📊 Raw result from edge function:', result);
+      const connectionLimit = limitData?.connection_limit ?? 0;
+      const userLimit = limitData?.user_limit ?? 0;
       
-      // Os valores vêm como connectionLimit e userLimit do edge function
-      const connectionLimit = result?.connectionLimit ?? 0;
-      const userLimit = result?.userLimit ?? 0;
-      
-      console.log('🔍 Extracted values - connectionLimit:', connectionLimit, 'userLimit:', userLimit);
+      console.log('🔍 Final values - connectionLimit:', connectionLimit, 'userLimit:', userLimit);
       
       const workspaceData = {
         workspace_id: workspace.workspace_id,
@@ -87,7 +87,7 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
         userLimit: userLimit
       };
       
-      console.log('✅ Final workspace data being set:', workspaceData);
+      console.log('✅ Setting workspace data:', workspaceData);
       
       setEditingWorkspace(workspaceData);
       setShowCreateModal(true);
