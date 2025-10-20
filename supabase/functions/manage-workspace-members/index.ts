@@ -192,7 +192,7 @@ serve(async (req) => {
         // Fetch user details separately 
         const { data: users, error: usersError } = await supabase
           .from('system_users')
-          .select('id, name, email, profile, phone')
+          .select('id, name, email, profile, phone, status')
           .in('id', userIds)
 
         if (usersError) {
@@ -203,9 +203,17 @@ serve(async (req) => {
           )
         }
 
+        // Fetch user cargos
+        const { data: userCargos } = await supabase
+          .from('system_user_cargos')
+          .select('user_id, cargo_id, cargos(id, nome)')
+          .in('user_id', userIds)
+
         // Transform the data to match the expected format
         let members = membersData.map(member => {
           const user = users?.find(u => u.id === member.user_id)
+          const cargos = userCargos?.filter(uc => uc.user_id === member.user_id) || []
+          
           return {
             id: member.id,
             workspace_id: workspaceId,
@@ -218,15 +226,15 @@ serve(async (req) => {
               name: user.name,
               email: user.email,
               profile: user.profile,
-              phone: user.phone
+              phone: user.phone,
+              status: user.status,
+              cargo_names: cargos.map(c => c.cargos?.nome).filter(Boolean)
             } : null
           }
         })
 
-        // Filter out master users if current user is not master (hide master users from admins)
-        if (!isMaster) {
-          members = members.filter(member => member.user?.profile !== 'master')
-        }
+        // Always filter out master users from workspace member list
+        members = members.filter(member => member.user?.profile !== 'master')
 
         return new Response(
           JSON.stringify({ success: true, members }),

@@ -401,11 +401,10 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">Usuário</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="master">Master</SelectItem>
-                    </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -431,34 +430,66 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
           {/* Members Table */}
           <div className="border rounded-lg">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead>Adicionado em</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Perfil</TableHead>
+                        <TableHead>Cargo</TableHead>
+                        <TableHead>Função</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Adicionado em</TableHead>
+                        <TableHead className="w-[100px]">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : members.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhum membro encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
-                  members.map((member) => (
+                  members
+                    .filter(member => member.user?.profile !== 'master')
+                    .map((member) => (
                     <TableRow key={member.id}>
-                      <TableCell className="font-medium">{member.user?.name || 'N/A'}</TableCell>
-                      <TableCell>{member.user?.email || 'N/A'}</TableCell>
+                      <TableCell className="font-medium">
+                        {member.user?.name || 'N/A'}
+                      </TableCell>
+                      
+                      <TableCell className="text-muted-foreground">
+                        {member.user?.email || 'N/A'}
+                      </TableCell>
+                      
+                      <TableCell>
+                        <span className="capitalize">{member.user?.profile || 'N/A'}</span>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {member.user?.cargo_names && member.user.cargo_names.length > 0 ? (
+                            member.user.cargo_names.map((cargoName, index) => (
+                              <Badge 
+                                key={index} 
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {cargoName}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      
                       <TableCell>
                         {editingMember?.id === member.id ? (
                           <Select 
@@ -467,13 +498,12 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                               handleUpdateRole(member.id, value)
                             }
                           >
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-32">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="user">Usuário</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                              <SelectItem value="master">Master</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -482,12 +512,23 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                           </Badge>
                         )}
                       </TableCell>
+
                       <TableCell>
-                        <Badge variant="outline">
-                          {member.user?.profile || 'user'}
+                        <Badge 
+                          variant={member.user?.status === 'active' ? 'secondary' : 'outline'} 
+                          className={member.user?.status === 'active' 
+                            ? "bg-brand-yellow text-black hover:bg-brand-yellow-hover rounded-full px-3 py-1" 
+                            : "border-destructive text-destructive rounded-full px-3 py-1"
+                          }
+                        >
+                          {member.user?.status === 'active' ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(member.created_at).toLocaleDateString()}</TableCell>
+                      
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(member.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
