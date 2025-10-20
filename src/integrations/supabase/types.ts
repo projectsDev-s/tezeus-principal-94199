@@ -1081,6 +1081,7 @@ export type Database = {
           origem_resposta: string | null
           quoted_message: Json | null
           read_at: string | null
+          reply_to_message_id: string | null
           sender_id: string | null
           sender_type: string
           status: string | null
@@ -1103,6 +1104,7 @@ export type Database = {
           origem_resposta?: string | null
           quoted_message?: Json | null
           read_at?: string | null
+          reply_to_message_id?: string | null
           sender_id?: string | null
           sender_type: string
           status?: string | null
@@ -1125,6 +1127,7 @@ export type Database = {
           origem_resposta?: string | null
           quoted_message?: Json | null
           read_at?: string | null
+          reply_to_message_id?: string | null
           sender_id?: string | null
           sender_type?: string
           status?: string | null
@@ -1136,6 +1139,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
           {
