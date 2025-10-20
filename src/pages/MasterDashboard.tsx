@@ -104,16 +104,17 @@ export default function MasterDashboard() {
   };
 
   const handleEditWorkspace = async (workspace: Workspace) => {
-    // Buscar connection limit para esta workspace
+    // Buscar connection limit e user limit para esta workspace
     const { data: limitData } = await supabase
       .from('workspace_limits')
-      .select('connection_limit')
+      .select('connection_limit, user_limit')
       .eq('workspace_id', workspace.workspace_id)
       .single();
     
     setEditingWorkspace({
       ...workspace,
-      connectionLimit: limitData?.connection_limit || 1
+      connectionLimit: limitData?.connection_limit || 1,
+      userLimit: limitData?.user_limit || 5
     });
     setCreateWorkspaceModalOpen(true);
   };

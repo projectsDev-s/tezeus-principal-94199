@@ -249,6 +249,47 @@ serve(async (req) => {
           )
         }
 
+        // Check user limit before adding
+        const { data: limits, error: limitsError } = await supabase
+          .from('workspace_limits')
+          .select('user_limit')
+          .eq('workspace_id', workspaceId)
+          .maybeSingle()
+
+        if (limitsError) {
+          console.error('Error fetching workspace limits:', limitsError)
+        }
+
+        const userLimit = limits?.user_limit || 5
+
+        // Count current users (excluding master users who are hidden)
+        const { count: currentUserCount, error: countError } = await supabase
+          .from('workspace_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId)
+          .eq('is_hidden', false)
+
+        if (countError) {
+          console.error('Error counting workspace members:', countError)
+          return new Response(
+            JSON.stringify({ success: false, error: 'Failed to check workspace user limit' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        console.log('Current users:', currentUserCount, 'Limit:', userLimit)
+
+        // Check if limit reached (only for non-master workspaces)
+        if (!isMaster && currentUserCount && currentUserCount >= userLimit) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: `Limite de usuários atingido. Atual: ${currentUserCount}/${userLimit}. Entre em contato com o administrador para aumentar o limite.` 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
         const { data: memberData, error: memberError } = await supabase
           .from('workspace_members')
           .insert({

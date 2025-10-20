@@ -19,6 +19,7 @@ interface CreateWorkspaceModalProps {
     name: string;
     cnpj?: string;
     connectionLimit?: number;
+    userLimit?: number;
   };
 }
 
@@ -27,6 +28,7 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
     name: "",
     cnpj: "",
     connectionLimit: 1,
+    userLimit: 5,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createWorkspace, updateWorkspace } = useWorkspaces();
@@ -40,9 +42,10 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
         name: workspace.name,
         cnpj: workspace.cnpj || "",
         connectionLimit: workspace.connectionLimit || 1,
+        userLimit: workspace.userLimit || 5,
       });
     } else {
-      setFormData({ name: "", cnpj: "", connectionLimit: 1 });
+      setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
     }
   }, [workspace]);
 
@@ -61,13 +64,14 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
           name: formData.name.trim(),
           cnpj: formData.cnpj.trim() || undefined,
           connectionLimit: formData.connectionLimit,
+          userLimit: formData.userLimit,
         });
       } else {
-        await createWorkspace(formData.name.trim(), formData.cnpj.trim() || undefined, formData.connectionLimit);
+        await createWorkspace(formData.name.trim(), formData.cnpj.trim() || undefined, formData.connectionLimit, formData.userLimit);
       }
       
       // Reset form
-      setFormData({ name: "", cnpj: "", connectionLimit: 1 });
+      setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
       onOpenChange(false);
     } catch (error) {
       // Error is handled in the hook
@@ -77,7 +81,7 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
   };
 
   const handleCancel = () => {
-    setFormData({ name: "", cnpj: "", connectionLimit: 1 });
+    setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
     onOpenChange(false);
   };
 
@@ -124,6 +128,23 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
             />
             <p className="text-xs text-muted-foreground">
               Número máximo de conexões WhatsApp permitidas para esta empresa
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="userLimit">Limite de Usuários *</Label>
+            <Input
+              id="userLimit"
+              type="number"
+              min="1"
+              max="500"
+              value={formData.userLimit}
+              onChange={(e) => setFormData(prev => ({ ...prev, userLimit: parseInt(e.target.value) || 5 }))}
+              placeholder="5"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Número máximo de usuários que podem ser criados para esta empresa
             </p>
           </div>
 

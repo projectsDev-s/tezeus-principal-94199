@@ -6,6 +6,7 @@ interface WorkspaceLimit {
   id: string;
   workspace_id: string;
   connection_limit: number;
+  user_limit: number;
   created_at: string;
   updated_at: string;
 }
@@ -16,9 +17,16 @@ interface ConnectionUsage {
   canCreateMore: boolean;
 }
 
+interface UserUsage {
+  current: number;
+  limit: number;
+  canCreateMore: boolean;
+}
+
 export function useWorkspaceLimits(workspaceId: string) {
   const [limits, setLimits] = useState<WorkspaceLimit | null>(null);
   const [usage, setUsage] = useState<ConnectionUsage | null>(null);
+  const [userUsage, setUserUsage] = useState<UserUsage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -62,13 +70,34 @@ export function useWorkspaceLimits(workspaceId: string) {
       const currentLimit = limitsData?.connection_limit || 1;
       const currentUsage = connectionCount || 0;
 
-      console.log('✅ useWorkspaceLimits: Final values - current:', currentUsage, 'limit:', currentLimit, 'canCreateMore:', currentUsage < currentLimit);
+      // Get current user count for this workspace
+      const { count: userCount, error: userCountError } = await supabase
+        .from('workspace_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId);
+
+      console.log('📊 useWorkspaceLimits: Users count:', userCount);
+
+      if (userCountError) {
+        console.error('❌ useWorkspaceLimits: Error counting users:', userCountError);
+        throw userCountError;
+      }
+
+      const currentUserLimit = limitsData?.user_limit || 5;
+      const currentUserUsage = userCount || 0;
+
+      console.log('✅ useWorkspaceLimits: Final values - connections:', currentUsage, '/', currentLimit, 'users:', currentUserUsage, '/', currentUserLimit);
 
       setLimits(limitsData);
       setUsage({
         current: currentUsage,
         limit: currentLimit,
         canCreateMore: currentUsage < currentLimit
+      });
+      setUserUsage({
+        current: currentUserUsage,
+        limit: currentUserLimit,
+        canCreateMore: currentUserUsage < currentUserLimit
       });
 
     } catch (error) {
@@ -115,6 +144,20 @@ export function useWorkspaceLimits(workspaceId: string) {
         {
           event: '*',
           schema: 'public',
+          table: 'workspace_members',
+          filter: `workspace_id=eq.${workspaceId}`
+        },
+        (payload) => {
+          console.log('🔔 Workspace member change detected:', payload);
+          // Refresh when users are added or removed
+          fetchLimits();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'workspace_limits',
           filter: `workspace_id=eq.${workspaceId}`
         },
@@ -135,6 +178,7 @@ export function useWorkspaceLimits(workspaceId: string) {
   return {
     limits,
     usage,
+    userUsage,
     isLoading,
     refreshLimits: fetchLimits
   };

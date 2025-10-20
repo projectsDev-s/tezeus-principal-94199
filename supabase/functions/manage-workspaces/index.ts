@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, workspaceId, name, cnpj, connectionLimit, isActive } = await req.json();
-    console.log('Request received:', { action, workspaceId, name, cnpj, connectionLimit, isActive });
+    const { action, workspaceId, name, cnpj, connectionLimit, userLimit, isActive } = await req.json();
+    console.log('Request received:', { action, workspaceId, name, cnpj, connectionLimit, userLimit, isActive });
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -139,7 +139,8 @@ Deno.serve(async (req) => {
         .from('workspace_limits')
         .insert({ 
           workspace_id: data.id, 
-          connection_limit: connectionLimit || 1 
+          connection_limit: connectionLimit || 1,
+          user_limit: userLimit || 5
         });
 
       if (limitsError) {
@@ -177,9 +178,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update connection limit if provided
-      if (connectionLimit !== undefined) {
-        console.log('Updating connection limit for workspace:', workspaceId, 'to:', connectionLimit);
+      // Update connection limit and/or user limit if provided
+      if (connectionLimit !== undefined || userLimit !== undefined) {
+        console.log('Updating limits for workspace:', workspaceId, 'connectionLimit:', connectionLimit, 'userLimit:', userLimit);
         
         // Use service role to bypass RLS for workspace_limits operations
         const { data: existingLimit, error: checkError } = await supabase
@@ -199,10 +200,15 @@ Deno.serve(async (req) => {
         let limitError;
         if (existingLimit) {
           console.log('Updating existing limit');
+          // Build update object with only provided values
+          const updateObj: any = { updated_at: new Date().toISOString() };
+          if (connectionLimit !== undefined) updateObj.connection_limit = connectionLimit;
+          if (userLimit !== undefined) updateObj.user_limit = userLimit;
+          
           // Update existing limit
           const { error } = await supabase
             .from('workspace_limits')
-            .update({ connection_limit: connectionLimit, updated_at: new Date().toISOString() })
+            .update(updateObj)
             .eq('workspace_id', workspaceId);
           limitError = error;
         } else {
@@ -212,7 +218,8 @@ Deno.serve(async (req) => {
             .from('workspace_limits')
             .insert({ 
               workspace_id: workspaceId, 
-              connection_limit: connectionLimit 
+              connection_limit: connectionLimit || 1,
+              user_limit: userLimit || 5
             });
           limitError = error;
         }

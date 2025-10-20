@@ -58,10 +58,10 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
   };
 
   const handleEditClick = async (workspace: any) => {
-    // Fetch the connection limit for this workspace
+    // Fetch the connection limit and user limit for this workspace
     const { data: limitData } = await supabase
       .from('workspace_limits')
-      .select('connection_limit')
+      .select('connection_limit, user_limit')
       .eq('workspace_id', workspace.workspace_id)
       .single();
     
@@ -69,7 +69,8 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
       workspace_id: workspace.workspace_id,
       name: workspace.name,
       cnpj: workspace.cnpj,
-      connectionLimit: limitData?.connection_limit || 1
+      connectionLimit: limitData?.connection_limit || 1,
+      userLimit: limitData?.user_limit || 5
     });
     setShowCreateModal(true);
   };
