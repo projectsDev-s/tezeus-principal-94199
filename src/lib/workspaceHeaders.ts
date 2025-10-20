@@ -1,4 +1,5 @@
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useParams } from 'react-router-dom';
 
 /**
  * Standard headers for Edge Function calls that include workspace context
@@ -6,6 +7,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
  */
 export const useWorkspaceHeaders = () => {
   const { selectedWorkspace } = useWorkspace();
+  const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
 
   const getHeaders = () => {
     // Get current user from localStorage (custom auth system)
@@ -16,14 +18,24 @@ export const useWorkspaceHeaders = () => {
       throw new Error('Usuário não autenticado');
     }
 
-    if (!selectedWorkspace?.workspace_id) {
+    // Priorizar workspaceId da URL (para Masters navegando entre workspaces)
+    const workspaceId = urlWorkspaceId || selectedWorkspace?.workspace_id;
+    
+    if (!workspaceId) {
       throw new Error('Nenhum workspace selecionado');
     }
+
+    console.log('🔍 [workspaceHeaders] Headers gerados:', {
+      userId: currentUserData.id,
+      urlWorkspaceId,
+      selectedWorkspaceId: selectedWorkspace?.workspace_id,
+      finalWorkspaceId: workspaceId
+    });
 
     return {
       'x-system-user-id': currentUserData.id,
       'x-system-user-email': currentUserData.email || '',
-      'x-workspace-id': selectedWorkspace.workspace_id
+      'x-workspace-id': workspaceId
     };
   };
 
