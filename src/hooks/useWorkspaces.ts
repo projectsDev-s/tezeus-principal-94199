@@ -259,6 +259,7 @@ export function useWorkspaces() {
     fetchWorkspaces,
     createWorkspace,
     updateWorkspace,
-    deleteWorkspace
+    deleteWorkspace,
+    clearCache: () => setCache(null) // Adicionar função para limpar cache
   };
 }

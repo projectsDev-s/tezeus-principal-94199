@@ -35,7 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
-  const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace } = useWorkspaces();
+  const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace, clearCache } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,7 +57,7 @@ export default function MasterDashboard() {
 
   // Realtime subscription para atualizar lista automaticamente
   useEffect(() => {
-    if (!fetchWorkspaces) return;
+    if (!fetchWorkspaces || !clearCache) return;
 
     const channel = supabase
       .channel('workspaces-realtime-changes')
@@ -70,10 +70,12 @@ export default function MasterDashboard() {
         },
         (payload) => {
           console.log('🔄 Workspace change detected:', payload.eventType);
+          // Limpar cache antes de buscar novos dados
+          clearCache();
           // Usar setTimeout para evitar race conditions
           setTimeout(() => {
             fetchWorkspaces();
-          }, 500);
+          }, 300);
         }
       )
       .subscribe((status) => {
