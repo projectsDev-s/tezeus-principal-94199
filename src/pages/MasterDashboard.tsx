@@ -4,6 +4,7 @@ import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCi
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { useWorkspace, Workspace } from '@/contexts/WorkspaceContext';
@@ -49,6 +50,7 @@ export default function MasterDashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
 
   // Verificar se o usuário é realmente master
   if (userRole !== 'master') {
@@ -116,6 +118,7 @@ export default function MasterDashboard() {
   const handleDeleteWorkspace = (workspace: Workspace) => {
     setWorkspaceToDelete(workspace);
     setDeleteDialogOpen(true);
+    setDeleteConfirmationText(''); // Resetar o input de confirmação
   };
 
   const confirmDelete = async () => {
@@ -397,22 +400,50 @@ export default function MasterDashboard() {
       />
 
       {/* Dialog de Confirmação de Exclusão */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog 
+        open={deleteDialogOpen} 
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setDeleteConfirmationText('');
+            setWorkspaceToDelete(null);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              ⚠️ Tem certeza que deseja excluir a empresa "{workspaceToDelete?.name}"?<br/>
-              Esta ação não pode ser desfeita e irá deletar permanentemente TODOS os dados relacionados: conversas, contatos, conexões, configurações, tags, etc.
+            <AlertDialogTitle>⚠️ Confirmar exclusão da empresa</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Tem certeza que deseja excluir a empresa <strong>"{workspaceToDelete?.name}"</strong>?
+              </p>
+              <p className="text-destructive font-semibold">
+                Esta ação não pode ser desfeita e irá deletar permanentemente TODOS os dados relacionados: conversas, contatos, conexões, configurações, tags, etc.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="delete-confirmation">
+                  Para confirmar, digite <strong>"excluir empresa"</strong> no campo abaixo:
+                </Label>
+                <Input
+                  id="delete-confirmation"
+                  type="text"
+                  placeholder="Digite 'excluir empresa' para confirmar"
+                  value={deleteConfirmationText}
+                  onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                  autoComplete="off"
+                  className="border-destructive focus-visible:ring-destructive"
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteConfirmationText !== 'excluir empresa'}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Excluir
+              Excluir Empresa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
