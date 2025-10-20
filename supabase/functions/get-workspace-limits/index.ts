@@ -70,8 +70,8 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        connectionLimit: limitsData?.connection_limit || 1,
-        userLimit: limitsData?.user_limit || 5,
+        connectionLimit: limitsData?.connection_limit ?? 0,
+        userLimit: limitsData?.user_limit ?? 0,
         connectionsCount: connectionsCount || 0,
         usersCount: usersCount || 0,
       }),

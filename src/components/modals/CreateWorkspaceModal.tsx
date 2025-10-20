@@ -27,8 +27,8 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
   const [formData, setFormData] = useState({
     name: "",
     cnpj: "",
-    connectionLimit: 1,
-    userLimit: 5,
+    connectionLimit: 0,
+    userLimit: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createWorkspace, updateWorkspace } = useWorkspaces();
@@ -43,15 +43,15 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
       const newFormData = {
         name: workspace.name || "",
         cnpj: workspace.cnpj || "",
-        connectionLimit: workspace.connectionLimit ?? 1,
-        userLimit: workspace.userLimit ?? 5,
+        connectionLimit: workspace.connectionLimit ?? 0,
+        userLimit: workspace.userLimit ?? 0,
       };
       
       console.log('✅ Setting form data:', newFormData);
       setFormData(newFormData);
     } else {
       console.log('🆕 Resetting form data for new workspace');
-      setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
+      setFormData({ name: "", cnpj: "", connectionLimit: 0, userLimit: 0 });
     }
   }, [workspace, open]);
 
@@ -77,7 +77,7 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
       }
       
       // Reset form
-      setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
+      setFormData({ name: "", cnpj: "", connectionLimit: 0, userLimit: 0 });
       onOpenChange(false);
     } catch (error) {
       // Error is handled in the hook
@@ -87,7 +87,7 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
   };
 
   const handleCancel = () => {
-    setFormData({ name: "", cnpj: "", connectionLimit: 1, userLimit: 5 });
+    setFormData({ name: "", cnpj: "", connectionLimit: 0, userLimit: 0 });
     onOpenChange(false);
   };
 
@@ -126,8 +126,8 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
               id="connectionLimit"
               type="text"
               value={formData.connectionLimit}
-              onChange={(e) => setFormData(prev => ({ ...prev, connectionLimit: parseInt(e.target.value) || 1 }))}
-              placeholder="1"
+              onChange={(e) => setFormData(prev => ({ ...prev, connectionLimit: parseInt(e.target.value) || 0 }))}
+              placeholder="0"
               required
             />
             <p className="text-xs text-muted-foreground">
@@ -141,8 +141,8 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
               id="userLimit"
               type="text"
               value={formData.userLimit}
-              onChange={(e) => setFormData(prev => ({ ...prev, userLimit: parseInt(e.target.value) || 5 }))}
-              placeholder="5"
+              onChange={(e) => setFormData(prev => ({ ...prev, userLimit: parseInt(e.target.value) || 0 }))}
+              placeholder="0"
               required
             />
             <p className="text-xs text-muted-foreground">
