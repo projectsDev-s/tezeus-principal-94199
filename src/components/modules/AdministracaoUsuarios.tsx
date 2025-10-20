@@ -163,7 +163,7 @@ export function AdministracaoUsuarios() {
                 </TableCell>
                <TableCell>
                 <span className="text-foreground">
-                   {user.empresa || (user.workspaces?.map(w => w.name).join(", ") || "-")} 
+                   {user.profile === 'master' ? 'Todas' : (user.empresa || (user.workspaces?.map(w => w.name).join(", ") || "-"))} 
                   </span>
             </TableCell>
                 <TableCell>
