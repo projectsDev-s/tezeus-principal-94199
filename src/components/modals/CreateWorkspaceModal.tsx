@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreateWorkspaceModalProps {
   open: boolean;
@@ -35,30 +36,53 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
   
   const isEditing = !!workspace;
 
-  // Update form data when workspace prop changes
+  // Fetch limits directly from database when modal opens in edit mode
   React.useEffect(() => {
-    console.log('🔄 CreateWorkspaceModal: workspace prop changed:', workspace);
-    console.log('🔄 Modal open state:', open);
-    console.log('🔍 workspace.connectionLimit:', workspace?.connectionLimit);
-    console.log('🔍 workspace.userLimit:', workspace?.userLimit);
-    
-    if (workspace) {
-      const newFormData = {
-        name: workspace.name || "",
-        cnpj: workspace.cnpj || "",
-        connectionLimit: workspace.connectionLimit ?? 0,
-        userLimit: workspace.userLimit ?? 0,
-      };
+    const fetchLimitsDirectly = async () => {
+      if (!workspace?.workspace_id || !open) {
+        console.log('⏭️ Skipping direct fetch - no workspace or modal closed');
+        return;
+      }
+
+      console.log('🔍 Fetching limits directly for workspace:', workspace.workspace_id);
       
-      console.log('✅ Setting form data:', newFormData);
-      console.log('✅ connectionLimit value:', newFormData.connectionLimit, 'type:', typeof newFormData.connectionLimit);
-      console.log('✅ userLimit value:', newFormData.userLimit, 'type:', typeof newFormData.userLimit);
-      setFormData(newFormData);
-    } else {
-      console.log('🆕 Resetting form data for new workspace');
+      try {
+        const { data: limitData, error } = await supabase
+          .from('workspace_limits')
+          .select('connection_limit, user_limit')
+          .eq('workspace_id', workspace.workspace_id)
+          .maybeSingle();
+        
+        console.log('📊 Direct fetch result:', limitData);
+        
+        if (error) {
+          console.error('❌ Error fetching limits:', error);
+          return;
+        }
+
+        if (limitData) {
+          const newFormData = {
+            name: workspace.name || "",
+            cnpj: workspace.cnpj || "",
+            connectionLimit: limitData.connection_limit ?? 0,
+            userLimit: limitData.user_limit ?? 0,
+          };
+          
+          console.log('✅ Setting form data from direct fetch:', newFormData);
+          setFormData(newFormData);
+        }
+      } catch (error) {
+        console.error('❌ Exception fetching limits:', error);
+      }
+    };
+
+    if (workspace && open) {
+      fetchLimitsDirectly();
+    } else if (!workspace && open) {
+      console.log('🆕 New workspace - resetting form');
       setFormData({ name: "", cnpj: "", connectionLimit: 0, userLimit: 0 });
     }
-  }, [workspace, open]);
+  }, [workspace?.workspace_id, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
