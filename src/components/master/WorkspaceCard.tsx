@@ -43,9 +43,6 @@ export function WorkspaceCard({
             <CardTitle className="text-lg">{workspace.name}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {workspace.connections_count || 0} conexões
-            </Badge>
             <Badge 
               variant={workspace.is_active !== false ? 'default' : 'destructive'}
               className="text-xs"
@@ -110,9 +107,14 @@ export function WorkspaceCard({
           <>
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-5 w-32" />
           </>
         ) : (
           <>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Cable className="h-4 w-4" />
+              <span>{workspace.connections_count || 0} conexões</span>
+            </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" />
               <span>{stats.usersCount} usuários</span>
