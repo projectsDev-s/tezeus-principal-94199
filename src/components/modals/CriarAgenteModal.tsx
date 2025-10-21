@@ -12,10 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Bot, Eye, EyeOff } from "lucide-react";
+import { Bot, Eye, EyeOff, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { PromptEditorModal } from "./PromptEditorModal";
 
 interface CriarAgenteModalProps {
   open: boolean;
@@ -30,6 +31,7 @@ export function CriarAgenteModal({
 }: CriarAgenteModalProps) {
   const [loading, setLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
   const { workspaces, isLoading: loadingWorkspaces } = useWorkspaces();
 
   const [formData, setFormData] = useState({
@@ -168,13 +170,26 @@ export function CriarAgenteModal({
 
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Descrição do agente"
-                rows={3}
-              />
+              <div className="relative">
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Descrição do agente (clique no botão ao lado para usar o editor avançado)"
+                  rows={3}
+                  className="pr-12"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1"
+                  onClick={() => setShowPromptEditor(true)}
+                  title="Abrir editor de prompt com ações"
+                >
+                  <Wand2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -310,6 +325,13 @@ export function CriarAgenteModal({
           </Button>
         </div>
       </DialogContent>
+
+      <PromptEditorModal
+        open={showPromptEditor}
+        onOpenChange={setShowPromptEditor}
+        value={formData.description}
+        onChange={(value) => setFormData({ ...formData, description: value })}
+      />
     </Dialog>
   );
 }
