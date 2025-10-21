@@ -413,20 +413,7 @@ export function CRMContatos() {
       return;
     }
 
-    // Validar campos obrigatórios do workspace
-    const missingFields = workspaceFields.filter((field) => {
-      const value = customFields.find((f) => f.key === field.field_name)?.value;
-      return !value || value.trim() === "";
-    });
-
-    if (missingFields.length > 0) {
-      toast({
-        title: "Campos obrigatórios não preenchidos",
-        description: `Por favor, preencha: ${missingFields.map((f) => f.field_name).join(", ")}`,
-        variant: "destructive",
-      });
-      return;
-    }
+    // Campos padrões do workspace (não obrigatórios)
 
     setIsSaving(true);
 
@@ -989,7 +976,7 @@ export function CRMContatos() {
               <div>
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <Pin className="h-4 w-4 text-yellow-600" />
-                  Informações Obrigatórias
+                  Campos Padrões
                 </Label>
                 <div className="space-y-3 mt-2">
                   {workspaceFields.map((field) => {
@@ -1001,7 +988,7 @@ export function CRMContatos() {
                         className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
                       >
                         <Label className="text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
-                          {field.field_name} *
+                          {field.field_name}
                         </Label>
                         <Input
                           value={currentValue}
