@@ -70,7 +70,9 @@ export const useAuthState = () => {
       });
 
       if (error || !data.user) {
-        return { error: 'Email ou senha inválidos' };
+        // Retornar a mensagem de erro original da edge function
+        const errorMessage = data?.error || error?.message || 'Email ou senha inválidos';
+        return { error: errorMessage };
       }
 
       const user = data.user;
