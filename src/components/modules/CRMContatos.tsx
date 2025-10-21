@@ -5,7 +5,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, MessageCircle, Edit, Trash2, User, X, Mail, MapPin, Home, Globe, FileText, Pin } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Phone,
+  MessageCircle,
+  Edit,
+  Trash2,
+  User,
+  X,
+  Mail,
+  MapPin,
+  Home,
+  Globe,
+  FileText,
+  Pin,
+} from "lucide-react";
 import { ContactTags } from "@/components/chat/ContactTags";
 import { useContactTags } from "@/hooks/useContactTags";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -41,25 +56,25 @@ interface Contact {
   extra_info?: Record<string, any>;
 }
 export function CRMContatos() {
-  const {
-    selectedWorkspace
-  } = useWorkspace();
+  const { selectedWorkspace } = useWorkspace();
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [customFields, setCustomFields] = useState<Array<{
-    key: string;
-    value: string;
-  }>>([]);
+  const [customFields, setCustomFields] = useState<
+    Array<{
+      key: string;
+      value: string;
+    }>
+  >([]);
   const [newCustomField, setNewCustomField] = useState({
-    key: '',
-    value: ''
+    key: "",
+    value: "",
   });
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
-  const [editingFieldType, setEditingFieldType] = useState<'key' | 'value' | null>(null);
+  const [editingFieldType, setEditingFieldType] = useState<"key" | "value" | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -73,16 +88,12 @@ export function CRMContatos() {
   const [selectedContactForWhatsApp, setSelectedContactForWhatsApp] = useState<Contact | null>(null);
   const [isFieldConfigModalOpen, setIsFieldConfigModalOpen] = useState(false);
   const headerCheckboxRef = useRef<HTMLButtonElement>(null);
-  const {
-    tags
-  } = useTags();
-  const {
-    toast
-  } = useToast();
-  
+  const { tags } = useTags();
+  const { toast } = useToast();
+
   // Hook para campos obrigatórios do workspace
   const { fields: workspaceFields, refetch: refetchWorkspaceFields } = useWorkspaceContactFields(
-    selectedWorkspace?.workspace_id || null
+    selectedWorkspace?.workspace_id || null,
   );
 
   // Fetch contacts directly from contacts table
@@ -90,59 +101,65 @@ export function CRMContatos() {
     try {
       setIsLoading(true);
       if (!selectedWorkspace) {
-        console.warn('No workspace selected in CRM Contatos');
+        console.warn("No workspace selected in CRM Contatos");
         setContacts([]);
         return;
       }
 
       // Get all contacts from the workspace
-      const {
-        data: contactsData,
-        error: contactsError
-      } = await supabase.from('contacts').select('*').eq('workspace_id', selectedWorkspace.workspace_id).order('created_at', {
-        ascending: false
-      });
+      const { data: contactsData, error: contactsError } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("workspace_id", selectedWorkspace.workspace_id)
+        .order("created_at", {
+          ascending: false,
+        });
       if (contactsError) throw contactsError;
       if (!contactsData || contactsData.length === 0) {
         setContacts([]);
         return;
       }
-      const contactIds = contactsData.map(c => c.id);
+      const contactIds = contactsData.map((c) => c.id);
 
       // Get contact tags
-      const {
-        data: contactTagsData,
-        error: tagsError
-      } = await supabase.from('contact_tags').select(`
+      const { data: contactTagsData, error: tagsError } = await supabase
+        .from("contact_tags")
+        .select(
+          `
           contact_id,
           tags:tag_id (
             id,
             name,
             color
           )
-        `).in('contact_id', contactIds);
+        `,
+        )
+        .in("contact_id", contactIds);
       if (tagsError) throw tagsError;
 
       // Map tags to contacts
-      const contactsWithTags = (contactsData || []).map(contact => {
-        const contactTags = contactTagsData?.filter(ct => ct.contact_id === contact.id)?.map(ct => ({
-          name: ct.tags?.name || '',
-          color: ct.tags?.color || '#808080'
-        })) || [];
+      const contactsWithTags = (contactsData || []).map((contact) => {
+        const contactTags =
+          contactTagsData
+            ?.filter((ct) => ct.contact_id === contact.id)
+            ?.map((ct) => ({
+              name: ct.tags?.name || "",
+              color: ct.tags?.color || "#808080",
+            })) || [];
         return {
           id: contact.id,
           name: contact.name,
-          phone: contact.phone || '',
-          email: contact.email || '',
-          createdAt: format(new Date(contact.created_at), 'dd/MM/yyyy HH:mm:ss'),
+          phone: contact.phone || "",
+          email: contact.email || "",
+          createdAt: format(new Date(contact.created_at), "dd/MM/yyyy HH:mm:ss"),
           tags: contactTags,
           profile_image_url: contact.profile_image_url,
-          extra_info: contact.extra_info as Record<string, any> || {}
+          extra_info: (contact.extra_info as Record<string, any>) || {},
         };
       });
       setContacts(contactsWithTags);
     } catch (error) {
-      console.error('Error fetching contacts:', error);
+      console.error("Error fetching contacts:", error);
     } finally {
       setIsLoading(false);
     }
@@ -154,63 +171,85 @@ export function CRMContatos() {
   // Real-time subscription for contacts changes
   useEffect(() => {
     if (!selectedWorkspace) return;
-    const channel = supabase.channel('contacts-changes').on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'contacts',
-      filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-    }, async payload => {
-      const newContactData = payload.new;
-      const newContact: Contact = {
-        id: newContactData.id,
-        name: newContactData.name,
-        phone: newContactData.phone || '',
-        email: newContactData.email || '',
-        createdAt: format(new Date(newContactData.created_at), 'dd/MM/yyyy HH:mm:ss'),
-        tags: [],
-        profile_image_url: newContactData.profile_image_url,
-        extra_info: newContactData.extra_info as Record<string, any> || {}
-      };
-      setContacts(prev => [newContact, ...prev]);
-    }).on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'contacts',
-      filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-    }, () => {
-      // Refetch all contacts when any contact is updated
-      fetchContacts();
-    }).on('postgres_changes', {
-      event: 'DELETE',
-      schema: 'public',
-      table: 'contacts',
-      filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`
-    }, payload => {
-      const deletedId = payload.old.id;
-      setContacts(prev => prev.filter(c => c.id !== deletedId));
-    }).subscribe();
+    const channel = supabase
+      .channel("contacts-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "contacts",
+          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`,
+        },
+        async (payload) => {
+          const newContactData = payload.new;
+          const newContact: Contact = {
+            id: newContactData.id,
+            name: newContactData.name,
+            phone: newContactData.phone || "",
+            email: newContactData.email || "",
+            createdAt: format(new Date(newContactData.created_at), "dd/MM/yyyy HH:mm:ss"),
+            tags: [],
+            profile_image_url: newContactData.profile_image_url,
+            extra_info: (newContactData.extra_info as Record<string, any>) || {},
+          };
+          setContacts((prev) => [newContact, ...prev]);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "contacts",
+          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`,
+        },
+        () => {
+          // Refetch all contacts when any contact is updated
+          fetchContacts();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "contacts",
+          filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`,
+        },
+        (payload) => {
+          const deletedId = payload.old.id;
+          setContacts((prev) => prev.filter((c) => c.id !== deletedId));
+        },
+      )
+      .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [selectedWorkspace]);
 
   // Filter contacts based on search and tag filter
-  const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = !searchTerm || contact.name.toLowerCase().includes(searchTerm.toLowerCase()) || contact.phone.includes(searchTerm);
-    
+  const filteredContacts = contacts.filter((contact) => {
+    const matchesSearch =
+      !searchTerm ||
+      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.phone.includes(searchTerm);
+
     // Se nenhuma tag está selecionada, mostra todos os contatos
     if (selectedTagIds.length === 0) {
       return matchesSearch;
     }
-    
+
     // Se tags estão selecionadas, o contato deve ter pelo menos uma das tags selecionadas
-    const contactTagIds = contact.tags.map(tag => {
-      const foundTag = tags.find(t => t.name === tag.name);
-      return foundTag?.id;
-    }).filter(Boolean);
-    
-    const matchesTag = selectedTagIds.some(selectedId => contactTagIds.includes(selectedId));
-    
+    const contactTagIds = contact.tags
+      .map((tag) => {
+        const foundTag = tags.find((t) => t.name === tag.name);
+        return foundTag?.id;
+      })
+      .filter(Boolean);
+
+    const matchesTag = selectedTagIds.some((selectedId) => contactTagIds.includes(selectedId));
+
     return matchesSearch && matchesTag;
   });
   const handleDeleteContact = async (contact: Contact, muteToast?: boolean) => {
@@ -218,81 +257,91 @@ export function CRMContatos() {
       // Delete in the correct order due to foreign key constraints
 
       // 1. Delete messages first
-      const {
-        error: messagesError
-      } = await supabase.from('messages').delete().in('conversation_id', await supabase.from('conversations').select('id').eq('contact_id', contact.id).then(({
-        data
-      }) => data?.map(c => c.id) || []));
+      const { error: messagesError } = await supabase
+        .from("messages")
+        .delete()
+        .in(
+          "conversation_id",
+          await supabase
+            .from("conversations")
+            .select("id")
+            .eq("contact_id", contact.id)
+            .then(({ data }) => data?.map((c) => c.id) || []),
+        );
       if (messagesError) throw messagesError;
 
       // 2. Delete conversation tags
-      const {
-        error: conversationTagsError
-      } = await supabase.from('conversation_tags').delete().in('conversation_id', await supabase.from('conversations').select('id').eq('contact_id', contact.id).then(({
-        data
-      }) => data?.map(c => c.id) || []));
+      const { error: conversationTagsError } = await supabase
+        .from("conversation_tags")
+        .delete()
+        .in(
+          "conversation_id",
+          await supabase
+            .from("conversations")
+            .select("id")
+            .eq("contact_id", contact.id)
+            .then(({ data }) => data?.map((c) => c.id) || []),
+        );
       if (conversationTagsError) throw conversationTagsError;
 
       // 3. Delete conversation participants
-      const {
-        error: participantsError
-      } = await supabase.from('conversation_participants').delete().in('conversation_id', await supabase.from('conversations').select('id').eq('contact_id', contact.id).then(({
-        data
-      }) => data?.map(c => c.id) || []));
+      const { error: participantsError } = await supabase
+        .from("conversation_participants")
+        .delete()
+        .in(
+          "conversation_id",
+          await supabase
+            .from("conversations")
+            .select("id")
+            .eq("contact_id", contact.id)
+            .then(({ data }) => data?.map((c) => c.id) || []),
+        );
       if (participantsError) throw participantsError;
 
       // 4. Delete conversations
-      const {
-        error: conversationsError
-      } = await supabase.from('conversations').delete().eq('contact_id', contact.id);
+      const { error: conversationsError } = await supabase.from("conversations").delete().eq("contact_id", contact.id);
       if (conversationsError) throw conversationsError;
 
       // 5. Delete activities
-      const {
-        error: activitiesError
-      } = await supabase.from('activities').delete().eq('contact_id', contact.id);
+      const { error: activitiesError } = await supabase.from("activities").delete().eq("contact_id", contact.id);
       if (activitiesError) throw activitiesError;
 
       // 6. Delete contact tags
-      const {
-        error: contactTagsError
-      } = await supabase.from('contact_tags').delete().eq('contact_id', contact.id);
+      const { error: contactTagsError } = await supabase.from("contact_tags").delete().eq("contact_id", contact.id);
       if (contactTagsError) throw contactTagsError;
 
       // 7. Finally delete the contact
-      const {
-        error: contactError
-      } = await supabase.from('contacts').delete().eq('id', contact.id);
+      const { error: contactError } = await supabase.from("contacts").delete().eq("id", contact.id);
       if (contactError) throw contactError;
 
       // Update local state
-      setContacts(prev => prev.filter(c => c.id !== contact.id));
+      setContacts((prev) => prev.filter((c) => c.id !== contact.id));
       if (!muteToast) {
         toast({
           title: "Contato excluído",
-          description: "O contato e todos os dados relacionados foram removidos com sucesso."
+          description: "O contato e todos os dados relacionados foram removidos com sucesso.",
         });
       }
     } catch (error) {
-      console.error('Error deleting contact:', error);
+      console.error("Error deleting contact:", error);
       if (!muteToast) {
         toast({
           title: "Erro ao excluir",
           description: "Ocorreu um erro ao excluir o contato. Tente novamente.",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     }
   };
   const handleBulkDelete = async () => {
-    const contactsToDelete = contacts.filter(c => selectedIds.includes(c.id));
+    const contactsToDelete = contacts.filter((c) => selectedIds.includes(c.id));
     try {
       for (const contact of contactsToDelete) {
         await handleDeleteContact(contact, true);
       }
       toast({
         title: "Contatos excluídos",
-        description: `${contactsToDelete.length} contatos foram removidos com sucesso.`
+        description: `${contactsToDelete.length} contatos foram removidos com sucesso.`,
       });
       setSelectedIds([]);
       setIsBulkDeleteOpen(false);
@@ -300,7 +349,7 @@ export function CRMContatos() {
       toast({
         title: "Erro na exclusão em massa",
         description: "Ocorreu um erro ao excluir os contatos. Tente novamente.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -313,11 +362,11 @@ export function CRMContatos() {
       email: "",
       createdAt: "",
       tags: [],
-      extra_info: {}
+      extra_info: {},
     });
     // Start with empty fields
     setCustomFields([]);
-    setNewCustomField({ key: '', value: '' });
+    setNewCustomField({ key: "", value: "" });
   };
   const handleEditContact = async (contact: Contact) => {
     setEditingContact(contact);
@@ -325,18 +374,18 @@ export function CRMContatos() {
     // Load existing custom fields from contact_extra_info table
     try {
       const { data: extraInfoData, error } = await supabase
-        .from('contact_extra_info')
-        .select('*')
-        .eq('contact_id', contact.id)
-        .order('created_at', { ascending: true });
+        .from("contact_extra_info")
+        .select("*")
+        .eq("contact_id", contact.id)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
 
       if (extraInfoData && extraInfoData.length > 0) {
         // Map database fields to form fields
-        const existingFields = extraInfoData.map(field => ({
+        const existingFields = extraInfoData.map((field) => ({
           key: field.field_name,
-          value: field.field_value
+          value: field.field_value,
         }));
         setCustomFields(existingFields);
       } else {
@@ -344,12 +393,12 @@ export function CRMContatos() {
         setCustomFields([]);
       }
     } catch (error) {
-      console.error('Error loading extra info:', error);
+      console.error("Error loading extra info:", error);
       setCustomFields([]);
     }
-    
+
     // Reset new field inputs
-    setNewCustomField({ key: '', value: '' });
+    setNewCustomField({ key: "", value: "" });
   };
   const handleSaveContact = async () => {
     if (!editingContact) return;
@@ -359,22 +408,22 @@ export function CRMContatos() {
       toast({
         title: "Erro de validação",
         description: "O nome é obrigatório.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     // Validar campos obrigatórios do workspace
-    const missingFields = workspaceFields.filter(field => {
-      const value = customFields.find(f => f.key === field.field_name)?.value;
-      return !value || value.trim() === '';
+    const missingFields = workspaceFields.filter((field) => {
+      const value = customFields.find((f) => f.key === field.field_name)?.value;
+      return !value || value.trim() === "";
     });
 
     if (missingFields.length > 0) {
       toast({
         title: "Campos obrigatórios não preenchidos",
-        description: `Por favor, preencha: ${missingFields.map(f => f.field_name).join(', ')}`,
-        variant: "destructive"
+        description: `Por favor, preencha: ${missingFields.map((f) => f.field_name).join(", ")}`,
+        variant: "destructive",
       });
       return;
     }
@@ -385,22 +434,22 @@ export function CRMContatos() {
     if (isCreateMode && editingContact.phone.trim()) {
       // Sanitizar telefone para validação (adicionar 55 se não tiver)
       let sanitizedPhone = editingContact.phone.trim();
-      if (sanitizedPhone && !sanitizedPhone.startsWith('55')) {
-        sanitizedPhone = '55' + sanitizedPhone;
+      if (sanitizedPhone && !sanitizedPhone.startsWith("55")) {
+        sanitizedPhone = "55" + sanitizedPhone;
       }
 
       const { data: existingContact } = await supabase
-        .from('contacts')
-        .select('id, name')
-        .eq('workspace_id', selectedWorkspace!.workspace_id)
-        .eq('phone', sanitizedPhone)
+        .from("contacts")
+        .select("id, name")
+        .eq("workspace_id", selectedWorkspace!.workspace_id)
+        .eq("phone", sanitizedPhone)
         .maybeSingle();
-      
+
       if (existingContact) {
         toast({
           title: "Telefone já cadastrado",
           description: `Este número já pertence ao contato "${existingContact.name}".`,
-          variant: "destructive"
+          variant: "destructive",
         });
         setIsSaving(false);
         return;
@@ -411,39 +460,38 @@ export function CRMContatos() {
       if (isCreateMode) {
         // Sanitizar telefone adicionando 55 na frente se não tiver
         let sanitizedPhone = editingContact.phone.trim();
-        if (sanitizedPhone && !sanitizedPhone.startsWith('55')) {
-          sanitizedPhone = '55' + sanitizedPhone;
+        if (sanitizedPhone && !sanitizedPhone.startsWith("55")) {
+          sanitizedPhone = "55" + sanitizedPhone;
         }
 
         // Create new contact
-        const {
-          data: newContactData,
-          error
-        } = await supabase.from('contacts').insert({
-          name: editingContact.name.trim(),
-          phone: sanitizedPhone || null,
-          email: editingContact.email.trim() || null,
-          workspace_id: selectedWorkspace!.workspace_id
-        }).select().single();
+        const { data: newContactData, error } = await supabase
+          .from("contacts")
+          .insert({
+            name: editingContact.name.trim(),
+            phone: sanitizedPhone || null,
+            email: editingContact.email.trim() || null,
+            workspace_id: selectedWorkspace!.workspace_id,
+          })
+          .select()
+          .single();
         if (error) throw error;
 
         // Save custom fields to contact_extra_info table
         const fieldsToInsert = customFields
-          .filter(field => field.key.trim() && field.value.trim())
-          .map(field => ({
+          .filter((field) => field.key.trim() && field.value.trim())
+          .map((field) => ({
             contact_id: newContactData.id,
             workspace_id: selectedWorkspace!.workspace_id,
             field_name: field.key.trim(),
-            field_value: field.value.trim()
+            field_value: field.value.trim(),
           }));
 
         if (fieldsToInsert.length > 0) {
-          const { error: extraInfoError } = await supabase
-            .from('contact_extra_info')
-            .insert(fieldsToInsert);
-          
+          const { error: extraInfoError } = await supabase.from("contact_extra_info").insert(fieldsToInsert);
+
           if (extraInfoError) {
-            console.error('Error saving extra info:', extraInfoError);
+            console.error("Error saving extra info:", extraInfoError);
           }
         }
 
@@ -451,76 +499,78 @@ export function CRMContatos() {
         // Removido a adição manual para evitar duplicação
         toast({
           title: "Contato criado",
-          description: "O novo contato foi adicionado com sucesso."
+          description: "O novo contato foi adicionado com sucesso.",
         });
       } else {
         // Update existing contact
-        const {
-          error
-        } = await supabase.from('contacts').update({
-          name: editingContact.name.trim(),
-          email: editingContact.email.trim() || null,
-          updated_at: new Date().toISOString()
-          // phone removido - não pode ser alterado para preservar histórico
-        }).eq('id', editingContact.id);
+        const { error } = await supabase
+          .from("contacts")
+          .update({
+            name: editingContact.name.trim(),
+            email: editingContact.email.trim() || null,
+            updated_at: new Date().toISOString(),
+            // phone removido - não pode ser alterado para preservar histórico
+          })
+          .eq("id", editingContact.id);
         if (error) throw error;
 
         // Delete existing extra info fields
-        await supabase
-          .from('contact_extra_info')
-          .delete()
-          .eq('contact_id', editingContact.id);
+        await supabase.from("contact_extra_info").delete().eq("contact_id", editingContact.id);
 
         // Insert new extra info fields
         const fieldsToInsert = customFields
-          .filter(field => field.key.trim() && field.value.trim())
-          .map(field => ({
+          .filter((field) => field.key.trim() && field.value.trim())
+          .map((field) => ({
             contact_id: editingContact.id,
             workspace_id: selectedWorkspace!.workspace_id,
             field_name: field.key.trim(),
-            field_value: field.value.trim()
+            field_value: field.value.trim(),
           }));
 
         if (fieldsToInsert.length > 0) {
-          const { error: extraInfoError } = await supabase
-            .from('contact_extra_info')
-            .insert(fieldsToInsert);
-          
+          const { error: extraInfoError } = await supabase.from("contact_extra_info").insert(fieldsToInsert);
+
           if (extraInfoError) {
-            console.error('Error saving extra info:', extraInfoError);
+            console.error("Error saving extra info:", extraInfoError);
           }
         }
 
         // Update local contacts list
-        setContacts(prev => prev.map(contact => contact.id === editingContact.id ? {
-          ...contact,
-          name: editingContact.name.trim(),
-          phone: editingContact.phone.trim(),
-          email: editingContact.email.trim()
-        } : contact));
+        setContacts((prev) =>
+          prev.map((contact) =>
+            contact.id === editingContact.id
+              ? {
+                  ...contact,
+                  name: editingContact.name.trim(),
+                  phone: editingContact.phone.trim(),
+                  email: editingContact.email.trim(),
+                }
+              : contact,
+          ),
+        );
         toast({
           title: "Contato atualizado",
-          description: "As informações do contato foram salvas com sucesso."
+          description: "As informações do contato foram salvas com sucesso.",
         });
       }
       setEditingContact(null);
       setCustomFields([]);
       setIsCreateMode(false);
     } catch (error: any) {
-      console.error('Error saving contact:', error);
-      
+      console.error("Error saving contact:", error);
+
       // Verificar se é erro de constraint único
-      if (error.code === '23505' && error.message?.includes('idx_contacts_phone_workspace')) {
+      if (error.code === "23505" && error.message?.includes("idx_contacts_phone_workspace")) {
         toast({
           title: "Telefone duplicado",
           description: "Já existe um contato com este número de telefone neste workspace.",
-          variant: "destructive"
+          variant: "destructive",
         });
       } else {
         toast({
           title: "Erro ao salvar",
           description: "Ocorreu um erro ao salvar as alterações. Tente novamente.",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } finally {
@@ -532,61 +582,72 @@ export function CRMContatos() {
       toast({
         title: "Erro",
         description: "Preencha o nome do campo e o valor",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    const fieldExists = customFields.some(field => field.key.toLowerCase() === newCustomField.key.trim().toLowerCase());
+    const fieldExists = customFields.some(
+      (field) => field.key.toLowerCase() === newCustomField.key.trim().toLowerCase(),
+    );
     if (fieldExists) {
       toast({
         title: "Erro",
         description: "Este campo já existe. Use um nome diferente.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    setCustomFields(prev => [...prev, {
-      key: newCustomField.key.trim(),
-      value: newCustomField.value.trim()
-    }]);
-    
-    setNewCustomField({ key: '', value: '' });
+    setCustomFields((prev) => [
+      ...prev,
+      {
+        key: newCustomField.key.trim(),
+        value: newCustomField.value.trim(),
+      },
+    ]);
+
+    setNewCustomField({ key: "", value: "" });
   };
-  
+
   const updateCustomField = (index: number, key: string, value: string) => {
-    setCustomFields(customFields.map((field, i) => i === index ? {
-      ...field,
-      [key]: value
-    } : field));
+    setCustomFields(
+      customFields.map((field, i) =>
+        i === index
+          ? {
+              ...field,
+              [key]: value,
+            }
+          : field,
+      ),
+    );
   };
 
   const handleRemoveCustomField = (index: number) => {
-    setCustomFields(prev => prev.filter((_, i) => i !== index));
+    setCustomFields((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getFieldIcon = (fieldKey: string) => {
     const key = fieldKey.toLowerCase();
-    if (key.includes('email') || key.includes('e-mail')) {
+    if (key.includes("email") || key.includes("e-mail")) {
       return <Mail className="h-4 w-4" />;
     }
-    if (key.includes('telefone') || key.includes('phone') || key.includes('celular')) {
+    if (key.includes("telefone") || key.includes("phone") || key.includes("celular")) {
       return <Phone className="h-4 w-4" />;
     }
-    if (key.includes('cep') || key.includes('zip')) {
+    if (key.includes("cep") || key.includes("zip")) {
       return <MapPin className="h-4 w-4" />;
     }
-    if (key.includes('endereço') || key.includes('address') || key.includes('rua')) {
+    if (key.includes("endereço") || key.includes("address") || key.includes("rua")) {
       return <Home className="h-4 w-4" />;
     }
-    if (key.includes('perfil') || key.includes('tipo') || key.includes('categoria')) {
+    if (key.includes("perfil") || key.includes("tipo") || key.includes("categoria")) {
       return <User className="h-4 w-4" />;
     }
-    if (key.includes('país') || key.includes('country') || key.includes('estado')) {
+    if (key.includes("país") || key.includes("country") || key.includes("estado")) {
       return <Globe className="h-4 w-4" />;
     }
-    if (key.includes('cpf') || key.includes('cnpj') || key.includes('documento')) {
+    if (key.includes("cpf") || key.includes("cnpj") || key.includes("documento")) {
       return <FileText className="h-4 w-4" />;
     }
     return <FileText className="h-4 w-4" />;
@@ -598,27 +659,30 @@ export function CRMContatos() {
     setIsTagModalOpen(false);
     setSelectedContactForTag(null);
   };
-  return <div className="p-6 bg-white rounded-lg shadow-lg border border-border/20 m-4 animate-fade-in">
+  return (
+    <div className="p-6 bg-white rounded-lg shadow-lg border border-border/20 m-4 animate-fade-in">
       {/* Header */}
       <div className="flex items-center mb-6">
         <h3 className="text-lg font-bold whitespace-nowrap mr-4">
-          Contatos ({isLoading ? '...' : filteredContacts.length})
+          Contatos ({isLoading ? "..." : filteredContacts.length})
         </h3>
-        
+
         {/* Search and Filter inputs close to title */}
         <div className="flex items-center gap-2 mr-8">
           <div className="relative w-40">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3 w-3" />
-            <Input placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 text-xs h-8" />
+            <Input
+              placeholder="Pesquisar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 text-xs h-8"
+            />
           </div>
-          
+
           <div className="w-40">
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal text-xs h-8"
-                >
+                <Button variant="outline" className="w-full justify-start text-left font-normal text-xs h-8">
                   {selectedTagIds.length === 0 ? (
                     <span className="text-muted-foreground">Filtrar por Tags</span>
                   ) : (
@@ -629,9 +693,7 @@ export function CRMContatos() {
               <PopoverContent className="w-64 p-0" align="start">
                 <div className="max-h-60 overflow-y-auto p-2">
                   {tags.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground text-xs">
-                      Nenhuma tag encontrada
-                    </div>
+                    <div className="p-4 text-center text-muted-foreground text-xs">Nenhuma tag encontrada</div>
                   ) : (
                     <>
                       {tags.map((tag) => (
@@ -639,28 +701,21 @@ export function CRMContatos() {
                           key={tag.id}
                           className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
                           onClick={() => {
-                            setSelectedTagIds(prev =>
-                              prev.includes(tag.id)
-                                ? prev.filter(id => id !== tag.id)
-                                : [...prev, tag.id]
+                            setSelectedTagIds((prev) =>
+                              prev.includes(tag.id) ? prev.filter((id) => id !== tag.id) : [...prev, tag.id],
                             );
                           }}
                         >
                           <Checkbox
                             checked={selectedTagIds.includes(tag.id)}
                             onCheckedChange={() => {
-                              setSelectedTagIds(prev =>
-                                prev.includes(tag.id)
-                                  ? prev.filter(id => id !== tag.id)
-                                  : [...prev, tag.id]
+                              setSelectedTagIds((prev) =>
+                                prev.includes(tag.id) ? prev.filter((id) => id !== tag.id) : [...prev, tag.id],
                               );
                             }}
                           />
                           <div className="flex items-center space-x-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: tag.color }}
-                            />
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
                             <span className="text-xs">{tag.name}</span>
                           </div>
                         </div>
@@ -684,28 +739,38 @@ export function CRMContatos() {
             </Popover>
           </div>
         </div>
-        
+
         {/* Other controls */}
         <div className="flex items-center gap-2 ml-auto">
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             className="whitespace-nowrap text-xs h-8 px-3"
             onClick={() => setIsFieldConfigModalOpen(true)}
           >
             <Pin className="h-3 w-3 mr-1" />
-            Pinar Info Adicionais
+            Criar Campo Padrão
           </Button>
-          
-          <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap text-xs h-8 px-2" onClick={handleAddContact}>
+
+          <Button
+            size="sm"
+            className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap text-xs h-8 px-2"
+            onClick={handleAddContact}
+          >
             Adicionar
           </Button>
-          
+
           <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap text-xs h-8 px-2">
             Importar
           </Button>
-          
-          <Button variant="destructive" size="sm" className="whitespace-nowrap text-xs h-8 px-2" disabled={selectedIds.length === 0} onClick={() => setIsBulkDeleteOpen(true)}>
+
+          <Button
+            variant="destructive"
+            size="sm"
+            className="whitespace-nowrap text-xs h-8 px-2"
+            disabled={selectedIds.length === 0}
+            onClick={() => setIsBulkDeleteOpen(true)}
+          >
             Excluir
           </Button>
         </div>
@@ -713,9 +778,11 @@ export function CRMContatos() {
 
       {/* Table */}
       <div className="border rounded-lg">
-        <Table style={{
-        fontSize: '10px'
-      }}>
+        <Table
+          style={{
+            fontSize: "10px",
+          }}
+        >
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
@@ -724,133 +791,168 @@ export function CRMContatos() {
               <TableHead className="text-center">Criado em</TableHead>
               <TableHead className="text-center">Ações</TableHead>
               <TableHead className="w-12 text-center">
-                <Checkbox checked={filteredContacts.length > 0 && filteredContacts.every(contact => selectedIds.includes(contact.id))} onCheckedChange={checked => {
-                if (checked) {
-                  setSelectedIds(filteredContacts.map(contact => contact.id));
-                } else {
-                  setSelectedIds([]);
-                }
-              }} className="h-4 w-4" />
+                <Checkbox
+                  checked={
+                    filteredContacts.length > 0 && filteredContacts.every((contact) => selectedIds.includes(contact.id))
+                  }
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedIds(filteredContacts.map((contact) => contact.id));
+                    } else {
+                      setSelectedIds([]);
+                    }
+                  }}
+                  className="h-4 w-4"
+                />
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow>
+            {isLoading ? (
+              <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   Carregando contatos...
                 </TableCell>
-              </TableRow> : filteredContacts.length === 0 ? <TableRow>
+              </TableRow>
+            ) : filteredContacts.length === 0 ? (
+              <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   Nenhum contato encontrado
                 </TableCell>
-              </TableRow> : filteredContacts.map(contact => <TableRow key={contact.id}>
-                <TableCell>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {contact.profile_image_url ? <AvatarImage src={contact.profile_image_url} alt={contact.name} /> : <AvatarFallback>
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>}
-                      </Avatar>
-                      <span className="font-medium">{contact.name}</span>
+              </TableRow>
+            ) : (
+              filteredContacts.map((contact) => (
+                <TableRow key={contact.id}>
+                  <TableCell>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          {contact.profile_image_url ? (
+                            <AvatarImage src={contact.profile_image_url} alt={contact.name} />
+                          ) : (
+                            <AvatarFallback>
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <span className="font-medium">{contact.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1 ml-11">
+                        <ContactTags contactId={contact.id} onTagRemoved={fetchContacts} />
+                        <Popover>
+                          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0" align="start" onClick={(e) => e.stopPropagation()}>
+                            <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 ml-11">
-                      <ContactTags 
-                        contactId={contact.id} 
-                        onTagRemoved={fetchContacts}
-                      />
-                      <Popover>
-                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 px-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent 
-                          className="w-64 p-0" 
-                          align="start"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
-                        </PopoverContent>
-                      </Popover>
+                  </TableCell>
+                  <TableCell className="text-center">{contact.phone}</TableCell>
+                  <TableCell className="text-center">{contact.email}</TableCell>
+                  <TableCell className="text-center">{contact.createdAt}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedContactForWhatsApp(contact);
+                          setIsWhatsAppModalOpen(true);
+                        }}
+                        title="Iniciar conversa no WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditContact(contact)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeletingContact(contact)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">{contact.phone}</TableCell>
-                <TableCell className="text-center">{contact.email}</TableCell>
-                <TableCell className="text-center">{contact.createdAt}</TableCell>
-                <TableCell>
-                  <div className="flex justify-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedContactForWhatsApp(contact);
-                        setIsWhatsAppModalOpen(true);
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={selectedIds.includes(contact.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedIds((prev) => [...prev, contact.id]);
+                        } else {
+                          setSelectedIds((prev) => prev.filter((id) => id !== contact.id));
+                        }
                       }}
-                      title="Iniciar conversa no WhatsApp"
-                    >
-                      <MessageCircle className="h-4 w-4 text-green-600" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditContact(contact)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeletingContact(contact)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Checkbox checked={selectedIds.includes(contact.id)} onCheckedChange={checked => {
-                if (checked) {
-                  setSelectedIds(prev => [...prev, contact.id]);
-                } else {
-                  setSelectedIds(prev => prev.filter(id => id !== contact.id));
-                }
-              }} />
-                </TableCell>
-              </TableRow>)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
       {/* Edit Contact Modal */}
-      <Dialog open={!!editingContact} onOpenChange={() => {
-      setEditingContact(null);
-      setIsCreateMode(false);
-    }}>
+      <Dialog
+        open={!!editingContact}
+        onOpenChange={() => {
+          setEditingContact(null);
+          setIsCreateMode(false);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{isCreateMode ? "Adicionar contato" : "Editar contato"}</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name" className="text-yellow-600">Nome</Label>
-              <Input id="name" value={editingContact?.name || ""} onChange={e => setEditingContact(prev => prev ? {
-              ...prev,
-              name: e.target.value
-            } : null)} className="border-yellow-400" />
+              <Label htmlFor="name" className="text-yellow-600">
+                Nome
+              </Label>
+              <Input
+                id="name"
+                value={editingContact?.name || ""}
+                onChange={(e) =>
+                  setEditingContact((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          name: e.target.value,
+                        }
+                      : null,
+                  )
+                }
+                className="border-yellow-400"
+              />
             </div>
-            
+
             <div>
               <Label>Telefone</Label>
               <div className="flex gap-2">
-                <Input 
-                  value="+55" 
-                  disabled 
-                  className="w-20"
-                />
-                <Input 
-                  value={editingContact?.phone || ""} 
-                  onChange={isCreateMode ? (e => setEditingContact(prev => prev ? {
-                    ...prev,
-                    phone: e.target.value
-                  } : null)) : undefined}
+                <Input value="+55" disabled className="w-20" />
+                <Input
+                  value={editingContact?.phone || ""}
+                  onChange={
+                    isCreateMode
+                      ? (e) =>
+                          setEditingContact((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  phone: e.target.value,
+                                }
+                              : null,
+                          )
+                      : undefined
+                  }
                   readOnly={!isCreateMode}
                   disabled={!isCreateMode}
                   className={!isCreateMode ? "bg-muted cursor-not-allowed" : ""}
@@ -864,15 +966,24 @@ export function CRMContatos() {
                 </p>
               )}
             </div>
-            
+
             <div>
               <Label>Email</Label>
-              <Input value={editingContact?.email || ""} onChange={e => setEditingContact(prev => prev ? {
-              ...prev,
-              email: e.target.value
-            } : null)} />
+              <Input
+                value={editingContact?.email || ""}
+                onChange={(e) =>
+                  setEditingContact((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          email: e.target.value,
+                        }
+                      : null,
+                  )
+                }
+              />
             </div>
-            
+
             {/* Campos obrigatórios do workspace */}
             {workspaceFields.length > 0 && (
               <div>
@@ -882,23 +993,26 @@ export function CRMContatos() {
                 </Label>
                 <div className="space-y-3 mt-2">
                   {workspaceFields.map((field) => {
-                    const currentValue = customFields.find(f => f.key === field.field_name)?.value || '';
-                    
+                    const currentValue = customFields.find((f) => f.key === field.field_name)?.value || "";
+
                     return (
-                      <div key={field.id} className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <div
+                        key={field.id}
+                        className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+                      >
                         <Label className="text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
                           {field.field_name} *
                         </Label>
                         <Input
                           value={currentValue}
                           onChange={(e) => {
-                            const exists = customFields.findIndex(f => f.key === field.field_name);
+                            const exists = customFields.findIndex((f) => f.key === field.field_name);
                             if (exists !== -1) {
-                              setCustomFields(prev => prev.map((f, i) => 
-                                i === exists ? { ...f, value: e.target.value } : f
-                              ));
+                              setCustomFields((prev) =>
+                                prev.map((f, i) => (i === exists ? { ...f, value: e.target.value } : f)),
+                              );
                             } else {
-                              setCustomFields(prev => [...prev, { key: field.field_name, value: e.target.value }]);
+                              setCustomFields((prev) => [...prev, { key: field.field_name, value: e.target.value }]);
                             }
                           }}
                           placeholder={`Digite ${field.field_name.toLowerCase()}`}
@@ -911,102 +1025,105 @@ export function CRMContatos() {
               </div>
             )}
 
-            {workspaceFields.length > 0 && (
-              <Separator className="my-4" />
-            )}
+            {workspaceFields.length > 0 && <Separator className="my-4" />}
 
             <div>
               <Label className="text-sm font-medium">Informações Adicionais (Opcionais)</Label>
               <div className="space-y-3 mt-2">
                 {/* Lista de campos opcionais - Cards compactos */}
                 <div className="space-y-3">
-                  {customFields.filter(field => !workspaceFields.some(wf => wf.field_name === field.key)).map((field, index) => {
-                    const originalIndex = customFields.findIndex(f => f.key === field.key && f.value === field.value);
-                    return (
-                    <div key={originalIndex} className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all">
-                      <div className="flex items-start gap-3">
-                        {/* Ícone dinâmico */}
-                        <div className="mt-0.5 text-muted-foreground">
-                          {getFieldIcon(field.key)}
-                        </div>
-                        
-                        <div className="flex-1 space-y-1 min-w-0">
-                          {/* Label do campo - EDITÁVEL com double-click */}
-                          {editingFieldIndex === originalIndex && editingFieldType === 'key' ? (
-                            <input
-                              type="text"
-                              value={field.key}
-                              onChange={e => updateCustomField(originalIndex, 'key', e.target.value)}
-                              onBlur={() => {
-                                setEditingFieldIndex(null);
-                                setEditingFieldType(null);
-                              }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              autoFocus
-                              className="w-full text-xs font-bold uppercase tracking-wide bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
-                            />
-                          ) : (
-                            <p
-                              className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer"
-                              onDoubleClick={() => {
-                                setEditingFieldIndex(originalIndex);
-                                setEditingFieldType('key');
-                              }}
-                              title="Clique duas vezes para editar"
-                            >
-                              {field.key}
-                            </p>
-                          )}
-                          
-                          {/* Valor editável com underline inline */}
-                          {editingFieldIndex === originalIndex && editingFieldType === 'value' ? (
-                            <input
-                              type="text"
-                              value={field.value}
-                              onChange={e => updateCustomField(originalIndex, 'value', e.target.value)}
-                              onBlur={() => {
-                                setEditingFieldIndex(null);
-                                setEditingFieldType(null);
-                              }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              autoFocus
-                              className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
-                            />
-                          ) : (
-                            <p
-                              onDoubleClick={() => {
-                                setEditingFieldIndex(originalIndex);
-                                setEditingFieldType('value');
-                              }}
-                              className="text-sm font-normal text-muted-foreground cursor-pointer truncate"
-                              title="Clique duas vezes para editar"
-                            >
-                              {field.value || 'Clique para adicionar'}
-                            </p>
-                          )}
-                        </div>
-                        
-                        {/* Botão delete - visível apenas no hover */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          onClick={() => handleRemoveCustomField(originalIndex)}
+                  {customFields
+                    .filter((field) => !workspaceFields.some((wf) => wf.field_name === field.key))
+                    .map((field, index) => {
+                      const originalIndex = customFields.findIndex(
+                        (f) => f.key === field.key && f.value === field.value,
+                      );
+                      return (
+                        <div
+                          key={originalIndex}
+                          className="group relative p-4 bg-muted/30 border border-border/40 rounded-lg hover:shadow-sm transition-all"
                         >
-                          <X className="h-3 w-3 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    </div>
-                    );
-                  })}
+                          <div className="flex items-start gap-3">
+                            {/* Ícone dinâmico */}
+                            <div className="mt-0.5 text-muted-foreground">{getFieldIcon(field.key)}</div>
+
+                            <div className="flex-1 space-y-1 min-w-0">
+                              {/* Label do campo - EDITÁVEL com double-click */}
+                              {editingFieldIndex === originalIndex && editingFieldType === "key" ? (
+                                <input
+                                  type="text"
+                                  value={field.key}
+                                  onChange={(e) => updateCustomField(originalIndex, "key", e.target.value)}
+                                  onBlur={() => {
+                                    setEditingFieldIndex(null);
+                                    setEditingFieldType(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.currentTarget.blur();
+                                    }
+                                  }}
+                                  autoFocus
+                                  className="w-full text-xs font-bold uppercase tracking-wide bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                                />
+                              ) : (
+                                <p
+                                  className="text-xs font-bold uppercase tracking-wide truncate cursor-pointer"
+                                  onDoubleClick={() => {
+                                    setEditingFieldIndex(originalIndex);
+                                    setEditingFieldType("key");
+                                  }}
+                                  title="Clique duas vezes para editar"
+                                >
+                                  {field.key}
+                                </p>
+                              )}
+
+                              {/* Valor editável com underline inline */}
+                              {editingFieldIndex === originalIndex && editingFieldType === "value" ? (
+                                <input
+                                  type="text"
+                                  value={field.value}
+                                  onChange={(e) => updateCustomField(originalIndex, "value", e.target.value)}
+                                  onBlur={() => {
+                                    setEditingFieldIndex(null);
+                                    setEditingFieldType(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.currentTarget.blur();
+                                    }
+                                  }}
+                                  autoFocus
+                                  className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-primary pb-0.5"
+                                />
+                              ) : (
+                                <p
+                                  onDoubleClick={() => {
+                                    setEditingFieldIndex(originalIndex);
+                                    setEditingFieldType("value");
+                                  }}
+                                  className="text-sm font-normal text-muted-foreground cursor-pointer truncate"
+                                  title="Clique duas vezes para editar"
+                                >
+                                  {field.value || "Clique para adicionar"}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Botão delete - visível apenas no hover */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                              onClick={() => handleRemoveCustomField(originalIndex)}
+                            >
+                              <X className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
 
                 {/* Adicionar novo campo */}
@@ -1015,13 +1132,13 @@ export function CRMContatos() {
                     <Input
                       placeholder="Nome do campo"
                       value={newCustomField.key}
-                      onChange={e => setNewCustomField(prev => ({ ...prev, key: e.target.value }))}
+                      onChange={(e) => setNewCustomField((prev) => ({ ...prev, key: e.target.value }))}
                       className="text-sm h-9"
                     />
                     <Input
                       placeholder="Valor"
                       value={newCustomField.value}
-                      onChange={e => setNewCustomField(prev => ({ ...prev, value: e.target.value }))}
+                      onChange={(e) => setNewCustomField((prev) => ({ ...prev, value: e.target.value }))}
                       className="text-sm h-9"
                     />
                   </div>
@@ -1038,15 +1155,23 @@ export function CRMContatos() {
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-            setEditingContact(null);
-            setIsCreateMode(false);
-          }} disabled={isSaving}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingContact(null);
+                setIsCreateMode(false);
+              }}
+              disabled={isSaving}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSaveContact} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={isSaving || !editingContact?.name?.trim()}>
+            <Button
+              onClick={handleSaveContact}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+              disabled={isSaving || !editingContact?.name?.trim()}
+            >
               {isSaving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -1054,15 +1179,23 @@ export function CRMContatos() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <DeletarTicketModal isOpen={!!deletingContact} onClose={() => setDeletingContact(null)} onConfirm={() => {
-      if (deletingContact) {
-        handleDeleteContact(deletingContact);
-        setDeletingContact(null);
-      }
-    }} />
+      <DeletarTicketModal
+        isOpen={!!deletingContact}
+        onClose={() => setDeletingContact(null)}
+        onConfirm={() => {
+          if (deletingContact) {
+            handleDeleteContact(deletingContact);
+            setDeletingContact(null);
+          }
+        }}
+      />
 
       {/* Bulk Delete Confirmation Modal */}
-      <DeletarTicketModal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} onConfirm={handleBulkDelete} />
+      <DeletarTicketModal
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+      />
 
       {/* WhatsApp Conversation Modal */}
       {selectedContactForWhatsApp && (
@@ -1076,14 +1209,22 @@ export function CRMContatos() {
       )}
 
       {/* Debug Profile Image Modal */}
-      {showDebugModal && debugContact && selectedWorkspace && <Dialog open={showDebugModal} onOpenChange={setShowDebugModal}>
+      {showDebugModal && debugContact && selectedWorkspace && (
+        <Dialog open={showDebugModal} onOpenChange={setShowDebugModal}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Debug - Imagem de Perfil</DialogTitle>
             </DialogHeader>
-            <ProfileImageDebug contactId={debugContact.id} contactName={debugContact.name} contactPhone={debugContact.phone || ''} workspaceId={selectedWorkspace.workspace_id} currentImageUrl={debugContact.profile_image_url || undefined} />
+            <ProfileImageDebug
+              contactId={debugContact.id}
+              contactName={debugContact.name}
+              contactPhone={debugContact.phone || ""}
+              workspaceId={selectedWorkspace.workspace_id}
+              currentImageUrl={debugContact.profile_image_url || undefined}
+            />
           </DialogContent>
-        </Dialog>}
+        </Dialog>
+      )}
 
       {/* Modal de configuração de campos obrigatórios */}
       {selectedWorkspace && (
@@ -1096,6 +1237,6 @@ export function CRMContatos() {
           workspaceId={selectedWorkspace.workspace_id}
         />
       )}
-
-    </div>;
+    </div>
+  );
 }
