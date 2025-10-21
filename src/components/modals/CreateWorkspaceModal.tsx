@@ -38,6 +38,9 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
   // Update form data when workspace prop changes
   React.useEffect(() => {
     console.log('🔄 CreateWorkspaceModal: workspace prop changed:', workspace);
+    console.log('🔄 Modal open state:', open);
+    console.log('🔍 workspace.connectionLimit:', workspace?.connectionLimit);
+    console.log('🔍 workspace.userLimit:', workspace?.userLimit);
     
     if (workspace) {
       const newFormData = {
@@ -48,6 +51,8 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
       };
       
       console.log('✅ Setting form data:', newFormData);
+      console.log('✅ connectionLimit value:', newFormData.connectionLimit, 'type:', typeof newFormData.connectionLimit);
+      console.log('✅ userLimit value:', newFormData.userLimit, 'type:', typeof newFormData.userLimit);
       setFormData(newFormData);
     } else {
       console.log('🆕 Resetting form data for new workspace');
@@ -132,9 +137,13 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
             <Label htmlFor="connectionLimit">Limite de Conexões *</Label>
             <Input
               id="connectionLimit"
-              type="text"
+              type="number"
               value={formData.connectionLimit}
-              onChange={(e) => setFormData(prev => ({ ...prev, connectionLimit: parseInt(e.target.value) || 0 }))}
+              onChange={(e) => {
+                const newValue = parseInt(e.target.value) || 0;
+                console.log('🔢 connectionLimit input changed to:', newValue);
+                setFormData(prev => ({ ...prev, connectionLimit: newValue }));
+              }}
               placeholder="0"
               required
             />
@@ -147,9 +156,13 @@ export function CreateWorkspaceModal({ open, onOpenChange, workspace }: CreateWo
             <Label htmlFor="userLimit">Limite de Usuários *</Label>
             <Input
               id="userLimit"
-              type="text"
+              type="number"
               value={formData.userLimit}
-              onChange={(e) => setFormData(prev => ({ ...prev, userLimit: parseInt(e.target.value) || 0 }))}
+              onChange={(e) => {
+                const newValue = parseInt(e.target.value) || 0;
+                console.log('🔢 userLimit input changed to:', newValue);
+                setFormData(prev => ({ ...prev, userLimit: newValue }));
+              }}
               placeholder="0"
               required
             />
