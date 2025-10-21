@@ -246,8 +246,10 @@ export function IniciarConversaContatoModal({
                     <SelectItem key={connection.id} value={connection.id}>
                       <div className="flex items-center gap-2">
                         {connection.instance_name} {connection.phone_number && `(${connection.phone_number})`}
-                        {connection.status === 'connected' && (
+                        {connection.status === 'connected' ? (
                           <span className="text-xs text-green-500 font-semibold">CONECTADO</span>
+                        ) : (
+                          <span className="text-xs text-red-500 font-semibold">DESCONECTADO</span>
                         )}
                       </div>
                     </SelectItem>
