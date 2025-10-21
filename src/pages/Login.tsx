@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -58,11 +59,19 @@ export const Login = () => {
       const result = await login(email, password);
       
       if (result.error) {
-        toast({
-          title: "Erro no login",
-          description: result.error,
-          variant: "destructive"
-        });
+        // Se for erro de empresa inativa, usar mesma notificação do deslogamento automático
+        if (result.error.toLowerCase().includes('empresa') && 
+            (result.error.toLowerCase().includes('inativa') || 
+             result.error.toLowerCase().includes('inativada'))) {
+          sonnerToast.error(result.error);
+        } else {
+          // Para outros erros de login, manter toast normal
+          toast({
+            title: "Erro no login",
+            description: result.error,
+            variant: "destructive"
+          });
+        }
       } else {
         // ✅ CRÍTICO: Buscar e salvar workspace ANTES de qualquer redirecionamento
         const currentUserStr = localStorage.getItem('currentUser');
