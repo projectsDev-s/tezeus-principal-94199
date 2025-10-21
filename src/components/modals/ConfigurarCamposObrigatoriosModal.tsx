@@ -5,9 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Plus, GripVertical } from "lucide-react";
 import { useWorkspaceContactFields } from "@/hooks/useWorkspaceContactFields";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 
 interface ConfigurarCamposObrigatoriosModalProps {
@@ -17,14 +23,7 @@ interface ConfigurarCamposObrigatoriosModalProps {
 }
 
 function SortableFieldItem({ field, onRemove }: { field: any; onRemove: () => void }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: field.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -37,17 +36,13 @@ function SortableFieldItem({ field, onRemove }: { field: any; onRemove: () => vo
       style={style}
       className={cn(
         "flex items-center gap-3 p-3 bg-muted/30 border border-border/40 rounded-lg group",
-        isDragging && "opacity-50"
+        isDragging && "opacity-50",
       )}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing"
-      >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
-      
+
       <div className="flex-1">
         <p className="text-sm font-medium">{field.field_name}</p>
       </div>
@@ -67,7 +62,7 @@ function SortableFieldItem({ field, onRemove }: { field: any; onRemove: () => vo
 export function ConfigurarCamposObrigatoriosModal({
   open,
   onClose,
-  workspaceId
+  workspaceId,
 }: ConfigurarCamposObrigatoriosModalProps) {
   const [newFieldName, setNewFieldName] = useState("");
   const { fields, addField, removeField, reorderFields } = useWorkspaceContactFields(workspaceId);
@@ -76,12 +71,12 @@ export function ConfigurarCamposObrigatoriosModal({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleAddField = async () => {
     if (!newFieldName.trim()) return;
-    
+
     const success = await addField(newFieldName.trim());
     if (success) {
       setNewFieldName("");
@@ -94,7 +89,7 @@ export function ConfigurarCamposObrigatoriosModal({
     if (active.id !== over.id) {
       const oldIndex = fields.findIndex((f) => f.id === active.id);
       const newIndex = fields.findIndex((f) => f.id === over.id);
-      
+
       const reordered = arrayMove(fields, oldIndex, newIndex);
       reorderFields(reordered);
     }
@@ -104,38 +99,23 @@ export function ConfigurarCamposObrigatoriosModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Configurar Campos Obrigatórios</DialogTitle>
-          <DialogDescription>
-            Defina campos que aparecerão para TODOS os contatos do workspace
-          </DialogDescription>
+          <DialogTitle>Configurar Campo Padrão</DialogTitle>
+          <DialogDescription>Defina campos que aparecerão para TODOS os contatos da Empresa</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
           {fields.length > 0 ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={fields.map(f => f.id)}
-                strategy={verticalListSortingStrategy}
-              >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {fields.map((field) => (
-                    <SortableFieldItem
-                      key={field.id}
-                      field={field}
-                      onRemove={() => removeField(field.id)}
-                    />
+                    <SortableFieldItem key={field.id} field={field} onRemove={() => removeField(field.id)} />
                   ))}
                 </div>
               </SortableContext>
             </DndContext>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum campo obrigatório configurado
-            </p>
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum campo Padrão configurado</p>
           )}
 
           <div className="border-t pt-4 space-y-2">
@@ -146,16 +126,12 @@ export function ConfigurarCamposObrigatoriosModal({
                 value={newFieldName}
                 onChange={(e) => setNewFieldName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleAddField();
                   }
                 }}
               />
-              <Button
-                size="sm"
-                onClick={handleAddField}
-                disabled={!newFieldName.trim()}
-              >
+              <Button size="sm" onClick={handleAddField} disabled={!newFieldName.trim()}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
