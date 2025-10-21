@@ -69,9 +69,31 @@ export const useAuthState = () => {
         body: { email, password }
       });
 
-      if (error || !data.user) {
-        // Retornar a mensagem de erro original da edge function
-        const errorMessage = data?.error || error?.message || 'Email ou senha inválidos';
+      if (error) {
+        // Quando a edge function retorna status 4xx/5xx, o erro pode estar em diferentes lugares
+        // Tentar extrair a mensagem do contexto do erro
+        let errorMessage = 'Email ou senha inválidos';
+        
+        // Verificar se há uma mensagem de erro no contexto
+        if (error.context?.body) {
+          try {
+            const errorBody = typeof error.context.body === 'string' 
+              ? JSON.parse(error.context.body) 
+              : error.context.body;
+            errorMessage = errorBody.error || errorMessage;
+          } catch (e) {
+            // Se não conseguir parsear, usar a mensagem padrão do erro
+            errorMessage = error.message || errorMessage;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        return { error: errorMessage };
+      }
+
+      if (!data.user) {
+        const errorMessage = data?.error || 'Email ou senha inválidos';
         return { error: errorMessage };
       }
 
