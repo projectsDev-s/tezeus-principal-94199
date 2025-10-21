@@ -242,11 +242,11 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
               </div>
 
               {(isMaster || isAdmin(workspace.workspace_id!) || userRole === 'master' || userRole === 'admin') && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-center">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 gap-2"
+                    className="gap-2"
                     onClick={() => handleUsersClick(workspace)}
                   >
                     <Users className="w-4 h-4" />
@@ -255,7 +255,7 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 gap-2"
+                    className="gap-2"
                     onClick={() => handleConfigClick(workspace)}
                   >
                     <Cable className="w-4 h-4" />
