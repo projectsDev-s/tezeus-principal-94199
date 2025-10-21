@@ -215,15 +215,6 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
                   </Popover>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="ordem">Ordem da fila (Bot)</Label>
-                  <Input
-                    id="ordem"
-                    value={ordem}
-                    onChange={(e) => setOrdem(e.target.value)}
-                    placeholder="Ordem da fila"
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
