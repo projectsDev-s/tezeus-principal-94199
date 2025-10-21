@@ -168,6 +168,7 @@ export type Database = {
           working_hours_enabled: boolean | null
           working_hours_end: string | null
           working_hours_start: string | null
+          workspace_id: string | null
         }
         Insert: {
           agent_type?: string
@@ -192,6 +193,7 @@ export type Database = {
           working_hours_enabled?: boolean | null
           working_hours_end?: string | null
           working_hours_start?: string | null
+          workspace_id?: string | null
         }
         Update: {
           agent_type?: string
@@ -216,8 +218,24 @@ export type Database = {
           working_hours_enabled?: boolean | null
           working_hours_end?: string | null
           working_hours_start?: string | null
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_agents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
       }
       cargos: {
         Row: {

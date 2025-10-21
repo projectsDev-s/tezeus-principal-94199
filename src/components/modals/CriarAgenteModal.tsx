@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { Bot, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
 
 interface CriarAgenteModalProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function CriarAgenteModal({
 }: CriarAgenteModalProps) {
   const [loading, setLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const { workspaces, isLoading: loadingWorkspaces } = useWorkspaces();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -43,6 +45,7 @@ export function CriarAgenteModal({
     response_delay_ms: 1000,
     knowledge_base_enabled: false,
     is_active: true,
+    workspace_id: '',
   });
 
   const handleSave = async () => {
@@ -58,6 +61,11 @@ export function CriarAgenteModal({
 
     if (!formData.system_instructions.trim()) {
       toast.error('Instruções do sistema são obrigatórias');
+      return;
+    }
+
+    if (!formData.workspace_id) {
+      toast.error('Selecione uma empresa');
       return;
     }
 
@@ -77,6 +85,7 @@ export function CriarAgenteModal({
           response_delay_ms: formData.response_delay_ms,
           knowledge_base_enabled: formData.knowledge_base_enabled,
           is_active: formData.is_active,
+          workspace_id: formData.workspace_id,
           api_provider: 'openai',
           auto_responses_enabled: true,
           working_hours_enabled: false,
@@ -104,6 +113,7 @@ export function CriarAgenteModal({
         response_delay_ms: 1000,
         knowledge_base_enabled: false,
         is_active: true,
+        workspace_id: '',
       });
     } catch (error) {
       console.error('Erro ao criar agente:', error);
@@ -126,6 +136,26 @@ export function CriarAgenteModal({
         <div className="grid grid-cols-2 gap-6 mt-6">
           {/* Coluna Esquerda */}
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="workspace">Empresa *</Label>
+              <Select 
+                value={formData.workspace_id} 
+                onValueChange={(value) => setFormData({ ...formData, workspace_id: value })}
+                disabled={loadingWorkspaces}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workspaces.map((workspace) => (
+                    <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                      {workspace.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
               <Input
