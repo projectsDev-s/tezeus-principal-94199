@@ -175,7 +175,7 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
           <p className="text-muted-foreground">Nenhuma empresa encontrada.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredWorkspaces.map((workspace) => (
             <Card key={workspace.workspace_id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
