@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePipelines } from "@/hooks/usePipelines";
 import { usePipelineColumns } from "@/hooks/usePipelineColumns";
-import { FolderKanban, ChevronRight } from "lucide-react";
+import { FolderKanban, ChevronRight, AlertCircle } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PipelineColumnSelectorModalProps {
   open: boolean;
@@ -17,9 +19,19 @@ export const PipelineColumnSelectorModal: React.FC<PipelineColumnSelectorModalPr
   onOpenChange,
   onSelect,
 }) => {
-  const { pipelines, isLoading: loadingPipelines } = usePipelines();
+  const { selectedWorkspace } = useWorkspace();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+  
+  // Só tenta buscar se tem workspace selecionado
+  const { pipelines, isLoading: loadingPipelines } = usePipelines();
   const { columns, isLoading: loadingColumns } = usePipelineColumns(selectedPipelineId);
+
+  // Limpar seleção ao fechar
+  useEffect(() => {
+    if (!open) {
+      setSelectedPipelineId(null);
+    }
+  }, [open]);
 
   const handlePipelineClick = (pipelineId: string) => {
     setSelectedPipelineId(pipelineId);
@@ -48,7 +60,14 @@ export const PipelineColumnSelectorModal: React.FC<PipelineColumnSelectorModalPr
           </DialogTitle>
         </DialogHeader>
 
-        {selectedPipelineId ? (
+        {!selectedWorkspace ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Nenhum workspace selecionado. Por favor, selecione um workspace primeiro.
+            </AlertDescription>
+          </Alert>
+        ) : selectedPipelineId ? (
           <div className="space-y-4">
             <Button
               variant="ghost"
