@@ -19,6 +19,7 @@ import {
   Shuffle 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TagSelectorModal } from "./TagSelectorModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -100,6 +101,8 @@ export function PromptEditorModal({
   const [localValue, setLocalValue] = useState(value);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draggedAction, setDraggedAction] = useState<ActionButton | null>(null);
+  const [showTagSelector, setShowTagSelector] = useState(false);
+  const [pendingCursorPosition, setPendingCursorPosition] = useState(0);
 
   const handleDragStart = (action: ActionButton) => {
     setDraggedAction(action);
@@ -115,6 +118,16 @@ export function PromptEditorModal({
 
     const textarea = textareaRef.current;
     const cursorPosition = textarea.selectionStart;
+
+    // Interceptar ação "add-tag" para abrir modal de seleção
+    if (draggedAction.id === "add-tag") {
+      setPendingCursorPosition(cursorPosition);
+      setShowTagSelector(true);
+      setDraggedAction(null);
+      return;
+    }
+
+    // Para outras ações, inserir diretamente
     const textBefore = localValue.substring(0, cursorPosition);
     const textAfter = localValue.substring(cursorPosition);
     
@@ -127,6 +140,25 @@ export function PromptEditorModal({
       textarea.focus();
       textarea.setSelectionRange(newPosition, newPosition);
     }, 0);
+  };
+
+  const handleTagSelected = (tagId: string, tagName: string) => {
+    const jsonToInsert = `{{action: "addTag", params: {"tagId": "${tagId}", "tagName": "${tagName}"}}}`;
+    
+    const textBefore = localValue.substring(0, pendingCursorPosition);
+    const textAfter = localValue.substring(pendingCursorPosition);
+    
+    const newValue = textBefore + "\n" + jsonToInsert + "\n" + textAfter;
+    setLocalValue(newValue);
+    
+    // Posicionar cursor após a tag inserida
+    if (textareaRef.current) {
+      setTimeout(() => {
+        const newPosition = pendingCursorPosition + jsonToInsert.length + 2;
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(newPosition, newPosition);
+      }, 0);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -212,6 +244,12 @@ export function PromptEditorModal({
           </Button>
         </div>
       </DialogContent>
+
+      <TagSelectorModal
+        open={showTagSelector}
+        onOpenChange={setShowTagSelector}
+        onTagSelected={handleTagSelected}
+      />
     </Dialog>
   );
 }
