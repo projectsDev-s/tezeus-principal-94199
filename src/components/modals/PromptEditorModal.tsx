@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TagSelectorModal } from "./TagSelectorModal";
-import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -103,7 +102,6 @@ export function PromptEditorModal({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draggedAction, setDraggedAction] = useState<ActionButton | null>(null);
   const [showTagSelector, setShowTagSelector] = useState(false);
-  const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
   const [pendingCursorPosition, setPendingCursorPosition] = useState(0);
 
   const handleDragStart = (action: ActionButton) => {
@@ -129,14 +127,6 @@ export function PromptEditorModal({
       return;
     }
 
-    // Interceptar ação "transfer-crm-column" para abrir modal de seleção
-    if (draggedAction.id === "transfer-crm-column") {
-      setPendingCursorPosition(cursorPosition);
-      setShowPipelineColumnSelector(true);
-      setDraggedAction(null);
-      return;
-    }
-
     // Para outras ações, inserir diretamente
     const textBefore = localValue.substring(0, cursorPosition);
     const textAfter = localValue.substring(cursorPosition);
@@ -154,28 +144,6 @@ export function PromptEditorModal({
 
   const handleTagSelected = (tagId: string, tagName: string) => {
     const jsonToInsert = `utilize o tools do agente \`inserir-tag\` enviando esses parâmetros: {{action: "addTag", params: {"tagId": "${tagId}", "tagName": "${tagName}"}}}`;
-    
-    const textBefore = localValue.substring(0, pendingCursorPosition);
-    const textAfter = localValue.substring(pendingCursorPosition);
-    
-    const newValue = textBefore + "\n" + jsonToInsert + "\n" + textAfter;
-    setLocalValue(newValue);
-    
-    // Posicionar cursor após a tag inserida
-    if (textareaRef.current) {
-      setTimeout(() => {
-        const newPosition = pendingCursorPosition + jsonToInsert.length + 2;
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(newPosition, newPosition);
-      }, 0);
-    }
-  };
-
-  const handlePipelineColumnSelected = (pipelineId: string, pipelineName: string, columnId: string, columnName: string) => {
-    const jsonToInsert = `utilize o tool do agente agente-mudar-coluna enviando os seguintes parâmetros:
-
-pipeline_id: "${pipelineId}"
-column_id: "${columnId}"`;
     
     const textBefore = localValue.substring(0, pendingCursorPosition);
     const textAfter = localValue.substring(pendingCursorPosition);
@@ -281,12 +249,6 @@ column_id: "${columnId}"`;
         open={showTagSelector}
         onOpenChange={setShowTagSelector}
         onTagSelected={handleTagSelected}
-      />
-
-      <PipelineColumnSelectorModal
-        open={showPipelineColumnSelector}
-        onOpenChange={setShowPipelineColumnSelector}
-        onSelect={handlePipelineColumnSelected}
       />
     </Dialog>
   );
