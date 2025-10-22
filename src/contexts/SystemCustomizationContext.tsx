@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useSystemCustomization } from '@/hooks/useSystemCustomization';
+import { useFavicon } from '@/hooks/useFavicon';
 
 interface SystemCustomizationContextType {
   customization: any;
@@ -14,6 +15,9 @@ const SystemCustomizationContext = createContext<SystemCustomizationContextType 
 
 export function SystemCustomizationProvider({ children }: { children: React.ReactNode }) {
   const customizationHook = useSystemCustomization();
+  
+  // Apply favicon from customization
+  useFavicon(customizationHook.customization.favicon_url);
 
   // Load customization on app start
   useEffect(() => {

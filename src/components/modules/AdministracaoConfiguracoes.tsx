@@ -25,6 +25,8 @@ export function AdministracaoConfiguracoes() {
   } = useSystemCustomization();
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [activeColorField, setActiveColorField] = useState<'primary' | 'background' | 'header' | 'sidebar' | null>(null);
 
@@ -36,6 +38,19 @@ export function AdministracaoConfiguracoes() {
       const reader = new FileReader();
       reader.onload = (e) => {
         setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle favicon file selection
+  const handleFaviconChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFaviconFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFaviconPreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -114,6 +129,67 @@ export function AdministracaoConfiguracoes() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle favicon upload
+  const handleFaviconUpload = async () => {
+    if (!faviconFile) return;
+
+    try {
+      setLoading(true);
+      
+      // Upload to Supabase storage
+      const fileExt = faviconFile.name.split('.').pop();
+      const fileName = `system-favicon-${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('workspace-media')
+        .upload(fileName, faviconFile);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('workspace-media')
+        .getPublicUrl(fileName);
+
+      // Update customization with new favicon URL
+      await updateCustomization({ favicon_url: urlData.publicUrl });
+      
+      // Update the favicon in the document
+      updateFaviconInDocument(urlData.publicUrl);
+      
+      setFaviconFile(null);
+      setFaviconPreview(null);
+      
+      toast({
+        title: 'Favicon atualizado',
+        description: 'O novo favicon foi aplicado com sucesso. Recarregue a página para ver as mudanças.'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao fazer upload',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update favicon in document head
+  const updateFaviconInDocument = (url: string) => {
+    // Remove existing favicon links
+    const existingLinks = document.querySelectorAll("link[rel*='icon']");
+    existingLinks.forEach(link => link.remove());
+    
+    // Add new favicon link
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = url;
+    document.head.appendChild(link);
   };
 
   // Handle reset to defaults
@@ -210,6 +286,54 @@ export function AdministracaoConfiguracoes() {
                           <img src={customization.logo_url} alt="Current logo" className="max-w-full max-h-full object-contain" />
                         ) : (
                           <span className="text-xs text-muted-foreground">Nenhuma logo</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favicon Section */}
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-foreground">Favicon do Sistema</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-medium text-foreground">
+                        Upload de Favicon
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Formatos recomendados: .ico, .png (32x32 ou 16x16 pixels)
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="file"
+                          accept="image/x-icon,image/png,image/svg+xml"
+                          onChange={handleFaviconChange}
+                          disabled={loading || customizationLoading}
+                          className="flex-1"
+                        />
+                        {faviconFile && (
+                          <Button 
+                            onClick={handleFaviconUpload} 
+                            disabled={loading || customizationLoading}
+                            size="sm"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-xs font-medium text-foreground">
+                        Preview
+                      </Label>
+                      <div className="w-16 h-16 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-muted/50">
+                        {faviconPreview ? (
+                          <img src={faviconPreview} alt="Favicon preview" className="w-8 h-8 object-contain" />
+                        ) : customization.favicon_url ? (
+                          <img src={customization.favicon_url} alt="Current favicon" className="w-8 h-8 object-contain" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Nenhum favicon</span>
                         )}
                       </div>
                     </div>

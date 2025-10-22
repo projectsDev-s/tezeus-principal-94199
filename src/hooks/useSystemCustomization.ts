@@ -6,6 +6,7 @@ import { useRetry } from './useRetry';
 interface SystemCustomization {
   id?: string;
   logo_url?: string;
+  favicon_url?: string;
   background_color: string;
   primary_color: string;
   header_color: string;

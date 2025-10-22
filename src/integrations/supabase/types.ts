@@ -1860,6 +1860,7 @@ export type Database = {
         Row: {
           background_color: string | null
           created_at: string
+          favicon_url: string | null
           header_color: string | null
           id: string
           logo_url: string | null
@@ -1870,6 +1871,7 @@ export type Database = {
         Insert: {
           background_color?: string | null
           created_at?: string
+          favicon_url?: string | null
           header_color?: string | null
           id?: string
           logo_url?: string | null
@@ -1880,6 +1882,7 @@ export type Database = {
         Update: {
           background_color?: string | null
           created_at?: string
+          favicon_url?: string | null
           header_color?: string | null
           id?: string
           logo_url?: string | null
