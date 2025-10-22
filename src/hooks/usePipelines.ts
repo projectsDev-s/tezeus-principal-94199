@@ -49,9 +49,10 @@ export interface PipelineCard {
 export function usePipelines() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [isLoading, setIsLoading] = useState(true);
   const { getHeaders } = useWorkspaceHeaders();
   const { toast } = useToast();
+  const [canFetch, setCanFetch] = useState(false);
 
   const fetchPipelines = async (retryCount = 0) => {
     const maxRetries = 3;
@@ -60,19 +61,14 @@ export function usePipelines() {
     try {
       setIsLoading(true);
       
-      // Refresh headers to ensure workspace context is current
+      // Tentar obter headers - se falhar, não prosseguir
       let headers;
       try {
         headers = getHeaders();
       } catch (headerError) {
-        console.error('Error getting headers:', headerError);
-        
-        // If headers fail, it might be a session issue - check localStorage
-        const userData = localStorage.getItem('currentUser');
-        if (!userData) {
-          throw new Error('Sessão expirada. Faça login novamente.');
-        }
-        throw headerError;
+        console.log('Headers não disponíveis ainda, aguardando workspace...');
+        setIsLoading(false);
+        return; // Sair silenciosamente se não houver workspace
       }
       
       // Fetching pipelines
@@ -174,13 +170,24 @@ export function usePipelines() {
   };
 
   useEffect(() => {
-    // Add debouncing to prevent excessive calls when workspace changes
-    const timeoutId = setTimeout(() => {
-      fetchPipelines();
-    }, 100);
-    
-    return () => clearTimeout(timeoutId);
-  }, []); // Remove dependency to prevent infinite re-renders
+    // Verificar se pode fazer fetch (tem workspace)
+    try {
+      getHeaders();
+      setCanFetch(true);
+    } catch {
+      setCanFetch(false);
+      setIsLoading(false);
+      return;
+    }
+
+    if (canFetch) {
+      const timeoutId = setTimeout(() => {
+        fetchPipelines();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [canFetch]);
 
   return {
     pipelines,
