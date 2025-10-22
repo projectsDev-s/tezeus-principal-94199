@@ -29,6 +29,21 @@ export function usePipelineCardAutoCreation() {
 
       if (error) {
         console.error('Erro na Edge Function:', error);
+        
+        // Se for erro de conflito (card aberto já existe), NÃO mostrar toast
+        // A notificação já foi tratada no data.error
+        if (data?.error === 'duplicate_open_card') {
+          console.log('⚠️ Card duplicado detectado, mas isso é esperado');
+          return null;
+        }
+        
+        return null;
+      }
+
+      // Verificar se retornou erro de card duplicado no data
+      if (data?.error === 'duplicate_open_card') {
+        console.log('⚠️ Negócio aberto já existe para este contato');
+        // NÃO mostrar toast aqui, deixar silencioso
         return null;
       }
 

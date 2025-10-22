@@ -136,22 +136,27 @@ export function CriarNegocioModal({
     };
     
     if (onCreateBusiness) {
-      onCreateBusiness(newBusiness);
+      try {
+        await onCreateBusiness(newBusiness);
+        
+        if (onResponsibleUpdated) {
+          onResponsibleUpdated();
+        }
+        
+        // Reset form apenas se sucesso
+        setSelectedLead(preSelectedContactId || "");
+        setSelectedResponsible("");
+        setSelectedPipeline("");
+        setSelectedProduct("");
+        setSelectedColumn("");
+        setValue("");
+        
+        handleClose();
+      } catch (error: any) {
+        // Erro já foi tratado no contexto com toast
+        console.error('Erro ao criar negócio:', error);
+      }
     }
-
-    if (onResponsibleUpdated) {
-      onResponsibleUpdated();
-    }
-    
-    // Reset form
-    setSelectedLead(preSelectedContactId || "");
-    setSelectedResponsible("");
-    setSelectedPipeline("");
-    setSelectedProduct("");
-    setSelectedColumn("");
-    setValue("");
-    
-    handleClose();
   };
 
   return (

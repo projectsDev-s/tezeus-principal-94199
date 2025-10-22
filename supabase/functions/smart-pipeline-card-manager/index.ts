@@ -84,8 +84,7 @@ serve(async (req) => {
 
     console.log('📋 Pipeline alvo:', targetPipelineId);
 
-    // 4. Permitir múltiplos cards por contato em pipelines diferentes
-    // Apenas verificar se já existe card ABERTO neste pipeline específico
+    // 4. VERIFICAR SE JÁ EXISTE UM CARD ABERTO PARA ESTE CONTATO NESTE PIPELINE
     const { data: existingCards, error: searchError } = await supabase
       .from('pipeline_cards')
       .select('id, title, description, responsible_user_id, updated_at')
@@ -97,67 +96,30 @@ serve(async (req) => {
       console.error('❌ Erro ao buscar cards existentes:', searchError);
     }
 
-    // Se encontrou card existente NO MESMO PIPELINE, atualizar
+    // REGRA: Apenas UM card aberto por contato por pipeline
+    // Se já existe, RETORNAR ERRO amigável
     if (existingCards && existingCards.length > 0) {
       const existingCard = existingCards[0];
-      console.log('✅ Card existente encontrado no mesmo pipeline:', existingCard.id);
-
-      // Buscar usuário responsável da conversa (se houver)
-      let responsibleUserId = existingCard.responsible_user_id;
-      
-      if (conversationId) {
-        const { data: conversation } = await supabase
-          .from('conversations')
-          .select('assigned_user_id')
-          .eq('id', conversationId)
-          .single();
-
-        if (conversation?.assigned_user_id) {
-          responsibleUserId = conversation.assigned_user_id;
-        }
-      }
-
-      // Atualizar card existente com nova informação
-      const timestamp = new Date().toLocaleString('pt-BR');
-      const newDescription = existingCard.description 
-        ? `${existingCard.description}\n\n[${timestamp}] Nova interação registrada`
-        : `[${timestamp}] Card atualizado automaticamente`;
-
-      const { data: updatedCard, error: updateError } = await supabase
-        .from('pipeline_cards')
-        .update({
-          description: newDescription,
-          responsible_user_id: responsibleUserId,
-          conversation_id: conversationId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingCard.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar card:', updateError);
-        return new Response(
-          JSON.stringify({ error: 'Erro ao atualizar card existente' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log('✅ Card atualizado com sucesso:', updatedCard);
+      console.log('⚠️ Já existe um card aberto para este contato neste pipeline:', existingCard.id);
       
       return new Response(
         JSON.stringify({ 
-          card: updatedCard,
-          action: 'updated',
-          message: 'Card existente atualizado com nova interação'
+          error: 'duplicate_open_card',
+          message: 'Já existe um negócio aberto para este contato neste pipeline. Finalize o anterior antes de criar um novo.',
+          existingCard: {
+            id: existingCard.id,
+            title: existingCard.title
+          }
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 409, // Conflict
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
     // 5. Se não existe card neste pipeline, criar um novo
     console.log('📝 Criando novo card para este pipeline...');
-    console.log('📝 Criando novo card...');
 
     // Buscar primeira coluna do pipeline
     const { data: columns, error: columnsError } = await supabase
@@ -212,6 +174,21 @@ serve(async (req) => {
 
     if (createError) {
       console.error('❌ Erro ao criar card:', createError);
+      
+      // Verificar se é erro do trigger de validação
+      if (createError.message?.includes('Já existe um card aberto')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'duplicate_open_card',
+            message: 'Já existe um negócio aberto para este contato neste pipeline. Finalize o anterior antes de criar um novo.'
+          }),
+          { 
+            status: 409,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Erro ao criar novo card', details: createError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

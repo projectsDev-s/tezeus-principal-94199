@@ -352,6 +352,23 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         console.error('❌ Erro ao criar card no backend:', error);
         // Remover card otimista em caso de erro
         setCards(prev => prev.filter(c => c.id !== tempCardId));
+        
+        // Verificar se é erro de card duplicado
+        if (error.message?.includes('Já existe um card aberto') || 
+            error.message?.includes('duplicate_open_card')) {
+          toast({
+            title: "Negócio já existe",
+            description: "Este contato já possui um negócio aberto neste pipeline. Finalize o anterior antes de criar um novo.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro",
+            description: "Erro ao criar card",
+            variant: "destructive",
+          });
+        }
+        
         throw error;
       }
 
@@ -364,13 +381,25 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       });
 
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error creating card:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar card",
-        variant: "destructive",
-      });
+      
+      // Verificar se é erro de card duplicado (do trigger do banco)
+      if (error.message?.includes('Já existe um card aberto') || 
+          error.message?.includes('duplicate_open_card')) {
+        toast({
+          title: "Negócio já existe",
+          description: "Este contato já possui um negócio aberto neste pipeline. Finalize o anterior antes de criar um novo.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao criar card",
+          variant: "destructive",
+        });
+      }
+      
       throw error;
     }
   }, [getHeaders, selectedPipeline, toast]);
