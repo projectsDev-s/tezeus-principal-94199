@@ -174,13 +174,27 @@ export function usePipelines(workspaceId?: string) {
   };
 
   useEffect(() => {
-    // Add debouncing to prevent excessive calls when workspace changes
-    const timeoutId = setTimeout(() => {
-      fetchPipelines();
-    }, 100);
-    
-    return () => clearTimeout(timeoutId);
-  }, []); // Remove dependency to prevent infinite re-renders
+    // Only fetch if we have a workspace (either passed or from context)
+    const canFetch = () => {
+      try {
+        getHeaders(workspaceId);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (canFetch()) {
+      const timeoutId = setTimeout(() => {
+        fetchPipelines();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      // No workspace available, don't fetch
+      setIsLoading(false);
+    }
+  }, [workspaceId]); // Re-fetch when workspaceId changes
 
   return {
     pipelines,

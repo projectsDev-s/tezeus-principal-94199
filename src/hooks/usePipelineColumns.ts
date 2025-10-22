@@ -77,8 +77,24 @@ export function usePipelineColumns(pipelineId: string | null, workspaceId?: stri
   };
 
   useEffect(() => {
-    fetchColumns();
-  }, [pipelineId]);
+    // Only fetch if we have both pipelineId and can get headers
+    const canFetch = () => {
+      if (!pipelineId) return false;
+      try {
+        getHeaders(workspaceId);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (canFetch()) {
+      fetchColumns();
+    } else {
+      setColumns([]);
+      setIsLoading(false);
+    }
+  }, [pipelineId, workspaceId]);
 
   return {
     columns,
