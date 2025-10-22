@@ -179,7 +179,10 @@ export function PromptEditorModal({
     columnId: string, 
     columnName: string
   ) => {
-    const jsonToInsert = `utilize o tools do agente \`transferir-coluna-crm\` enviando esses parâmetros: {{action: "crm.transferColumn", params: {"pipelineId": "${pipelineId}", "pipelineName": "${pipelineName}", "columnId": "${columnId}", "columnName": "${columnName}"}}}`;
+    const jsonToInsert = `utilize o tool do agente agente-mudar-coluna enviando os seguintes parâmetros:
+
+pipeline_id: "${pipelineId}"
+column_id: "${columnId}"`;
     
     const textBefore = localValue.substring(0, pendingCursorPosition);
     const textAfter = localValue.substring(pendingCursorPosition);
