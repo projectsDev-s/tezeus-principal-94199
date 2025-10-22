@@ -260,16 +260,6 @@ export function CriarAgenteModal({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="instructions">Instruções do Sistema *</Label>
-              <Textarea
-                id="instructions"
-                value={formData.system_instructions}
-                onChange={(e) => setFormData({ ...formData, system_instructions: e.target.value })}
-                placeholder="Instruções para o comportamento do agente"
-                rows={4}
-              />
-            </div>
 
             <div className="space-y-2">
               <Label>Temperatura: {formData.temperature}</Label>
