@@ -135,9 +135,6 @@ export function AdministracaoConfiguracoes() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-      </div>
       
       <div className="bg-card rounded-lg shadow-sm border border-border">
         <Tabs defaultValue="personalizacao" className="w-full">
