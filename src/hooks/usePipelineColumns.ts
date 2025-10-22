@@ -4,7 +4,7 @@ import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineColumn } from './usePipelines';
 
-export function usePipelineColumns(pipelineId: string | null) {
+export function usePipelineColumns(pipelineId: string | null, workspaceId?: string) {
   const [columns, setColumns] = useState<PipelineColumn[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { getHeaders } = useWorkspaceHeaders();
@@ -18,7 +18,7 @@ export function usePipelineColumns(pipelineId: string | null) {
 
     try {
       setIsLoading(true);
-      const headers = getHeaders();
+      const headers = getHeaders(workspaceId);
       
       const { data, error } = await supabase.functions.invoke(`pipeline-management/columns?pipeline_id=${pipelineId}`, {
         method: 'GET',
@@ -43,7 +43,7 @@ export function usePipelineColumns(pipelineId: string | null) {
     if (!pipelineId) return;
 
     try {
-      const headers = getHeaders();
+      const headers = getHeaders(workspaceId);
       
       const { data, error } = await supabase.functions.invoke('pipeline-management/columns', {
         method: 'POST',

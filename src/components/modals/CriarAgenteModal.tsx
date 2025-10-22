@@ -331,6 +331,7 @@ export function CriarAgenteModal({
         onOpenChange={setShowPromptEditor}
         value={formData.description}
         onChange={(value) => setFormData({ ...formData, description: value })}
+        workspaceId={formData.workspace_id}
       />
     </Dialog>
   );

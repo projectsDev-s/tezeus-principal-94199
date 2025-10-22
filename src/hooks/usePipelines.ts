@@ -46,7 +46,7 @@ export interface PipelineCard {
   conversation?: any;
 }
 
-export function usePipelines() {
+export function usePipelines(workspaceId?: string) {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Start with loading true
@@ -63,7 +63,7 @@ export function usePipelines() {
       // Refresh headers to ensure workspace context is current
       let headers;
       try {
-        headers = getHeaders();
+        headers = getHeaders(workspaceId);
       } catch (headerError) {
         console.error('Error getting headers:', headerError);
         
@@ -139,7 +139,7 @@ export function usePipelines() {
 
   const createPipeline = async (name: string, type: string) => {
     try {
-      const headers = getHeaders();
+      const headers = getHeaders(workspaceId);
       
       const { data, error } = await supabase.functions.invoke('pipeline-management/pipelines', {
         method: 'POST',

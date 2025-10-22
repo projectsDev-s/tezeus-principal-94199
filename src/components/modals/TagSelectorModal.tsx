@@ -21,6 +21,7 @@ interface TagSelectorModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTagSelected: (tagId: string, tagName: string) => void;
+  workspaceId?: string;
 }
 
 export function TagSelectorModal({

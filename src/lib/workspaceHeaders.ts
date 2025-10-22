@@ -9,7 +9,7 @@ export const useWorkspaceHeaders = () => {
   const { selectedWorkspace } = useWorkspace();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
 
-  const getHeaders = () => {
+  const getHeaders = (overrideWorkspaceId?: string) => {
     // Get current user from localStorage (custom auth system)
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
@@ -18,8 +18,8 @@ export const useWorkspaceHeaders = () => {
       throw new Error('Usuário não autenticado');
     }
 
-    // Priorizar workspaceId da URL (para Masters navegando entre workspaces)
-    const workspaceId = urlWorkspaceId || selectedWorkspace?.workspace_id;
+    // Priorizar: override > workspaceId da URL > selectedWorkspace
+    const workspaceId = overrideWorkspaceId || urlWorkspaceId || selectedWorkspace?.workspace_id;
     
     if (!workspaceId) {
       throw new Error('Nenhum workspace selecionado');
@@ -29,6 +29,7 @@ export const useWorkspaceHeaders = () => {
       userId: currentUserData.id,
       urlWorkspaceId,
       selectedWorkspaceId: selectedWorkspace?.workspace_id,
+      overrideWorkspaceId,
       finalWorkspaceId: workspaceId
     });
 
@@ -61,6 +62,13 @@ export const getWorkspaceHeaders = (workspaceId?: string) => {
 
   if (workspaceId) {
     headers['x-workspace-id'] = workspaceId;
+  } else {
+    // Try to get from current workspace context if available
+    const selectedWorkspace = localStorage.getItem('selectedWorkspace');
+    if (selectedWorkspace) {
+      const workspace = JSON.parse(selectedWorkspace);
+      headers['x-workspace-id'] = workspace.workspace_id;
+    }
   }
 
   return headers;
