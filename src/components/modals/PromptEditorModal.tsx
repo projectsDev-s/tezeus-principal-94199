@@ -40,55 +40,55 @@ const actionButtons: ActionButton[] = [
     id: "add-tag",
     label: "Adicionar Tag",
     icon: <Tag className="w-4 h-4" />,
-    tag: '{{action: "addTag", params: {"tagName": ""}}}',
+    tag: 'utilize o tools do agente `inserir-tag` enviando esses parâmetros: {{action: "addTag", params: {"tagName": ""}}}',
   },
   {
     id: "transfer-ticket",
     label: "Transferir Ticket",
     icon: <ArrowRightLeft className="w-4 h-4" />,
-    tag: '{{action: "transferTicket", params: {"queueId": ""}}}',
+    tag: 'utilize o tools do agente `transferir-ticket` enviando esses parâmetros: {{action: "transferTicket", params: {"queueId": ""}}}',
   },
   {
     id: "send-schedule",
     label: "Enviar horários",
     icon: <Clock className="w-4 h-4" />,
-    tag: '{{action: "sendAvailableHours"}}',
+    tag: 'utilize o tools do agente `enviar-horarios`: {{action: "sendAvailableHours"}}',
   },
   {
     id: "send-dsvoice",
     label: "Enviar funil DS Voice",
     icon: <Phone className="w-4 h-4" />,
-    tag: '{{action: "sendDSVoiceFunnel"}}',
+    tag: 'utilize o tools do agente `enviar-funil-dsvoice`: {{action: "sendDSVoiceFunnel"}}',
   },
   {
     id: "create-crm-card",
     label: "Criar card no CRM",
     icon: <FolderKanban className="w-4 h-4" />,
-    tag: '{{action: "crm.createCard", params: {"pipeline": "", "column": ""}}}',
+    tag: 'utilize o tools do agente `criar-card-crm` enviando esses parâmetros: {{action: "crm.createCard", params: {"pipeline": "", "column": ""}}}',
   },
   {
     id: "transfer-crm-column",
     label: "Transferir coluna CRM",
     icon: <ArrowRight className="w-4 h-4" />,
-    tag: '{{action: "crm.transferColumn", params: {"columnId": ""}}}',
+    tag: 'utilize o tools do agente `transferir-coluna-crm` enviando esses parâmetros: {{action: "crm.transferColumn", params: {"columnId": ""}}}',
   },
   {
     id: "save-variable",
     label: "Salvar variável",
     icon: <Database className="w-4 h-4" />,
-    tag: '{{action: "saveVariable", params: {"name": "", "value": ""}}}',
+    tag: 'utilize o tools do agente `salvar-variavel` enviando esses parâmetros: {{action: "saveVariable", params: {"name": "", "value": ""}}}',
   },
   {
     id: "http-request",
     label: "Requisição HTTP",
     icon: <Link2 className="w-4 h-4" />,
-    tag: '{{action: "httpRequest", params: {"url": "", "method": "GET"}}}',
+    tag: 'utilize o tools do agente `requisicao-http` enviando esses parâmetros: {{action: "httpRequest", params: {"url": "", "method": "GET"}}}',
   },
   {
     id: "randomize-channel",
     label: "Randomizar Canal",
     icon: <Shuffle className="w-4 h-4" />,
-    tag: '{{action: "randomizeChannel"}}',
+    tag: 'utilize o tools do agente `randomizar-canal`: {{action: "randomizeChannel"}}',
   },
 ];
 
@@ -143,7 +143,7 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const jsonToInsert = `{{action: "addTag", params: {"tagId": "${tagId}", "tagName": "${tagName}"}}}`;
+    const jsonToInsert = `utilize o tools do agente \`inserir-tag\` enviando esses parâmetros: {{action: "addTag", params: {"tagId": "${tagId}", "tagName": "${tagName}"}}}`;
     
     const textBefore = localValue.substring(0, pendingCursorPosition);
     const textAfter = localValue.substring(pendingCursorPosition);
