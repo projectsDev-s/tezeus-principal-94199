@@ -16,7 +16,7 @@ const categories = [
   { id: "audios", label: "Áudios", icon: Mic },
   { id: "midias", label: "Mídias", icon: Image },
   { id: "documentos", label: "Documentos", icon: FileText },
-  // Ocultado temporariamente - { id: "funis", label: "Funis", icon: Filter },
+  { id: "funis", label: "Funis", icon: Filter },
   // Ocultado temporariamente - { id: "gatilhos", label: "Gatilhos", icon: Play },
   // Ocultado temporariamente - { id: "configuracoes", label: "Configurações", icon: Settings },
 ];
@@ -48,6 +48,17 @@ export function DSVoice() {
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+
+  // Estados para funis
+  const [isFunnelModalOpen, setIsFunnelModalOpen] = useState(false);
+  const [isAddStepModalOpen, setIsAddStepModalOpen] = useState(false);
+  const [funnelName, setFunnelName] = useState("");
+  const [funnelSteps, setFunnelSteps] = useState<any[]>([]);
+  const [selectedStepType, setSelectedStepType] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const [stepMinutes, setStepMinutes] = useState(0);
+  const [stepSeconds, setStepSeconds] = useState(0);
+  const [funnels, setFunnels] = useState<any[]>([]);
 
   // Hooks para dados reais
   const { messages, loading: messagesLoading, createMessage, updateMessage, deleteMessage } = useQuickMessages();
@@ -178,6 +189,77 @@ export function DSVoice() {
     setDocumentTitle("");
     setDocumentFile(null);
     setEditingDocumentId(null);
+  };
+
+  // Handlers para funis
+  const handleOpenFunnelModal = () => {
+    setFunnelName("");
+    setFunnelSteps([]);
+    setIsFunnelModalOpen(true);
+  };
+
+  const handleCloseFunnelModal = () => {
+    setIsFunnelModalOpen(false);
+    setFunnelName("");
+    setFunnelSteps([]);
+  };
+
+  const handleOpenAddStepModal = () => {
+    setSelectedStepType(null);
+    setSelectedItemId("");
+    setStepMinutes(0);
+    setStepSeconds(0);
+    setIsAddStepModalOpen(true);
+  };
+
+  const handleCloseAddStepModal = () => {
+    setIsAddStepModalOpen(false);
+    setSelectedStepType(null);
+    setSelectedItemId("");
+    setStepMinutes(0);
+    setStepSeconds(0);
+  };
+
+  const handleAddStep = () => {
+    if (selectedStepType && selectedItemId) {
+      const newStep = {
+        id: Date.now().toString(),
+        type: selectedStepType,
+        itemId: selectedItemId,
+        delayMinutes: stepMinutes,
+        delaySeconds: stepSeconds,
+      };
+      setFunnelSteps([...funnelSteps, newStep]);
+      handleCloseAddStepModal();
+    }
+  };
+
+  const handleSaveFunnel = () => {
+    if (funnelName.trim() && funnelSteps.length > 0) {
+      const newFunnel = {
+        id: Date.now().toString(),
+        name: funnelName,
+        steps: funnelSteps,
+        createdAt: new Date().toISOString(),
+      };
+      setFunnels([...funnels, newFunnel]);
+      handleCloseFunnelModal();
+    }
+  };
+
+  const getItemDetails = (type: string, itemId: string) => {
+    switch (type) {
+      case "mensagens":
+        return messages.find(m => m.id === itemId);
+      case "audios":
+        return audios.find(a => a.id === itemId);
+      case "midias":
+        return media.find(m => m.id === itemId);
+      case "documentos":
+        return documents.find(d => d.id === itemId);
+      default:
+        return null;
+    }
   };
 
   // Filtrar dados baseado no termo de busca
@@ -410,11 +492,63 @@ export function DSVoice() {
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Funis</h3>
+              <div className="flex-1">
+                <Input
+                  placeholder="Buscar funis..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              <Button onClick={handleOpenFunnelModal} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Item
+              </Button>
             </div>
-            <div className="text-center py-8 text-muted-foreground">
-              Funcionalidade em desenvolvimento.
-            </div>
+            
+            {funnels.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum funil criado ainda.
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {funnels.map((funnel) => (
+                  <Card key={funnel.id} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-medium text-lg">{funnel.name}</h4>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {funnel.steps.map((step: any, index: number) => {
+                          const itemDetails = getItemDetails(step.type, step.itemId);
+                          return (
+                            <div key={step.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                              <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{itemDetails?.title || 'Item não encontrado'}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Tipo: {step.type} • Delay: {step.delayMinutes}m {step.delaySeconds}s
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         );
 
@@ -654,6 +788,218 @@ export function DSVoice() {
               </Button>
               <Button onClick={handleCreateDocument} disabled={!documentTitle.trim() || (!documentFile && !editingDocumentId)}>
                 {editingDocumentId ? 'Salvar' : 'Criar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Criar Funil */}
+      <Dialog open={isFunnelModalOpen} onOpenChange={setIsFunnelModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Novo Funil</DialogTitle>
+            <DialogDescription>
+              Crie um funil com múltiplas etapas e delays configuráveis.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Nome do Funil</label>
+              <Input
+                value={funnelName}
+                onChange={(e) => setFunnelName(e.target.value)}
+                placeholder="Digite o nome do funil"
+              />
+            </div>
+
+            {/* Etapas do Funil */}
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-sm font-medium">Etapas</label>
+                <Button onClick={handleOpenAddStepModal} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Etapas
+                </Button>
+              </div>
+
+              {funnelSteps.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  Nenhuma etapa adicionada ainda.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {funnelSteps.map((step, index) => {
+                    const itemDetails = getItemDetails(step.type, step.itemId);
+                    const Icon = step.type === "mensagens" ? MessageSquare 
+                              : step.type === "audios" ? Mic 
+                              : step.type === "midias" ? Image 
+                              : FileText;
+                    return (
+                      <Card key={step.id} className="p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{itemDetails?.title || 'Item não encontrado'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {step.type} • Delay: {step.delayMinutes}min {step.delaySeconds}s
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setFunnelSteps(funnelSteps.filter(s => s.id !== step.id))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button variant="outline" onClick={handleCloseFunnelModal}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveFunnel} disabled={!funnelName.trim() || funnelSteps.length === 0}>
+                Salvar Funil
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Adicionar Etapa */}
+      <Dialog open={isAddStepModalOpen} onOpenChange={setIsAddStepModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Item</DialogTitle>
+            <DialogDescription>
+              Selecione o tipo de conteúdo e configure o delay da etapa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Seleção de Tipo */}
+            <div>
+              <label className="text-sm font-medium mb-3 block">Tipo de Mensagem</label>
+              <div className="grid grid-cols-4 gap-3">
+                <button
+                  onClick={() => setSelectedStepType("mensagens")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                    selectedStepType === "mensagens"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <MessageSquare className="h-6 w-6" />
+                  <span className="text-xs font-medium">Mensagens</span>
+                </button>
+                <button
+                  onClick={() => setSelectedStepType("audios")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                    selectedStepType === "audios"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <Mic className="h-6 w-6" />
+                  <span className="text-xs font-medium">Áudios</span>
+                </button>
+                <button
+                  onClick={() => setSelectedStepType("midias")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                    selectedStepType === "midias"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <Image className="h-6 w-6" />
+                  <span className="text-xs font-medium">Imagens</span>
+                </button>
+                <button
+                  onClick={() => setSelectedStepType("documentos")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                    selectedStepType === "documentos"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <FileText className="h-6 w-6" />
+                  <span className="text-xs font-medium">Documentos</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Select do Item */}
+            {selectedStepType && (
+              <div>
+                <label className="text-sm font-medium">Selecionar Item</label>
+                <select
+                  className="w-full mt-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={selectedItemId}
+                  onChange={(e) => setSelectedItemId(e.target.value)}
+                >
+                  <option value="">Selecione um item</option>
+                  {selectedStepType === "mensagens" && messages.map(msg => (
+                    <option key={msg.id} value={msg.id}>{msg.title}</option>
+                  ))}
+                  {selectedStepType === "audios" && audios.map(audio => (
+                    <option key={audio.id} value={audio.id}>{audio.title}</option>
+                  ))}
+                  {selectedStepType === "midias" && media.map(m => (
+                    <option key={m.id} value={m.id}>{m.title}</option>
+                  ))}
+                  {selectedStepType === "documentos" && documents.map(doc => (
+                    <option key={doc.id} value={doc.id}>{doc.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Configuração de Delay */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Delay para executar a ação</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Minutos</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={stepMinutes}
+                    onChange={(e) => setStepMinutes(parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Segundos</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={stepSeconds}
+                    onChange={(e) => setStepSeconds(Math.min(59, parseInt(e.target.value) || 0))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4 border-t">
+              <Button variant="outline" onClick={handleCloseAddStepModal}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAddStep} disabled={!selectedStepType || !selectedItemId}>
+                Adicionar
               </Button>
             </div>
           </div>
