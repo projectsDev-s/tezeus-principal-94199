@@ -11,9 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
-export function EvolutionApiConfigMaster() {
+interface EvolutionApiConfigMasterProps {
+  preSelectedWorkspaceId?: string;
+}
+
+export function EvolutionApiConfigMaster({ preSelectedWorkspaceId }: EvolutionApiConfigMasterProps = {}) {
   const { workspaces } = useWorkspaces();
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(preSelectedWorkspaceId || "");
   const [evolutionUrl, setEvolutionUrl] = useState("");
   const [evolutionApiKey, setEvolutionApiKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,12 +25,14 @@ export function EvolutionApiConfigMaster() {
   const [clearing, setClearing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
 
-  // Auto-select first workspace
+  // Auto-select first workspace or use pre-selected
   useEffect(() => {
-    if (workspaces.length > 0 && !selectedWorkspaceId) {
+    if (preSelectedWorkspaceId) {
+      setSelectedWorkspaceId(preSelectedWorkspaceId);
+    } else if (workspaces.length > 0 && !selectedWorkspaceId) {
       setSelectedWorkspaceId(workspaces[0].workspace_id);
     }
-  }, [workspaces, selectedWorkspaceId]);
+  }, [workspaces, selectedWorkspaceId, preSelectedWorkspaceId]);
 
   // Load current settings for selected workspace
   useEffect(() => {
@@ -224,22 +230,24 @@ export function EvolutionApiConfigMaster() {
   const selectedWorkspace = workspaces.find(w => w.workspace_id === selectedWorkspaceId);
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Label htmlFor="workspace-selector-evo">Selecionar Workspace</Label>
-        <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
-          <SelectTrigger id="workspace-selector-evo" className="w-72">
-            <SelectValue placeholder="Selecione um workspace" />
-          </SelectTrigger>
-          <SelectContent>
-            {workspaces.map((workspace) => (
-              <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                {workspace.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <div className={preSelectedWorkspaceId ? "" : "p-6"}>
+      {!preSelectedWorkspaceId && (
+        <div className="mb-6">
+          <Label htmlFor="workspace-selector-evo">Selecionar Workspace</Label>
+          <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
+            <SelectTrigger id="workspace-selector-evo" className="w-72">
+              <SelectValue placeholder="Selecione um workspace" />
+            </SelectTrigger>
+            <SelectContent>
+              {workspaces.map((workspace) => (
+                <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                  {workspace.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {!selectedWorkspaceId ? (
         <div className="text-center py-12">

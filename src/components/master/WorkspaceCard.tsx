@@ -151,8 +151,8 @@ export function WorkspaceCard({
             variant="outline"
             size="sm"
           >
-            <Cable className="h-4 w-4 mr-2" />
-            Conexões
+            <Settings className="h-4 w-4 mr-2" />
+            Config
           </Button>
         </div>
       </CardFooter>

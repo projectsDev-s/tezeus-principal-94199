@@ -30,9 +30,13 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export function WebhooksEvolutionConfigMaster() {
+interface WebhooksEvolutionConfigMasterProps {
+  preSelectedWorkspaceId?: string;
+}
+
+export function WebhooksEvolutionConfigMaster({ preSelectedWorkspaceId }: WebhooksEvolutionConfigMasterProps = {}) {
   const { workspaces } = useWorkspaces();
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(preSelectedWorkspaceId || "");
   
   const {
     webhookConfig,
@@ -62,12 +66,14 @@ export function WebhooksEvolutionConfigMaster() {
     dateTo: ""
   });
 
-  // Auto-select first workspace
+  // Auto-select first workspace or use pre-selected
   useEffect(() => {
-    if (workspaces.length > 0 && !selectedWorkspaceId) {
+    if (preSelectedWorkspaceId) {
+      setSelectedWorkspaceId(preSelectedWorkspaceId);
+    } else if (workspaces.length > 0 && !selectedWorkspaceId) {
       setSelectedWorkspaceId(workspaces[0].workspace_id);
     }
-  }, [workspaces, selectedWorkspaceId]);
+  }, [workspaces, selectedWorkspaceId, preSelectedWorkspaceId]);
 
   // Sync webhookUrl with config when it loads
   useEffect(() => {
@@ -155,27 +161,29 @@ export function WebhooksEvolutionConfigMaster() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Webhooks Evolution (Master)</h1>
-          <p className="text-muted-foreground">Configure webhooks centralizados para todas as instâncias</p>
+      {!preSelectedWorkspaceId && (
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Webhooks Evolution (Master)</h1>
+            <p className="text-muted-foreground">Configure webhooks centralizados para todas as instâncias</p>
+          </div>
+          <div className="w-72">
+            <Label htmlFor="workspace-selector">Selecionar Workspace</Label>
+            <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
+              <SelectTrigger id="workspace-selector">
+                <SelectValue placeholder="Selecione um workspace" />
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((workspace) => (
+                  <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                    {workspace.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="w-72">
-          <Label htmlFor="workspace-selector">Selecionar Workspace</Label>
-          <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
-            <SelectTrigger id="workspace-selector">
-              <SelectValue placeholder="Selecione um workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaces.map((workspace) => (
-                <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                  {workspace.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      )}
 
       {!selectedWorkspaceId ? (
         <div className="text-center py-12">
