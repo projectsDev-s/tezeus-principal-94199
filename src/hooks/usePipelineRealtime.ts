@@ -132,5 +132,13 @@ export function usePipelineRealtime({
       console.log('🔌 [Realtime] Desconectando do pipeline:', pipelineId);
       supabase.removeChannel(channel);
     };
-  }, [pipelineId]); // Simplificado: só reconecta se pipeline mudar
+  }, [
+    pipelineId,
+    onCardInsert,
+    onCardUpdate,
+    onCardDelete,
+    onColumnInsert,
+    onColumnUpdate,
+    onColumnDelete
+  ]);
 }
