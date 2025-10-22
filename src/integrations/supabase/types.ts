@@ -2406,14 +2406,8 @@ export type Database = {
       }
     }
     Functions: {
-      block_system_user: {
-        Args: { user_email: string }
-        Returns: undefined
-      }
-      clear_all_conversations: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      block_system_user: { Args: { user_email: string }; Returns: undefined }
+      clear_all_conversations: { Args: never; Returns: undefined }
       create_connection_anon: {
         Args: {
           p_history_recovery: string
@@ -2422,14 +2416,8 @@ export type Database = {
         }
         Returns: string
       }
-      current_system_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      debug_current_user: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      current_system_user_id: { Args: never; Returns: string }
+      debug_current_user: { Args: never; Returns: Json }
       debug_user_permissions: {
         Args: { p_workspace_id: string }
         Returns: Json
@@ -2442,12 +2430,9 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: undefined
       }
-      ensure_master_users_in_all_workspaces: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      ensure_master_users_in_all_workspaces: { Args: never; Returns: undefined }
       fix_phone_numbers_from_remote_jid: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_taken: string
           contact_id: string
@@ -2456,10 +2441,7 @@ export type Database = {
           workspace_id: string
         }[]
       }
-      get_current_user_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_user_profile: { Args: never; Returns: string }
       get_system_user: {
         Args: { user_email: string; user_password: string }
         Returns: {
@@ -2481,22 +2463,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_password: {
-        Args: { password: string }
-        Returns: string
-      }
-      is_current_user_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_current_user_master: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_master: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      hash_password: { Args: { password: string }; Returns: string }
+      is_current_user_admin: { Args: never; Returns: boolean }
+      is_current_user_master: { Args: never; Returns: boolean }
+      is_master: { Args: never; Returns: boolean }
       is_member: {
         Args: {
           min_role?: Database["public"]["Enums"]["org_role"]
@@ -2512,7 +2482,7 @@ export type Database = {
         Returns: boolean
       }
       list_connections_anon: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           history_recovery: string
@@ -2530,14 +2500,8 @@ export type Database = {
         Args: { user_email?: string; user_id: string }
         Returns: undefined
       }
-      slugify: {
-        Args: { txt: string }
-        Returns: string
-      }
-      sync_user_roles: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      slugify: { Args: { txt: string }; Returns: string }
+      sync_user_roles: { Args: never; Returns: undefined }
       update_connection_status_anon: {
         Args: {
           p_connection_id: string
@@ -2548,10 +2512,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_fixed_phone_numbers: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      update_fixed_phone_numbers: { Args: never; Returns: number }
       verify_password: {
         Args: { hash: string; password: string }
         Returns: boolean
