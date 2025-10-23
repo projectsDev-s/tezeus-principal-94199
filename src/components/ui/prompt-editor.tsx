@@ -76,7 +76,18 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     
     let node;
     while ((node = walker.nextNode())) {
-      if (node.parentElement?.getAttribute("data-badge-id")) continue;
+      // Check if ANY ancestor has data-badge-id (not just direct parent)
+      let parent = node.parentElement;
+      let isBadge = false;
+      while (parent && parent !== editorRef.current) {
+        if (parent.getAttribute("data-badge-id")) {
+          isBadge = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      
+      if (isBadge) continue;
       textNodes.push(node.textContent || "");
     }
     
