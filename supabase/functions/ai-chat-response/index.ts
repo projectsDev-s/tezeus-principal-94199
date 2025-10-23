@@ -63,13 +63,15 @@ serve(async (req) => {
       console.error('❌ Erro ao buscar mensagens:', messagesError);
     }
 
-    // 3. Montar contexto da conversa
-    const conversationHistory = messages?.map(msg => ({
-      role: msg.sender_type === 'agent' || msg.sender_type === 'ia' ? 'assistant' : 'user',
-      content: msg.content
-    })) || [];
+    // 3. Montar contexto da conversa - INCLUIR APENAS MENSAGENS DO LEAD
+    const conversationHistory = messages
+      ?.filter(msg => msg.sender_type !== 'agent' && msg.sender_type !== 'ia') // Filtrar respostas do agente
+      .map(msg => ({
+        role: 'user',
+        content: msg.content
+      })) || [];
 
-    console.log(`📖 Histórico montado: ${conversationHistory.length} mensagens`);
+    console.log(`📖 Histórico montado: ${conversationHistory.length} mensagens do lead`);
 
     // 4. Preparar chamada OpenAI
     const openaiApiKey = agent.api_key_encrypted;
