@@ -18,6 +18,12 @@ import {
   Link2, 
   Shuffle 
 } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { TagSelectorModal } from "./TagSelectorModal";
 import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
@@ -172,10 +178,10 @@ export function PromptEditorModal({
 }: PromptEditorModalProps) {
   const [localValue, setLocalValue] = useState("");
   const [badges, setBadges] = useState<ActionBadge[]>([]);
-  const [draggedAction, setDraggedAction] = useState<ActionButton | null>(null);
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
   const [editingBadge, setEditingBadge] = useState<ActionBadge | null>(null);
+  const [pendingActionType, setPendingActionType] = useState<string | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
   const previousOpenRef = useRef(false);
 
@@ -199,46 +205,33 @@ export function PromptEditorModal({
     previousOpenRef.current = open;
   }, [open, value]);
 
-  const handleDragStart = (action: ActionButton) => {
-    setDraggedAction(action);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedAction(null);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedAction) return;
-
-    // Interceptar ação "add-tag" para abrir modal de seleção
-    if (draggedAction.id === "add-tag") {
-      setShowTagSelector(true);
-      setDraggedAction(null);
-      return;
-    }
-
-    // Interceptar ação "transfer-crm-column" para abrir modal de seleção
-    if (draggedAction.id === "transfer-crm-column" || draggedAction.id === "create-crm-card") {
-      setShowPipelineColumnSelector(true);
-      setDraggedAction(null);
-      return;
-    }
-
+  const handleActionSelect = (action: ActionButton) => {
     // Obter posição do cursor
     const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
 
-    // Para outras ações, criar badge genérico
+    // Ações que precisam de modal de seleção
+    if (action.id === "add-tag") {
+      setPendingActionType(action.id);
+      setShowTagSelector(true);
+      return;
+    }
+
+    if (action.id === "transfer-crm-column" || action.id === "create-crm-card") {
+      setPendingActionType(action.id);
+      setShowPipelineColumnSelector(true);
+      return;
+    }
+
+    // Para outras ações, criar badge genérico imediatamente
     const newBadge: ActionBadge = {
-      id: `${draggedAction.id}-${Date.now()}`,
-      type: draggedAction.id,
-      label: draggedAction.label,
+      id: `${action.id}-${Date.now()}`,
+      type: action.id,
+      label: action.label,
       data: {},
       position: cursorPosition,
     };
 
     setBadges([...badges, newBadge]);
-    setDraggedAction(null);
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
@@ -290,8 +283,8 @@ export function PromptEditorModal({
       // Obter posição do cursor
       const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
 
-      // Criando novo badge (determinar tipo baseado no draggedAction anterior)
-      const actionType = draggedAction?.id || "transfer-crm-column";
+      // Criando novo badge
+      const actionType = pendingActionType || "transfer-crm-column";
       const label = actionType === "create-crm-card"
         ? `Criar Card CRM: ${pipelineName} | ${columnName}`
         : `Transferir Coluna CRM: ${columnName}`;
@@ -305,11 +298,9 @@ export function PromptEditorModal({
       };
       setBadges([...badges, newBadge]);
     }
+    setPendingActionType(null);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
 
   const handleBadgeClick = (badge: ActionBadge) => {
     setEditingBadge(badge);
@@ -365,56 +356,35 @@ export function PromptEditorModal({
         </DialogHeader>
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Editor Area */}
-          <div 
-            className="flex-1 p-6 overflow-y-auto"
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-          >
-            <PromptEditor
-              ref={editorRef}
-              value={localValue}
-              onChange={handleEditorChange}
-              badges={badges}
-              onBadgeClick={handleBadgeClick}
-              placeholder="Digite o prompt do agente aqui... Arraste e solte os botões abaixo para adicionar ações automáticas."
-              className="min-h-[400px]"
-            />
-            
-            {draggedAction && (
-              <div className="mt-4 p-4 border-2 border-dashed border-primary/50 rounded-lg bg-primary/5 text-center text-sm text-muted-foreground">
-                Solte aqui para inserir: <span className="font-semibold">{draggedAction.label}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons Bar */}
-          <div className="border-t bg-muted/30 px-6 py-4">
-            <p className="text-xs text-muted-foreground mb-3">
-              Arraste e solte as ações abaixo no editor para inseri-las no prompt
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {actionButtons.map((action) => (
-                <button
-                  key={action.id}
-                  draggable
-                  onDragStart={() => handleDragStart(action)}
-                  onDragEnd={handleDragEnd}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg",
-                    "bg-background border border-border",
-                    "hover:bg-accent hover:border-accent-foreground/20",
-                    "transition-colors cursor-move",
-                    "text-sm font-medium"
-                  )}
-                >
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    {action.icon}
-                  </div>
-                  <span>{action.label}</span>
-                </button>
-              ))}
-            </div>
+          {/* Editor Area with Context Menu */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            <ContextMenu>
+              <ContextMenuTrigger>
+                <PromptEditor
+                  ref={editorRef}
+                  value={localValue}
+                  onChange={handleEditorChange}
+                  badges={badges}
+                  onBadgeClick={handleBadgeClick}
+                  placeholder="Digite o prompt do agente aqui... Clique com o botão direito para adicionar ações."
+                  className="min-h-[400px]"
+                />
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-64">
+                {actionButtons.map((action) => (
+                  <ContextMenuItem
+                    key={action.id}
+                    onClick={() => handleActionSelect(action)}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      {action.icon}
+                    </div>
+                    <span>{action.label}</span>
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuContent>
+            </ContextMenu>
           </div>
         </div>
 
