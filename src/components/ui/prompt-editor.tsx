@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -7,7 +7,7 @@ export interface ActionBadge {
   type: string;
   label: string;
   data: Record<string, any>;
-  position?: number;
+  position: number; // posição no texto onde o badge deve aparecer
 }
 
 interface PromptEditorProps {
@@ -19,16 +19,49 @@ interface PromptEditorProps {
   className?: string;
 }
 
-export function PromptEditor({
+export interface PromptEditorRef {
+  getCursorPosition: () => number;
+}
+
+export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   value,
   onChange,
   badges,
   onBadgeClick,
   placeholder,
   className,
-}: PromptEditorProps) {
+}, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const cursorPositionRef = useRef<number>(0);
+
+  // Salva a posição do cursor
+  const saveCursorPosition = () => {
+    if (!editorRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(editorRef.current);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    
+    // Conta apenas o texto, ignorando badges
+    let position = 0;
+    const walker = document.createTreeWalker(
+      preCaretRange.cloneContents(),
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    let node;
+    while ((node = walker.nextNode())) {
+      position += node.textContent?.length || 0;
+    }
+    
+    cursorPositionRef.current = position;
+  };
 
   const handleInput = () => {
     if (!editorRef.current) return;
@@ -60,7 +93,12 @@ export function PromptEditor({
     onBadgeClick?.(badge);
   };
 
-  // Render content with badges inline
+  // Expõe a posição do cursor para uso externo via ref
+  useImperativeHandle(ref, () => ({
+    getCursorPosition: () => cursorPositionRef.current,
+  }));
+
+  // Render content with badges inline at their positions
   useEffect(() => {
     if (!editorRef.current || isFocused) return;
 
@@ -70,34 +108,32 @@ export function PromptEditor({
     
     container.innerHTML = "";
 
-    // Add text content first
-    if (value) {
-      const lines = value.split("\n");
-      lines.forEach((line, index) => {
-        if (index > 0) {
-          container.appendChild(document.createElement("br"));
-        }
-        container.appendChild(document.createTextNode(line));
-      });
-    }
-
-    // Add a space before badges if there's text
-    if (value && badges.length > 0) {
-      container.appendChild(document.createTextNode(" "));
-    }
+    const content = value || "";
     
-    // Add badges at the end
-    badges.forEach((badge, idx) => {
-      // Add space between badges
-      if (idx > 0) {
-        container.appendChild(document.createTextNode(" "));
+    // Ordena badges por posição
+    const sortedBadges = [...badges].sort((a, b) => a.position - b.position);
+    
+    let lastIndex = 0;
+    
+    sortedBadges.forEach((badge) => {
+      // Adiciona texto antes do badge
+      if (badge.position > lastIndex) {
+        const textBefore = content.substring(lastIndex, badge.position);
+        const lines = textBefore.split("\n");
+        lines.forEach((line, index) => {
+          if (index > 0) {
+            container.appendChild(document.createElement("br"));
+          }
+          if (line) {
+            container.appendChild(document.createTextNode(line));
+          }
+        });
       }
       
-      // Create inline badge
+      // Cria o badge
       const badgeElement = document.createElement("span");
       badgeElement.setAttribute("data-badge-id", badge.id);
       badgeElement.contentEditable = "false";
-      badgeElement.draggable = true;
       badgeElement.style.display = "inline-flex";
       badgeElement.style.alignItems = "center";
       badgeElement.style.gap = "1px";
@@ -106,7 +142,7 @@ export function PromptEditor({
       badgeElement.style.borderRadius = "3px";
       badgeElement.style.backgroundColor = "hsl(var(--primary) / 0.7)";
       badgeElement.style.color = "hsl(var(--primary-foreground))";
-      badgeElement.style.cursor = "move";
+      badgeElement.style.cursor = "pointer";
       badgeElement.style.verticalAlign = "middle";
       badgeElement.style.margin = "0 1px";
       
@@ -137,41 +173,24 @@ export function PromptEditor({
           handleBadgeClick(badge);
         }
       });
-
-      // Drag and drop handlers
-      badgeElement.addEventListener("dragstart", (e) => {
-        e.dataTransfer!.effectAllowed = "move";
-        e.dataTransfer!.setData("text/plain", badge.id);
-        badgeElement.style.opacity = "0.5";
-      });
-
-      badgeElement.addEventListener("dragend", (e) => {
-        badgeElement.style.opacity = "1";
-      });
-
-      badgeElement.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        e.dataTransfer!.dropEffect = "move";
-      });
-
-      badgeElement.addEventListener("drop", (e) => {
-        e.preventDefault();
-        const draggedId = e.dataTransfer!.getData("text/plain");
-        if (draggedId !== badge.id) {
-          const draggedIndex = badges.findIndex(b => b.id === draggedId);
-          const targetIndex = badges.findIndex(b => b.id === badge.id);
-          
-          if (draggedIndex !== -1 && targetIndex !== -1) {
-            const newBadges = [...badges];
-            const [draggedBadge] = newBadges.splice(draggedIndex, 1);
-            newBadges.splice(targetIndex, 0, draggedBadge);
-            onChange(value, newBadges);
-          }
-        }
-      });
       
       container.appendChild(badgeElement);
+      lastIndex = badge.position;
     });
+    
+    // Adiciona o texto restante depois do último badge
+    if (lastIndex < content.length) {
+      const textAfter = content.substring(lastIndex);
+      const lines = textAfter.split("\n");
+      lines.forEach((line, index) => {
+        if (index > 0) {
+          container.appendChild(document.createElement("br"));
+        }
+        if (line) {
+          container.appendChild(document.createTextNode(line));
+        }
+      });
+    }
 
     // Restore cursor position
     if (savedRange) {
@@ -197,7 +216,12 @@ export function PromptEditor({
         contentEditable
         onInput={handleInput}
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onBlur={() => {
+          setIsFocused(false);
+          saveCursorPosition();
+        }}
+        onClick={saveCursorPosition}
+        onKeyUp={saveCursorPosition}
         className={cn(
           "min-h-[400px] p-4 outline-none font-mono",
           "break-words",
@@ -210,10 +234,10 @@ export function PromptEditor({
 
       {/* Placeholder */}
       {!value && !isFocused && badges.length === 0 && (
-        <div className="absolute top-4 left-4 pointer-events-none text-muted-foreground text-sm font-mono">
+        <div className="absolute top-4 left-4 pointer-events-none text-sm font-mono">
           {placeholder}
         </div>
       )}
     </div>
   );
-}
+});

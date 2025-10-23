@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PromptEditor, ActionBadge } from "@/components/ui/prompt-editor";
+import { PromptEditor, ActionBadge, PromptEditorRef } from "@/components/ui/prompt-editor";
 import { 
   Tag, 
   ArrowRightLeft, 
@@ -95,6 +95,7 @@ export function PromptEditorModal({
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
   const [editingBadge, setEditingBadge] = useState<ActionBadge | null>(null);
+  const editorRef = useRef<PromptEditorRef>(null);
 
   const handleDragStart = (action: ActionButton) => {
     setDraggedAction(action);
@@ -122,12 +123,16 @@ export function PromptEditorModal({
       return;
     }
 
+    // Obter posição do cursor
+    const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
+
     // Para outras ações, criar badge genérico
     const newBadge: ActionBadge = {
       id: `${draggedAction.id}-${Date.now()}`,
       type: draggedAction.id,
       label: draggedAction.label,
       data: {},
+      position: cursorPosition,
     };
 
     setBadges([...badges, newBadge]);
@@ -145,12 +150,16 @@ export function PromptEditorModal({
       setBadges(updatedBadges);
       setEditingBadge(null);
     } else {
+      // Obter posição do cursor
+      const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
+
       // Criando novo badge
       const newBadge: ActionBadge = {
         id: `add-tag-${Date.now()}`,
         type: "add-tag",
         label: `Adicionar Tag: ${tagName}`,
         data: { tagId, tagName },
+        position: cursorPosition,
       };
       setBadges([...badges, newBadge]);
     }
@@ -176,6 +185,9 @@ export function PromptEditorModal({
       setBadges(updatedBadges);
       setEditingBadge(null);
     } else {
+      // Obter posição do cursor
+      const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
+
       // Criando novo badge (determinar tipo baseado no draggedAction anterior)
       const actionType = draggedAction?.id || "transfer-crm-column";
       const label = actionType === "create-crm-card"
@@ -187,6 +199,7 @@ export function PromptEditorModal({
         type: actionType,
         label,
         data: { pipelineId, pipelineName, columnId, columnName },
+        position: cursorPosition,
       };
       setBadges([...badges, newBadge]);
     }
@@ -254,6 +267,7 @@ export function PromptEditorModal({
             onDragOver={handleDragOver}
           >
             <PromptEditor
+              ref={editorRef}
               value={localValue}
               onChange={handleEditorChange}
               badges={badges}
