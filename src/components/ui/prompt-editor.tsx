@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
 import { X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const cursorPositionRef = useRef<number>(0);
+  const prevBadgesRef = useRef<ActionBadge[]>([]);
 
   // Salva a posição do cursor
   const saveCursorPosition = () => {
@@ -120,6 +121,60 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     handleInput();
   };
 
+  // Recalcula posições dos badges baseado no DOM atual
+  const recalculateBadgePositions = useCallback((): ActionBadge[] => {
+    if (!editorRef.current) return badges;
+
+    const updatedBadges: ActionBadge[] = [];
+    let textPosition = 0;
+
+    const walker = document.createTreeWalker(
+      editorRef.current,
+      NodeFilter.SHOW_ALL,
+      null
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        const badgeId = element.getAttribute("data-badge-id");
+        
+        if (badgeId) {
+          // Encontrou um badge, atualizar sua posição
+          const badge = badges.find(b => b.id === badgeId);
+          if (badge) {
+            updatedBadges.push({ ...badge, position: textPosition });
+          }
+          // Pular conteúdo do badge
+          walker.nextSibling();
+          continue;
+        }
+        
+        if (element.tagName === "BR") {
+          textPosition += 1;
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        // Verificar se NÃO está dentro de badge
+        let parent = node.parentElement;
+        let isBadge = false;
+        while (parent && parent !== editorRef.current) {
+          if (parent.getAttribute("data-badge-id")) {
+            isBadge = true;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        
+        if (!isBadge) {
+          textPosition += node.textContent?.length || 0;
+        }
+      }
+    }
+
+    return updatedBadges;
+  }, [badges]);
+
   const handleInput = () => {
     if (!editorRef.current) return;
     
@@ -164,8 +219,9 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
       }
     }
     
-    // Do NOT apply .trim() - preserve formatting
-    onChange(textContent, badges);
+    // Recalcular posições dos badges
+    const updatedBadges = recalculateBadgePositions();
+    onChange(textContent, updatedBadges);
   };
 
   const handleRemoveBadge = (badgeId: string) => {
@@ -186,10 +242,15 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   useEffect(() => {
     if (!editorRef.current) return;
     
-    // Se está focado, só re-renderizar se os badges mudaram
+    // Se está focado, só re-renderizar se os badges NÃO mudaram
     if (isFocused) {
-      return;
+      const badgesChanged = JSON.stringify(prevBadgesRef.current) !== JSON.stringify(badges);
+      if (!badgesChanged) {
+        return;
+      }
     }
+    
+    prevBadgesRef.current = badges;
 
     const container = editorRef.current;
     const selection = window.getSelection();
@@ -256,17 +317,6 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         </button>
       `;
       
-      badgeElement.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const target = e.target as HTMLElement;
-        if (target.closest("[data-remove]")) {
-          handleRemoveBadge(badge.id);
-        } else {
-          handleBadgeClick(badge);
-        }
-      });
-      
       container.appendChild(badgeElement);
       lastIndex = badge.position;
     });
@@ -296,6 +346,40 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
       }
     }
   }, [badges, value, isFocused]);
+
+  // Delegação de eventos no container
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const container = editorRef.current;
+
+    const handleContainerClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const badgeElement = target.closest("[data-badge-id]") as HTMLElement;
+      
+      if (badgeElement) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const badgeId = badgeElement.getAttribute("data-badge-id");
+        const badge = badges.find(b => b.id === badgeId);
+        
+        if (!badge) return;
+        
+        if (target.closest("[data-remove]")) {
+          handleRemoveBadge(badge.id);
+        } else {
+          handleBadgeClick(badge);
+        }
+      }
+    };
+
+    container.addEventListener("click", handleContainerClick);
+
+    return () => {
+      container.removeEventListener("click", handleContainerClick);
+    };
+  }, [badges, onBadgeClick]);
 
   return (
     <div
