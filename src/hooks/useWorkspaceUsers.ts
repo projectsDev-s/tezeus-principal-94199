@@ -14,6 +14,12 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
+    console.log('🔍 [useWorkspaceUsers] useEffect triggered:', { 
+      workspaceId, 
+      filterProfiles,
+      hasWorkspaceId: !!workspaceId 
+    });
+    
     if (!workspaceId) {
       console.warn('⚠️ useWorkspaceUsers: sem workspace ID');
       setUsers([]);
