@@ -145,6 +145,24 @@ function parseBadgesFromPrompt(prompt: string): { text: string; badges: ActionBa
   return { text, badges };
 }
 
+// Função para formatar o preview do prompt para exibição no textarea
+export function formatPromptPreview(prompt: string): string {
+  if (!prompt) return "";
+  
+  const parsed = parseBadgesFromPrompt(prompt);
+  let preview = parsed.text;
+  
+  // Adicionar badges formatados no final
+  if (parsed.badges.length > 0) {
+    preview += "\n\n--- AÇÕES CONFIGURADAS ---\n";
+    parsed.badges.forEach((badge) => {
+      preview += `\n[${badge.label}]`;
+    });
+  }
+  
+  return preview;
+}
+
 export function PromptEditorModal({
   open,
   onOpenChange,

@@ -16,7 +16,7 @@ import { Eye, EyeOff, FileText, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
-import { PromptEditorModal } from "./PromptEditorModal";
+import { PromptEditorModal, formatPromptPreview } from "./PromptEditorModal";
 
 interface CriarAgenteModalProps {
   open: boolean;
@@ -269,7 +269,7 @@ export function CriarAgenteModal({
             <Label htmlFor="system_instructions">Instruções do Sistema (Prompt)</Label>
             <Textarea
               id="system_instructions"
-              value={formData.system_instructions}
+              value={formatPromptPreview(formData.system_instructions)}
               onClick={() => setShowPromptEditor(true)}
               placeholder="Clique para editar o prompt com ações avançadas..."
               rows={4}
