@@ -206,17 +206,36 @@ export function CriarAgenteModal({
             </DialogHeader>
 
             <form className="space-y-6">
-              {/* Nome e Tipo */}
+              {/* Workspace */}
+              <div className="space-y-2">
+                <Label htmlFor="workspace">Empresa</Label>
+                <Select value={formData.workspace_id} onValueChange={(value) => setFormData({ ...formData, workspace_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workspaces.map((workspace) => (
+                      <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                        {workspace.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Nome */}
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Nome do agente"
+                />
+              </div>
+
+              {/* Tipo e Modelo */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nome do agente"
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Tipo de Agente</Label>
                   <Select value={formData.agent_type} onValueChange={(value) => setFormData({ ...formData, agent_type: value })}>
@@ -226,6 +245,20 @@ export function CriarAgenteModal({
                     <SelectContent>
                       <SelectItem value="OPENAI_COMPLETION">OPEN AI Padrão</SelectItem>
                       <SelectItem value="OPENAI_ASSISTANT">OPEN AI Assistant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="model">Modelo Open AI</Label>
+                  <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gpt-4o">gpt-4o</SelectItem>
+                      <SelectItem value="gpt-4o-mini">gpt-4o-mini</SelectItem>
+                      <SelectItem value="gpt-4-turbo">gpt-4-turbo</SelectItem>
+                      <SelectItem value="gpt-3.5-turbo">gpt-3.5-turbo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -255,21 +288,6 @@ export function CriarAgenteModal({
                 </div>
               </div>
 
-              {/* Modelo */}
-              <div className="space-y-2">
-                <Label htmlFor="model">Modelo Open AI</Label>
-                <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-4o">gpt-4o</SelectItem>
-                    <SelectItem value="gpt-4o-mini">gpt-4o-mini</SelectItem>
-                    <SelectItem value="gpt-4-turbo">gpt-4-turbo</SelectItem>
-                    <SelectItem value="gpt-3.5-turbo">gpt-3.5-turbo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               {/* Instruções */}
               <div className="space-y-2">
