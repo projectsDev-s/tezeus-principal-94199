@@ -312,7 +312,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         onKeyUp={saveCursorPosition}
         className={cn(
           "min-h-[400px] p-4 outline-none font-mono",
-          "break-words whitespace-pre-wrap",
+          "break-words",
           !value && !isFocused && badges.length === 0 && "text-muted-foreground"
         )}
         suppressContentEditableWarning
