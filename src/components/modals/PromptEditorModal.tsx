@@ -143,18 +143,18 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const jsonToInsert = `utilize o tools do agente \`inserir-tag\` enviando esses parâmetros: {{action: "addTag", params: {"tagId": "${tagId}", "tagName": "${tagName}"}}}`;
+    const marcacao = `[Adicionar Tag: ${tagName}]`;
     
     const textBefore = localValue.substring(0, pendingCursorPosition);
     const textAfter = localValue.substring(pendingCursorPosition);
     
-    const newValue = textBefore + "\n" + jsonToInsert + "\n" + textAfter;
+    const newValue = textBefore + "\n" + marcacao + "\n" + textAfter;
     setLocalValue(newValue);
     
-    // Posicionar cursor após a tag inserida
+    // Posicionar cursor após a marcação inserida
     if (textareaRef.current) {
       setTimeout(() => {
-        const newPosition = pendingCursorPosition + jsonToInsert.length + 2;
+        const newPosition = pendingCursorPosition + marcacao.length + 2;
         textareaRef.current?.focus();
         textareaRef.current?.setSelectionRange(newPosition, newPosition);
       }, 0);
