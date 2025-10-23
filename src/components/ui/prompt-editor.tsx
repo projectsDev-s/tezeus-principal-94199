@@ -70,21 +70,37 @@ export function PromptEditor({
     
     container.innerHTML = "";
 
-    // Insert badges first
-    badges.forEach((badge) => {
+    // Insert badges inline with text
+    const content = value || "";
+    let lastIndex = 0;
+    
+    badges.forEach((badge, idx) => {
+      // Add text before badge
+      if (lastIndex < content.length) {
+        const textBefore = idx === 0 ? content : "";
+        if (textBefore) {
+          container.appendChild(document.createTextNode(textBefore));
+        }
+      }
+      
+      // Create inline badge
       const badgeElement = document.createElement("span");
       badgeElement.setAttribute("data-badge-id", badge.id);
       badgeElement.contentEditable = "false";
-      badgeElement.className = "inline align-baseline";
+      badgeElement.style.display = "inline-flex";
+      badgeElement.style.alignItems = "center";
+      badgeElement.style.gap = "2px";
+      badgeElement.style.padding = "1px 6px";
+      badgeElement.style.fontSize = "10px";
+      badgeElement.style.borderRadius = "4px";
+      badgeElement.style.backgroundColor = "hsl(var(--primary) / 0.7)";
+      badgeElement.style.color = "hsl(var(--primary-foreground))";
+      badgeElement.style.cursor = "pointer";
+      badgeElement.style.verticalAlign = "middle";
+      badgeElement.style.margin = "0 2px";
       
-      const badgeContent = document.createElement("span");
-      badgeContent.className = cn(
-        "inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors align-baseline",
-        "bg-primary/70 text-primary-foreground hover:bg-primary/90 cursor-pointer"
-      );
-      
-      badgeContent.innerHTML = `
-        <svg class="h-2 w-2 flex-shrink-0 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      badgeElement.innerHTML = `
+        <svg style="width: 10px; height: 10px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="9" cy="5" r="1"></circle>
           <circle cx="9" cy="12" r="1"></circle>
           <circle cx="9" cy="19" r="1"></circle>
@@ -92,15 +108,15 @@ export function PromptEditor({
           <circle cx="15" cy="12" r="1"></circle>
           <circle cx="15" cy="19" r="1"></circle>
         </svg>
-        <span class="text-[10px] whitespace-nowrap inline">${badge.label}</span>
-        <button class="inline rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors" data-remove="${badge.id}">
-          <svg class="h-2 w-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <span style="white-space: nowrap;">${badge.label}</span>
+        <button style="padding: 1px; border-radius: 50%; background: transparent;" data-remove="${badge.id}">
+          <svg style="width: 10px; height: 10px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       `;
       
-      badgeContent.addEventListener("click", (e) => {
+      badgeElement.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         const target = e.target as HTMLElement;
@@ -111,7 +127,6 @@ export function PromptEditor({
         }
       });
       
-      badgeElement.appendChild(badgeContent);
       container.appendChild(badgeElement);
     });
 
