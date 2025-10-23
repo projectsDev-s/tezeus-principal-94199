@@ -148,53 +148,54 @@ export function PromptEditor({
         className
       )}
     >
-      {/* Badges Container */}
-      {badges.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 p-2.5 border-b border-border bg-muted/20">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+      {/* Integrated Editor with Badges and Text */}
+      <div className="min-h-[400px] p-4">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={badges.map((b) => b.id)}
+            strategy={verticalListSortingStrategy}
           >
-            <SortableContext
-              items={badges.map((b) => b.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {badges.map((badge) => (
-                <SortableBadge
-                  key={badge.id}
-                  badge={badge}
-                  onRemove={() => handleRemoveBadge(badge.id)}
-                  onClick={() => handleBadgeClick(badge)}
-                />
+            <div className="flex flex-wrap gap-2 items-start">
+              {badges.map((badge, index) => (
+                <React.Fragment key={badge.id}>
+                  <SortableBadge
+                    badge={badge}
+                    onRemove={() => handleRemoveBadge(badge.id)}
+                    onClick={() => handleBadgeClick(badge)}
+                  />
+                </React.Fragment>
               ))}
-            </SortableContext>
-          </DndContext>
-        </div>
-      )}
+            </div>
+          </SortableContext>
+        </DndContext>
 
-      {/* Text Editor */}
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleTextChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        className={cn(
-          "min-h-[350px] p-4 outline-none font-mono text-sm",
-          "whitespace-pre-wrap break-words",
-          !value && !isFocused && "text-muted-foreground"
+        {/* Text Editor */}
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleTextChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className={cn(
+            "mt-2 min-h-[320px] outline-none font-mono text-sm",
+            "whitespace-pre-wrap break-words",
+            !value && !isFocused && "text-muted-foreground"
+          )}
+          data-placeholder={placeholder}
+          suppressContentEditableWarning
+        />
+
+        {/* Placeholder */}
+        {!value && !isFocused && badges.length === 0 && (
+          <div className="absolute top-4 left-4 pointer-events-none text-muted-foreground text-sm font-mono">
+            {placeholder}
+          </div>
         )}
-        data-placeholder={placeholder}
-        suppressContentEditableWarning
-      />
-
-      {/* Placeholder */}
-      {!value && !isFocused && (
-        <div className="absolute top-[60px] left-4 pointer-events-none text-muted-foreground text-sm font-mono">
-          {placeholder}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
