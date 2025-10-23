@@ -904,7 +904,10 @@ export function ContactSidePanel({
         preSelectedContactId={contact.id} 
         preSelectedContactName={contact.name}
         onCreateBusiness={async (business) => {
+          console.log('🚀 INÍCIO - onCreateBusiness chamado com:', business);
+          
           if (!selectedWorkspace) {
+            console.error('❌ Workspace não selecionado');
             toast({
               title: "Erro",
               description: "Workspace não selecionado",
@@ -912,6 +915,8 @@ export function ContactSidePanel({
             });
             return;
           }
+
+          console.log('✅ Workspace selecionado:', selectedWorkspace.workspace_id);
 
           try {
             // 1. Buscar dados completos do contato
