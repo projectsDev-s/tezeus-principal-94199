@@ -5,10 +5,21 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 export const useWorkspaceAgent = () => {
   const { selectedWorkspace } = useWorkspace();
   
-  const { data: agent, isLoading } = useQuery({
+  console.log('🤖 useWorkspaceAgent - selectedWorkspace:', {
+    workspace_id: selectedWorkspace?.workspace_id,
+    name: selectedWorkspace?.name,
+    enabled: !!selectedWorkspace?.workspace_id
+  });
+  
+  const { data: agent, isLoading, error } = useQuery({
     queryKey: ['workspace-agent', selectedWorkspace?.workspace_id],
     queryFn: async () => {
-      if (!selectedWorkspace?.workspace_id) return null;
+      if (!selectedWorkspace?.workspace_id) {
+        console.log('❌ Workspace ID não disponível');
+        return null;
+      }
+      
+      console.log('🔍 Buscando agente para workspace:', selectedWorkspace.workspace_id);
       
       const { data, error } = await supabase
         .from('ai_agents')
@@ -17,10 +28,18 @@ export const useWorkspaceAgent = () => {
         .eq('is_active', true)
         .maybeSingle();
       
+      console.log('📊 Resultado da busca:', { data, error });
+      
       if (error) throw error;
       return data;
     },
     enabled: !!selectedWorkspace?.workspace_id,
+  });
+  
+  console.log('✅ Hook result:', { 
+    hasAgent: !!agent, 
+    isLoading,
+    agent: agent?.name 
   });
   
   return { 

@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { PromptEditorModal, formatPromptPreview } from "./PromptEditorModal";
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CriarAgenteModalProps {
   open: boolean;
@@ -52,6 +53,7 @@ export function CriarAgenteModal({
   const [showApiKey, setShowApiKey] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const { workspaces } = useWorkspaces();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<FormData>({
     workspace_id: '',
@@ -142,6 +144,9 @@ export function CriarAgenteModal({
         });
 
       if (error) throw error;
+
+      // Invalidar cache do workspace-agent para atualizar o botão
+      queryClient.invalidateQueries({ queryKey: ['workspace-agent'] });
 
       toast.success('Agente criado com sucesso!');
       onAgentCreated?.();

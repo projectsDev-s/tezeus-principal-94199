@@ -40,7 +40,7 @@ import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -94,7 +94,7 @@ export function WhatsAppChat({
   } = useWhatsAppConversations();
 
   // Verificar se há agente ativo no workspace
-  const { hasAgent } = useWorkspaceAgent();
+  const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent();
 
   // ✅ Hook específico para mensagens (lazy loading)
   const {
@@ -140,6 +140,16 @@ export function WhatsAppChat({
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Log do estado do agente após selectedConversation estar disponível
+  useEffect(() => {
+    console.log('🎯 WhatsAppChat - Estado do Agente:', { 
+      hasAgent, 
+      agentLoading, 
+      agentName: agent?.name,
+      conversationActive: selectedConversation?.agente_ativo 
+    });
+  }, [hasAgent, agentLoading, agent, selectedConversation]);
   const [quickPhoneNumber, setQuickPhoneNumber] = useState("");
   const [isCreatingQuickConversation, setIsCreatingQuickConversation] = useState(false);
   const [showAllQueues, setShowAllQueues] = useState(true);
@@ -1677,21 +1687,23 @@ export function WhatsAppChat({
                           variant="ghost" 
                           size="sm" 
                           onClick={handleToggleAgent} 
-                          disabled={!hasAgent}
+                          disabled={!hasAgent || agentLoading}
                           className={cn(
-                            "h-8 w-8 p-0 rounded-full transition-colors", 
+                            "h-8 w-8 p-0 rounded-full transition-colors",
+                            agentLoading && "opacity-50 cursor-wait",
                             selectedConversation.agente_ativo 
                               ? "bg-green-500/10 text-green-600 hover:bg-green-500/20" 
                               : "bg-muted text-muted-foreground hover:bg-muted/80"
                           )}
                         >
-                          <Bot className="w-4 h-4" />
+                          {agentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {!hasAgent && "⚠️ Nenhum agente de IA cadastrado"}
-                        {hasAgent && selectedConversation.agente_ativo && "🤖 IA respondendo - Clique para assumir atendimento"}
-                        {hasAgent && !selectedConversation.agente_ativo && "👤 Atendimento manual - Clique para ativar IA"}
+                        {agentLoading && "⏳ Carregando configuração do agente..."}
+                        {!agentLoading && !hasAgent && "⚠️ Nenhum agente de IA cadastrado"}
+                        {!agentLoading && hasAgent && selectedConversation.agente_ativo && "🤖 IA respondendo - Clique para assumir atendimento"}
+                        {!agentLoading && hasAgent && !selectedConversation.agente_ativo && "👤 Atendimento manual - Clique para ativar IA"}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
