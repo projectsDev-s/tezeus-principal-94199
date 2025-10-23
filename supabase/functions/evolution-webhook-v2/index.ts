@@ -599,48 +599,56 @@ serve(async (req) => {
                 console.error(`❌ [${requestId}] Erro ao buscar conversa para IA:`, convError);
               } else if (!conversation) {
                 console.warn(`⚠️ [${requestId}] Conversa não encontrada para contato: ${contact.id}`);
-              } else if (conversation?.agente_ativo) {
-              console.log(`🤖 [${requestId}] IA ativa detectada para conversa ${conversation.id}`);
+        } else if (conversation?.agente_ativo) {
+          console.log(`🤖 [${requestId}] IA ativa detectada para conversa ${conversation.id}`);
+          
+          // ✅ DEDUP: Verificar se já processamos esta mensagem
+          const dedupKey = `ai_response_${messageData.id}`;
+          if (checkDedup(dedupKey)) {
+            console.log(`⏭️ [${requestId}] IA já processou esta mensagem - pulando`);
+          } else {
+            console.log(`✅ [${requestId}] Primeira vez processando mensagem ${messageData.id} - prosseguindo com IA`);
+            
+            // 2. Verificar se há agente ativo no workspace
+            const { data: agent, error: agentError } = await supabase
+              .from('ai_agents')
+              .select('id, name, api_provider, model')
+              .eq('workspace_id', workspaceId)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (agentError) {
+              console.error(`❌ [${requestId}] Erro ao buscar agente:`, agentError);
+            } else if (agent) {
+              console.log(`✅ [${requestId}] Agente encontrado: ${agent.name} (${agent.model})`);
+              console.log(`🚀 [${requestId}] Invocando ai-chat-response de forma assíncrona...`);
               
-              // 2. Verificar se há agente ativo no workspace
-              const { data: agent, error: agentError } = await supabase
-                .from('ai_agents')
-                .select('id, name, api_provider, model')
-                .eq('workspace_id', workspaceId)
-                .eq('is_active', true)
-                .maybeSingle();
-              
-              if (agentError) {
-                console.error(`❌ [${requestId}] Erro ao buscar agente:`, agentError);
-              } else if (agent) {
-                console.log(`✅ [${requestId}] Agente encontrado: ${agent.name} (${agent.model})`);
-                console.log(`🚀 [${requestId}] Invocando ai-chat-response de forma assíncrona...`);
-                
-                // 3. Invocar ai-chat-response de forma assíncrona (não bloquear webhook)
-                supabase.functions.invoke('ai-chat-response', {
-                  body: {
-                    conversationId: conversation.id,
-                    contactId: conversation.contact_id,
-                    workspaceId: workspaceId,
-                    agentId: agent.id,
-                    phoneNumber: phoneNumber,
-                    instanceName: instanceName
-                  }
-                }).then(result => {
-                  if (result.error) {
-                    console.error(`❌ [${requestId}] Erro na resposta da IA:`, result.error);
-                  } else {
-                    console.log(`✅ [${requestId}] IA respondeu com sucesso:`, result.data);
-                  }
-                }).catch(err => {
-                  console.error(`❌ [${requestId}] Exceção ao invocar IA:`, err);
-                });
-              } else {
-                console.log(`ℹ️ [${requestId}] Nenhum agente ativo encontrado no workspace`);
-              }
-              } else {
-                console.log(`ℹ️ [${requestId}] IA não está ativa para esta conversa`);
-              }
+              // 3. Invocar ai-chat-response de forma assíncrona (não bloquear webhook)
+              supabase.functions.invoke('ai-chat-response', {
+                body: {
+                  conversationId: conversation.id,
+                  contactId: conversation.contact_id,
+                  workspaceId: workspaceId,
+                  agentId: agent.id,
+                  phoneNumber: phoneNumber,
+                  instanceName: instanceName
+                }
+              }).then(result => {
+                if (result.error) {
+                  console.error(`❌ [${requestId}] Erro na resposta da IA:`, result.error);
+                } else {
+                  console.log(`✅ [${requestId}] IA respondeu com sucesso:`, result.data);
+                }
+              }).catch(err => {
+                console.error(`❌ [${requestId}] Exceção ao invocar IA:`, err);
+              });
+            } else {
+              console.log(`ℹ️ [${requestId}] Nenhum agente ativo encontrado no workspace`);
+            }
+          }
+        } else {
+          console.log(`ℹ️ [${requestId}] IA não está ativa para esta conversa`);
+        }
             }
           } catch (aiCheckError) {
             console.error(`❌ [${requestId}] Exceção ao verificar IA:`, aiCheckError);
