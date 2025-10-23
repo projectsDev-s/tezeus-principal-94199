@@ -149,18 +149,25 @@ export type Database = {
           agent_type: string
           api_key_encrypted: string | null
           api_provider: string
+          assign_responsible: boolean | null
           auto_responses_enabled: boolean | null
           created_at: string
           description: string | null
+          disable_outside_platform: boolean | null
           fallback_message: string | null
           id: string
+          ignore_interval: number | null
           is_active: boolean | null
           is_default: boolean | null
           knowledge_base_enabled: boolean | null
+          knowledge_base_url: string | null
+          max_messages: number | null
           max_tokens: number | null
           model: string
           name: string
+          process_messages: boolean | null
           response_delay_ms: number | null
+          split_responses: boolean | null
           system_instructions: string | null
           temperature: number | null
           updated_at: string
@@ -174,18 +181,25 @@ export type Database = {
           agent_type?: string
           api_key_encrypted?: string | null
           api_provider?: string
+          assign_responsible?: boolean | null
           auto_responses_enabled?: boolean | null
           created_at?: string
           description?: string | null
+          disable_outside_platform?: boolean | null
           fallback_message?: string | null
           id?: string
+          ignore_interval?: number | null
           is_active?: boolean | null
           is_default?: boolean | null
           knowledge_base_enabled?: boolean | null
+          knowledge_base_url?: string | null
+          max_messages?: number | null
           max_tokens?: number | null
           model?: string
           name: string
+          process_messages?: boolean | null
           response_delay_ms?: number | null
+          split_responses?: boolean | null
           system_instructions?: string | null
           temperature?: number | null
           updated_at?: string
@@ -199,18 +213,25 @@ export type Database = {
           agent_type?: string
           api_key_encrypted?: string | null
           api_provider?: string
+          assign_responsible?: boolean | null
           auto_responses_enabled?: boolean | null
           created_at?: string
           description?: string | null
+          disable_outside_platform?: boolean | null
           fallback_message?: string | null
           id?: string
+          ignore_interval?: number | null
           is_active?: boolean | null
           is_default?: boolean | null
           knowledge_base_enabled?: boolean | null
+          knowledge_base_url?: string | null
+          max_messages?: number | null
           max_tokens?: number | null
           model?: string
           name?: string
+          process_messages?: boolean | null
           response_delay_ms?: number | null
+          split_responses?: boolean | null
           system_instructions?: string | null
           temperature?: number | null
           updated_at?: string
