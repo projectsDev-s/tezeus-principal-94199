@@ -167,8 +167,8 @@ export function PromptEditor({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         className={cn(
-          "min-h-[400px] p-4 outline-none font-mono text-sm",
-          "whitespace-pre-wrap break-words",
+          "min-h-[400px] p-4 outline-none font-mono",
+          "break-words",
           !value && !isFocused && badges.length === 0 && "text-muted-foreground"
         )}
         suppressContentEditableWarning
