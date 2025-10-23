@@ -84,38 +84,59 @@ export function EditarAgenteModal({
   }, [open, agentId]);
 
   const loadAgentData = async () => {
+    if (!agentId) {
+      console.log('⚠️ Nenhum agentId fornecido');
+      return;
+    }
+
+    console.log('🔍 Carregando agente:', agentId);
+
     try {
       const { data, error } = await supabase
         .from('ai_agents')
         .select('*')
         .eq('id', agentId)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      console.log('📦 Dados recebidos:', data);
+      console.log('❌ Erro:', error);
 
-      if (data) {
-        setFormData({
-          workspace_id: data.workspace_id || '',
-          name: data.name || '',
-          agent_type: data.agent_type || 'conversational',
-          api_key: data.api_key_encrypted || '',
-          model: data.model || 'gpt-4o-mini',
-          system_instructions: data.system_instructions || 'Você é um assistente útil e prestativo.',
-          temperature: data.temperature || 0.7,
-          max_tokens: data.max_tokens || 2000,
-          max_messages: data.max_messages || 300,
-          response_delay: (data.response_delay_ms || 3000) / 1000,
-          ignore_interval: data.ignore_interval || 0,
-          assign_responsible: data.assign_responsible || false,
-          split_responses: data.split_responses ?? true,
-          process_messages: data.process_messages ?? true,
-          disable_outside_platform: data.disable_outside_platform || false,
-          is_active: data.is_active ?? true,
-        });
-        setCurrentKnowledgeUrl(data.knowledge_base_url);
+      if (error) {
+        console.error('Erro ao carregar agente:', error);
+        toast.error(`Erro ao carregar agente: ${error.message}`);
+        return;
       }
+
+      if (!data) {
+        console.error('Agente não encontrado:', agentId);
+        toast.error('Agente não encontrado');
+        return;
+      }
+
+      const loadedFormData = {
+        workspace_id: data.workspace_id || '',
+        name: data.name || '',
+        agent_type: data.agent_type || 'conversational',
+        api_key: data.api_key_encrypted || '',
+        model: data.model || 'gpt-4o-mini',
+        system_instructions: data.system_instructions || 'Você é um assistente útil e prestativo.',
+        temperature: data.temperature || 0.7,
+        max_tokens: data.max_tokens || 2000,
+        max_messages: data.max_messages || 300,
+        response_delay: (data.response_delay_ms || 3000) / 1000,
+        ignore_interval: data.ignore_interval || 0,
+        assign_responsible: data.assign_responsible || false,
+        split_responses: data.split_responses ?? true,
+        process_messages: data.process_messages ?? true,
+        disable_outside_platform: data.disable_outside_platform || false,
+        is_active: data.is_active ?? true,
+      };
+
+      setFormData(loadedFormData);
+      setCurrentKnowledgeUrl(data.knowledge_base_url);
+      console.log('✅ FormData preenchido:', loadedFormData);
     } catch (error: any) {
-      console.error('Erro ao carregar agente:', error);
+      console.error('💥 Exceção ao carregar agente:', error);
       toast.error('Erro ao carregar dados do agente');
     }
   };

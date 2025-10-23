@@ -203,17 +203,19 @@ export function DSAgenteMaster() {
         onAgentCreated={handleCreateModalClose}
       />
 
-      {selectedAgentId && (
-        <EditarAgenteModal
-          open={showEditModal}
-          onOpenChange={setShowEditModal}
-          agentId={selectedAgentId}
-          onAgentUpdated={() => {
-            setShowEditModal(false);
-            loadAgents();
-          }}
-        />
-      )}
+      <EditarAgenteModal
+        open={showEditModal && !!selectedAgentId}
+        onOpenChange={(open) => {
+          setShowEditModal(open);
+          if (!open) setSelectedAgentId(null);
+        }}
+        agentId={selectedAgentId || ''}
+        onAgentUpdated={() => {
+          setShowEditModal(false);
+          setSelectedAgentId(null);
+          loadAgents();
+        }}
+      />
     </div>
   );
 }
