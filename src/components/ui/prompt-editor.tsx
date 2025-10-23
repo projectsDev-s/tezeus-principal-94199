@@ -89,18 +89,18 @@ export function PromptEditor({
       badgeElement.contentEditable = "false";
       badgeElement.style.display = "inline-flex";
       badgeElement.style.alignItems = "center";
-      badgeElement.style.gap = "2px";
-      badgeElement.style.padding = "1px 6px";
-      badgeElement.style.fontSize = "10px";
-      badgeElement.style.borderRadius = "4px";
+      badgeElement.style.gap = "1px";
+      badgeElement.style.padding = "0px 3px";
+      badgeElement.style.fontSize = "9px";
+      badgeElement.style.borderRadius = "3px";
       badgeElement.style.backgroundColor = "hsl(var(--primary) / 0.7)";
       badgeElement.style.color = "hsl(var(--primary-foreground))";
       badgeElement.style.cursor = "pointer";
       badgeElement.style.verticalAlign = "middle";
-      badgeElement.style.margin = "0 2px";
+      badgeElement.style.margin = "0 1px";
       
       badgeElement.innerHTML = `
-        <svg style="width: 10px; height: 10px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg style="width: 8px; height: 8px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="9" cy="5" r="1"></circle>
           <circle cx="9" cy="12" r="1"></circle>
           <circle cx="9" cy="19" r="1"></circle>
@@ -109,8 +109,8 @@ export function PromptEditor({
           <circle cx="15" cy="19" r="1"></circle>
         </svg>
         <span style="white-space: nowrap;">${badge.label}</span>
-        <button style="padding: 1px; border-radius: 50%; background: transparent;" data-remove="${badge.id}">
-          <svg style="width: 10px; height: 10px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button style="padding: 0px; border-radius: 50%; background: transparent;" data-remove="${badge.id}">
+          <svg style="width: 8px; height: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
