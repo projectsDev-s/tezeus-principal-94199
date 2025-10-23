@@ -50,7 +50,7 @@ serve(async (req) => {
       });
     }
 
-    const { evolutionUrl, token } = instanceConfig;
+    const { evolution_url: evolutionUrl, token } = instanceConfig;
     
     console.log(`📤 [${messageId}] Sending message via Evolution API:`, { 
       evolutionInstance, 
