@@ -1683,21 +1683,33 @@ export function WhatsAppChat({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleToggleAgent} 
-                          disabled={!hasAgent || agentLoading}
-                          className={cn(
-                            "h-8 w-8 p-0 rounded-full transition-colors",
-                            agentLoading && "opacity-50 cursor-wait",
-                            selectedConversation.agente_ativo 
-                              ? "bg-green-500/10 text-green-600 hover:bg-green-500/20" 
-                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        <div className="relative">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleToggleAgent} 
+                            disabled={!hasAgent || agentLoading}
+                            className={cn(
+                              "h-8 w-8 p-0 rounded-full transition-all duration-300",
+                              agentLoading && "opacity-50 cursor-wait",
+                              selectedConversation.agente_ativo 
+                                ? "bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/50" 
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            )}
+                          >
+                            {agentLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Bot className={cn(
+                                "w-4 h-4 transition-all",
+                                selectedConversation.agente_ativo && "animate-pulse"
+                              )} />
+                            )}
+                          </Button>
+                          {selectedConversation.agente_ativo && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-background animate-pulse" />
                           )}
-                        >
-                          {agentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
-                        </Button>
+                        </div>
                       </TooltipTrigger>
                       <TooltipContent>
                         {agentLoading && "⏳ Carregando configuração do agente..."}
