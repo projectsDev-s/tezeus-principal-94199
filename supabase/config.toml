@@ -227,3 +227,9 @@ verify_jwt = false
 
 [functions.n8n-queue-distribution]
 verify_jwt = false
+
+[functions.process-agent-response]
+verify_jwt = false
+
+[functions.execute-agent-action]
+verify_jwt = false
