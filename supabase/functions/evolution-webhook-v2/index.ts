@@ -570,18 +570,36 @@ serve(async (req) => {
           console.log(`🔍 [${requestId}] Checking if AI agent is active for phone: ${phoneNumber}`);
           
           try {
-            // 1. Buscar conversa pelo phoneNumber
-            const { data: conversation, error: convError } = await supabase
-              .from('conversations')
-              .select('id, agente_ativo, contact_id')
+            // 1. Primeiro buscar o contact_id pelo phoneNumber
+            const { data: contact, error: contactError } = await supabase
+              .from('contacts')
+              .select('id')
+              .eq('phone', phoneNumber)
               .eq('workspace_id', workspaceId)
-              .order('created_at', { ascending: false })
-              .limit(1)
               .maybeSingle();
             
-            if (convError) {
-              console.error(`❌ [${requestId}] Erro ao buscar conversa para IA:`, convError);
-            } else if (conversation?.agente_ativo) {
+            if (contactError) {
+              console.error(`❌ [${requestId}] Erro ao buscar contato:`, contactError);
+            } else if (!contact) {
+              console.warn(`⚠️ [${requestId}] Contato não encontrado para phone: ${phoneNumber}`);
+            } else {
+              console.log(`✅ [${requestId}] Contato encontrado: ${contact.id}`);
+              
+              // 2. Agora buscar a conversa específica deste contato
+              const { data: conversation, error: convError } = await supabase
+                .from('conversations')
+                .select('id, agente_ativo, contact_id')
+                .eq('contact_id', contact.id)
+                .eq('workspace_id', workspaceId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              if (convError) {
+                console.error(`❌ [${requestId}] Erro ao buscar conversa para IA:`, convError);
+              } else if (!conversation) {
+                console.warn(`⚠️ [${requestId}] Conversa não encontrada para contato: ${contact.id}`);
+              } else if (conversation?.agente_ativo) {
               console.log(`🤖 [${requestId}] IA ativa detectada para conversa ${conversation.id}`);
               
               // 2. Verificar se há agente ativo no workspace
@@ -620,8 +638,9 @@ serve(async (req) => {
               } else {
                 console.log(`ℹ️ [${requestId}] Nenhum agente ativo encontrado no workspace`);
               }
-            } else {
-              console.log(`ℹ️ [${requestId}] IA não está ativa para esta conversa`);
+              } else {
+                console.log(`ℹ️ [${requestId}] IA não está ativa para esta conversa`);
+              }
             }
           } catch (aiCheckError) {
             console.error(`❌ [${requestId}] Exceção ao verificar IA:`, aiCheckError);
