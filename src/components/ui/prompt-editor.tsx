@@ -79,12 +79,12 @@ export function PromptEditor({
       
       const badgeContent = document.createElement("div");
       badgeContent.className = cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold transition-colors",
+        "inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors",
         "border-transparent bg-primary/80 text-primary-foreground hover:bg-primary cursor-pointer"
       );
       
       badgeContent.innerHTML = `
-        <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <svg class="h-2 w-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <circle cx="9" cy="5" r="1"></circle>
           <circle cx="9" cy="12" r="1"></circle>
           <circle cx="9" cy="19" r="1"></circle>
@@ -92,9 +92,9 @@ export function PromptEditor({
           <circle cx="15" cy="12" r="1"></circle>
           <circle cx="15" cy="19" r="1"></circle>
         </svg>
-        <span>${badge.label}</span>
+        <span class="text-[10px]">${badge.label}</span>
         <button class="ml-0.5 rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors" data-remove="${badge.id}">
-          <svg class="h-2 w-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg class="h-1.5 w-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
