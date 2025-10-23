@@ -499,7 +499,14 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 [Realtime Conv Messages] Status:', status, 'Conversa:', currentConversationId);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime Conv Messages] ATIVO para conversa:', currentConversationId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime Conv Messages] ERRO no canal');
+        }
+      });
 
     return () => {
       console.log('🔕 Limpando subscription da conversa:', currentConversationId);

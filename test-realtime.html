@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Supabase Realtime - Messages & Conversations</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .panel h2 {
+      margin-top: 0;
+      color: #555;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 8px;
+    }
+    #logs {
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 8px;
+      margin: 4px 0;
+      border-radius: 4px;
+      border-left: 4px solid #ccc;
+    }
+    .log-entry.info {
+      background: #e3f2fd;
+      border-left-color: #2196F3;
+    }
+    .log-entry.success {
+      background: #e8f5e9;
+      border-left-color: #4CAF50;
+    }
+    .log-entry.event {
+      background: #fff3e0;
+      border-left-color: #FF9800;
+    }
+    .log-entry.error {
+      background: #ffebee;
+      border-left-color: #f44336;
+    }
+    .timestamp {
+      color: #999;
+      font-size: 10px;
+    }
+    .event-data {
+      background: #f9f9f9;
+      padding: 8px;
+      margin-top: 4px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-size: 11px;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 11px;
+      margin: 4px 0;
+    }
+    .status.connected {
+      background: #4CAF50;
+      color: white;
+    }
+    .status.connecting {
+      background: #FF9800;
+      color: white;
+    }
+    .status.error {
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔌 Teste Realtime - Messages & Conversations</h1>
+  
+  <div class="container">
+    <div class="panel">
+      <h2>📨 Messages Channel</h2>
+      <div id="messages-status"></div>
+      <div id="messages-logs"></div>
+    </div>
+
+    <div class="panel">
+      <h2>💬 Conversations Channel</h2>
+      <div id="conversations-status"></div>
+      <div id="conversations-logs"></div>
+    </div>
+  </div>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://zldeaozqxjwvzgrblyrh.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsZGVhb3pxeGp3dnpncmJseXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNDQyNDYsImV4cCI6MjA2ODkyMDI0Nn0.4KmrswdBfTyHLqrUt9NdCBUjDPKCeO2NN7Vvqepr4xM'
+    );
+
+    function formatTime() {
+      return new Date().toLocaleTimeString('pt-BR');
+    }
+
+    function addLog(containerId, message, type = 'info', data = null) {
+      const container = document.getElementById(containerId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      
+      let html = `<span class="timestamp">[${formatTime()}]</span> ${message}`;
+      
+      if (data) {
+        html += `<div class="event-data">${JSON.stringify(data, null, 2)}</div>`;
+      }
+      
+      entry.innerHTML = html;
+      container.insertBefore(entry, container.firstChild);
+      
+      console.log(`[${containerId}] ${message}`, data || '');
+    }
+
+    function updateStatus(containerId, status) {
+      const statusDiv = document.getElementById(containerId);
+      const statusClass = status === 'SUBSCRIBED' ? 'connected' : 
+                         status === 'CHANNEL_ERROR' ? 'error' : 'connecting';
+      statusDiv.innerHTML = `<span class="status ${statusClass}">${status}</span>`;
+    }
+
+    // Messages Channel
+    addLog('messages-logs', '🔌 Iniciando subscription para MESSAGES...');
+    
+    const messagesChannel = supabase
+      .channel('test-messages')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages'
+      }, (payload) => {
+        addLog('messages-logs', `📨 INSERT Event`, 'event', {
+          id: payload.new.id,
+          conversation_id: payload.new.conversation_id,
+          content: payload.new.content,
+          sender_type: payload.new.sender_type,
+          message_type: payload.new.message_type
+        });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages'
+      }, (payload) => {
+        addLog('messages-logs', `🔄 UPDATE Event`, 'event', {
+          id: payload.new.id,
+          status: payload.new.status
+        });
+      })
+      .subscribe((status) => {
+        updateStatus('messages-status', status);
+        addLog('messages-logs', `📡 Status: ${status}`, 
+               status === 'SUBSCRIBED' ? 'success' : 
+               status === 'CHANNEL_ERROR' ? 'error' : 'info');
+      });
+
+    // Conversations Channel
+    addLog('conversations-logs', '🔌 Iniciando subscription para CONVERSATIONS...');
+    
+    const conversationsChannel = supabase
+      .channel('test-conversations')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'conversations'
+      }, (payload) => {
+        addLog('conversations-logs', `💬 INSERT Event`, 'event', {
+          id: payload.new.id,
+          contact_id: payload.new.contact_id,
+          status: payload.new.status,
+          unread_count: payload.new.unread_count
+        });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations'
+      }, (payload) => {
+        addLog('conversations-logs', `🔄 UPDATE Event`, 'event', {
+          id: payload.new.id,
+          status: payload.new.status,
+          unread_count: payload.new.unread_count,
+          last_activity_at: payload.new.last_activity_at
+        });
+      })
+      .subscribe((status) => {
+        updateStatus('conversations-status', status);
+        addLog('conversations-logs', `📡 Status: ${status}`, 
+               status === 'SUBSCRIBED' ? 'success' : 
+               status === 'CHANNEL_ERROR' ? 'error' : 'info');
+      });
+
+    addLog('messages-logs', '✅ Subscription criada. Aguardando eventos...', 'success');
+    addLog('conversations-logs', '✅ Subscription criada. Aguardando eventos...', 'success');
+  </script>
+</body>
+</html>

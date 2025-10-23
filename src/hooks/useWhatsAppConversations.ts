@@ -753,7 +753,14 @@ export const useWhatsAppConversations = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 [Realtime Messages] Status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime Messages] Canal ATIVO');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime Messages] ERRO no canal');
+        }
+      });
 
     // ✅ CORREÇÃO: Subscription única para conversas com canal único por workspace
     const conversationsChannel = supabase
@@ -998,24 +1005,13 @@ export const useWhatsAppConversations = () => {
         }
       )
       .subscribe((status) => {
-        console.log('🔌 [Realtime Conversations] Status da subscription:', status, 'para workspace:', workspaceId);
+        console.log('📡 [Realtime Conversations] Status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime Conversations] Canal conectado com sucesso');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('❌ [Realtime Conversations] Erro na conexão:', status);
-          console.warn('⚠️ Realtime falhou - considere implementar polling como fallback');
+          console.log('✅ [Realtime Conversations] Canal ATIVO');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime Conversations] ERRO no canal');
         }
       });
-
-    // Monitor subscription status
-    messagesChannel.subscribe((status) => {
-      console.log('🔌 [Realtime Messages] Status da subscription:', status, 'para workspace:', workspaceId);
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ [Realtime Messages] Canal conectado com sucesso');
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.error('❌ [Realtime Messages] Erro na conexão:', status);
-      }
-    });
 
     // ✅ CLEANUP: Garantir remoção adequada dos canais
     return () => {
