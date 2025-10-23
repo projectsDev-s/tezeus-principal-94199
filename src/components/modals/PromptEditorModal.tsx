@@ -46,15 +46,9 @@ const actionButtons: ActionButton[] = [
   },
   {
     id: "transfer-ticket",
-    label: "Transferir Ticket",
+    label: "Transferir Fila/Conexão",
     icon: <ArrowRightLeft className="w-4 h-4" />,
     tag: 'utilize o tools do agente `transferir-ticket` enviando esses parâmetros: {{action: "transferTicket", params: {"queueId": ""}}}',
-  },
-  {
-    id: "send-schedule",
-    label: "Enviar horários",
-    icon: <Clock className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `enviar-horarios`: {{action: "sendAvailableHours"}}',
   },
   {
     id: "send-dsvoice",
@@ -76,7 +70,7 @@ const actionButtons: ActionButton[] = [
   },
   {
     id: "save-variable",
-    label: "Salvar variável",
+    label: "Salvar informações adicionais",
     icon: <Database className="w-4 h-4" />,
     tag: 'utilize o tools do agente `salvar-variavel` enviando esses parâmetros: {{action: "saveVariable", params: {"name": "", "value": ""}}}',
   },
@@ -85,12 +79,6 @@ const actionButtons: ActionButton[] = [
     label: "Requisição HTTP",
     icon: <Link2 className="w-4 h-4" />,
     tag: 'utilize o tools do agente `requisicao-http` enviando esses parâmetros: {{action: "httpRequest", params: {"url": "", "method": "GET"}}}',
-  },
-  {
-    id: "randomize-channel",
-    label: "Randomizar Canal",
-    icon: <Shuffle className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `randomizar-canal`: {{action: "randomizeChannel"}}',
   },
 ];
 
