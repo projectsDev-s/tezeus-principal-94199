@@ -143,13 +143,17 @@ export function WhatsAppChat({
 
   // Log do estado do agente após selectedConversation estar disponível
   useEffect(() => {
-    console.log('🎯 WhatsAppChat - Estado do Agente:', { 
-      hasAgent, 
-      agentLoading, 
-      agentName: agent?.name,
-      conversationActive: selectedConversation?.agente_ativo 
-    });
-  }, [hasAgent, agentLoading, agent, selectedConversation]);
+    if (selectedConversation) {
+      console.log('🎯 WhatsAppChat - Estado do Agente:', { 
+        hasAgent, 
+        agentLoading, 
+        agentName: agent?.name,
+        conversationId: selectedConversation.id,
+        conversationActive: selectedConversation.agente_ativo,
+        contactName: selectedConversation.contact.name
+      });
+    }
+  }, [hasAgent, agentLoading, agent, selectedConversation?.agente_ativo, selectedConversation?.id]);
   const [quickPhoneNumber, setQuickPhoneNumber] = useState("");
   const [isCreatingQuickConversation, setIsCreatingQuickConversation] = useState(false);
   const [showAllQueues, setShowAllQueues] = useState(true);

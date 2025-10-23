@@ -129,7 +129,7 @@ export const useWhatsAppConversations = () => {
           phone: conv.contacts.phone,
           profile_image_url: conv.contacts.profile_image_url
         },
-        agente_ativo: false,
+        agente_ativo: conv.agente_ativo || false, // ✅ CORRIGIDO: Ler do banco ao invés de hardcode
         status: conv.status,
         unread_count: conv.unread_count || 0,
         last_activity_at: conv.last_activity_at,
@@ -144,6 +144,13 @@ export const useWhatsAppConversations = () => {
         workspace_id: conv.workspace_id,
         messages: []
       }));
+      
+      console.log('🤖 Conversas carregadas com status de agente:', 
+        formattedConversations.map(c => ({ 
+          contact: c.contact.name, 
+          agente_ativo: c.agente_ativo 
+        }))
+      );
       
       setConversations(formattedConversations);
       if (DEBUG_CONVERSATIONS) {
@@ -361,6 +368,8 @@ export const useWhatsAppConversations = () => {
   // Assumir atendimento (desativar IA)
   const assumirAtendimento = useCallback(async (conversationId: string) => {
     try {
+      console.log('🚫 Desativando IA para conversa:', conversationId);
+      
       const { error } = await supabase
         .from('conversations')
         .update({ agente_ativo: false })
@@ -370,9 +379,11 @@ export const useWhatsAppConversations = () => {
 
       setConversations(prev => prev.map(conv => 
         conv.id === conversationId 
-          ? { ...conv, agente_ativo: false }
+          ? { ...conv, agente_ativo: false, _updated_at: Date.now() }
           : conv
       ));
+
+      console.log('✅ IA desativada com sucesso');
 
       toast({
         title: "Atendimento assumido",
@@ -391,6 +402,8 @@ export const useWhatsAppConversations = () => {
   // Reativar IA
   const reativarIA = useCallback(async (conversationId: string) => {
     try {
+      console.log('🤖 Ativando IA para conversa:', conversationId);
+      
       const { error } = await supabase
         .from('conversations')
         .update({ agente_ativo: true })
@@ -400,9 +413,11 @@ export const useWhatsAppConversations = () => {
 
       setConversations(prev => prev.map(conv => 
         conv.id === conversationId 
-          ? { ...conv, agente_ativo: true }
+          ? { ...conv, agente_ativo: true, _updated_at: Date.now() }
           : conv
       ));
+
+      console.log('✅ IA ativada com sucesso');
 
       toast({
         title: "IA reativada",
