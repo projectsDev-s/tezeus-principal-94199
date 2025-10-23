@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { PromptEditor, ActionBadge } from "@/components/ui/prompt-editor";
 import { 
   Tag, 
   ArrowRightLeft, 
@@ -90,11 +90,11 @@ export function PromptEditorModal({
   workspaceId,
 }: PromptEditorModalProps) {
   const [localValue, setLocalValue] = useState(value);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [badges, setBadges] = useState<ActionBadge[]>([]);
   const [draggedAction, setDraggedAction] = useState<ActionButton | null>(null);
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
-  const [pendingCursorPosition, setPendingCursorPosition] = useState(0);
+  const [editingBadge, setEditingBadge] = useState<ActionBadge | null>(null);
 
   const handleDragStart = (action: ActionButton) => {
     setDraggedAction(action);
@@ -106,58 +106,53 @@ export function PromptEditorModal({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!draggedAction || !textareaRef.current) return;
-
-    const textarea = textareaRef.current;
-    const cursorPosition = textarea.selectionStart;
+    if (!draggedAction) return;
 
     // Interceptar ação "add-tag" para abrir modal de seleção
     if (draggedAction.id === "add-tag") {
-      setPendingCursorPosition(cursorPosition);
       setShowTagSelector(true);
       setDraggedAction(null);
       return;
     }
 
     // Interceptar ação "transfer-crm-column" para abrir modal de seleção
-    if (draggedAction.id === "transfer-crm-column") {
-      setPendingCursorPosition(cursorPosition);
+    if (draggedAction.id === "transfer-crm-column" || draggedAction.id === "create-crm-card") {
       setShowPipelineColumnSelector(true);
       setDraggedAction(null);
       return;
     }
 
-    // Para outras ações, inserir diretamente
-    const textBefore = localValue.substring(0, cursorPosition);
-    const textAfter = localValue.substring(cursorPosition);
-    
-    const newValue = textBefore + "\n" + draggedAction.tag + "\n" + textAfter;
-    setLocalValue(newValue);
-    
-    // Posicionar cursor após a tag inserida
-    setTimeout(() => {
-      const newPosition = cursorPosition + draggedAction.tag.length + 2;
-      textarea.focus();
-      textarea.setSelectionRange(newPosition, newPosition);
-    }, 0);
+    // Para outras ações, criar badge genérico
+    const newBadge: ActionBadge = {
+      id: `${draggedAction.id}-${Date.now()}`,
+      type: draggedAction.id,
+      label: draggedAction.label,
+      data: {},
+    };
+
+    setBadges([...badges, newBadge]);
+    setDraggedAction(null);
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const marcacao = `[Adicionar Tag: ${tagName}]`;
-    
-    const textBefore = localValue.substring(0, pendingCursorPosition);
-    const textAfter = localValue.substring(pendingCursorPosition);
-    
-    const newValue = textBefore + "\n" + marcacao + "\n" + textAfter;
-    setLocalValue(newValue);
-    
-    // Posicionar cursor após a marcação inserida
-    if (textareaRef.current) {
-      setTimeout(() => {
-        const newPosition = pendingCursorPosition + marcacao.length + 2;
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(newPosition, newPosition);
-      }, 0);
+    if (editingBadge) {
+      // Editando badge existente
+      const updatedBadges = badges.map((b) =>
+        b.id === editingBadge.id
+          ? { ...b, label: `Adicionar Tag: ${tagName}`, data: { tagId, tagName } }
+          : b
+      );
+      setBadges(updatedBadges);
+      setEditingBadge(null);
+    } else {
+      // Criando novo badge
+      const newBadge: ActionBadge = {
+        id: `add-tag-${Date.now()}`,
+        type: "add-tag",
+        label: `Adicionar Tag: ${tagName}`,
+        data: { tagId, tagName },
+      };
+      setBadges([...badges, newBadge]);
     }
   };
 
@@ -167,24 +162,33 @@ export function PromptEditorModal({
     columnId: string, 
     columnName: string
   ) => {
-    const jsonToInsert = `utilize o tool do agente agente-mudar-coluna enviando os seguintes parâmetros:
-
-pipeline_id: "${pipelineId}"
-column_id: "${columnId}"`;
-    
-    const textBefore = localValue.substring(0, pendingCursorPosition);
-    const textAfter = localValue.substring(pendingCursorPosition);
-    
-    const newValue = textBefore + "\n" + jsonToInsert + "\n" + textAfter;
-    setLocalValue(newValue);
-    
-    // Posicionar cursor após a tag inserida
-    if (textareaRef.current) {
-      setTimeout(() => {
-        const newPosition = pendingCursorPosition + jsonToInsert.length + 2;
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(newPosition, newPosition);
-      }, 0);
+    if (editingBadge) {
+      // Editando badge existente
+      const label = editingBadge.type === "create-crm-card" 
+        ? `Criar Card CRM: ${pipelineName} | ${columnName}`
+        : `Transferir Coluna CRM: ${columnName}`;
+      
+      const updatedBadges = badges.map((b) =>
+        b.id === editingBadge.id
+          ? { ...b, label, data: { pipelineId, pipelineName, columnId, columnName } }
+          : b
+      );
+      setBadges(updatedBadges);
+      setEditingBadge(null);
+    } else {
+      // Criando novo badge (determinar tipo baseado no draggedAction anterior)
+      const actionType = draggedAction?.id || "transfer-crm-column";
+      const label = actionType === "create-crm-card"
+        ? `Criar Card CRM: ${pipelineName} | ${columnName}`
+        : `Transferir Coluna CRM: ${columnName}`;
+      
+      const newBadge: ActionBadge = {
+        id: `${actionType}-${Date.now()}`,
+        type: actionType,
+        label,
+        data: { pipelineId, pipelineName, columnId, columnName },
+      };
+      setBadges([...badges, newBadge]);
     }
   };
 
@@ -192,13 +196,46 @@ column_id: "${columnId}"`;
     e.preventDefault();
   };
 
+  const handleBadgeClick = (badge: ActionBadge) => {
+    setEditingBadge(badge);
+    if (badge.type === "add-tag") {
+      setShowTagSelector(true);
+    } else if (badge.type === "create-crm-card" || badge.type === "transfer-crm-column") {
+      setShowPipelineColumnSelector(true);
+    }
+  };
+
+  const handleEditorChange = (text: string, updatedBadges: ActionBadge[]) => {
+    setLocalValue(text);
+    setBadges(updatedBadges);
+  };
+
   const handleSave = () => {
-    onChange(localValue);
+    // Construir o prompt final com badges e texto
+    let finalPrompt = localValue;
+    
+    if (badges.length > 0) {
+      finalPrompt += "\n\n--- AÇÕES CONFIGURADAS ---\n";
+      badges.forEach((badge) => {
+        if (badge.type === "add-tag") {
+          finalPrompt += `\n[Adicionar Tag: ${badge.data.tagName}]`;
+        } else if (badge.type === "create-crm-card") {
+          finalPrompt += `\n[Criar Card CRM: ${badge.data.pipelineName} | ${badge.data.columnName}]`;
+        } else if (badge.type === "transfer-crm-column") {
+          finalPrompt += `\n[Transferir Coluna CRM: ${badge.data.columnName}]`;
+        } else {
+          finalPrompt += `\n[${badge.label}]`;
+        }
+      });
+    }
+    
+    onChange(finalPrompt);
     onOpenChange(false);
   };
 
   const handleCancel = () => {
     setLocalValue(value);
+    setBadges([]);
     onOpenChange(false);
   };
 
@@ -216,12 +253,13 @@ column_id: "${columnId}"`;
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
-            <Textarea
-              ref={textareaRef}
+            <PromptEditor
               value={localValue}
-              onChange={(e) => setLocalValue(e.target.value)}
+              onChange={handleEditorChange}
+              badges={badges}
+              onBadgeClick={handleBadgeClick}
               placeholder="Digite o prompt do agente aqui... Arraste e solte os botões abaixo para adicionar ações automáticas."
-              className="min-h-[400px] font-mono text-sm resize-none"
+              className="min-h-[400px]"
             />
             
             {draggedAction && (
