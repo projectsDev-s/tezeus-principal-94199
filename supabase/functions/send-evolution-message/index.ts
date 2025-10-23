@@ -15,12 +15,22 @@ serve(async (req) => {
   
   try {
     requestBody = await req.json();
-    const { messageId, phoneNumber, content, messageType = 'text', fileUrl, fileName, evolutionInstance, external_id } = requestBody;
+    const { messageId, phoneNumber, content, messageType = 'text', fileUrl, fileName, evolutionInstance, external_id, workspaceId } = requestBody;
     
     if (!evolutionInstance) {
       return new Response(JSON.stringify({
         success: false,
         error: 'evolutionInstance is required'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!workspaceId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'workspaceId is required'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -38,12 +48,17 @@ serve(async (req) => {
       .from('evolution_instance_tokens')
       .select('evolution_url, token')
       .eq('instance_name', evolutionInstance)
+      .eq('workspace_id', workspaceId)
       .maybeSingle();
 
     if (!instanceConfig) {
+      console.error(`❌ [${messageId}] Instance not found:`, {
+        evolutionInstance,
+        workspaceId
+      });
       return new Response(JSON.stringify({
         success: false,
-        error: `Instance ${evolutionInstance} not found in database`
+        error: `Instance ${evolutionInstance} not found for workspace ${workspaceId}`
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -51,6 +66,27 @@ serve(async (req) => {
     }
 
     const { evolution_url: evolutionUrl, token } = instanceConfig;
+    
+    console.log(`🔑 [${messageId}] Instance config loaded:`, {
+      evolutionUrl: evolutionUrl || 'UNDEFINED',
+      hasToken: !!token,
+      instanceName: evolutionInstance,
+      workspaceId
+    });
+
+    if (!evolutionUrl || !token) {
+      console.error(`❌ [${messageId}] Missing credentials:`, {
+        evolutionUrl: evolutionUrl || 'MISSING',
+        token: token ? 'EXISTS' : 'MISSING'
+      });
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Missing Evolution API credentials'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     console.log(`📤 [${messageId}] Sending message via Evolution API:`, { 
       evolutionInstance, 

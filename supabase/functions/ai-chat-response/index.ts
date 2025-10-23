@@ -184,7 +184,8 @@ serve(async (req) => {
             phoneNumber: phoneNumber,
             content: processedMessage,
             messageType: 'text',
-            evolutionInstance: instanceName
+            evolutionInstance: instanceName,
+            workspaceId: workspaceId
           }
         });
 
