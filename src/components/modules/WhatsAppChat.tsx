@@ -154,6 +154,20 @@ export function WhatsAppChat({
       });
     }
   }, [hasAgent, agentLoading, agent, selectedConversation?.agente_ativo, selectedConversation?.id]);
+
+  // ✅ CRÍTICO: Sincronizar selectedConversation quando conversations mudar
+  useEffect(() => {
+    if (selectedConversation) {
+      const updatedConversation = conversations.find(c => c.id === selectedConversation.id);
+      if (updatedConversation && updatedConversation.agente_ativo !== selectedConversation.agente_ativo) {
+        console.log('🔄 Atualizando selectedConversation:', {
+          old: selectedConversation.agente_ativo,
+          new: updatedConversation.agente_ativo
+        });
+        setSelectedConversation(updatedConversation);
+      }
+    }
+  }, [conversations, selectedConversation?.id]);
   const [quickPhoneNumber, setQuickPhoneNumber] = useState("");
   const [isCreatingQuickConversation, setIsCreatingQuickConversation] = useState(false);
   const [showAllQueues, setShowAllQueues] = useState(true);
