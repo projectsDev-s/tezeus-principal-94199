@@ -70,23 +70,34 @@ export function PromptEditor({
     
     container.innerHTML = "";
 
-    // Insert badges inline with text
-    const content = value || "";
-    let lastIndex = 0;
-    
-    badges.forEach((badge, idx) => {
-      // Add text before badge
-      if (lastIndex < content.length) {
-        const textBefore = idx === 0 ? content : "";
-        if (textBefore) {
-          container.appendChild(document.createTextNode(textBefore));
+    // Add text content first
+    if (value) {
+      const lines = value.split("\n");
+      lines.forEach((line, index) => {
+        if (index > 0) {
+          container.appendChild(document.createElement("br"));
         }
+        container.appendChild(document.createTextNode(line));
+      });
+    }
+
+    // Add a space before badges if there's text
+    if (value && badges.length > 0) {
+      container.appendChild(document.createTextNode(" "));
+    }
+    
+    // Add badges at the end
+    badges.forEach((badge, idx) => {
+      // Add space between badges
+      if (idx > 0) {
+        container.appendChild(document.createTextNode(" "));
       }
       
       // Create inline badge
       const badgeElement = document.createElement("span");
       badgeElement.setAttribute("data-badge-id", badge.id);
       badgeElement.contentEditable = "false";
+      badgeElement.draggable = true;
       badgeElement.style.display = "inline-flex";
       badgeElement.style.alignItems = "center";
       badgeElement.style.gap = "1px";
@@ -95,7 +106,7 @@ export function PromptEditor({
       badgeElement.style.borderRadius = "3px";
       badgeElement.style.backgroundColor = "hsl(var(--primary) / 0.7)";
       badgeElement.style.color = "hsl(var(--primary-foreground))";
-      badgeElement.style.cursor = "pointer";
+      badgeElement.style.cursor = "move";
       badgeElement.style.verticalAlign = "middle";
       badgeElement.style.margin = "0 1px";
       
@@ -126,20 +137,41 @@ export function PromptEditor({
           handleBadgeClick(badge);
         }
       });
+
+      // Drag and drop handlers
+      badgeElement.addEventListener("dragstart", (e) => {
+        e.dataTransfer!.effectAllowed = "move";
+        e.dataTransfer!.setData("text/plain", badge.id);
+        badgeElement.style.opacity = "0.5";
+      });
+
+      badgeElement.addEventListener("dragend", (e) => {
+        badgeElement.style.opacity = "1";
+      });
+
+      badgeElement.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = "move";
+      });
+
+      badgeElement.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer!.getData("text/plain");
+        if (draggedId !== badge.id) {
+          const draggedIndex = badges.findIndex(b => b.id === draggedId);
+          const targetIndex = badges.findIndex(b => b.id === badge.id);
+          
+          if (draggedIndex !== -1 && targetIndex !== -1) {
+            const newBadges = [...badges];
+            const [draggedBadge] = newBadges.splice(draggedIndex, 1);
+            newBadges.splice(targetIndex, 0, draggedBadge);
+            onChange(value, newBadges);
+          }
+        }
+      });
       
       container.appendChild(badgeElement);
     });
-
-    // Add text content
-    if (value) {
-      const lines = value.split("\n");
-      lines.forEach((line, index) => {
-        if (index > 0) {
-          container.appendChild(document.createElement("br"));
-        }
-        container.appendChild(document.createTextNode(line));
-      });
-    }
 
     // Restore cursor position
     if (savedRange) {
@@ -150,7 +182,7 @@ export function PromptEditor({
         // Ignore errors restoring selection
       }
     }
-  }, [badges]);
+  }, [badges, value]);
 
   return (
     <div
