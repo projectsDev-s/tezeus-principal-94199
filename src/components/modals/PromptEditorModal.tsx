@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -82,6 +82,69 @@ const actionButtons: ActionButton[] = [
   },
 ];
 
+// Função para fazer parsing de badges do prompt salvo
+function parseBadgesFromPrompt(prompt: string): { text: string; badges: ActionBadge[] } {
+  if (!prompt.includes("--- AÇÕES CONFIGURADAS ---")) {
+    return { text: prompt, badges: [] };
+  }
+
+  const [textPart, actionsPart] = prompt.split("--- AÇÕES CONFIGURADAS ---");
+  const text = textPart.trim();
+  const badges: ActionBadge[] = [];
+
+  if (actionsPart) {
+    const lines = actionsPart.split("\n").filter(line => line.trim().startsWith("["));
+    lines.forEach((line, index) => {
+      const match = line.match(/\[(.*?)\]/);
+      if (match) {
+        const content = match[1];
+        let badge: ActionBadge | null = null;
+
+        if (content.startsWith("Adicionar Tag: ")) {
+          const tagName = content.replace("Adicionar Tag: ", "");
+          badge = {
+            id: `add-tag-${Date.now()}-${index}`,
+            type: "add-tag",
+            label: content,
+            data: { tagName },
+            position: text.length,
+          };
+        } else if (content.startsWith("Criar Card CRM: ")) {
+          const parts = content.replace("Criar Card CRM: ", "").split(" | ");
+          badge = {
+            id: `create-crm-card-${Date.now()}-${index}`,
+            type: "create-crm-card",
+            label: content,
+            data: { pipelineName: parts[0], columnName: parts[1] },
+            position: text.length,
+          };
+        } else if (content.startsWith("Transferir Coluna CRM: ")) {
+          const columnName = content.replace("Transferir Coluna CRM: ", "");
+          badge = {
+            id: `transfer-crm-column-${Date.now()}-${index}`,
+            type: "transfer-crm-column",
+            label: content,
+            data: { columnName },
+            position: text.length,
+          };
+        } else {
+          badge = {
+            id: `action-${Date.now()}-${index}`,
+            type: "generic",
+            label: content,
+            data: {},
+            position: text.length,
+          };
+        }
+
+        if (badge) badges.push(badge);
+      }
+    });
+  }
+
+  return { text, badges };
+}
+
 export function PromptEditorModal({
   open,
   onOpenChange,
@@ -89,13 +152,22 @@ export function PromptEditorModal({
   onChange,
   workspaceId,
 }: PromptEditorModalProps) {
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalValue] = useState("");
   const [badges, setBadges] = useState<ActionBadge[]>([]);
   const [draggedAction, setDraggedAction] = useState<ActionButton | null>(null);
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
   const [editingBadge, setEditingBadge] = useState<ActionBadge | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
+
+  // Sincronizar estado local com props quando modal abre
+  useEffect(() => {
+    if (open) {
+      const parsed = parseBadgesFromPrompt(value);
+      setLocalValue(parsed.text);
+      setBadges(parsed.badges);
+    }
+  }, [open, value]);
 
   const handleDragStart = (action: ActionButton) => {
     setDraggedAction(action);
@@ -225,8 +297,9 @@ export function PromptEditorModal({
 
   const handleSave = () => {
     // Construir o prompt final com badges e texto
-    let finalPrompt = localValue;
+    let finalPrompt = localValue.trim();
     
+    // Só adicionar seção de ações se houver badges
     if (badges.length > 0) {
       finalPrompt += "\n\n--- AÇÕES CONFIGURADAS ---\n";
       badges.forEach((badge) => {
@@ -247,8 +320,10 @@ export function PromptEditorModal({
   };
 
   const handleCancel = () => {
-    setLocalValue(value);
-    setBadges([]);
+    // Resetar completamente o estado local
+    const parsed = parseBadgesFromPrompt(value);
+    setLocalValue(parsed.text);
+    setBadges(parsed.badges);
     onOpenChange(false);
   };
 

@@ -80,8 +80,14 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
       textNodes.push(node.textContent || "");
     }
     
-    const textContent = textNodes.join("");
-    onChange(textContent, badges);
+    const textContent = textNodes.join("").trim();
+    
+    // Se o texto estiver vazio, limpar badges também
+    if (textContent === "") {
+      onChange("", []);
+    } else {
+      onChange(textContent, badges);
+    }
   };
 
   const handleRemoveBadge = (badgeId: string) => {
