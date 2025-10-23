@@ -48,7 +48,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     preCaretRange.selectNodeContents(editorRef.current);
     preCaretRange.setEnd(range.endContainer, range.endOffset);
     
-    // Conta apenas o texto, ignorando badges
+    // Contar texto E badges (badges contam como 1 caractere)
     let position = 0;
     const contents = preCaretRange.cloneContents();
     const walker = document.createTreeWalker(
@@ -59,10 +59,11 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     
     let node;
     while ((node = walker.nextNode())) {
-      // Ignorar badges
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as HTMLElement;
         if (element.getAttribute("data-badge-id")) {
+          // ✅ CONTAR BADGES COMO 1 CARACTERE
+          position += 1;
           continue;
         }
         // Contar <br> como quebra de linha
@@ -178,8 +179,10 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   const handleInput = () => {
     if (!editorRef.current) return;
     
-    // Extract text content preserving line breaks (<br> elements)
     let textContent = "";
+    let badgePositions: { position: number; badgeId: string }[] = [];
+    let currentPosition = 0;
+    
     const walker = document.createTreeWalker(
       editorRef.current,
       NodeFilter.SHOW_ALL,
@@ -188,21 +191,24 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     
     let node;
     while ((node = walker.nextNode())) {
-      // Ignore badges
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as HTMLElement;
-        if (element.getAttribute("data-badge-id")) {
-          // Skip badge and its children
+        const badgeId = element.getAttribute("data-badge-id");
+        
+        if (badgeId) {
+          // ✅ Registrar posição do badge e adicionar marcador
+          badgePositions.push({ position: currentPosition, badgeId });
+          textContent += "\uFEFF"; // Zero-width no-break space
+          currentPosition += 1;
           walker.nextSibling();
           continue;
         }
         
-        // Preserve <br> as line break
         if (element.tagName === "BR") {
           textContent += "\n";
+          currentPosition += 1;
         }
       } else if (node.nodeType === Node.TEXT_NODE) {
-        // Check if not inside a badge
         let parent = node.parentElement;
         let isBadge = false;
         while (parent && parent !== editorRef.current) {
@@ -214,13 +220,20 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         }
         
         if (!isBadge) {
-          textContent += node.textContent || "";
+          const text = node.textContent || "";
+          textContent += text;
+          currentPosition += text.length;
         }
       }
     }
     
-    // NÃO recalcular posições aqui - só atualizar o texto
-    onChange(textContent, badges);
+    // ✅ Atualizar posições dos badges baseado no DOM atual
+    const updatedBadges = badges.map(badge => {
+      const found = badgePositions.find(bp => bp.badgeId === badge.id);
+      return found ? { ...badge, position: found.position } : badge;
+    });
+    
+    onChange(textContent, updatedBadges);
   };
 
   const handleRemoveBadge = (badgeId: string) => {
@@ -259,6 +272,9 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
 
     const content = value || "";
     
+    // ✅ Remover marcadores especiais do texto para renderização
+    const cleanContent = content.replace(/\uFEFF/g, "");
+    
     // Ordena badges por posição
     const sortedBadges = [...badges].sort((a, b) => a.position - b.position);
     
@@ -267,7 +283,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     sortedBadges.forEach((badge) => {
       // Adiciona texto antes do badge
       if (badge.position > lastIndex) {
-        const textBefore = content.substring(lastIndex, badge.position);
+        const textBefore = cleanContent.substring(lastIndex, badge.position);
         const lines = textBefore.split("\n");
         lines.forEach((line, index) => {
           if (index > 0) {
@@ -321,8 +337,8 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     });
     
     // Adiciona o texto restante depois do último badge
-    if (lastIndex < content.length) {
-      const textAfter = content.substring(lastIndex);
+    if (lastIndex < cleanContent.length) {
+      const textAfter = cleanContent.substring(lastIndex);
       const lines = textAfter.split("\n");
       lines.forEach((line, index) => {
         if (index > 0) {

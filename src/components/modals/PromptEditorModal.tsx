@@ -231,7 +231,14 @@ export function PromptEditorModal({
       position: cursorPosition,
     };
 
-    setBadges([...badges, newBadge]);
+    // ✅ Ajustar posições dos badges existentes que vêm depois
+    const adjustedBadges = badges.map(b => 
+      b.position >= cursorPosition 
+        ? { ...b, position: b.position + 1 }
+        : b
+    );
+
+    setBadges([...adjustedBadges, newBadge]);
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
@@ -256,7 +263,15 @@ export function PromptEditorModal({
         data: { tagId, tagName },
         position: cursorPosition,
       };
-      setBadges([...badges, newBadge]);
+      
+      // ✅ Ajustar posições dos badges existentes que vêm depois
+      const adjustedBadges = badges.map(b => 
+        b.position >= cursorPosition 
+          ? { ...b, position: b.position + 1 }
+          : b
+      );
+      
+      setBadges([...adjustedBadges, newBadge]);
     }
   };
 
@@ -296,7 +311,15 @@ export function PromptEditorModal({
         data: { pipelineId, pipelineName, columnId, columnName },
         position: cursorPosition,
       };
-      setBadges([...badges, newBadge]);
+      
+      // ✅ Ajustar posições dos badges existentes que vêm depois
+      const adjustedBadges = badges.map(b => 
+        b.position >= cursorPosition 
+          ? { ...b, position: b.position + 1 }
+          : b
+      );
+      
+      setBadges([...adjustedBadges, newBadge]);
     }
     setPendingActionType(null);
   };
