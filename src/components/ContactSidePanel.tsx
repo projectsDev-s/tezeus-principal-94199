@@ -951,17 +951,40 @@ export function ContactSidePanel({
             }
 
             // 4. Buscar colunas do pipeline SELECIONADO pelo usuário (não do currentPipeline)
+            console.log('🔍 Dados recebidos do modal:', {
+              pipeline: business.pipeline,
+              column: business.column,
+              lead: business.lead,
+              responsible: business.responsible,
+              value: business.value
+            });
+
             const { data: pipelineColumns, error: columnsError } = await supabase
               .from('pipeline_columns')
               .select('*')
               .eq('pipeline_id', business.pipeline)
               .order('order_position');
 
+            console.log('📋 Colunas carregadas:', {
+              total: pipelineColumns?.length,
+              colunas: pipelineColumns?.map(c => ({ id: c.id, name: c.name })),
+              columnIdRecebido: business.column
+            });
+
             if (columnsError) throw columnsError;
 
             // 5. Validar se a coluna selecionada existe
             const targetColumn = pipelineColumns?.find(col => col.id === business.column);
             if (!targetColumn) {
+              console.error('❌ Coluna não encontrada!', {
+                columnIdBuscado: business.column,
+                colunasDisponiveis: pipelineColumns?.map(c => ({ id: c.id, name: c.name }))
+              });
+              toast({
+                title: 'Erro ao criar negócio',
+                description: 'A coluna selecionada não foi encontrada. Por favor, selecione uma coluna válida.',
+                variant: 'destructive'
+              });
               throw new Error('Coluna selecionada não encontrada');
             }
 
