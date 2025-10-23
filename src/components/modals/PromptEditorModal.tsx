@@ -185,7 +185,7 @@ export function PromptEditorModal({
     
     if (wasClosedNowOpen) {
       // Se value está vazio, iniciar com estado vazio (modal de criação)
-      if (!value || value.trim() === "") {
+      if (!value || value === "") {
         setLocalValue("");
         setBadges([]);
       } else {

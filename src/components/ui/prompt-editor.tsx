@@ -151,9 +151,8 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
           if (index > 0) {
             container.appendChild(document.createElement("br"));
           }
-          if (line) {
-            container.appendChild(document.createTextNode(line));
-          }
+          // Always add text node, even if empty (preserves formatting)
+          container.appendChild(document.createTextNode(line));
         });
       }
       
@@ -213,9 +212,8 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         if (index > 0) {
           container.appendChild(document.createElement("br"));
         }
-        if (line) {
-          container.appendChild(document.createTextNode(line));
-        }
+        // Always add text node, even if empty (preserves formatting)
+        container.appendChild(document.createTextNode(line));
       });
     }
 
