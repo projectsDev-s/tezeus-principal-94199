@@ -48,43 +48,37 @@ const actionButtons: ActionButton[] = [
     id: "add-tag",
     label: "Adicionar Tag",
     icon: <Tag className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `inserir-tag` enviando esses parâmetros: {{action: "addTag", params: {"tagName": ""}}}',
+    tag: '[Adicionar Tag: NOME_DA_TAG]',
   },
   {
-    id: "transfer-ticket",
-    label: "Transferir Fila/Conexão",
+    id: "transfer-queue",
+    label: "Transferir Fila",
     icon: <ArrowRightLeft className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `transferir-ticket` enviando esses parâmetros: {{action: "transferTicket", params: {"queueId": ""}}}',
+    tag: '[Transferir Fila: NOME_DA_FILA]',
   },
   {
-    id: "send-dsvoice",
-    label: "Enviar funil DS Voice",
-    icon: <Phone className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `enviar-funil-dsvoice`: {{action: "sendDSVoiceFunnel"}}',
+    id: "transfer-connection",
+    label: "Transferir Conexão",
+    icon: <Shuffle className="w-4 h-4" />,
+    tag: '[Transferir Conexão: NOME_DA_CONEXÃO]',
   },
   {
     id: "create-crm-card",
     label: "Criar card no CRM",
     icon: <FolderKanban className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `criar-card-crm` enviando esses parâmetros: {{action: "crm.createCard", params: {"pipeline": "", "column": ""}}}',
+    tag: '[Criar Card CRM: TÍTULO | Pipeline: NOME_PIPELINE | Coluna: NOME_COLUNA]',
   },
   {
     id: "transfer-crm-column",
     label: "Transferir coluna CRM",
     icon: <ArrowRight className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `transferir-coluna-crm` enviando esses parâmetros: {{action: "crm.transferColumn", params: {"columnId": ""}}}',
+    tag: '[Transferir para Coluna: NOME_COLUNA | Pipeline: NOME_PIPELINE]',
   },
   {
-    id: "save-variable",
+    id: "save-info",
     label: "Salvar informações adicionais",
     icon: <Database className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `salvar-variavel` enviando esses parâmetros: {{action: "saveVariable", params: {"name": "", "value": ""}}}',
-  },
-  {
-    id: "http-request",
-    label: "Requisição HTTP",
-    icon: <Link2 className="w-4 h-4" />,
-    tag: 'utilize o tools do agente `requisicao-http` enviando esses parâmetros: {{action: "httpRequest", params: {"url": "", "method": "GET"}}}',
+    tag: '[Salvar Informação: campo: valor]',
   },
 ];
 
@@ -209,8 +203,10 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const actionText = `\nutilize o tools do agente \`inserir-tag\` enviando esses parâmetros: {{action: "addTag", params: {"tagName": "${tagName}"}}}\n`;
+    const actionText = `[Adicionar Tag: ${tagName}]`;
     editorRef.current?.insertText(actionText);
+    setShowTagSelector(false);
+    setPendingActionType(null);
   };
 
   const handlePipelineColumnSelected = (
@@ -223,12 +219,13 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `\nutilize o tools do agente \`criar-card-crm\` enviando esses parâmetros: {{action: "crm.createCard", params: {"pipeline": "${pipelineName}", "column": "${columnName}"}}}\n`;
+      actionText = `[Criar Card CRM: TÍTULO_DO_CARD | Pipeline: ${pipelineName} | Coluna: ${columnName}]`;
     } else {
-      actionText = `\nutilize o tools do agente \`transferir-coluna-crm\` enviando esses parâmetros: {{action: "crm.transferColumn", params: {"columnId": "${columnId}"}}}\n`;
+      actionText = `[Transferir para Coluna: ${columnName} | Pipeline: ${pipelineName}]`;
     }
     
     editorRef.current?.insertText(actionText);
+    setShowPipelineColumnSelector(false);
     setPendingActionType(null);
   };
 
