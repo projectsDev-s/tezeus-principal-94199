@@ -98,6 +98,5 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
   return {
     users,
     isLoading,
-    loadUsers: () => {}, // Função vazia para compatibilidade
   };
 }

@@ -56,7 +56,7 @@ export function CriarNegocioModal({
   // Estabilizar o array de filtros para evitar loop infinito
   const profileFilters = useMemo<('user' | 'admin' | 'master')[]>(() => ['user', 'admin'], []);
   
-  const { users, loadUsers, isLoading: isLoadingUsers } = useWorkspaceUsers(
+  const { users, isLoading: isLoadingUsers } = useWorkspaceUsers(
     selectedWorkspace?.workspace_id, 
     profileFilters
   );
@@ -81,13 +81,6 @@ export function CriarNegocioModal({
     fetchContacts();
   }, [selectedWorkspace]);
 
-  // Carregar usuários quando modal abrir
-  useEffect(() => {
-    if (modalOpen && selectedWorkspace?.workspace_id) {
-      console.log('🔄 Modal aberto, carregando usuários...');
-      loadUsers();
-    }
-  }, [modalOpen, selectedWorkspace?.workspace_id]);
 
   // Pré-selecionar contato quando fornecido
   useEffect(() => {
