@@ -1024,13 +1024,29 @@ export function ContactSidePanel({
             }, 500);
 
             setIsCreateDealModalOpen(false);
-          } catch (error) {
+          } catch (error: any) {
             console.error('Erro ao criar negócio:', error);
-            toast({
-              title: "Erro",
-              description: error instanceof Error ? error.message : "Erro ao criar negócio",
-              variant: "destructive"
-            });
+            
+            // Verificar se é erro de duplicação (do trigger ou da edge function)
+            const errorMessage = error?.message || error?.context?.body?.message || '';
+            const isDuplicateError = 
+              errorMessage.includes('Já existe um card aberto') || 
+              errorMessage.includes('duplicate_open_card') ||
+              error?.context?.body?.error === 'duplicate_open_card';
+            
+            if (isDuplicateError) {
+              toast({
+                title: "Negócio já existe",
+                description: "Já existe um negócio aberto para este contato neste pipeline. Finalize o anterior antes de criar um novo.",
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar negócio",
+                variant: "destructive"
+              });
+            }
           }
         }}
       />
