@@ -163,9 +163,16 @@ export function PromptEditorModal({
   // Sincronizar estado local com props quando modal abre
   useEffect(() => {
     if (open) {
-      const parsed = parseBadgesFromPrompt(value);
-      setLocalValue(parsed.text);
-      setBadges(parsed.badges);
+      // Se value está vazio, iniciar com estado vazio (modal de criação)
+      if (!value || value.trim() === "") {
+        setLocalValue("");
+        setBadges([]);
+      } else {
+        // Se value tem conteúdo, fazer parsing (modal de edição)
+        const parsed = parseBadgesFromPrompt(value);
+        setLocalValue(parsed.text);
+        setBadges(parsed.badges);
+      }
     }
   }, [open, value]);
 
