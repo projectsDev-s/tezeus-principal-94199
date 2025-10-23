@@ -16,6 +16,7 @@ import { Eye, EyeOff, FileText, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { PromptEditorModal } from "./PromptEditorModal";
 
 interface CriarAgenteModalProps {
   open: boolean;
@@ -49,6 +50,7 @@ export function CriarAgenteModal({
 }: CriarAgenteModalProps) {
   const [loading, setLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
   const { workspaces } = useWorkspaces();
 
   const [formData, setFormData] = useState<FormData>({
@@ -268,9 +270,11 @@ export function CriarAgenteModal({
             <Textarea
               id="system_instructions"
               value={formData.system_instructions}
-              onChange={(e) => setFormData({ ...formData, system_instructions: e.target.value })}
-              placeholder="Defina como o agente deve se comportar..."
+              onClick={() => setShowPromptEditor(true)}
+              placeholder="Clique para editar o prompt com ações avançadas..."
               rows={4}
+              readOnly
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
             />
           </div>
 
@@ -422,6 +426,14 @@ export function CriarAgenteModal({
           </div>
         </form>
       </DialogContent>
+
+      <PromptEditorModal
+        open={showPromptEditor}
+        onOpenChange={setShowPromptEditor}
+        value={formData.system_instructions}
+        onChange={(value) => setFormData({ ...formData, system_instructions: value })}
+        workspaceId={formData.workspace_id}
+      />
     </Dialog>
   );
 }
