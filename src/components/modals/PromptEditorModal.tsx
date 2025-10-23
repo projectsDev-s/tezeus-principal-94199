@@ -89,7 +89,7 @@ function parseBadgesFromPrompt(prompt: string): { text: string; badges: ActionBa
   }
 
   const [textPart, actionsPart] = prompt.split("--- AÇÕES CONFIGURADAS ---");
-  const text = textPart.trim();
+  const text = textPart;
   const badges: ActionBadge[] = [];
 
   if (actionsPart) {
@@ -327,7 +327,7 @@ export function PromptEditorModal({
 
   const handleSave = () => {
     // Construir o prompt final com badges e texto
-    let finalPrompt = localValue.trim();
+    let finalPrompt = localValue;
     
     // Só adicionar seção de ações se houver badges
     if (badges.length > 0) {

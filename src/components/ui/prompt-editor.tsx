@@ -66,39 +66,49 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   const handleInput = () => {
     if (!editorRef.current) return;
     
-    // Extract only text content, ignoring badge elements
-    const textNodes: string[] = [];
+    // Extract text content preserving line breaks (<br> elements)
+    let textContent = "";
     const walker = document.createTreeWalker(
       editorRef.current,
-      NodeFilter.SHOW_TEXT,
+      NodeFilter.SHOW_ALL,
       null
     );
     
     let node;
     while ((node = walker.nextNode())) {
-      // Check if ANY ancestor has data-badge-id (not just direct parent)
-      let parent = node.parentElement;
-      let isBadge = false;
-      while (parent && parent !== editorRef.current) {
-        if (parent.getAttribute("data-badge-id")) {
-          isBadge = true;
-          break;
+      // Ignore badges
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        if (element.getAttribute("data-badge-id")) {
+          // Skip badge and its children
+          walker.nextSibling();
+          continue;
         }
-        parent = parent.parentElement;
+        
+        // Preserve <br> as line break
+        if (element.tagName === "BR") {
+          textContent += "\n";
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        // Check if not inside a badge
+        let parent = node.parentElement;
+        let isBadge = false;
+        while (parent && parent !== editorRef.current) {
+          if (parent.getAttribute("data-badge-id")) {
+            isBadge = true;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        
+        if (!isBadge) {
+          textContent += node.textContent || "";
+        }
       }
-      
-      if (isBadge) continue;
-      textNodes.push(node.textContent || "");
     }
     
-    const textContent = textNodes.join("").trim();
-    
-    // Se o texto estiver vazio, limpar badges também
-    if (textContent === "") {
-      onChange("", []);
-    } else {
-      onChange(textContent, badges);
-    }
+    // Do NOT apply .trim() - preserve formatting
+    onChange(textContent, badges);
   };
 
   const handleRemoveBadge = (badgeId: string) => {
