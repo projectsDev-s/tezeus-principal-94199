@@ -185,9 +185,6 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   // Render content with badges inline at their positions
   useEffect(() => {
     if (!editorRef.current) return;
-    
-    // Only skip rendering if focused AND there's already content
-    if (isFocused && editorRef.current.textContent?.length > 0) return;
 
     const container = editorRef.current;
     const selection = window.getSelection();
@@ -211,8 +208,10 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
           if (index > 0) {
             container.appendChild(document.createElement("br"));
           }
-          // Always add text node, even if empty (preserves formatting)
-          container.appendChild(document.createTextNode(line));
+          // Só adicionar text node se houver conteúdo
+          if (line) {
+            container.appendChild(document.createTextNode(line));
+          }
         });
       }
       
@@ -233,6 +232,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
       badgeElement.style.margin = "0 1px";
       badgeElement.style.maxWidth = "250px";
       badgeElement.style.overflow = "hidden";
+      badgeElement.style.whiteSpace = "nowrap";
       
       badgeElement.innerHTML = `
         <svg style="width: 8px; height: 8px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,8 +274,10 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         if (index > 0) {
           container.appendChild(document.createElement("br"));
         }
-        // Always add text node, even if empty (preserves formatting)
-        container.appendChild(document.createTextNode(line));
+        // Só adicionar text node se houver conteúdo
+        if (line) {
+          container.appendChild(document.createTextNode(line));
+        }
       });
     }
 
