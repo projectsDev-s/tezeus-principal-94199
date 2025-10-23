@@ -159,10 +159,13 @@ export function PromptEditorModal({
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
   const [editingBadge, setEditingBadge] = useState<ActionBadge | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
+  const previousOpenRef = useRef(false);
 
-  // Sincronizar estado local com props quando modal abre
+  // Sincronizar estado local com props APENAS quando modal abre (transição de fechado para aberto)
   useEffect(() => {
-    if (open) {
+    const wasClosedNowOpen = !previousOpenRef.current && open;
+    
+    if (wasClosedNowOpen) {
       // Se value está vazio, iniciar com estado vazio (modal de criação)
       if (!value || value.trim() === "") {
         setLocalValue("");
@@ -174,6 +177,8 @@ export function PromptEditorModal({
         setBadges(parsed.badges);
       }
     }
+    
+    previousOpenRef.current = open;
   }, [open, value]);
 
   const handleDragStart = (action: ActionButton) => {
