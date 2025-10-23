@@ -91,7 +91,7 @@ export function PromptEditor({
       badgeElement.style.alignItems = "center";
       badgeElement.style.gap = "1px";
       badgeElement.style.padding = "0px 3px";
-      badgeElement.style.fontSize = "9px";
+      badgeElement.style.fontSize = "15px";
       badgeElement.style.borderRadius = "3px";
       badgeElement.style.backgroundColor = "hsl(var(--primary) / 0.7)";
       badgeElement.style.color = "hsl(var(--primary-foreground))";
