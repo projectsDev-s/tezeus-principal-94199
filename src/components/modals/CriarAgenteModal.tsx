@@ -206,32 +206,32 @@ export function CriarAgenteModal({
             </DialogHeader>
 
             <form className="space-y-6">
-              {/* Workspace */}
-              <div className="space-y-2">
-                <Label htmlFor="workspace">Empresa</Label>
-                <Select value={formData.workspace_id} onValueChange={(value) => setFormData({ ...formData, workspace_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workspaces.map((workspace) => (
-                      <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                        {workspace.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Nome */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome do agente"
-                />
+              {/* Workspace e Nome */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workspace">Empresa</Label>
+                  <Select value={formData.workspace_id} onValueChange={(value) => setFormData({ ...formData, workspace_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workspaces.map((workspace) => (
+                        <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                          {workspace.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome do agente"
+                  />
+                </div>
               </div>
 
               {/* Tipo e Modelo */}
