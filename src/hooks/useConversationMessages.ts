@@ -72,8 +72,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   const cacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; timestamp: number }>>(new Map());
   const CACHE_TTL = 2000; // 2 segundos
   
-  // ✅ DEDUP: Prevenir processamento duplicado de mensagens
-  const seenRef = useRef<Set<string>>(new Set());
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -243,47 +241,31 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       id: message.id,
       sender_type: message.sender_type,
       conversation_id: message.conversation_id,
-      content_preview: message.content?.substring(0, 30),
-      stack_trace: new Error().stack // ✅ CRITICAL: Ver de onde está sendo chamado
+      content_preview: message.content?.substring(0, 30)
     });
     
-    // ✅ DEDUP: Usar conversation_id + message_id como chave única
-    const dedupKey = `${message.conversation_id}_${message.id}`;
-    
-    if (seenRef.current.has(dedupKey)) {
-      console.log(`⏭️ [addMessage] BLOQUEADO - Mensagem duplicada ignorada (dedup): ${dedupKey}`);
-      return;
-    }
-    
     setMessages(prevMessages => {
-      // ✅ VERIFICAR se já existe (proteção adicional)
+      // ✅ ÚNICA verificação necessária: ID já existe no state?
       const exists = prevMessages.some(m => m.id === message.id);
       
       if (exists) {
-        console.log(`⏭️ [addMessage] BLOQUEADO - Mensagem já existe no state: ${message.id}`);
+        console.log(`⏭️ [addMessage] Mensagem já existe no state: ${message.id}`);
         return prevMessages;
       }
 
       console.log('✅ [addMessage] Mensagem nova, adicionando ao state:', {
         id: message.id,
         sender_type: message.sender_type,
-        content_preview: message.content?.substring(0, 30),
         total_messages_after: prevMessages.length + 1
       });
       
-      // Marcar como vista
-      seenRef.current.add(dedupKey);
-      
-      // Limpar Set após 30s para liberar memória
-      setTimeout(() => seenRef.current.delete(dedupKey), 30000);
-      
-      // Adicionar no final (mensagem mais recente) e ordenar por created_at
+      // Adicionar no final e ordenar por created_at
       return [...prevMessages, message].sort((a, b) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
     });
 
-    // Invalidar cache para forçar refresh na próxima carga
+    // Invalidar cache
     if (selectedWorkspace?.workspace_id && currentConversationId) {
       const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
       cacheRef.current.delete(cacheKey);
@@ -303,13 +285,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
       return filtered;
     });
-
-    // Limpar do Set de mensagens vistas
-    if (selectedWorkspace?.workspace_id && currentConversationId) {
-      const dedupKey = `${currentConversationId}_${messageId}`;
-      seenRef.current.delete(dedupKey);
-    }
-  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+  }, []);
 
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
     console.log('🔄 updateMessage chamado:', { messageId, updates });
@@ -409,50 +385,31 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const newMessage = payload.new as WhatsAppMessage;
           
-          console.log('📨 [INSERT useConversationMessages] Nova mensagem recebida via Realtime:', {
+          console.log('📨 [INSERT Realtime] Nova mensagem:', {
             id: newMessage.id,
-            external_id: newMessage.external_id,
             sender_type: newMessage.sender_type,
-            workspace_id: newMessage.workspace_id,
-            current_workspace: selectedWorkspace.workspace_id,
-            conversation_id: newMessage.conversation_id,
             content_preview: newMessage.content?.substring(0, 30)
           });
           
-          // ✅ DEDUPLICAÇÃO: Ignorar se já existe mensagem com mesmo ID ou external_id
-          if (newMessage.external_id) {
-            const existingById = messages.find(m => m.id === newMessage.external_id);
-            const existingByExternalId = messages.find(m => m.external_id === newMessage.external_id);
-            
-            if (existingById) {
-              console.log('🔄 [INSERT] Mensagem otimista encontrada por ID, substituindo...');
-              updateMessage(existingById.id, {
-                ...newMessage,
-                id: newMessage.id
-              });
-              return;
-            }
-            
-            if (existingByExternalId && existingByExternalId.id !== newMessage.id) {
-              console.log('⏭️ [INSERT] Mensagem duplicada ignorada (external_id já existe)');
-              return;
-            }
+          // ✅ Verificar workspace
+          if (newMessage.workspace_id !== selectedWorkspace.workspace_id) {
+            console.log('❌ Workspace diferente, ignorando');
+            return;
           }
           
-          // ✅ PROCESSAR TODAS as mensagens (contact E agent)
-          console.log('✅ [INSERT useConversationMessages] Processando mensagem:', {
-            sender_type: newMessage.sender_type,
-            is_contact: newMessage.sender_type === 'contact',
-            is_agent: newMessage.sender_type === 'agent'
+          // ✅ Adicionar diretamente ao state (sem callback externo)
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === newMessage.id);
+            if (exists) {
+              console.log('⏭️ Mensagem já existe, ignorando');
+              return prev;
+            }
+            
+            console.log('✅ Adicionando mensagem ao state');
+            return [...prev, newMessage].sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
           });
-          
-          // Verificar se é do workspace atual
-          if (newMessage.workspace_id === selectedWorkspace.workspace_id) {
-            console.log('✅ [INSERT useConversationMessages] Workspace correto, chamando addMessage...');
-            addMessage(newMessage);
-          } else {
-            console.log('❌ [INSERT useConversationMessages] Workspace diferente, ignorando mensagem');
-          }
         }
       )
       .on(
@@ -466,53 +423,46 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const updatedMessage = payload.new as WhatsAppMessage;
           
-          console.log('🔄 [UPDATE] Mensagem atualizada via Realtime:', {
+          console.log('🔄 [UPDATE Realtime] Mensagem atualizada:', {
             id: updatedMessage.id,
-            sender_type: updatedMessage.sender_type,
-            status: updatedMessage.status,
-            file_url: updatedMessage.file_url,
-            message_type: updatedMessage.message_type,
-            content_preview: updatedMessage.content?.substring(0, 30)
+            status: updatedMessage.status
           });
           
-          // Verificar se é do workspace atual
+          // ✅ Verificar workspace
           if (updatedMessage.workspace_id !== selectedWorkspace.workspace_id) {
-            console.log('❌ [UPDATE] Workspace diferente, ignorando');
             return;
           }
           
-          // ✅ Atualizar TODA a mensagem (incluindo file_url processado pelo Media Processor)
-          console.log('🔄 [UPDATE] Atualizando mensagem completa:', {
-            id: updatedMessage.id,
-            status: updatedMessage.status,
-            has_file_url: !!updatedMessage.file_url
-          });
-          
-          updateMessage(updatedMessage.id, {
-            ...updatedMessage,
-            status: updatedMessage.status,
-            delivered_at: updatedMessage.delivered_at,
-            read_at: updatedMessage.read_at,
-            file_url: updatedMessage.file_url,
-            file_name: updatedMessage.file_name,
-            mime_type: updatedMessage.mime_type
+          // ✅ Atualizar diretamente no state
+          setMessages(prev => {
+            const index = prev.findIndex(m => 
+              m.id === updatedMessage.id || m.external_id === updatedMessage.id
+            );
+            
+            if (index === -1) {
+              console.log('⚠️ Mensagem não encontrada para atualizar');
+              return prev;
+            }
+            
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              ...updatedMessage
+            };
+            
+            return updated;
           });
         }
       )
       .subscribe((status) => {
-        console.log('📡 [Realtime Conv Messages] Status:', status, 'Conversa:', currentConversationId);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime Conv Messages] ATIVO para conversa:', currentConversationId);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [Realtime Conv Messages] ERRO no canal');
-        }
+        console.log('📡 [Realtime] Status:', status);
       });
 
     return () => {
-      console.log('🔕 Limpando subscription da conversa:', currentConversationId);
+      console.log('🔕 Limpando subscription');
       supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace?.workspace_id, currentConversationId, addMessage, updateMessage]);
+  }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
   return {
     messages,
