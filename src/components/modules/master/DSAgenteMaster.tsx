@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CriarAgenteModal } from "../../modals/CriarAgenteModal";
+import { EditarAgenteModal } from "../../modals/EditarAgenteModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,6 +23,8 @@ export function DSAgenteMaster() {
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
   const loadAgents = async () => {
     try {
@@ -73,7 +76,8 @@ export function DSAgenteMaster() {
   };
 
   const handleEditAgent = (agentId: string) => {
-    window.location.hash = `#editar-agente/${agentId}`;
+    setSelectedAgentId(agentId);
+    setShowEditModal(true);
   };
 
   const handleCreateModalClose = () => {
@@ -198,6 +202,18 @@ export function DSAgenteMaster() {
         onOpenChange={setShowCreateModal}
         onAgentCreated={handleCreateModalClose}
       />
+
+      {selectedAgentId && (
+        <EditarAgenteModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          agentId={selectedAgentId}
+          onAgentUpdated={() => {
+            setShowEditModal(false);
+            loadAgents();
+          }}
+        />
+      )}
     </div>
   );
 }
