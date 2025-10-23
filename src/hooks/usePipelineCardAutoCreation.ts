@@ -30,20 +30,33 @@ export function usePipelineCardAutoCreation() {
       if (error) {
         console.error('Erro na Edge Function:', error);
         
-        // Se for erro de conflito (card aberto já existe), NÃO mostrar toast
-        // A notificação já foi tratada no data.error
+        // Se for erro de conflito (card aberto já existe), mostrar mensagem clara
         if (data?.error === 'duplicate_open_card') {
-          console.log('⚠️ Card duplicado detectado, mas isso é esperado');
+          toast({
+            title: 'Negócio já existe',
+            description: data.message || 'Já existe um negócio aberto para este contato neste pipeline. Finalize o anterior antes de criar um novo.',
+            variant: 'destructive',
+          });
           return null;
         }
         
+        // Outros erros
+        toast({
+          title: 'Erro ao criar negócio',
+          description: error.message || 'Ocorreu um erro ao tentar criar o negócio',
+          variant: 'destructive',
+        });
         return null;
       }
 
       // Verificar se retornou erro de card duplicado no data
       if (data?.error === 'duplicate_open_card') {
         console.log('⚠️ Negócio aberto já existe para este contato');
-        // NÃO mostrar toast aqui, deixar silencioso
+        toast({
+          title: 'Negócio já existe',
+          description: data.message || 'Já existe um negócio aberto para este contato neste pipeline. Finalize o anterior antes de criar um novo.',
+          variant: 'destructive',
+        });
         return null;
       }
 
