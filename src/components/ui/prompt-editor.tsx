@@ -185,6 +185,11 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   // Render content with badges inline at their positions
   useEffect(() => {
     if (!editorRef.current) return;
+    
+    // Se está focado, só re-renderizar se os badges mudaram
+    if (isFocused) {
+      return;
+    }
 
     const container = editorRef.current;
     const selection = window.getSelection();
@@ -290,7 +295,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         // Ignore errors restoring selection
       }
     }
-  }, [badges, value]);
+  }, [badges, value, isFocused]);
 
   return (
     <div
