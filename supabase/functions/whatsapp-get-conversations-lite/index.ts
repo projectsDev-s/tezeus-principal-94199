@@ -120,6 +120,7 @@ serve(async (req) => {
         priority,
         status,
         assigned_user_id,
+        agente_ativo,
         contacts!inner(
           id,
           name,
