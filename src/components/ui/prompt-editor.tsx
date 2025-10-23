@@ -63,6 +63,37 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     cursorPositionRef.current = position;
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    
+    // Get plain text from clipboard
+    const text = e.clipboardData.getData('text/plain');
+    
+    // Insert at cursor maintaining line breaks
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    
+    selection.deleteFromDocument();
+    
+    // Split by lines and insert with <br>
+    const lines = text.split('\n');
+    const range = selection.getRangeAt(0);
+    
+    lines.forEach((line, index) => {
+      if (index > 0) {
+        const br = document.createElement('br');
+        range.insertNode(br);
+        range.collapse(false);
+      }
+      const textNode = document.createTextNode(line);
+      range.insertNode(textNode);
+      range.collapse(false);
+    });
+    
+    // Manually trigger handleInput
+    handleInput();
+  };
+
   const handleInput = () => {
     if (!editorRef.current) return;
     
@@ -127,7 +158,10 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
 
   // Render content with badges inline at their positions
   useEffect(() => {
-    if (!editorRef.current || isFocused) return;
+    if (!editorRef.current) return;
+    
+    // Only skip rendering if focused AND there's already content
+    if (isFocused && editorRef.current.textContent?.length > 0) return;
 
     const container = editorRef.current;
     const selection = window.getSelection();
@@ -240,6 +274,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         ref={editorRef}
         contentEditable
         onInput={handleInput}
+        onPaste={handlePaste}
         onFocus={() => setIsFocused(true)}
         onBlur={() => {
           setIsFocused(false);
@@ -249,7 +284,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
         onKeyUp={saveCursorPosition}
         className={cn(
           "min-h-[400px] p-4 outline-none font-mono",
-          "break-words",
+          "break-words whitespace-pre-wrap",
           !value && !isFocused && badges.length === 0 && "text-muted-foreground"
         )}
         suppressContentEditableWarning
