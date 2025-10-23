@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Configurar Webhook - teste-ia</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background: #45a049; }
+        #result { margin-top: 20px; padding: 10px; background: #f4f4f4; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Configurar Webhook Evolution - teste-ia</h1>
+    
+    <div class="form-group">
+        <label>URL da Evolution API:</label>
+        <input type="text" id="evolutionUrl" placeholder="https://sua-evolution-api.com">
+    </div>
+    
+    <div class="form-group">
+        <label>Token/API Key da Evolution:</label>
+        <input type="text" id="apiKey" placeholder="seu-token-aqui">
+    </div>
+    
+    <button onclick="configurarWebhook()">Configurar Webhook para evolution-webhook-v2</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function configurarWebhook() {
+            const evolutionUrl = document.getElementById('evolutionUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            
+            if (!evolutionUrl || !apiKey) {
+                alert('Preencha todos os campos!');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '⏳ Configurando webhook...';
+            
+            try {
+                // 1. Configurar webhook na Evolution API
+                const webhookUrl = 'https://zldeaozqxjwvzgrblyrh.supabase.co/functions/v1/evolution-webhook-v2';
+                
+                const response = await fetch(`${evolutionUrl}/webhook/set/teste-ia`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': apiKey
+                    },
+                    body: JSON.stringify({
+                        url: webhookUrl,
+                        webhook_by_events: false,
+                        webhook_base64: false,
+                        events: [
+                            'APPLICATION_STARTUP',
+                            'QRCODE_UPDATED',
+                            'MESSAGES_SET',
+                            'MESSAGES_UPSERT',
+                            'MESSAGES_UPDATE',
+                            'MESSAGES_DELETE',
+                            'SEND_MESSAGE',
+                            'CONTACTS_SET',
+                            'CONTACTS_UPSERT',
+                            'CONTACTS_UPDATE',
+                            'PRESENCE_UPDATE',
+                            'CHATS_SET',
+                            'CHATS_UPSERT',
+                            'CHATS_UPDATE',
+                            'CHATS_DELETE',
+                            'GROUPS_UPSERT',
+                            'GROUP_UPDATE',
+                            'GROUP_PARTICIPANTS_UPDATE',
+                            'CONNECTION_UPDATE',
+                            'CALL',
+                            'NEW_JWT_TOKEN'
+                        ]
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `✅ SUCESSO!\n\nWebhook configurado para:\n${webhookUrl}\n\nResposta da Evolution:\n${JSON.stringify(result, null, 2)}\n\n⚠️ IMPORTANTE: Agora adicione este registro na tabela evolution_instance_tokens:\n\ninstance_name: teste-ia\nevolution_url: ${evolutionUrl}\ntoken: ${apiKey}\nworkspace_id: 9379d213-8df0-47a8-a1b0-9d71e036fa5d`;
+                } else {
+                    resultDiv.innerHTML = `❌ Erro ao configurar webhook:\n${JSON.stringify(result, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Erro: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
