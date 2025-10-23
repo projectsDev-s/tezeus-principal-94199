@@ -155,7 +155,7 @@ serve(async (req) => {
       .insert({
         conversation_id: conversationId,
         content: processedMessage,
-        sender_type: 'ia',
+        sender_type: 'agent',
         message_type: 'text',
         status: 'sending',
         origem_resposta: 'automatica',
