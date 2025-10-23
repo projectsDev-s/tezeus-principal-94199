@@ -152,7 +152,24 @@ export const useWhatsAppConversations = () => {
         }))
       );
       
-      setConversations(formattedConversations);
+      // ✅ FILTRO CLIENT-SIDE: Se usuário é "user", filtrar apenas conversas atribuídas ou não atribuídas
+      let filteredConversations = formattedConversations;
+      
+      if (currentUserData.profile === 'user') {
+        filteredConversations = formattedConversations.filter(conv => 
+          conv.assigned_user_id === currentUserData.id || 
+          conv.assigned_user_id === null
+        );
+        console.log('🔒 [Filter] Conversas filtradas para user:', {
+          total: formattedConversations.length,
+          filtradas: filteredConversations.length,
+          criterio: 'assigned_user_id = ' + currentUserData.id + ' OR NULL'
+        });
+      } else {
+        console.log('👑 [Filter] Admin/Master vê todas as conversas:', formattedConversations.length);
+      }
+      
+      setConversations(filteredConversations);
       if (DEBUG_CONVERSATIONS) {
         // Conversations loaded
         
@@ -912,6 +929,26 @@ export const useWhatsAppConversations = () => {
               console.log('⚠️ Payload.new é null - ignorando evento');
               return;
             }
+          
+          // ✅ FILTRO DE PERMISSÕES CLIENT-SIDE: Se usuário é "user", verificar permissão
+          if (currentUserData?.profile === 'user') {
+            const hasPermission = (
+              updatedConv.assigned_user_id === currentUserData.id || 
+              updatedConv.assigned_user_id === null
+            );
+            
+            if (!hasPermission) {
+              console.log('⏭️ [UPDATE] Conversa não pertence ao usuário, removendo da lista:', {
+                conversation_id: updatedConv.id,
+                assigned_to: updatedConv.assigned_user_id,
+                current_user: currentUserData.id
+              });
+              
+              // ✅ REMOVER conversa da lista se ela não pertence mais ao usuário
+              setConversations(prev => prev.filter(c => c.id !== updatedConv.id));
+              return;
+            }
+          }
           
           // ✅ CRÍTICO: Evitar processar updates duplicados
           // Comparar APENAS se for o mesmo timestamp (duplicata real)
