@@ -367,13 +367,19 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   // Real-time subscriptions para mensagens
   useEffect(() => {
     if (!selectedWorkspace?.workspace_id || !currentConversationId) {
+      console.log('⏭️ [Realtime] Sem workspace ou conversa, ignorando subscription');
       return;
     }
 
-    console.log('🔌 Criando subscription para conversa:', currentConversationId);
+    console.log('🔌 [Realtime] Criando subscription para conversa:', {
+      conversationId: currentConversationId,
+      workspaceId: selectedWorkspace.workspace_id,
+      timestamp: new Date().toISOString()
+    });
 
+    const channelName = `conversation-messages-${currentConversationId}`;
     const channel = supabase
-      .channel(`conversation-messages-${currentConversationId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -385,15 +391,21 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           const newMessage = payload.new as WhatsAppMessage;
           
-          console.log('📨 [INSERT Realtime] Nova mensagem:', {
+          console.log('📨 [INSERT Realtime] Nova mensagem recebida:', {
             id: newMessage.id,
             sender_type: newMessage.sender_type,
-            content_preview: newMessage.content?.substring(0, 30)
+            content_preview: newMessage.content?.substring(0, 30),
+            workspace_id: newMessage.workspace_id,
+            conversation_id: newMessage.conversation_id,
+            timestamp: new Date().toISOString()
           });
           
           // ✅ Verificar workspace
           if (newMessage.workspace_id !== selectedWorkspace.workspace_id) {
-            console.log('❌ Workspace diferente, ignorando');
+            console.log('❌ [INSERT Realtime] Workspace diferente, ignorando:', {
+              received: newMessage.workspace_id,
+              expected: selectedWorkspace.workspace_id
+            });
             return;
           }
           
@@ -401,11 +413,16 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           setMessages(prev => {
             const exists = prev.some(m => m.id === newMessage.id);
             if (exists) {
-              console.log('⏭️ Mensagem já existe, ignorando');
+              console.log('⏭️ [INSERT Realtime] Mensagem já existe, ignorando:', newMessage.id);
               return prev;
             }
             
-            console.log('✅ Adicionando mensagem ao state');
+            console.log('✅ [INSERT Realtime] Adicionando mensagem ao state:', {
+              id: newMessage.id,
+              totalBefore: prev.length,
+              totalAfter: prev.length + 1
+            });
+            
             return [...prev, newMessage].sort((a, b) => 
               new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
             );
@@ -425,11 +442,14 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           
           console.log('🔄 [UPDATE Realtime] Mensagem atualizada:', {
             id: updatedMessage.id,
-            status: updatedMessage.status
+            status: updatedMessage.status,
+            workspace_id: updatedMessage.workspace_id,
+            timestamp: new Date().toISOString()
           });
           
           // ✅ Verificar workspace
           if (updatedMessage.workspace_id !== selectedWorkspace.workspace_id) {
+            console.log('❌ [UPDATE Realtime] Workspace diferente, ignorando');
             return;
           }
           
@@ -440,9 +460,15 @@ export function useConversationMessages(): UseConversationMessagesReturn {
             );
             
             if (index === -1) {
-              console.log('⚠️ Mensagem não encontrada para atualizar');
+              console.log('⚠️ [UPDATE Realtime] Mensagem não encontrada para atualizar:', updatedMessage.id);
               return prev;
             }
+            
+            console.log('✅ [UPDATE Realtime] Atualizando mensagem no state:', {
+              id: updatedMessage.id,
+              oldStatus: prev[index].status,
+              newStatus: updatedMessage.status
+            });
             
             const updated = [...prev];
             updated[index] = {
@@ -454,12 +480,26 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           });
         }
       )
-      .subscribe((status) => {
-        console.log('📡 [Realtime] Status:', status);
+      .subscribe((status, err) => {
+        console.log('📡 [Realtime] Status da subscription:', {
+          channelName,
+          status,
+          error: err,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime] Erro no canal:', err);
+        } else if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime] Subscription ativa e pronta!');
+        }
       });
 
     return () => {
-      console.log('🔕 Limpando subscription');
+      console.log('🔕 [Realtime] Limpando subscription:', {
+        channelName,
+        timestamp: new Date().toISOString()
+      });
       supabase.removeChannel(channel);
     };
   }, [selectedWorkspace?.workspace_id, currentConversationId]);
