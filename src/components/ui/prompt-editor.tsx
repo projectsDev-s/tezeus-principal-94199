@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
-import { X, GripVertical } from "lucide-react";
+import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export interface ActionBadge {
@@ -7,431 +6,79 @@ export interface ActionBadge {
   type: string;
   label: string;
   data: Record<string, any>;
-  position: number; // posição no texto onde o badge deve aparecer
+  position: number;
 }
 
 interface PromptEditorProps {
   value: string;
-  onChange: (value: string, badges: ActionBadge[]) => void;
-  badges: ActionBadge[];
-  onBadgeClick?: (badge: ActionBadge) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
 }
 
 export interface PromptEditorRef {
   getCursorPosition: () => number;
+  insertText: (text: string) => void;
 }
 
 export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   value,
   onChange,
-  badges,
-  onBadgeClick,
   placeholder,
   className,
 }, ref) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [isFocused, setIsFocused] = useState(false);
-  const cursorPositionRef = useRef<number>(0);
-  const prevBadgesRef = useRef<ActionBadge[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Salva a posição do cursor
-  const saveCursorPosition = () => {
-    if (!editorRef.current) return;
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onChange(e.target.value);
+  };
+
+  const getCursorPosition = (): number => {
+    if (!textareaRef.current) return 0;
+    return textareaRef.current.selectionStart;
+  };
+
+  const insertText = (text: string) => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentValue = textarea.value;
+
+    // Inserir texto na posição do cursor
+    const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
     
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
-    const range = selection.getRangeAt(0);
-    const preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(editorRef.current);
-    preCaretRange.setEnd(range.endContainer, range.endOffset);
-    
-    // Contar texto E badges (badges contam como 1 caractere)
-    let position = 0;
-    const contents = preCaretRange.cloneContents();
-    const walker = document.createTreeWalker(
-      contents,
-      NodeFilter.SHOW_ALL,
-      null
-    );
-    
-    let node;
-    while ((node = walker.nextNode())) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        if (element.getAttribute("data-badge-id")) {
-          // ✅ CONTAR BADGES COMO 1 CARACTERE
-          position += 1;
-          continue;
-        }
-        // Contar <br> como quebra de linha
-        if (element.tagName === "BR") {
-          position += 1;
-        }
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        // Verificar se NÃO está dentro de badge
-        let parent = node.parentElement;
-        let isBadge = false;
-        while (parent && parent !== editorRef.current) {
-          if (parent.getAttribute?.("data-badge-id")) {
-            isBadge = true;
-            break;
-          }
-          parent = parent.parentElement;
-        }
-        
-        if (!isBadge) {
-          position += node.textContent?.length || 0;
-        }
+    onChange(newValue);
+
+    // Mover cursor para depois do texto inserido
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const newPosition = start + text.length;
+        textareaRef.current.setSelectionRange(newPosition, newPosition);
+        textareaRef.current.focus();
       }
-    }
-    
-    cursorPositionRef.current = position;
+    }, 0);
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    
-    // Get plain text from clipboard
-    const text = e.clipboardData.getData('text/plain');
-    
-    // Insert at cursor maintaining line breaks
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return;
-    
-    selection.deleteFromDocument();
-    
-    // Split by lines and insert with <br>
-    const lines = text.split('\n');
-    const range = selection.getRangeAt(0);
-    
-    lines.forEach((line, index) => {
-      if (index > 0) {
-        const br = document.createElement('br');
-        range.insertNode(br);
-        range.collapse(false);
-      }
-      const textNode = document.createTextNode(line);
-      range.insertNode(textNode);
-      range.collapse(false);
-    });
-    
-    // Manually trigger handleInput
-    handleInput();
-  };
-
-  // Recalcula posições dos badges baseado no DOM atual
-  const recalculateBadgePositions = useCallback((): ActionBadge[] => {
-    if (!editorRef.current) return badges;
-
-    const updatedBadges: ActionBadge[] = [];
-    let textPosition = 0;
-
-    const walker = document.createTreeWalker(
-      editorRef.current,
-      NodeFilter.SHOW_ALL,
-      null
-    );
-
-    let node;
-    while ((node = walker.nextNode())) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        const badgeId = element.getAttribute("data-badge-id");
-        
-        if (badgeId) {
-          // Encontrou um badge, atualizar sua posição
-          const badge = badges.find(b => b.id === badgeId);
-          if (badge) {
-            updatedBadges.push({ ...badge, position: textPosition });
-          }
-          // Pular conteúdo do badge
-          walker.nextSibling();
-          continue;
-        }
-        
-        if (element.tagName === "BR") {
-          textPosition += 1;
-        }
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        // Verificar se NÃO está dentro de badge
-        let parent = node.parentElement;
-        let isBadge = false;
-        while (parent && parent !== editorRef.current) {
-          if (parent.getAttribute("data-badge-id")) {
-            isBadge = true;
-            break;
-          }
-          parent = parent.parentElement;
-        }
-        
-        if (!isBadge) {
-          textPosition += node.textContent?.length || 0;
-        }
-      }
-    }
-
-    return updatedBadges;
-  }, [badges]);
-
-  const handleInput = () => {
-    if (!editorRef.current) return;
-    
-    let textContent = "";
-    let badgePositions: { position: number; badgeId: string }[] = [];
-    let currentPosition = 0;
-    
-    const walker = document.createTreeWalker(
-      editorRef.current,
-      NodeFilter.SHOW_ALL,
-      null
-    );
-    
-    let node;
-    while ((node = walker.nextNode())) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        const badgeId = element.getAttribute("data-badge-id");
-        
-        if (badgeId) {
-          // ✅ Registrar posição do badge e adicionar marcador
-          badgePositions.push({ position: currentPosition, badgeId });
-          textContent += "\uFEFF"; // Zero-width no-break space
-          currentPosition += 1;
-          walker.nextSibling();
-          continue;
-        }
-        
-        if (element.tagName === "BR") {
-          textContent += "\n";
-          currentPosition += 1;
-        }
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        let parent = node.parentElement;
-        let isBadge = false;
-        while (parent && parent !== editorRef.current) {
-          if (parent.getAttribute("data-badge-id")) {
-            isBadge = true;
-            break;
-          }
-          parent = parent.parentElement;
-        }
-        
-        if (!isBadge) {
-          const text = node.textContent || "";
-          textContent += text;
-          currentPosition += text.length;
-        }
-      }
-    }
-    
-    // ✅ Atualizar posições dos badges baseado no DOM atual
-    const updatedBadges = badges.map(badge => {
-      const found = badgePositions.find(bp => bp.badgeId === badge.id);
-      return found ? { ...badge, position: found.position } : badge;
-    });
-    
-    onChange(textContent, updatedBadges);
-  };
-
-  const handleRemoveBadge = (badgeId: string) => {
-    const updatedBadges = badges.filter((b) => b.id !== badgeId);
-    onChange(value, updatedBadges);
-  };
-
-  const handleBadgeClick = (badge: ActionBadge) => {
-    onBadgeClick?.(badge);
-  };
-
-  // Expõe a posição do cursor para uso externo via ref
   useImperativeHandle(ref, () => ({
-    getCursorPosition: () => cursorPositionRef.current,
+    getCursorPosition,
+    insertText,
   }));
 
-  // Render content with badges inline at their positions
-  useEffect(() => {
-    if (!editorRef.current) return;
-    
-    // Comparar badges e value para evitar re-renders desnecessários
-    const badgesChanged = JSON.stringify(prevBadgesRef.current) !== JSON.stringify(badges);
-    
-    // Se está focado e nada mudou, não re-renderizar
-    if (isFocused && !badgesChanged) {
-      return;
-    }
-    
-    prevBadgesRef.current = badges;
-
-    const container = editorRef.current;
-    const selection = window.getSelection();
-    const savedRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-    
-    container.innerHTML = "";
-
-    const content = value || "";
-    
-    // ✅ Remover marcadores especiais do texto para renderização
-    const cleanContent = content.replace(/\uFEFF/g, "");
-    
-    // Ordena badges por posição
-    const sortedBadges = [...badges].sort((a, b) => a.position - b.position);
-    
-    let lastIndex = 0;
-    
-    sortedBadges.forEach((badge) => {
-      // Adiciona texto antes do badge
-      if (badge.position > lastIndex) {
-        const textBefore = cleanContent.substring(lastIndex, badge.position);
-        const lines = textBefore.split("\n");
-        lines.forEach((line, index) => {
-          if (index > 0) {
-            container.appendChild(document.createElement("br"));
-          }
-          // Só adicionar text node se houver conteúdo
-          if (line) {
-            container.appendChild(document.createTextNode(line));
-          }
-        });
-      }
-      
-      // Cria o badge
-      const badgeElement = document.createElement("span");
-      badgeElement.setAttribute("data-badge-id", badge.id);
-      badgeElement.contentEditable = "false";
-      badgeElement.style.display = "inline-flex";
-      badgeElement.style.alignItems = "center";
-      badgeElement.style.gap = "1px";
-      badgeElement.style.padding = "0px 3px";
-      badgeElement.style.fontSize = "15px";
-      badgeElement.style.borderRadius = "3px";
-      badgeElement.style.backgroundColor = "hsl(var(--primary) / 0.7)";
-      badgeElement.style.color = "hsl(var(--primary-foreground))";
-      badgeElement.style.cursor = "pointer";
-      badgeElement.style.verticalAlign = "middle";
-      badgeElement.style.margin = "0 1px";
-      badgeElement.style.maxWidth = "250px";
-      badgeElement.style.overflow = "hidden";
-      badgeElement.style.whiteSpace = "nowrap";
-      
-      badgeElement.innerHTML = `
-        <svg style="width: 8px; height: 8px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="9" cy="5" r="1"></circle>
-          <circle cx="9" cy="12" r="1"></circle>
-          <circle cx="9" cy="19" r="1"></circle>
-          <circle cx="15" cy="5" r="1"></circle>
-          <circle cx="15" cy="12" r="1"></circle>
-          <circle cx="15" cy="19" r="1"></circle>
-        </svg>
-        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: inline-block;">${badge.label}</span>
-        <button style="padding: 0px; border-radius: 50%; background: transparent; flex-shrink: 0;" data-remove="${badge.id}">
-          <svg style="width: 8px; height: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      `;
-      
-      container.appendChild(badgeElement);
-      lastIndex = badge.position;
-    });
-    
-    // Adiciona o texto restante depois do último badge
-    if (lastIndex < cleanContent.length) {
-      const textAfter = cleanContent.substring(lastIndex);
-      const lines = textAfter.split("\n");
-      lines.forEach((line, index) => {
-        if (index > 0) {
-          container.appendChild(document.createElement("br"));
-        }
-        // Só adicionar text node se houver conteúdo
-        if (line) {
-          container.appendChild(document.createTextNode(line));
-        }
-      });
-    }
-
-    // Restore cursor position
-    if (savedRange) {
-      try {
-        selection?.removeAllRanges();
-        selection?.addRange(savedRange);
-      } catch (e) {
-        // Ignore errors restoring selection
-      }
-    }
-  }, [badges, value, isFocused]);
-
-  // Delegação de eventos no container
-  useEffect(() => {
-    if (!editorRef.current) return;
-
-    const container = editorRef.current;
-
-    const handleContainerClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const badgeElement = target.closest("[data-badge-id]") as HTMLElement;
-      
-      if (badgeElement) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const badgeId = badgeElement.getAttribute("data-badge-id");
-        const badge = badges.find(b => b.id === badgeId);
-        
-        if (!badge) return;
-        
-        if (target.closest("[data-remove]")) {
-          handleRemoveBadge(badge.id);
-        } else {
-          handleBadgeClick(badge);
-        }
-      }
-    };
-
-    container.addEventListener("click", handleContainerClick);
-
-    return () => {
-      container.removeEventListener("click", handleContainerClick);
-    };
-  }, [badges, onBadgeClick]);
-
   return (
-    <div
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={handleChange}
+      placeholder={placeholder}
       className={cn(
-        "relative min-h-[400px] rounded-md border border-input bg-background",
-        "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+        "w-full min-h-[400px] p-4 rounded-md border border-input bg-background",
+        "font-mono text-sm resize-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "placeholder:text-muted-foreground",
         className
       )}
-    >
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onPaste={handlePaste}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => {
-          setIsFocused(false);
-          saveCursorPosition();
-        }}
-        onClick={saveCursorPosition}
-        onKeyUp={saveCursorPosition}
-        className={cn(
-          "min-h-[400px] p-4 outline-none font-mono",
-          "break-words",
-          !value && !isFocused && badges.length === 0 && "text-muted-foreground"
-        )}
-        suppressContentEditableWarning
-      >
-        {/* Content will be rendered via useEffect */}
-      </div>
-
-      {/* Placeholder */}
-      {!value && !isFocused && badges.length === 0 && (
-        <div className="absolute top-4 left-4 pointer-events-none text-sm font-mono">
-          {placeholder}
-        </div>
-      )}
-    </div>
+    />
   );
 });

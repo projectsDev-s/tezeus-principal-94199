@@ -177,38 +177,19 @@ export function PromptEditorModal({
   workspaceId,
 }: PromptEditorModalProps) {
   const [localValue, setLocalValue] = useState("");
-  const [badges, setBadges] = useState<ActionBadge[]>([]);
   const [showTagSelector, setShowTagSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
-  const [editingBadge, setEditingBadge] = useState<ActionBadge | null>(null);
   const [pendingActionType, setPendingActionType] = useState<string | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
-  const previousOpenRef = useRef(false);
 
-  // Sincronizar estado local com props APENAS quando modal abre (transição de fechado para aberto)
+  // Sincronizar com o value quando o modal abre
   useEffect(() => {
-    const wasClosedNowOpen = !previousOpenRef.current && open;
-    
-    if (wasClosedNowOpen) {
-      // Se value está vazio, iniciar com estado vazio (modal de criação)
-      if (!value || value === "") {
-        setLocalValue("");
-        setBadges([]);
-      } else {
-        // Se value tem conteúdo, fazer parsing (modal de edição)
-        const parsed = parseBadgesFromPrompt(value);
-        setLocalValue(parsed.text);
-        setBadges(parsed.badges);
-      }
+    if (open) {
+      setLocalValue(value || "");
     }
-    
-    previousOpenRef.current = open;
   }, [open, value]);
 
   const handleActionSelect = (action: ActionButton) => {
-    // Obter posição do cursor
-    const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
-
     // Ações que precisam de modal de seleção
     if (action.id === "add-tag") {
       setPendingActionType(action.id);
@@ -222,57 +203,14 @@ export function PromptEditorModal({
       return;
     }
 
-    // Para outras ações, criar badge genérico imediatamente
-    const newBadge: ActionBadge = {
-      id: `${action.id}-${Date.now()}`,
-      type: action.id,
-      label: action.label,
-      data: {},
-      position: cursorPosition,
-    };
-
-    // ✅ Ajustar posições dos badges existentes que vêm depois
-    const adjustedBadges = badges.map(b => 
-      b.position >= cursorPosition 
-        ? { ...b, position: b.position + 1 }
-        : b
-    );
-
-    setBadges([...adjustedBadges, newBadge]);
+    // Para outras ações genéricas, inserir texto diretamente
+    const actionText = `\n${action.tag}\n`;
+    editorRef.current?.insertText(actionText);
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    if (editingBadge) {
-      // Editando badge existente
-      const updatedBadges = badges.map((b) =>
-        b.id === editingBadge.id
-          ? { ...b, label: `Adicionar Tag: ${tagName}`, data: { tagId, tagName } }
-          : b
-      );
-      setBadges(updatedBadges);
-      setEditingBadge(null);
-    } else {
-      // Obter posição do cursor
-      const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
-
-      // Criando novo badge
-      const newBadge: ActionBadge = {
-        id: `add-tag-${Date.now()}`,
-        type: "add-tag",
-        label: `Adicionar Tag: ${tagName}`,
-        data: { tagId, tagName },
-        position: cursorPosition,
-      };
-      
-      // ✅ Ajustar posições dos badges existentes que vêm depois
-      const adjustedBadges = badges.map(b => 
-        b.position >= cursorPosition 
-          ? { ...b, position: b.position + 1 }
-          : b
-      );
-      
-      setBadges([...adjustedBadges, newBadge]);
-    }
+    const actionText = `\nutilize o tools do agente \`inserir-tag\` enviando esses parâmetros: {{action: "addTag", params: {"tagName": "${tagName}"}}}\n`;
+    editorRef.current?.insertText(actionText);
   };
 
   const handlePipelineColumnSelected = (
@@ -281,93 +219,26 @@ export function PromptEditorModal({
     columnId: string, 
     columnName: string
   ) => {
-    if (editingBadge) {
-      // Editando badge existente
-      const label = editingBadge.type === "create-crm-card" 
-        ? `Criar Card CRM: ${pipelineName} | ${columnName}`
-        : `Transferir Coluna CRM: ${columnName}`;
-      
-      const updatedBadges = badges.map((b) =>
-        b.id === editingBadge.id
-          ? { ...b, label, data: { pipelineId, pipelineName, columnId, columnName } }
-          : b
-      );
-      setBadges(updatedBadges);
-      setEditingBadge(null);
+    const actionType = pendingActionType || "transfer-crm-column";
+    
+    let actionText = "";
+    if (actionType === "create-crm-card") {
+      actionText = `\nutilize o tools do agente \`criar-card-crm\` enviando esses parâmetros: {{action: "crm.createCard", params: {"pipeline": "${pipelineName}", "column": "${columnName}"}}}\n`;
     } else {
-      // Obter posição do cursor
-      const cursorPosition = editorRef.current?.getCursorPosition() || localValue.length;
-
-      // Criando novo badge
-      const actionType = pendingActionType || "transfer-crm-column";
-      const label = actionType === "create-crm-card"
-        ? `Criar Card CRM: ${pipelineName} | ${columnName}`
-        : `Transferir Coluna CRM: ${columnName}`;
-      
-      const newBadge: ActionBadge = {
-        id: `${actionType}-${Date.now()}`,
-        type: actionType,
-        label,
-        data: { pipelineId, pipelineName, columnId, columnName },
-        position: cursorPosition,
-      };
-      
-      // ✅ Ajustar posições dos badges existentes que vêm depois
-      const adjustedBadges = badges.map(b => 
-        b.position >= cursorPosition 
-          ? { ...b, position: b.position + 1 }
-          : b
-      );
-      
-      setBadges([...adjustedBadges, newBadge]);
+      actionText = `\nutilize o tools do agente \`transferir-coluna-crm\` enviando esses parâmetros: {{action: "crm.transferColumn", params: {"columnId": "${columnId}"}}}\n`;
     }
+    
+    editorRef.current?.insertText(actionText);
     setPendingActionType(null);
   };
 
-
-  const handleBadgeClick = (badge: ActionBadge) => {
-    setEditingBadge(badge);
-    if (badge.type === "add-tag") {
-      setShowTagSelector(true);
-    } else if (badge.type === "create-crm-card" || badge.type === "transfer-crm-column") {
-      setShowPipelineColumnSelector(true);
-    }
-  };
-
-  const handleEditorChange = (text: string, updatedBadges: ActionBadge[]) => {
-    setLocalValue(text);
-    setBadges(updatedBadges);
-  };
-
   const handleSave = () => {
-    // Construir o prompt final com badges e texto
-    let finalPrompt = localValue;
-    
-    // Só adicionar seção de ações se houver badges
-    if (badges.length > 0) {
-      finalPrompt += "\n\n--- AÇÕES CONFIGURADAS ---\n";
-      badges.forEach((badge) => {
-        if (badge.type === "add-tag") {
-          finalPrompt += `\n[Adicionar Tag: ${badge.data.tagName}]`;
-        } else if (badge.type === "create-crm-card") {
-          finalPrompt += `\n[Criar Card CRM: ${badge.data.pipelineName} | ${badge.data.columnName}]`;
-        } else if (badge.type === "transfer-crm-column") {
-          finalPrompt += `\n[Transferir Coluna CRM: ${badge.data.columnName}]`;
-        } else {
-          finalPrompt += `\n[${badge.label}]`;
-        }
-      });
-    }
-    
-    onChange(finalPrompt);
+    onChange(localValue);
     onOpenChange(false);
   };
 
   const handleCancel = () => {
-    // Resetar completamente o estado local
-    const parsed = parseBadgesFromPrompt(value);
-    setLocalValue(parsed.text);
-    setBadges(parsed.badges);
+    setLocalValue(value || "");
     onOpenChange(false);
   };
 
@@ -382,13 +253,11 @@ export function PromptEditorModal({
           {/* Editor Area with Context Menu */}
           <div className="flex-1 p-6 overflow-y-auto">
             <ContextMenu>
-              <ContextMenuTrigger>
+              <ContextMenuTrigger className="w-full">
                 <PromptEditor
                   ref={editorRef}
                   value={localValue}
-                  onChange={handleEditorChange}
-                  badges={badges}
-                  onBadgeClick={handleBadgeClick}
+                  onChange={setLocalValue}
                   placeholder="Digite o prompt do agente aqui... Clique com o botão direito para adicionar ações."
                   className="min-h-[400px]"
                 />
