@@ -73,7 +73,7 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
     agent_type: 'conversational',
     api_provider: 'openai',
     model: 'gpt-4o-mini',
-    system_instructions: 'Você é um assistente útil e prestativo.',
+    system_instructions: '',
     temperature: 0.7,
     max_tokens: 1000,
     response_delay_ms: 1000,
