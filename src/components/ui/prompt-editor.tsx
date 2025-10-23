@@ -49,15 +49,41 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
     
     // Conta apenas o texto, ignorando badges
     let position = 0;
+    const contents = preCaretRange.cloneContents();
     const walker = document.createTreeWalker(
-      preCaretRange.cloneContents(),
-      NodeFilter.SHOW_TEXT,
+      contents,
+      NodeFilter.SHOW_ALL,
       null
     );
     
     let node;
     while ((node = walker.nextNode())) {
-      position += node.textContent?.length || 0;
+      // Ignorar badges
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        if (element.getAttribute("data-badge-id")) {
+          continue;
+        }
+        // Contar <br> como quebra de linha
+        if (element.tagName === "BR") {
+          position += 1;
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        // Verificar se NÃO está dentro de badge
+        let parent = node.parentElement;
+        let isBadge = false;
+        while (parent && parent !== editorRef.current) {
+          if (parent.getAttribute?.("data-badge-id")) {
+            isBadge = true;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        
+        if (!isBadge) {
+          position += node.textContent?.length || 0;
+        }
+      }
     }
     
     cursorPositionRef.current = position;
@@ -205,6 +231,8 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
       badgeElement.style.cursor = "pointer";
       badgeElement.style.verticalAlign = "middle";
       badgeElement.style.margin = "0 1px";
+      badgeElement.style.maxWidth = "250px";
+      badgeElement.style.overflow = "hidden";
       
       badgeElement.innerHTML = `
         <svg style="width: 8px; height: 8px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,8 +243,8 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
           <circle cx="15" cy="12" r="1"></circle>
           <circle cx="15" cy="19" r="1"></circle>
         </svg>
-        <span style="white-space: nowrap;">${badge.label}</span>
-        <button style="padding: 0px; border-radius: 50%; background: transparent;" data-remove="${badge.id}">
+        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: inline-block;">${badge.label}</span>
+        <button style="padding: 0px; border-radius: 50%; background: transparent; flex-shrink: 0;" data-remove="${badge.id}">
           <svg style="width: 8px; height: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
           </svg>
