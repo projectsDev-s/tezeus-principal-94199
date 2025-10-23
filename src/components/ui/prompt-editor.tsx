@@ -219,9 +219,8 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
       }
     }
     
-    // Recalcular posições dos badges
-    const updatedBadges = recalculateBadgePositions();
-    onChange(textContent, updatedBadges);
+    // NÃO recalcular posições aqui - só atualizar o texto
+    onChange(textContent, badges);
   };
 
   const handleRemoveBadge = (badgeId: string) => {
@@ -242,12 +241,12 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
   useEffect(() => {
     if (!editorRef.current) return;
     
-    // Se está focado, só re-renderizar se os badges NÃO mudaram
-    if (isFocused) {
-      const badgesChanged = JSON.stringify(prevBadgesRef.current) !== JSON.stringify(badges);
-      if (!badgesChanged) {
-        return;
-      }
+    // Comparar badges e value para evitar re-renders desnecessários
+    const badgesChanged = JSON.stringify(prevBadgesRef.current) !== JSON.stringify(badges);
+    
+    // Se está focado e nada mudou, não re-renderizar
+    if (isFocused && !badgesChanged) {
+      return;
     }
     
     prevBadgesRef.current = badges;
