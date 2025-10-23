@@ -157,17 +157,39 @@ export function WhatsAppChat({
 
   // ✅ CRÍTICO: Sincronizar selectedConversation quando conversations mudar
   useEffect(() => {
-    if (selectedConversation) {
-      const updatedConversation = conversations.find(c => c.id === selectedConversation.id);
-      if (updatedConversation && updatedConversation.agente_ativo !== selectedConversation.agente_ativo) {
-        console.log('🔄 Atualizando selectedConversation:', {
-          old: selectedConversation.agente_ativo,
-          new: updatedConversation.agente_ativo
-        });
-        setSelectedConversation(updatedConversation);
-      }
+    if (!selectedConversation) return;
+    
+    console.log('🔍 Verificando sincronização:', {
+      selectedConvId: selectedConversation.id,
+      totalConversations: conversations.length,
+      selectedAgenteAtivo: selectedConversation.agente_ativo
+    });
+    
+    const updatedConversation = conversations.find(c => c.id === selectedConversation.id);
+    
+    if (!updatedConversation) {
+      console.log('⚠️ Conversa não encontrada no array');
+      return;
     }
-  }, [conversations, selectedConversation?.id]);
+    
+    console.log('🔍 Conversa encontrada no array:', {
+      found: true,
+      updatedAgenteAtivo: updatedConversation.agente_ativo,
+      currentAgenteAtivo: selectedConversation.agente_ativo,
+      needsUpdate: updatedConversation.agente_ativo !== selectedConversation.agente_ativo
+    });
+    
+    // ✅ SEMPRE atualizar para garantir que temos a versão mais recente
+    if (updatedConversation.agente_ativo !== selectedConversation.agente_ativo || 
+        updatedConversation._updated_at !== selectedConversation._updated_at) {
+      console.log('🔄 Atualizando selectedConversation:', {
+        oldAgenteAtivo: selectedConversation.agente_ativo,
+        newAgenteAtivo: updatedConversation.agente_ativo,
+        timestamp: updatedConversation._updated_at
+      });
+      setSelectedConversation(updatedConversation);
+    }
+  }, [conversations]);
   const [quickPhoneNumber, setQuickPhoneNumber] = useState("");
   const [isCreatingQuickConversation, setIsCreatingQuickConversation] = useState(false);
   const [showAllQueues, setShowAllQueues] = useState(true);
@@ -821,6 +843,12 @@ export function WhatsAppChat({
   // Gerenciar agente IA
   const handleToggleAgent = () => {
     if (selectedConversation) {
+      console.log('🎯 handleToggleAgent chamado:', {
+        conversationId: selectedConversation.id,
+        currentState: selectedConversation.agente_ativo,
+        willCall: selectedConversation.agente_ativo ? 'assumirAtendimento' : 'reativarIA'
+      });
+      
       if (selectedConversation.agente_ativo) {
         assumirAtendimento(selectedConversation.id);
       } else {
