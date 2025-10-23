@@ -44,9 +44,11 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       hasLocalStorage: localStorage.getItem('selectedWorkspace') ? 'exists' : 'missing'
     });
 
-    // REGRA MASTER: Usuário master NÃO deve ter workspace auto-selecionado do localStorage
-    if (userRole === 'master') {
-      console.log('🎩 Usuário master detectado - workspace não será auto-selecionado do localStorage');
+    // ✅ CORREÇÃO: Master PODE usar workspace do localStorage quando está visualizando um workspace específico
+    // Apenas não deve ter workspace "fixo" como Admin/User
+    if (userRole === 'master' && !selectedWorkspace && workspaces.length === 0) {
+      // Master sem workspace selecionado e sem workspaces carregados - aguarda seleção manual
+      console.log('🎩 Master sem workspace - aguardando seleção');
       return;
     }
 

@@ -144,14 +144,15 @@ serve(async (req) => {
       `)
       .eq('workspace_id', workspaceId);
 
-    // Aplicar filtro baseado no perfil do usuário
-    if (userProfile !== 'master' && userProfile !== 'admin') {
+    // ✅ CORREÇÃO: Apenas USER tem filtro de assigned_user_id
+    // Master e Admin veem TUDO do workspace
+    if (userProfile === 'user') {
       // Usuários normais veem apenas conversas atribuídas a eles ou sem atribuição
       query = query.or(`assigned_user_id.eq.${systemUserId},assigned_user_id.is.null`);
-      console.log('🔒 Filtering conversations for regular user:', systemUserId);
+      console.log('🔒 User filtering: assigned to them OR unassigned');
       console.log('🔍 Applied filter: assigned_user_id = ', systemUserId, ' OR assigned_user_id IS NULL');
     } else {
-      console.log('👑 Admin/Master user - showing all conversations');
+      console.log('👑 Admin/Master: showing ALL conversations in workspace');
     }
 
     console.log('📊 Query filters applied, fetching conversations...');
