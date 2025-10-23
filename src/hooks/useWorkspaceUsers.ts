@@ -93,7 +93,7 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
       cancelled = true;
       isFetchingRef.current = false;
     };
-  }, [workspaceId]); // Apenas workspaceId como dependência
+  }, [workspaceId, filterProfiles]);
 
   return {
     users,
