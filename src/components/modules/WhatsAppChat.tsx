@@ -841,7 +841,7 @@ export function WhatsAppChat({
   // Importadas de avatarUtils para consistência
 
   // Gerenciar agente IA
-  const handleToggleAgent = () => {
+  const handleToggleAgent = async () => {
     if (selectedConversation) {
       console.log('🎯 handleToggleAgent chamado:', {
         conversationId: selectedConversation.id,
@@ -849,10 +849,20 @@ export function WhatsAppChat({
         willCall: selectedConversation.agente_ativo ? 'assumirAtendimento' : 'reativarIA'
       });
       
+      const newAgenteAtivoState = !selectedConversation.agente_ativo;
+      
+      // ✅ ATUALIZAR IMEDIATAMENTE a selectedConversation ANTES de chamar a função
+      setSelectedConversation(prev => prev ? {
+        ...prev,
+        agente_ativo: newAgenteAtivoState,
+        _updated_at: Date.now()
+      } : null);
+      
+      // Chamar a função para persistir no banco
       if (selectedConversation.agente_ativo) {
-        assumirAtendimento(selectedConversation.id);
+        await assumirAtendimento(selectedConversation.id);
       } else {
-        reativarIA(selectedConversation.id);
+        await reativarIA(selectedConversation.id);
       }
     }
   };
