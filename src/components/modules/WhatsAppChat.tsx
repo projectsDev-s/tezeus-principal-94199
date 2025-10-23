@@ -19,6 +19,7 @@ import { useInstanceAssignments } from "@/hooks/useInstanceAssignments";
 import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQueues } from "@/hooks/useQueues";
+import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { parsePhoneNumber } from 'libphonenumber-js';
@@ -91,6 +92,9 @@ export function WhatsAppChat({
     loading,
     sendMessage
   } = useWhatsAppConversations();
+
+  // Verificar se há agente ativo no workspace
+  const { hasAgent } = useWorkspaceAgent();
 
   // ✅ Hook específico para mensagens (lazy loading)
   const {
@@ -1666,9 +1670,31 @@ export function WhatsAppChat({
                 </div>
 
                 <div className="flex items-center gap-3 ml-auto">
-                  <Button variant="ghost" size="sm" onClick={handleToggleAgent} disabled className={cn("h-8 w-8 p-0 rounded-full transition-colors", selectedConversation.agente_ativo ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80")} title={selectedConversation.agente_ativo ? "Desativar IA" : "Ativar IA"}>
-                    <Bot className="w-4 h-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleToggleAgent} 
+                          disabled={!hasAgent}
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-full transition-colors", 
+                            selectedConversation.agente_ativo 
+                              ? "bg-green-500/10 text-green-600 hover:bg-green-500/20" 
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          )}
+                        >
+                          <Bot className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {!hasAgent && "⚠️ Nenhum agente de IA cadastrado"}
+                        {hasAgent && selectedConversation.agente_ativo && "🤖 IA respondendo - Clique para assumir atendimento"}
+                        {hasAgent && !selectedConversation.agente_ativo && "👤 Atendimento manual - Clique para ativar IA"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   
                   {selectedConversation.connection_id && (
                     <ConnectionBadge 
