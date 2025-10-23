@@ -1,13 +1,31 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export interface ActionBadge {
   id: string;
   type: string;
   label: string;
   data: Record<string, any>;
+  position?: number;
 }
 
 interface PromptEditorProps {
@@ -17,6 +35,59 @@ interface PromptEditorProps {
   onBadgeClick?: (badge: ActionBadge) => void;
   placeholder?: string;
   className?: string;
+}
+
+function SortableBadge({
+  badge,
+  onRemove,
+  onClick,
+}: {
+  badge: ActionBadge;
+  onRemove: () => void;
+  onClick: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: badge.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Badge
+        variant="secondary"
+        className={cn(
+          "px-2 py-1 cursor-pointer transition-all text-xs",
+          "bg-primary/80 text-primary-foreground hover:bg-primary",
+          "flex items-center gap-1.5 group"
+        )}
+        onClick={onClick}
+      >
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-3 w-3" />
+        </div>
+        <span className="text-xs font-medium">{badge.label}</span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="ml-1 rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      </Badge>
+    </div>
+  );
 }
 
 export function PromptEditor({
@@ -29,6 +100,25 @@ export function PromptEditor({
 }: PromptEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = badges.findIndex((b) => b.id === active.id);
+      const newIndex = badges.findIndex((b) => b.id === over.id);
+
+      const reorderedBadges = arrayMove(badges, oldIndex, newIndex);
+      onChange(value, reorderedBadges);
+    }
+  };
 
   const handleTextChange = (e: React.FormEvent<HTMLDivElement>) => {
     const text = e.currentTarget.textContent || "";
@@ -60,30 +150,26 @@ export function PromptEditor({
     >
       {/* Badges Container */}
       {badges.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 border-b border-border bg-muted/20">
-          {badges.map((badge) => (
-            <Badge
-              key={badge.id}
-              variant="secondary"
-              className={cn(
-                "px-3 py-1.5 cursor-pointer transition-all",
-                "bg-primary/80 text-primary-foreground hover:bg-primary",
-                "flex items-center gap-2 group"
-              )}
-              onClick={() => handleBadgeClick(badge)}
+        <div className="flex flex-wrap gap-1.5 p-2.5 border-b border-border bg-muted/20">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={badges.map((b) => b.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <span className="text-sm font-medium">{badge.label}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveBadge(badge.id);
-                }}
-                className="ml-1 rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
+              {badges.map((badge) => (
+                <SortableBadge
+                  key={badge.id}
+                  badge={badge}
+                  onRemove={() => handleRemoveBadge(badge.id)}
+                  onClick={() => handleBadgeClick(badge)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
@@ -112,3 +198,4 @@ export function PromptEditor({
     </div>
   );
 }
+
