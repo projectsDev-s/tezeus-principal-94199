@@ -93,6 +93,12 @@ serve(async (req) => {
 
     console.log('Using system_user_id:', systemUserId)
 
+    // Set user context for RLS policies
+    await supabase.rpc('set_current_user_context', {
+      user_id: systemUserId,
+      user_email: userEmail || ''
+    })
+
     const { data: systemUser, error: userError } = await supabase
       .from('system_users')
       .select('profile')
