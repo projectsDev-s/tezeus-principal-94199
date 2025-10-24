@@ -96,29 +96,61 @@ export function CriarAgenteModal({
     setLoading(true);
 
     try {
-      // 1. Upload do arquivo de conhecimento (se houver)
-      let knowledgeBaseUrl = null;
+      // 1. Gerar ID do agente
+      const agentId = crypto.randomUUID();
+
+      // 2. Upload do arquivo de conhecimento (se houver)
       if (knowledgeFile) {
-        const agentId = crypto.randomUUID();
+        // Validação de tamanho (máx 10MB)
+        const maxSizeInBytes = 10 * 1024 * 1024;
+        if (knowledgeFile.size > maxSizeInBytes) {
+          toast.error('Arquivo muito grande. Tamanho máximo: 10MB');
+          setLoading(false);
+          return;
+        }
+
         const filePath = `${formData.workspace_id}/${agentId}/${knowledgeFile.name}`;
         
+        // Converter para Base64
+        const base64Content = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(knowledgeFile);
+        });
+
+        // Upload para Storage
         const { error: uploadError } = await supabase.storage
           .from('agent-knowledge')
           .upload(filePath, knowledgeFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('agent-knowledge')
-          .getPublicUrl(filePath);
-        
-        knowledgeBaseUrl = publicUrl;
+        // Salvar na tabela ai_agent_knowledge_files
+        const { error: fileError } = await supabase
+          .from('ai_agent_knowledge_files')
+          .insert([{
+            agent_id: agentId,
+            file_name: knowledgeFile.name,
+            file_path: filePath,
+            file_type: knowledgeFile.type,
+            file_size: knowledgeFile.size,
+            content_extracted: base64Content,
+            is_processed: true,
+          }]);
+
+        if (fileError) throw fileError;
       }
 
-      // 2. Inserir agente no banco
+      // 3. Inserir agente no banco
       const { error } = await supabase
         .from('ai_agents')
         .insert({
+          id: agentId,
           workspace_id: formData.workspace_id,
           name: formData.name,
           agent_type: formData.agent_type,
@@ -134,7 +166,6 @@ export function CriarAgenteModal({
           split_responses: formData.split_responses,
           process_messages: formData.process_messages,
           disable_outside_platform: formData.disable_outside_platform,
-          knowledge_base_url: knowledgeBaseUrl,
           is_active: formData.is_active,
           api_provider: 'openai',
           auto_responses_enabled: true,

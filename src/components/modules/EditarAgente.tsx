@@ -178,15 +178,37 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validação de tamanho (máx 10MB)
+    const maxSizeInBytes = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSizeInBytes) {
+      toast.error('Arquivo muito grande. Tamanho máximo: 10MB');
+      return;
+    }
+
     const fileName = `${agentId}/${Date.now()}-${file.name}`;
     
     try {
+      // 1. Converter arquivo para Base64
+      const base64Content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remover prefixo "data:..." para salvar apenas o base64 puro
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // 2. Upload para Storage (mantém o arquivo físico)
       const { error: uploadError } = await supabase.storage
         .from('agent-knowledge')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
+      // 3. Salvar metadata + base64 na tabela
       const { error: dbError } = await supabase
         .from('ai_agent_knowledge_files')
         .insert([{
@@ -195,6 +217,8 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
           file_path: fileName,
           file_type: file.type,
           file_size: file.size,
+          content_extracted: base64Content,
+          is_processed: true,
         }]);
 
       if (dbError) throw dbError;
