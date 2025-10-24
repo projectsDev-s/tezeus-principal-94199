@@ -14,6 +14,7 @@ export interface Connection {
   workspace_id: string;
   auto_create_crm_card?: boolean;
   default_pipeline_id?: string;
+  default_column_id?: string;
   queue_id?: string;
   is_default?: boolean;
   metadata?: {
@@ -34,6 +35,7 @@ export interface CreateConnectionRequest {
   workspaceId: string;
   autoCreateCrmCard?: boolean;
   defaultPipelineId?: string;
+  defaultColumnId?: string;
   queueId?: string;
   phoneNumber?: string;
 }

@@ -140,12 +140,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   };
 
-  // Carregar pipelines quando o modal for aberto (tanto para criar quanto para editar)
-  useEffect(() => {
-    if (isCreateModalOpen && workspaceId) {
-      loadWorkspacePipelines();
-    }
-  }, [isCreateModalOpen, workspaceId]);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +160,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [createCrmCard, setCreateCrmCard] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<string>('');
+  const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [selectedQueueId, setSelectedQueueId] = useState<string>('');
+  const [pipelineColumns, setPipelineColumns] = useState<any[]>([]);
 
   // Load connections on component mount
   useEffect(() => {
@@ -182,6 +178,59 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       }
     };
   }, [workspaceId]);
+
+  // Carregar pipelines quando o modal for aberto (tanto para criar quanto para editar)
+  useEffect(() => {
+    if (isCreateModalOpen && workspaceId) {
+      loadWorkspacePipelines();
+    }
+  }, [isCreateModalOpen, workspaceId]);
+
+  // Carregar colunas quando pipeline for selecionado
+  useEffect(() => {
+    const loadPipelineColumns = async () => {
+      if (!selectedPipeline || !workspaceId) {
+        setPipelineColumns([]);
+        setSelectedColumn('');
+        return;
+      }
+
+      try {
+        const userData = localStorage.getItem('currentUser');
+        if (!userData) return;
+
+        const user = JSON.parse(userData);
+        const headers = {
+          'x-system-user-id': user.id,
+          'x-system-user-email': user.email,
+          'x-workspace-id': workspaceId
+        };
+
+        const { data, error } = await supabase.functions.invoke(
+          `pipeline-management/pipelines/${selectedPipeline}/columns`,
+          {
+            method: 'GET',
+            headers
+          }
+        );
+
+        if (error) throw error;
+        
+        setPipelineColumns(data || []);
+        
+        // Se estiver editando e já tem uma coluna selecionada, manter
+        // Senão, selecionar a primeira coluna automaticamente
+        if (!selectedColumn && data && data.length > 0) {
+          setSelectedColumn(data[0].id);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar colunas:', error);
+        setPipelineColumns([]);
+      }
+    };
+
+    loadPipelineColumns();
+  }, [selectedPipeline, workspaceId]);
 
   const loadConnections = async () => {
     try {
@@ -373,6 +422,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         phone_number: phoneNumber?.trim() || null,
         auto_create_crm_card: createCrmCard,
         default_pipeline_id: selectedPipeline || null,
+        default_column_id: selectedColumn || null,
         queue_id: selectedQueueId || null,
       };
 
@@ -409,7 +459,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setHistoryRecovery('none');
     setCreateCrmCard(false);
     setSelectedPipeline('');
+    setSelectedColumn('');
     setSelectedQueueId('');
+    setPipelineColumns([]);
     setIsEditMode(false);
     setEditingConnection(null);
     setIsCreateModalOpen(false);
@@ -422,6 +474,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setHistoryRecovery(connection.history_recovery);
     setCreateCrmCard(connection.auto_create_crm_card || false);
     setSelectedPipeline(connection.default_pipeline_id || '');
+    setSelectedColumn(connection.default_column_id || '');
     setSelectedQueueId(connection.queue_id || '');
     setIsEditMode(true);
     setIsCreateModalOpen(true);
@@ -982,50 +1035,81 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                   </div>
 
                   {createCrmCard && (
-                    <div className="space-y-2">
-                      <Label htmlFor="pipeline" className="text-sm font-medium text-foreground">
-                        Selecionar Pipeline
-                      </Label>
-                      {loadingPipelines ? (
-                        <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
-                          <span className="text-sm text-muted-foreground">
-                            Carregando pipelines...
-                          </span>
-                        </div>
-                      ) : workspacePipelines.length > 0 ? (
-                        <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-                          <SelectTrigger className="h-11">
-                            <SelectValue placeholder="Selecionar Pipeline" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {workspacePipelines.map((pipeline) => (
-                              <SelectItem key={pipeline.id} value={pipeline.id}>
-                                {pipeline.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
-                          <span className="text-sm text-muted-foreground flex-1">
-                            Nenhum pipeline encontrado para esta empresa
-                          </span>
-                          {!isInMasterDashboard && (
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
-                            >
-                              <Link to={getNavigationPath('/crm-negocios')}>
-                                Criar Pipeline
-                                <ArrowRight className="h-3 w-3" />
-                              </Link>
-                            </Button>
-                          )}
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="pipeline" className="text-sm font-medium text-foreground">
+                          Selecionar Pipeline
+                        </Label>
+                        {loadingPipelines ? (
+                          <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
+                            <span className="text-sm text-muted-foreground">
+                              Carregando pipelines...
+                            </span>
+                          </div>
+                        ) : workspacePipelines.length > 0 ? (
+                          <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Selecionar Pipeline" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {workspacePipelines.map((pipeline) => (
+                                <SelectItem key={pipeline.id} value={pipeline.id}>
+                                  {pipeline.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
+                            <span className="text-sm text-muted-foreground flex-1">
+                              Nenhum pipeline encontrado para esta empresa
+                            </span>
+                            {!isInMasterDashboard && (
+                              <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                              >
+                                <Link to={getNavigationPath('/crm-negocios')}>
+                                  Criar Pipeline
+                                  <ArrowRight className="h-3 w-3" />
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedPipeline && pipelineColumns.length > 0 && (
+                        <div className="space-y-2">
+                          <Label htmlFor="column" className="text-sm font-medium text-foreground">
+                            Coluna do Card
+                          </Label>
+                          <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Selecionar Coluna" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {pipelineColumns.map((column) => (
+                                <SelectItem key={column.id} value={column.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full" 
+                                      style={{ backgroundColor: column.color }}
+                                    />
+                                    {column.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Cards serão criados nesta coluna
+                          </p>
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
 
                   <div className="flex items-center justify-between">
