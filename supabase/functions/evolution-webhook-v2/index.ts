@@ -63,6 +63,57 @@ function extractPhoneFromRemoteJid(remoteJid: string): string {
   return sanitized;
 }
 
+// Helper function to get or create conversation
+async function getOrCreateConversation(
+  supabase: any,
+  phoneNumber: string,
+  contactId: string,
+  connectionId: string,
+  workspaceId: string,
+  instanceName: string
+) {
+  // Buscar conversa ativa existente
+  const { data: existing } = await supabase
+    .from('conversations')
+    .select('id, contact_id, assigned_user_id')
+    .eq('contact_phone', phoneNumber)
+    .eq('connection_id', connectionId)
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (existing) {
+    console.log(`✅ Found existing conversation: ${existing.id}`);
+    return existing;
+  }
+  
+  // Criar nova conversa se não existir
+  console.log(`🆕 Creating new conversation for contact ${contactId}`);
+  const { data: newConv, error } = await supabase
+    .from('conversations')
+    .insert({
+      contact_phone: phoneNumber,
+      contact_id: contactId,
+      connection_id: connectionId,
+      workspace_id: workspaceId,
+      instance_name: instanceName,
+      status: 'active',
+      last_message_at: new Date().toISOString()
+    })
+    .select('id, contact_id, assigned_user_id')
+    .single();
+  
+  if (error) {
+    console.error('❌ Erro ao criar conversa:', error);
+    return null;
+  }
+  
+  console.log(`✅ New conversation created: ${newConv.id}`);
+  return newConv;
+}
+
 serve(async (req) => {
   const requestId = generateRequestId();
   
@@ -573,60 +624,69 @@ serve(async (req) => {
           console.log(`🎯 [${requestId}] Auto-criação de card habilitada - processando...`);
           
           try {
-            // Buscar a conversa mais recente para este número
-            const { data: conversation, error: convError } = await supabase
-              .from('conversations')
-              .select('id, contact_id')
+            // 1. Buscar ou criar contato
+            const { data: contact } = await supabase
+              .from('contacts')
+              .select('id')
+              .eq('phone', phoneNumber)
               .eq('workspace_id', workspaceId)
-              .order('created_at', { ascending: false })
-              .limit(1)
               .maybeSingle();
             
-            if (convError) {
-              console.error(`❌ [${requestId}] Erro ao buscar conversa:`, convError);
-            } else if (conversation) {
-              // 🔍 Verificar se já existe card aberto para este contato
-              const { data: existingCard } = await supabase
-                .from('pipeline_cards')
-                .select('id, title')
-                .eq('contact_id', conversation.contact_id)
-                .eq('status', 'aberto')
-                .maybeSingle();
-              
-              if (!existingCard) {
-                console.log(`🆕 [${requestId}] No open card found - creating first CRM card for contact ${conversation.contact_id}`);
-                console.log(`📋 [${requestId}] Chamando smart-pipeline-card-manager:`, {
-                  contactId: conversation.contact_id,
-                  conversationId: conversation.id,
-                  workspaceId: workspaceId,
-                  pipelineId: connectionData.default_pipeline_id
-                });
-                
-                const { data: cardResult, error: cardError } = await supabase.functions.invoke(
-                  'smart-pipeline-card-manager',
-                  {
-                    body: {
-                      contactId: conversation.contact_id,
-                      conversationId: conversation.id,
-                      workspaceId: workspaceId,
-                      pipelineId: connectionData.default_pipeline_id
-                    }
-                  }
-                );
-                
-                if (cardError) {
-                  console.error(`❌ [${requestId}] Erro ao criar/atualizar card:`, cardError);
-                } else {
-                  console.log(`✅ [${requestId}] Card ${cardResult?.action} com sucesso:`, cardResult?.card?.id);
-                }
-              } else {
-                console.log(`✅ [${requestId}] Card already exists for contact: ${existingCard.id} - "${existingCard.title}" - skipping card creation`);
-              }
+            if (!contact) {
+              console.warn(`⚠️ [${requestId}] Contato não encontrado: ${phoneNumber} - será criado pelo N8N`);
             } else {
-              console.warn(`⚠️ [${requestId}] Nenhuma conversa encontrada para criar card`);
+              // 2. Criar ou obter conversa
+              const conversation = await getOrCreateConversation(
+                supabase,
+                phoneNumber,
+                contact.id,
+                connectionData.id,
+                workspaceId,
+                instanceName
+              );
+              
+              if (!conversation) {
+                console.error(`❌ [${requestId}] Falha ao criar/obter conversa`);
+              } else {
+                console.log(`✅ [${requestId}] Conversa obtida/criada: ${conversation.id}`);
+                
+                // 3. Verificar se já existe card aberto
+                const { data: existingCard } = await supabase
+                  .from('pipeline_cards')
+                  .select('id, title')
+                  .eq('contact_id', contact.id)
+                  .eq('pipeline_id', connectionData.default_pipeline_id)
+                  .eq('status', 'aberto')
+                  .maybeSingle();
+                
+                if (existingCard) {
+                  console.log(`✅ [${requestId}] Card já existe: ${existingCard.id} - "${existingCard.title}"`);
+                } else {
+                  console.log(`🆕 [${requestId}] Criando card para contato ${contact.id}`);
+                  
+                  // 4. Chamar smart-pipeline-card-manager
+                  const { data: cardResult, error: cardError } = await supabase.functions.invoke(
+                    'smart-pipeline-card-manager',
+                    {
+                      body: {
+                        contactId: contact.id,
+                        conversationId: conversation.id,
+                        workspaceId: workspaceId,
+                        pipelineId: connectionData.default_pipeline_id
+                      }
+                    }
+                  );
+                  
+                  if (cardError) {
+                    console.error(`❌ [${requestId}] Erro ao criar card:`, cardError);
+                  } else {
+                    console.log(`✅ [${requestId}] Card ${cardResult?.action}: ${cardResult?.card?.id}`);
+                  }
+                }
+              }
             }
           } catch (cardCreationError) {
-            console.error(`❌ [${requestId}] Exceção ao processar auto-criação de card:`, cardCreationError);
+            console.error(`❌ [${requestId}] Exceção ao processar auto-criação:`, cardCreationError);
           }
         } else if (connectionData?.auto_create_crm_card) {
           console.log(`ℹ️ [${requestId}] Auto-criação habilitada mas mensagem não requer processamento`);
