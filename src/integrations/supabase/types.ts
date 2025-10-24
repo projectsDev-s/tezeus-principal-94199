@@ -412,6 +412,7 @@ export type Database = {
           auto_create_crm_card: boolean | null
           created_at: string | null
           default_column_id: string | null
+          default_column_name: string | null
           default_pipeline_id: string | null
           history_days: number | null
           history_messages_synced: number | null
@@ -436,6 +437,7 @@ export type Database = {
           auto_create_crm_card?: boolean | null
           created_at?: string | null
           default_column_id?: string | null
+          default_column_name?: string | null
           default_pipeline_id?: string | null
           history_days?: number | null
           history_messages_synced?: number | null
@@ -460,6 +462,7 @@ export type Database = {
           auto_create_crm_card?: boolean | null
           created_at?: string | null
           default_column_id?: string | null
+          default_column_name?: string | null
           default_pipeline_id?: string | null
           history_days?: number | null
           history_messages_synced?: number | null

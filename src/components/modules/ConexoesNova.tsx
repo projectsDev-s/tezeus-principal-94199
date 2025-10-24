@@ -163,6 +163,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [selectedQueueId, setSelectedQueueId] = useState<string>('');
   const [pipelineColumns, setPipelineColumns] = useState<any[]>([]);
+  const [loadingColumns, setLoadingColumns] = useState(false);
 
   // Load connections on component mount
   useEffect(() => {
@@ -192,10 +193,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       if (!selectedPipeline || !workspaceId) {
         setPipelineColumns([]);
         setSelectedColumn('');
+        setLoadingColumns(false);
         return;
       }
 
       try {
+        setLoadingColumns(true);
+        
         const { data, error } = await supabase
           .from('pipeline_columns')
           .select('*')
@@ -214,6 +218,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       } catch (error) {
         console.error('❌ Erro ao carregar colunas:', error);
         setPipelineColumns([]);
+      } finally {
+        setLoadingColumns(false);
       }
     };
 
@@ -405,12 +411,16 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     
     setIsLoading(true);
     try {
+      // Buscar nome da coluna selecionada
+      const selectedColumnData = pipelineColumns.find(col => col.id === selectedColumn);
+      
       const updateData = {
         connectionId: editingConnection.id,
         phone_number: phoneNumber?.trim() || null,
         auto_create_crm_card: createCrmCard,
         default_pipeline_id: selectedPipeline || null,
         default_column_id: selectedColumn || null,
+        default_column_name: selectedColumnData?.name || null,
         queue_id: selectedQueueId || null,
       };
 
@@ -450,6 +460,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setSelectedColumn('');
     setSelectedQueueId('');
     setPipelineColumns([]);
+    setLoadingColumns(false);
     setIsEditMode(false);
     setEditingConnection(null);
     setIsCreateModalOpen(false);
@@ -1069,32 +1080,50 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         )}
                       </div>
 
-                      {selectedPipeline && pipelineColumns.length > 0 && (
+                      {selectedPipeline && (
                         <div className="space-y-2">
                           <Label htmlFor="column" className="text-sm font-medium text-foreground">
                             Coluna do Card
                           </Label>
-                          <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                            <SelectTrigger className="h-11">
-                              <SelectValue placeholder="Selecionar Coluna" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {pipelineColumns.map((column) => (
-                                <SelectItem key={column.id} value={column.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div 
-                                      className="w-3 h-3 rounded-full" 
-                                      style={{ backgroundColor: column.color }}
-                                    />
-                                    {column.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground">
-                            Cards serão criados nesta coluna
-                          </p>
+                          
+                          {loadingColumns ? (
+                            <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
+                              <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                Carregando colunas...
+                              </span>
+                            </div>
+                          ) : pipelineColumns.length > 0 ? (
+                            <>
+                              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                                <SelectTrigger className="h-11">
+                                  <SelectValue placeholder="Selecionar Coluna" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {pipelineColumns.map((column) => (
+                                    <SelectItem key={column.id} value={column.id}>
+                                      <div className="flex items-center gap-2">
+                                        <div 
+                                          className="w-3 h-3 rounded-full" 
+                                          style={{ backgroundColor: column.color }}
+                                        />
+                                        {column.name}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground">
+                                Cards serão criados nesta coluna
+                              </p>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
+                              <span className="text-sm text-muted-foreground">
+                                Nenhuma coluna encontrada para este pipeline
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </>
