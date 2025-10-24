@@ -196,35 +196,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       }
 
       try {
-        const userData = localStorage.getItem('currentUser');
-        if (!userData) return;
-
-        const user = JSON.parse(userData);
-        const headers = {
-          'x-system-user-id': user.id,
-          'x-system-user-email': user.email,
-          'x-workspace-id': workspaceId
-        };
-
-        const { data, error } = await supabase.functions.invoke(
-          `pipeline-management/pipelines/${selectedPipeline}/columns`,
-          {
-            method: 'GET',
-            headers
-          }
-        );
+        const { data, error } = await supabase
+          .from('pipeline_columns')
+          .select('*')
+          .eq('pipeline_id', selectedPipeline)
+          .order('order_position', { ascending: true });
 
         if (error) throw error;
         
+        console.log('✅ Colunas carregadas:', data);
         setPipelineColumns(data || []);
         
-        // Se estiver editando e já tem uma coluna selecionada, manter
-        // Senão, selecionar a primeira coluna automaticamente
+        // Se não estiver editando, selecionar a primeira coluna automaticamente
         if (!selectedColumn && data && data.length > 0) {
           setSelectedColumn(data[0].id);
         }
       } catch (error) {
-        console.error('Erro ao carregar colunas:', error);
+        console.error('❌ Erro ao carregar colunas:', error);
         setPipelineColumns([]);
       }
     };
