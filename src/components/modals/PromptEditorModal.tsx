@@ -27,6 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 import { TagSelectorModal } from "./TagSelectorModal";
 import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
+import { QueueSelectorModal } from "./QueueSelectorModal";
+import { ConnectionSelectorModal } from "./ConnectionSelectorModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -172,6 +174,8 @@ export function PromptEditorModal({
 }: PromptEditorModalProps) {
   const [localValue, setLocalValue] = useState("");
   const [showTagSelector, setShowTagSelector] = useState(false);
+  const [showQueueSelector, setShowQueueSelector] = useState(false);
+  const [showConnectionSelector, setShowConnectionSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<string | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
@@ -191,6 +195,18 @@ export function PromptEditorModal({
       return;
     }
 
+    if (action.id === "transfer-queue") {
+      setPendingActionType(action.id);
+      setShowQueueSelector(true);
+      return;
+    }
+
+    if (action.id === "transfer-connection") {
+      setPendingActionType(action.id);
+      setShowConnectionSelector(true);
+      return;
+    }
+
     if (action.id === "transfer-crm-column" || action.id === "create-crm-card") {
       setPendingActionType(action.id);
       setShowPipelineColumnSelector(true);
@@ -203,9 +219,23 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const actionText = `[Adicionar Tag: ${tagName}]`;
+    const actionText = `[Adicionar Tag: ${tagName} / ${tagId}]`;
     editorRef.current?.insertText(actionText);
     setShowTagSelector(false);
+    setPendingActionType(null);
+  };
+
+  const handleQueueSelected = (queueId: string, queueName: string) => {
+    const actionText = `[Transferir Fila: ${queueName} / ${queueId}]`;
+    editorRef.current?.insertText(actionText);
+    setShowQueueSelector(false);
+    setPendingActionType(null);
+  };
+
+  const handleConnectionSelected = (connectionId: string, connectionName: string) => {
+    const actionText = `[Transferir Conexão: ${connectionName} / ${connectionId}]`;
+    editorRef.current?.insertText(actionText);
+    setShowConnectionSelector(false);
     setPendingActionType(null);
   };
 
@@ -219,9 +249,9 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `[Criar Card CRM: TÍTULO_DO_CARD | Pipeline: ${pipelineName} | Coluna: ${columnName}]`;
+      actionText = `[Criar Card CRM: TÍTULO_DO_CARD | Pipeline: ${pipelineName} / ${pipelineId} | Coluna: ${columnName} / ${columnId}]`;
     } else {
-      actionText = `[Transferir para Coluna: ${columnName} | Pipeline: ${pipelineName}]`;
+      actionText = `[Transferir para Coluna: ${columnName} / ${columnId} | Pipeline: ${pipelineName} / ${pipelineId}]`;
     }
     
     editorRef.current?.insertText(actionText);
@@ -292,6 +322,20 @@ export function PromptEditorModal({
         open={showTagSelector}
         onOpenChange={setShowTagSelector}
         onTagSelected={handleTagSelected}
+        workspaceId={workspaceId}
+      />
+
+      <QueueSelectorModal
+        open={showQueueSelector}
+        onOpenChange={setShowQueueSelector}
+        onQueueSelected={handleQueueSelected}
+        workspaceId={workspaceId}
+      />
+
+      <ConnectionSelectorModal
+        open={showConnectionSelector}
+        onOpenChange={setShowConnectionSelector}
+        onConnectionSelected={handleConnectionSelected}
         workspaceId={workspaceId}
       />
 
