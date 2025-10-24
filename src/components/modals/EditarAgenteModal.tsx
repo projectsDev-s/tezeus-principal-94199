@@ -77,11 +77,17 @@ export function EditarAgenteModal({
   });
 
   const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
-  const [currentKnowledgeUrl, setCurrentKnowledgeUrl] = useState<string | null>(null);
+  const [knowledgeFiles, setKnowledgeFiles] = useState<Array<{
+    id: string;
+    file_name: string;
+    file_size: number;
+    file_path: string;
+  }>>([]);
 
   useEffect(() => {
     if (open && agentId) {
       loadAgentData();
+      loadKnowledgeFiles();
     }
   }, [open, agentId]);
 
@@ -135,11 +141,26 @@ export function EditarAgenteModal({
       };
 
       setFormData(loadedFormData);
-      setCurrentKnowledgeUrl(data.knowledge_base_url);
       console.log('✅ FormData preenchido:', loadedFormData);
     } catch (error: any) {
       console.error('💥 Exceção ao carregar agente:', error);
       toast.error('Erro ao carregar dados do agente');
+    }
+  };
+
+  const loadKnowledgeFiles = async () => {
+    if (!agentId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('ai_agent_knowledge_files')
+        .select('id, file_name, file_size, file_path')
+        .eq('agent_id', agentId);
+
+      if (error) throw error;
+      setKnowledgeFiles(data || []);
+    } catch (error) {
+      console.error('❌ Erro ao carregar arquivos:', error);
     }
   };
 
@@ -154,8 +175,29 @@ export function EditarAgenteModal({
     setKnowledgeFile(null);
   };
 
-  const handleRemoveCurrentKnowledge = () => {
-    setCurrentKnowledgeUrl(null);
+  const handleDeleteKnowledgeFile = async (fileId: string, filePath: string) => {
+    try {
+      // Deletar do storage
+      const { error: storageError } = await supabase.storage
+        .from('agent-knowledge')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      // Deletar do banco
+      const { error: dbError } = await supabase
+        .from('ai_agent_knowledge_files')
+        .delete()
+        .eq('id', fileId);
+
+      if (dbError) throw dbError;
+
+      toast.success('Arquivo excluído com sucesso');
+      loadKnowledgeFiles();
+    } catch (error) {
+      console.error('❌ Erro ao deletar arquivo:', error);
+      toast.error('Erro ao excluir arquivo');
+    }
   };
 
   const handleSave = async () => {
@@ -248,6 +290,8 @@ export function EditarAgenteModal({
       queryClient.invalidateQueries({ queryKey: ['workspace-agent'] });
 
       toast.success('Agente atualizado com sucesso!');
+      await loadKnowledgeFiles(); // Recarregar lista de arquivos
+      setKnowledgeFile(null); // Limpar arquivo temporário
       onAgentUpdated?.();
       onOpenChange(false);
     } catch (error: any) {
@@ -365,26 +409,51 @@ export function EditarAgenteModal({
           <div className="space-y-2">
             <Label>Base de Conhecimento</Label>
             <p className="text-sm text-muted-foreground">
-              Adicione um arquivo (PDF, TXT, MD, etc.) para o agente usar como referência
+              Adicione arquivos (PDF, TXT, MD, etc.) para o agente usar como referência
             </p>
             
             <div className="space-y-3">
-              {currentKnowledgeUrl && !knowledgeFile && (
-                <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+              {/* Arquivos existentes */}
+              {knowledgeFiles.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Arquivos carregados</Label>
+                  {knowledgeFiles.map((file) => (
+                    <div key={file.id} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{file.file_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.file_size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteKnowledgeFile(file.id, file.file_path)}
+                      >
+                        <Trash className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload de novo arquivo */}
+              {knowledgeFile ? (
+                <div className="flex items-center gap-2 p-3 border rounded-lg">
                   <FileText className="h-5 w-5 text-primary" />
-                  <span className="flex-1 text-sm truncate">Arquivo existente</span>
+                  <span className="flex-1 text-sm truncate">{knowledgeFile.name}</span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={handleRemoveCurrentKnowledge}
+                    onClick={handleRemoveFile}
                   >
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-
-              {!knowledgeFile && !currentKnowledgeUrl && (
+              ) : (
                 <div className="border-2 border-dashed rounded-lg p-4">
                   <input
                     type="file"
@@ -398,23 +467,8 @@ export function EditarAgenteModal({
                     className="flex flex-col items-center justify-center cursor-pointer"
                   >
                     <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-sm text-muted-foreground">Clique para adicionar arquivo</span>
+                    <span className="text-sm text-muted-foreground">Adicionar novo arquivo</span>
                   </label>
-                </div>
-              )}
-
-              {knowledgeFile && (
-                <div className="flex items-center gap-2 p-3 border rounded-lg">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <span className="flex-1 text-sm truncate">{knowledgeFile.name}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleRemoveFile}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
                 </div>
               )}
             </div>
