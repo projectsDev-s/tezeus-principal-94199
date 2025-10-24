@@ -151,6 +151,7 @@ export type Database = {
           api_provider: string
           assign_responsible: boolean | null
           auto_responses_enabled: boolean | null
+          configure_commands: string | null
           created_at: string
           description: string | null
           disable_outside_platform: boolean | null
@@ -183,6 +184,7 @@ export type Database = {
           api_provider?: string
           assign_responsible?: boolean | null
           auto_responses_enabled?: boolean | null
+          configure_commands?: string | null
           created_at?: string
           description?: string | null
           disable_outside_platform?: boolean | null
@@ -215,6 +217,7 @@ export type Database = {
           api_provider?: string
           assign_responsible?: boolean | null
           auto_responses_enabled?: boolean | null
+          configure_commands?: string | null
           created_at?: string
           description?: string | null
           disable_outside_platform?: boolean | null
