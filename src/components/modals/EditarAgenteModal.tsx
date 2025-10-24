@@ -43,6 +43,7 @@ interface FormData {
   process_messages: boolean;
   disable_outside_platform: boolean;
   is_active: boolean;
+  configure_commands: string;
 }
 
 export function EditarAgenteModal({
@@ -74,6 +75,7 @@ export function EditarAgenteModal({
     process_messages: true,
     disable_outside_platform: false,
     is_active: true,
+    configure_commands: '',
   });
 
   const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
@@ -138,6 +140,7 @@ export function EditarAgenteModal({
         process_messages: data.process_messages ?? true,
         disable_outside_platform: data.disable_outside_platform || false,
         is_active: data.is_active ?? true,
+        configure_commands: data.configure_commands || '',
       };
 
       setFormData(loadedFormData);
@@ -280,6 +283,7 @@ export function EditarAgenteModal({
           process_messages: formData.process_messages,
           disable_outside_platform: formData.disable_outside_platform,
           is_active: formData.is_active,
+          configure_commands: formData.configure_commands,
           updated_at: new Date().toISOString(),
         })
         .eq('id', agentId);

@@ -42,6 +42,7 @@ interface FormData {
   process_messages: boolean;
   disable_outside_platform: boolean;
   is_active: boolean;
+  configure_commands: string;
 }
 
 export function CriarAgenteModal({
@@ -72,6 +73,21 @@ export function CriarAgenteModal({
     process_messages: true,
     disable_outside_platform: false,
     is_active: true,
+    configure_commands: `[Regras de interpretação de comandos]
+
+Os comandos sempre virão no formato entre colchetes [ ].
+
+Sua tarefa é interpretar o comando e chamar a Tool correspondente:
+
+- Se encontrar [Adicionar Tag: ...] → usar a tool "inserir-tag"
+- Se encontrar [Transferir Fila: ...] → usar a tool "transferir-fila"
+- Se encontrar [Transferir Conexão: ...] → usar a tool "transferir-conexão"
+- Se encontrar [Criar Card CRM: ...] → usar a tool "criar-card"
+- Se encontrar [Transferir para Coluna: ...] → usar a tool "transferir-coluna"
+- Se encontrar [Salvar Informação: ...] → usar a tool "info-adicionais"
+
+Sempre extraia os parâmetros do texto dentro dos colchetes e passe para a tool correta.
+Não invente novos nomes de tool, use apenas os definidos acima.`,
   });
 
   const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
@@ -176,6 +192,7 @@ export function CriarAgenteModal({
           working_hours_enabled: false,
           working_days: [1, 2, 3, 4, 5],
           fallback_message: 'Desculpe, não estou disponível no momento.',
+          configure_commands: formData.configure_commands,
         });
 
       if (error) throw error;
@@ -205,6 +222,21 @@ export function CriarAgenteModal({
         process_messages: true,
         disable_outside_platform: false,
         is_active: true,
+        configure_commands: `[Regras de interpretação de comandos]
+
+Os comandos sempre virão no formato entre colchetes [ ].
+
+Sua tarefa é interpretar o comando e chamar a Tool correspondente:
+
+- Se encontrar [Adicionar Tag: ...] → usar a tool "inserir-tag"
+- Se encontrar [Transferir Fila: ...] → usar a tool "transferir-fila"
+- Se encontrar [Transferir Conexão: ...] → usar a tool "transferir-conexão"
+- Se encontrar [Criar Card CRM: ...] → usar a tool "criar-card"
+- Se encontrar [Transferir para Coluna: ...] → usar a tool "transferir-coluna"
+- Se encontrar [Salvar Informação: ...] → usar a tool "info-adicionais"
+
+Sempre extraia os parâmetros do texto dentro dos colchetes e passe para a tool correta.
+Não invente novos nomes de tool, use apenas os definidos acima.`,
       });
       setKnowledgeFile(null);
     } catch (error: any) {
