@@ -179,17 +179,21 @@ export function EditarAgenteModal({
 
         const filePath = `${formData.workspace_id}/${agentId}/${knowledgeFile.name}`;
         
-        // Converter para Base64
-        const base64Content = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64 = result.split(',')[1];
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(knowledgeFile);
-        });
+        // Extrair texto do arquivo usando edge function
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', knowledgeFile);
+
+        const { data: extractData, error: extractError } = await supabase.functions.invoke(
+          'extract-text-from-file',
+          {
+            body: uploadFormData,
+          }
+        );
+
+        if (extractError) throw extractError;
+        if (!extractData?.success) throw new Error(extractData?.error || 'Falha ao extrair texto do arquivo');
+
+        const extractedText = extractData.text;
 
         // Upload para Storage
         const { error: uploadError } = await supabase.storage
@@ -198,7 +202,7 @@ export function EditarAgenteModal({
 
         if (uploadError) throw uploadError;
 
-        // Salvar na tabela ai_agent_knowledge_files
+        // Salvar na tabela ai_agent_knowledge_files com texto extraído
         const { error: fileError } = await supabase
           .from('ai_agent_knowledge_files')
           .insert([{
@@ -207,7 +211,7 @@ export function EditarAgenteModal({
             file_path: filePath,
             file_type: knowledgeFile.type,
             file_size: knowledgeFile.size,
-            content_extracted: base64Content,
+            content_extracted: extractedText,
             is_processed: true,
           }]);
 

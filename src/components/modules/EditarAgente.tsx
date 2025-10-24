@@ -188,18 +188,21 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
     const fileName = `${agentId}/${Date.now()}-${file.name}`;
     
     try {
-      // 1. Converter arquivo para Base64
-      const base64Content = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Remover prefixo "data:..." para salvar apenas o base64 puro
-          const base64 = result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // 1. Extrair texto do arquivo usando edge function
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data: extractData, error: extractError } = await supabase.functions.invoke(
+        'extract-text-from-file',
+        {
+          body: formData,
+        }
+      );
+
+      if (extractError) throw extractError;
+      if (!extractData?.success) throw new Error(extractData?.error || 'Falha ao extrair texto do arquivo');
+
+      const extractedText = extractData.text;
 
       // 2. Upload para Storage (mantém o arquivo físico)
       const { error: uploadError } = await supabase.storage
@@ -208,7 +211,7 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
 
       if (uploadError) throw uploadError;
 
-      // 3. Salvar metadata + base64 na tabela
+      // 3. Salvar metadata + texto extraído na tabela
       const { error: dbError } = await supabase
         .from('ai_agent_knowledge_files')
         .insert([{
@@ -217,14 +220,14 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
           file_path: fileName,
           file_type: file.type,
           file_size: file.size,
-          content_extracted: base64Content,
+          content_extracted: extractedText,
           is_processed: true,
         }]);
 
       if (dbError) throw dbError;
 
       loadKnowledgeFiles();
-      toast.success('Arquivo carregado com sucesso!');
+      toast.success('Arquivo processado e carregado com sucesso!');
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
       toast.error('Erro ao carregar arquivo');
