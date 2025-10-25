@@ -299,16 +299,24 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
   // ✅ SUBSCRIPTION DE MENSAGENS (ÚNICO E CENTRALIZADO)
   useEffect(() => {
-    if (!currentConversationId || !selectedWorkspace?.workspace_id) return;
+    if (!currentConversationId || !selectedWorkspace?.workspace_id) {
+      console.log('⚠️ [useConversationMessages] Subscription NÃO iniciada - faltam dados:', {
+        currentConversationId,
+        workspaceId: selectedWorkspace?.workspace_id
+      });
+      return;
+    }
 
-    console.log('🔌 [useConversationMessages] Configurando subscription para:', {
+    const channelName = `messages-${currentConversationId}-workspace-${selectedWorkspace.workspace_id}`;
+    console.log('🔌 [useConversationMessages] INICIANDO subscription:', {
+      channelName,
       conversationId: currentConversationId,
       workspaceId: selectedWorkspace.workspace_id,
       timestamp: new Date().toISOString()
     });
 
     const channel = supabase
-      .channel(`messages-${currentConversationId}-${selectedWorkspace.workspace_id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -318,13 +326,19 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          console.log('📨 [useConversationMessages] Nova mensagem recebida via real-time:', {
+          console.log('📨 [REALTIME] ✅ NOVA MENSAGEM RECEBIDA:', {
             messageId: payload.new.id,
+            content: payload.new.content?.substring(0, 50),
             conversationId: currentConversationId,
-            timestamp: new Date().toISOString()
+            sender_type: payload.new.sender_type,
+            timestamp: new Date().toISOString(),
+            payload: payload.new
           });
+          
           const newMessage = payload.new as WhatsAppMessage;
           addMessage(newMessage);
+          
+          console.log('✅ [REALTIME] addMessage() chamado para mensagem:', newMessage.id);
         }
       )
       .on(
@@ -336,31 +350,46 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          console.log('🔄 [useConversationMessages] Mensagem atualizada via real-time:', {
+          console.log('🔄 [REALTIME] ✅ MENSAGEM ATUALIZADA:', {
             messageId: payload.new.id,
             conversationId: currentConversationId,
-            timestamp: new Date().toISOString()
+            status: payload.new.status,
+            timestamp: new Date().toISOString(),
+            changes: payload
           });
+          
           const updatedMessage = payload.new as WhatsAppMessage;
           updateMessage(updatedMessage.id, updatedMessage);
+          
+          console.log('✅ [REALTIME] updateMessage() chamado para mensagem:', updatedMessage.id);
         }
       )
       .subscribe((status) => {
-        console.log('📡 [useConversationMessages] Status da subscription:', {
+        console.log('📡 [REALTIME] STATUS DA SUBSCRIPTION:', {
           status,
+          channelName,
           conversationId: currentConversationId,
           timestamp: new Date().toISOString()
         });
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [REALTIME] SUBSCRIPTION ATIVA E FUNCIONANDO!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [REALTIME] ERRO NO CANAL!');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ [REALTIME] TIMEOUT NA SUBSCRIPTION!');
+        }
       });
 
     return () => {
-      console.log('🔌 [useConversationMessages] Removendo subscription:', {
+      console.log('🔌 [useConversationMessages] 🔴 REMOVENDO subscription:', {
+        channelName,
         conversationId: currentConversationId,
         timestamp: new Date().toISOString()
       });
       supabase.removeChannel(channel);
     };
-  }, [currentConversationId, selectedWorkspace?.workspace_id]); // ✅ SEM addMessage e updateMessage
+  }, [currentConversationId, selectedWorkspace?.workspace_id, addMessage, updateMessage]);
 
   return {
     messages,
