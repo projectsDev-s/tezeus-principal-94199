@@ -27,10 +27,15 @@ export function useQueues() {
   const { selectedWorkspace } = useWorkspace();
 
   const fetchQueues = async () => {
-    if (!selectedWorkspace?.workspace_id) return;
+    if (!selectedWorkspace?.workspace_id) {
+      console.log('🚫 useQueues: Nenhum workspace selecionado');
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('🔍 useQueues: Buscando filas para workspace:', selectedWorkspace.workspace_id);
+      
       const { data, error } = await supabase
         .from('queues')
         .select(`
@@ -41,10 +46,15 @@ export function useQueues() {
         .eq('is_active', true)
         .order('order_position', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ useQueues: Erro ao buscar filas:', error);
+        throw error;
+      }
+      
+      console.log('✅ useQueues: Filas carregadas:', data?.length || 0, 'filas');
       setQueues(data || []);
     } catch (error) {
-      console.error('Erro ao carregar filas:', error);
+      console.error('❌ useQueues: Erro ao carregar filas:', error);
     } finally {
       setLoading(false);
     }
