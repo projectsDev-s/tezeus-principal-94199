@@ -92,6 +92,22 @@ export function WhatsAppChat({
     loading,
     sendMessage
   } = useWhatsAppConversations();
+  
+  // ✅ Estado para mostrar botão de recarregar
+  const [showReloadButton, setShowReloadButton] = useState(false);
+  
+  // ✅ Mostrar botão de recarregar se lista vazia após loading
+  useEffect(() => {
+    if (!loading && conversations.length === 0) {
+      const timer = setTimeout(() => {
+        setShowReloadButton(true);
+      }, 3000); // Mostrar após 3s sem conversas
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowReloadButton(false);
+    }
+  }, [loading, conversations.length]);
 
   // Verificar se há agente ativo no workspace
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent();
@@ -1538,10 +1554,21 @@ export function WhatsAppChat({
                 <p className="text-sm text-muted-foreground">Carregando conversas...</p>
               </div>
             </div> : filteredConversations.length === 0 ? <div className="flex items-center justify-center h-32">
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-3">
                 <MessageCircle className="h-8 w-8 text-muted-foreground mx-auto" />
                 <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada</p>
                 <p className="text-xs text-muted-foreground">Configure conexões WhatsApp para ver conversas</p>
+                {showReloadButton && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => fetchConversations()}
+                    className="mt-2"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Recarregar conversas
+                  </Button>
+                )}
               </div>
             </div> : <div className="space-y-0 group/list flex flex-col">
             {getFilteredConversations().map(conversation => {

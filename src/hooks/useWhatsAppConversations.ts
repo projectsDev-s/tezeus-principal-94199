@@ -89,20 +89,16 @@ export const useWhatsAppConversations = () => {
     console.log('🔄 [useWhatsAppConversations] User data sincronizado no mount');
   }, []); // ✅ SEM polling - roda apenas no mount
 
-  const fetchConversations = async () => {
-    const DEBUG_CONVERSATIONS = true; // Ativado para debug
+  const fetchConversations = async (retryCount = 0): Promise<boolean> => {
+    const DEBUG_CONVERSATIONS = true;
+    const MAX_RETRIES = 3;
     
     try {
       setLoading(true);
-      // Loading WhatsApp conversations
+      console.log(`🔄 [fetchConversations] Tentativa ${retryCount + 1}/${MAX_RETRIES}`);
 
-      // Get current user from localStorage (custom auth system)
       const userData = localStorage.getItem('currentUser');
       const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (DEBUG_CONVERSATIONS) {
-        // User authenticated - workspace selected
-      }
       
       if (!currentUserData?.id) {
         console.log('No user data in localStorage');
@@ -111,32 +107,36 @@ export const useWhatsAppConversations = () => {
           description: "Usuário não autenticado. Faça login novamente.",
           variant: "destructive",
         });
-        return;
+        return false;
       }
 
-      // Use Edge Function with workspace headers from URL
       const headers = getHeaders();
 
-      // ✅ CRÍTICO: Use whatsapp-get-conversations-lite (SEM mensagens, COM connection_id)
       const { data: response, error: functionError } = await supabase.functions.invoke(
         'whatsapp-get-conversations-lite', {
         headers
       });
 
-      console.log('📦 [useWhatsAppConversations] Resposta da Edge Function:', {
+      console.log('📦 [fetchConversations] Resposta:', {
         hasData: !!response,
         conversationsCount: response?.items?.length,
-        error: functionError
+        error: functionError,
+        retryCount
       });
 
       if (functionError) {
         throw functionError;
       }
 
-      // ✅ Conversas SEM mensagens (dados agora garantidos pela Edge Function)
       const conversationsOnly = response.items || [];
       
-      // ✅ Mapear para formato compatível (connection_id e connection já vêm da Edge Function)
+      // ✅ CRÍTICO: Se retornou vazio E ainda há tentativas, tentar novamente
+      if (conversationsOnly.length === 0 && retryCount < MAX_RETRIES - 1) {
+        console.log(`⚠️ [fetchConversations] Lista vazia. Retry em 2s...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return await fetchConversations(retryCount + 1);
+      }
+      
       const formattedConversations = conversationsOnly.map(conv => ({
         id: conv.id,
         contact: {
@@ -145,7 +145,7 @@ export const useWhatsAppConversations = () => {
           phone: conv.contacts.phone,
           profile_image_url: conv.contacts.profile_image_url
         },
-        agente_ativo: conv.agente_ativo || false, // ✅ CORRIGIDO: Ler do banco ao invés de hardcode
+        agente_ativo: conv.agente_ativo || false,
         status: conv.status,
         unread_count: conv.unread_count || 0,
         last_activity_at: conv.last_activity_at,
@@ -155,8 +155,8 @@ export const useWhatsAppConversations = () => {
         priority: conv.priority,
         last_message: conv.last_message,
         conversation_tags: conv.conversation_tags || [],
-        connection_id: conv.connection_id, // ✅ Direto da Edge Function
-        connection: conv.connection,       // ✅ Garantido pela Edge Function
+        connection_id: conv.connection_id,
+        connection: conv.connection,
         workspace_id: conv.workspace_id,
         messages: []
       }));
@@ -168,7 +168,6 @@ export const useWhatsAppConversations = () => {
         }))
       );
       
-      // ✅ FILTRO CLIENT-SIDE: Se usuário é "user", filtrar apenas conversas atribuídas ou não atribuídas
       let filteredConversations = formattedConversations;
       
       if (currentUserData.profile === 'user') {
@@ -186,18 +185,32 @@ export const useWhatsAppConversations = () => {
       }
       
       setConversations(filteredConversations);
+      
       if (DEBUG_CONVERSATIONS) {
-        // Conversations loaded
+        console.log(`✅ [fetchConversations] ${filteredConversations.length} conversas carregadas (tentativa ${retryCount + 1})`);
         
         if (formattedConversations.length === 0) {
           console.log('ℹ️ Nenhuma conversa encontrada. Verifique se há conexões configuradas e conversas ativas.');
         }
       }
+      
+      return filteredConversations.length > 0; // ✅ Retorna true se teve sucesso
+      
     } catch (error) {
       console.error('❌ Erro ao buscar conversas:', error);
       console.error('Error details:', error.message, error.details);
       
-      // If it's a fetch error, provide more specific guidance
+      // ✅ RETRY automático em caso de erro de conexão
+      const isConnectionError = 
+        error?.name === 'FunctionsFetchError' ||
+        error?.message?.includes('Failed to fetch');
+      
+      if (isConnectionError && retryCount < MAX_RETRIES - 1) {
+        console.log(`🔄 [fetchConversations] Erro de conexão. Retry ${retryCount + 1}/${MAX_RETRIES} em 2s...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return await fetchConversations(retryCount + 1);
+      }
+      
       if (error.name === 'FunctionsFetchError') {
         toast({
           title: "Erro de conexão",
@@ -211,6 +224,8 @@ export const useWhatsAppConversations = () => {
           variant: "destructive",
         });
       }
+      
+      return false;
     } finally {
       setLoading(false);
     }
@@ -548,34 +563,46 @@ export const useWhatsAppConversations = () => {
     }
   }, []);
 
-  // Real-time subscriptions and workspace dependency
+  // ✅ CORREÇÃO: Flag de sucesso separada da flag de tentativa
   const fetchedRef = useRef(false);
+  const hasLoadedSuccessfully = useRef(false);
   
   useEffect(() => {
-    // Resetar flag quando workspace muda
+    // Resetar flags quando workspace muda
     fetchedRef.current = false;
+    hasLoadedSuccessfully.current = false;
   }, [selectedWorkspace?.workspace_id]);
   
   useEffect(() => {
-    // Get current user from localStorage
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
     if (currentUserData?.id && selectedWorkspace?.workspace_id && !fetchedRef.current) {
-      fetchedRef.current = true; // ✅ Marcar como chamado
+      fetchedRef.current = true; // ✅ Marca tentativa
       
       console.log('🔄 [useWhatsAppConversations] Workspace mudou, carregando conversas');
       
-      // Forçar limpeza completa das conversas quando workspace muda
       setConversations([]);
       setLoading(true);
       
-      fetchConversations();
+      // ✅ CRÍTICO: Só marcar sucesso se de fato carregar dados
+      fetchConversations().then(success => {
+        hasLoadedSuccessfully.current = success;
+        
+        // ✅ Se falhou, permitir nova tentativa após 5s
+        if (!success) {
+          console.log('⚠️ Fetch inicial falhou. Nova tentativa em 5s...');
+          setTimeout(() => {
+            if (!hasLoadedSuccessfully.current) {
+              fetchedRef.current = false; // ✅ Permite retry
+            }
+          }, 5000);
+        }
+      });
     } else if (currentUserData?.id && !selectedWorkspace?.workspace_id) {
-      // Awaiting workspace selection
       setLoading(true);
     }
-  }, [selectedWorkspace?.workspace_id]); // Re-fetch when workspace changes
+  }, [selectedWorkspace?.workspace_id]);
 
   // ✅ SUBSCRIPTION ÚNICA E SIMPLIFICADA
   useEffect(() => {
@@ -823,8 +850,26 @@ export const useWhatsAppConversations = () => {
           console.log('Aguardando eventos de INSERT, UPDATE em conversations e notifications');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ [REALTIME-CONVERSATIONS] ERRO NO CANAL!');
+          // ✅ FALLBACK: Se subscription falhar, usar polling
+          console.log('🔄 Iniciando fallback polling a cada 10s...');
+          const pollingInterval = setInterval(() => {
+            if (!hasLoadedSuccessfully.current) {
+              console.log('🔄 [Polling] Tentando recarregar conversas...');
+              fetchConversations();
+            }
+          }, 10000);
+          
+          // Cleanup polling quando subscription for restaurada
+          return () => clearInterval(pollingInterval);
         } else if (status === 'TIMED_OUT') {
           console.error('⏱️ [REALTIME-CONVERSATIONS] TIMEOUT NA SUBSCRIPTION!');
+          console.log('🔄 Tentando reconectar em 3s...');
+          setTimeout(() => {
+            console.log('🔄 Forçando refresh de conversas...');
+            fetchConversations();
+          }, 3000);
+        } else if (status === 'CLOSED') {
+          console.error('🔌 [REALTIME-CONVERSATIONS] CANAL FECHADO!');
         } else {
           console.log(`🔄 [REALTIME-CONVERSATIONS] Status: ${status}`);
         }
