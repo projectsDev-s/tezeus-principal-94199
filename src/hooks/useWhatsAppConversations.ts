@@ -82,16 +82,33 @@ export const useWhatsAppConversations = () => {
   // ✅ CORREÇÃO 2: Usar useRef para currentUserData para estabilizar subscription
   const currentUserDataRef = useRef<{ id: string; email?: string; profile?: string } | null>(null);
   
+  // ✅ SINCRONIZAR currentUserDataRef com localStorage usando polling
   useEffect(() => {
     const userData = localStorage.getItem('currentUser');
     currentUserDataRef.current = userData ? JSON.parse(userData) : null;
-    console.log('🔄 [useWhatsAppConversations] Sincronizando currentUserDataRef:', {
-      hasUserData: !!currentUserDataRef.current,
-      userId: currentUserDataRef.current?.id,
-      workspaceId: selectedWorkspace?.workspace_id,
-      userIdContext: user?.id
-    });
-  }, [selectedWorkspace?.workspace_id, user?.id]); // ✅ Re-sincronizar quando workspace OU user mudar
+
+    console.log('🔄 [useWhatsAppConversations] Iniciando polling de sincronização do usuário');
+
+    const interval = setInterval(() => {
+      const userData = localStorage.getItem('currentUser');
+      const newUserData = userData ? JSON.parse(userData) : null;
+      
+      if (newUserData?.id !== currentUserDataRef.current?.id) {
+        console.log('🔄 [useWhatsAppConversations] User data mudou, sincronizando...', {
+          oldUserId: currentUserDataRef.current?.id,
+          newUserId: newUserData?.id,
+          timestamp: new Date().toISOString()
+        });
+        currentUserDataRef.current = newUserData;
+        fetchConversations();
+      }
+    }, 1000);
+    
+    return () => {
+      console.log('🛑 [useWhatsAppConversations] Parando polling de sincronização');
+      clearInterval(interval);
+    };
+  }, [selectedWorkspace?.workspace_id]);
 
   const fetchConversations = async () => {
     const DEBUG_CONVERSATIONS = true; // Ativado para debug
@@ -578,7 +595,7 @@ export const useWhatsAppConversations = () => {
     }
   }, [selectedWorkspace?.workspace_id]); // Re-fetch when workspace changes
 
-  // ✅ CORREÇÃO: Subscription única e otimizada para evitar duplicação
+  // ✅ SUBSCRIPTION ÚNICA E SIMPLIFICADA
   useEffect(() => {
     const currentUserData = currentUserDataRef.current;
     
@@ -586,40 +603,24 @@ export const useWhatsAppConversations = () => {
       return;
     }
 
-    const workspaceId = selectedWorkspace.workspace_id; // ✅ Capturar workspace_id no closure
-    console.log('🔌 [Realtime] Iniciando subscription para workspace:', {
-      workspaceId,
-      userId: currentUserData.id,
-      profile: currentUserData.profile
-    });
-
-    // ✅ CORREÇÃO DEFINITIVA: REMOVER subscription de mensagens daqui
-    // As mensagens devem ser gerenciadas APENAS pelo useConversationMessages
-    // Este hook só precisa saber sobre UPDATES de conversas (unread_count, status, etc)
+    const workspaceId = selectedWorkspace.workspace_id;
     
-    console.log('🔕 [Realtime] NÃO criando subscription de mensagens aqui - delegando para useConversationMessages');
+    console.log('🔌 [useWhatsAppConversations] Configurando subscriptions para workspace:', workspaceId);
 
-    // ✅ CORREÇÃO: Subscription única para conversas com canal único por workspace
     const conversationsChannel = supabase
-      .channel(`wapp-convs-${workspaceId}`) // ✅ Canal único por workspace
+      .channel(`conversations-${workspaceId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'conversations'
-        // ✅ SEM FILTRO - Filtrar no cliente
+        table: 'conversations',
+        filter: `workspace_id=eq.${workspaceId}`
       },
         async (payload) => {
-          // Realtime: New conversation received
+          console.log('📨 [useWhatsAppConversations] Nova conversa via real-time:', {
+            conversationId: payload.new.id,
+            timestamp: new Date().toISOString()
+          });
           const newConv = payload.new as any;
-          
-          // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
-          if (newConv.workspace_id !== workspaceId) {
-            console.log('⏭️ [Realtime] Conversa de outro workspace ignorada:', {
-              conversation_workspace: newConv.workspace_id,
-              current_workspace: workspaceId
-            });
-            return;
-          }
           
           // Só processar conversas do WhatsApp
           if (newConv.canal !== 'whatsapp') {
@@ -695,17 +696,11 @@ export const useWhatsAppConversations = () => {
             setConversations(prev => {
               const exists = prev.some(conv => conv.id === newConversation.id);
               if (exists) {
-                console.log('⚠️ Conversa já existe na lista, ignorando');
+                console.log('⚠️ [useWhatsAppConversations] Conversa duplicada ignorada:', newConversation.id);
                 return prev;
               }
               
-              const updated = [newConversation, ...prev].sort((a, b) => 
-                new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
-              );
-
-              console.log('✅ Lista atualizada com nova conversa. Total:', updated.length);
-
-              return updated;
+              return [newConversation, ...prev];
             });
           } else {
             console.error('❌ Dados da conversa ou contato não encontrados');
@@ -716,166 +711,118 @@ export const useWhatsAppConversations = () => {
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'conversations'
-        // ✅ SEM FILTRO - Filtrar no cliente
+        table: 'conversations',
+        filter: `workspace_id=eq.${workspaceId}`
       }, (payload) => {
-          try {
-            const updatedConv = payload.new as any;
-            const oldConv = payload.old as any;
-            
-            // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
-            if (updatedConv?.workspace_id !== workspaceId) {
-              console.log('⏭️ [Realtime] Update de conversa de outro workspace ignorado:', {
-                conversation_workspace: updatedConv?.workspace_id,
-                current_workspace: workspaceId
-              });
-              return;
-            }
-            
-            console.log('🔄 Realtime: Conversa atualizada (REPLICA IDENTITY FULL):', {
-              id: updatedConv?.id,
-              workspace_id: updatedConv?.workspace_id,
-              unread_count: updatedConv?.unread_count,
-              status: updatedConv?.status,
-              agente_ativo: updatedConv?.agente_ativo,
-              last_activity_at: updatedConv?.last_activity_at,
-              assigned_user_id: updatedConv?.assigned_user_id,
-              current_workspace: selectedWorkspace?.workspace_id,
-              old_last_activity: oldConv?.last_activity_at,
-              new_last_activity: updatedConv?.last_activity_at
-            });
-            
-            if (!updatedConv) {
-              console.log('⚠️ Payload.new é null - ignorando evento');
-              return;
-            }
-          
-          // ✅ FILTRO DE PERMISSÕES CLIENT-SIDE: Se usuário é "user", verificar permissão
-          if (currentUserData?.profile === 'user') {
-            const hasPermission = (
-              updatedConv.assigned_user_id === currentUserData.id || 
-              updatedConv.assigned_user_id === null
-            );
-            
-            if (!hasPermission) {
-              console.log('⏭️ [UPDATE] Conversa não pertence ao usuário, removendo da lista:', {
-                conversation_id: updatedConv.id,
-                assigned_to: updatedConv.assigned_user_id,
-                current_user: currentUserData.id
-              });
-              
-              // ✅ REMOVER conversa da lista se ela não pertence mais ao usuário
-              setConversations(prev => prev.filter(c => c.id !== updatedConv.id));
-              return;
-            }
-          }
-          
-          // ✅ CRÍTICO: Evitar processar updates duplicados
-          // Comparar APENAS se for o mesmo timestamp (duplicata real)
-          const isDuplicate = oldConv && 
-            oldConv.unread_count === updatedConv.unread_count &&
-            oldConv.last_activity_at === updatedConv.last_activity_at &&
-            oldConv.status === updatedConv.status &&
-            oldConv.agente_ativo === updatedConv.agente_ativo &&
-            oldConv.assigned_user_id === updatedConv.assigned_user_id;
-          
-          if (isDuplicate) {
-            console.log('⏭️ [Realtime] Update duplicado ignorado:', updatedConv.id);
-            return;
-          }
-          
-          console.log('✅ [Realtime] Processando update:', {
-            id: updatedConv.id,
-            old_unread: oldConv?.unread_count,
-            new_unread: updatedConv.unread_count,
-            old_last_activity: oldConv?.last_activity_at,
-            new_last_activity: updatedConv.last_activity_at
+          console.log('🔄 [useWhatsAppConversations] Conversa atualizada via real-time:', {
+            conversationId: payload.new.id,
+            status: payload.new.status,
+            timestamp: new Date().toISOString()
           });
-          
+
+          const updatedConversation = payload.new as any;
+
           setConversations(prev => {
-            // ✅ CRÍTICO: Encontrar e atualizar a conversa
-            let conversationFound = false;
-            const updated = prev.map(conv => {
-              if (conv.id === updatedConv.id) {
-                conversationFound = true;
-                
-                // ✅ CRIAR NOVO OBJETO para forçar re-render
-                const updatedConversation = { 
-                  ...conv, 
-                  agente_ativo: updatedConv.agente_ativo ?? conv.agente_ativo,
-                  unread_count: updatedConv.unread_count ?? conv.unread_count,
-                  last_activity_at: updatedConv.last_activity_at ?? conv.last_activity_at,
-                  status: updatedConv.status ?? conv.status,
-                  evolution_instance: updatedConv.evolution_instance ?? conv.evolution_instance,
-                  ...(updatedConv.assigned_user_id !== undefined && { assigned_user_id: updatedConv.assigned_user_id }),
-                  ...(updatedConv.priority !== undefined && { priority: updatedConv.priority }),
-                  _updated_at: Date.now() // ✅ FORÇAR RE-RENDER DO CARD
+            const conversationExists = prev.some(c => c.id === updatedConversation.id);
+
+            const shouldKeepConversation = (() => {
+              if (!currentUserDataRef.current) return false;
+
+              if (updatedConversation.status === 'pending') return true;
+
+              if (updatedConversation.status === 'active') {
+                return updatedConversation.assigned_user_id === currentUserDataRef.current.id;
+              }
+
+              if (updatedConversation.status === 'closed') return false;
+
+              return conversationExists;
+            })();
+
+            if (!shouldKeepConversation) {
+              console.log('🗑️ [useWhatsAppConversations] Removendo conversa da lista:', updatedConversation.id);
+              return prev.filter(c => c.id !== updatedConversation.id);
+            }
+
+            const newConversations = conversationExists
+              ? prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
+              : [updatedConversation, ...prev];
+
+            return newConversations.sort((a, b) => 
+              new Date(b.last_activity_at || b.updated_at).getTime() - 
+              new Date(a.last_activity_at || a.updated_at).getTime()
+            );
+          });
+        }
+      )
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `workspace_id=eq.${workspaceId}`
+      }, (payload) => {
+          console.log('📨 [useWhatsAppConversations] Nova notificação via real-time:', {
+            notificationId: payload.new.id,
+            conversationId: payload.new.conversation_id,
+            timestamp: new Date().toISOString()
+          });
+
+          const newNotification = payload.new as any;
+
+          if (!newNotification.is_read) {
+            setConversations(prev => prev.map(conv => {
+              if (conv.id === newNotification.conversation_id) {
+                return {
+                  ...conv,
+                  unread_count: (conv.unread_count || 0) + 1
                 };
-                
-                console.log('✅ [UPDATE conversations] Card atualizado:', {
-                  id: conv.id,
-                  contact: conv.contact.name,
-                  old_unread: conv.unread_count,
-                  new_unread: updatedConversation.unread_count,
-                  old_last_activity: conv.last_activity_at,
-                  new_last_activity: updatedConversation.last_activity_at
-                });
-                
-                return updatedConversation;
               }
               return conv;
-            });
-            
-            if (!conversationFound) {
-              console.log('⚠️ Conversa não encontrada:', updatedConv.id);
-              return prev;
-            }
-            
-            // ✅ CRÍTICO: SEMPRE criar novo array com spread para forçar detecção de mudança
-            const sorted = [...updated].sort((a, b) => {
-              const timeA = new Date(a.last_activity_at).getTime();
-              const timeB = new Date(b.last_activity_at).getTime();
-              return timeB - timeA;
-            });
-            
-            console.log('🔄 [UPDATE conversations] Lista reordenada:', {
-              total: sorted.length,
-              primeiras_5: sorted.slice(0, 5).map(c => ({
-                nome: c.contact.name,
-                last_activity: c.last_activity_at,
-                _updated_at: c._updated_at
-              }))
-            });
-            
-            console.log('🔄 [UPDATE] Array atualizado:', {
-              total: sorted.length,
-              first_conv: sorted[0]?.contact?.name,
-              first_unread: sorted[0]?.unread_count
-            });
-            
-            // ✅ RETORNAR NOVO ARRAY para forçar re-render
-            return sorted;
+            }));
+          }
+        }
+      )
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications',
+        filter: `workspace_id=eq.${workspaceId}`
+      }, (payload) => {
+          console.log('🔄 [useWhatsAppConversations] Notificação atualizada via real-time:', {
+            notificationId: payload.new.id,
+            conversationId: payload.new.conversation_id,
+            isRead: payload.new.is_read,
+            timestamp: new Date().toISOString()
           });
-          } catch (error) {
-            console.error('❌ Erro no processamento de update em conversation:', error);
+
+          const updatedNotification = payload.new as any;
+
+          if (updatedNotification.is_read) {
+            setConversations(prev => prev.map(conv => {
+              if (conv.id === updatedNotification.conversation_id) {
+                return {
+                  ...conv,
+                  unread_count: Math.max(0, (conv.unread_count || 0) - 1)
+                };
+              }
+              return conv;
+            }));
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 [Realtime Conversations] Status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime Conversations] Canal ATIVO');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [Realtime Conversations] ERRO no canal');
-        }
+        console.log('📡 [useWhatsAppConversations] Status da subscription:', {
+          status,
+          workspaceId,
+          timestamp: new Date().toISOString()
+        });
       });
 
-    // ✅ CLEANUP: Garantir remoção adequada dos canais
     return () => {
-      console.log('🔕 Removendo subscriptions do workspace:', workspaceId);
+      console.log('🔌 [useWhatsAppConversations] Removendo subscription do workspace:', workspaceId);
       supabase.removeChannel(conversationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id]); // ✅ Recriar subscriptions quando workspace muda
+  }, [selectedWorkspace?.workspace_id]);
 
   return {
     conversations,

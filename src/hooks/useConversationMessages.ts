@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -15,7 +15,7 @@ interface WhatsAppMessage {
   file_name?: string;
   mime_type?: string;
   created_at: string;
-  status?: string; // Status pode vir do Evolution como 'DELIVERY_ACK', 'READ_ACK', etc.
+  status?: string;
   delivered_at?: string;
   read_at?: string;
   external_id?: string;
@@ -42,18 +42,8 @@ interface UseConversationMessagesReturn {
   loadMore: () => Promise<void>;
   addMessage: (message: WhatsAppMessage) => void;
   updateMessage: (messageId: string, updates: Partial<WhatsAppMessage>) => void;
-  removeMessage: (messageId: string) => void; // ✅ NOVO
+  removeMessage: (messageId: string) => void;
   clearMessages: () => void;
-}
-
-// ✅ MAPEAMENTO DE ACK PARA STATUS
-function mapAckToStatus(ack?: number): string {
-  switch(ack) {
-    case 1: return 'sent';
-    case 2: return 'delivered';
-    case 3: return 'read';
-    default: return 'sent';
-  }
 }
 
 export function useConversationMessages(): UseConversationMessagesReturn {
@@ -65,15 +55,27 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   
   const { selectedWorkspace } = useWorkspace();
-  const { toast } = useToast();
   const { getHeaders } = useWorkspaceHeaders();
+  const { toast } = useToast();
   
-  // Cache em memória para evitar re-fetch desnecessário
+  // Cache em memória
   const cacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; timestamp: number }>>(new Map());
-  const CACHE_TTL = 2000; // 2 segundos
-  
+  const CACHE_TTL = 2000;
+
+  // ✅ ESTABILIZAR headers com useMemo
+  const headers = useMemo(() => {
+    try {
+      return getHeaders();
+    } catch (error) {
+      console.error('❌ [useConversationMessages] Erro ao gerar headers:', error);
+      return {};
+    }
+  }, [getHeaders]);
 
   const clearMessages = useCallback(() => {
+    console.log('🧹 [useConversationMessages] clearMessages chamado:', {
+      timestamp: new Date().toISOString()
+    });
     setMessages([]);
     setHasMore(true);
     setCursorBefore(null);
@@ -81,21 +83,15 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, []);
 
   const loadInitial = useCallback(async (conversationId: string) => {
-    // ✅ CORREÇÃO: Chamar getHeaders e toast DENTRO da função para estabilizar callback
-    const headers = getHeaders();
-    
-    console.log('🔄 [loadInitial] INÍCIO:', {
+    if (!selectedWorkspace?.workspace_id) return;
+
+    console.log('🔄 [useConversationMessages] loadInitial chamado:', {
       conversationId,
-      workspaceId: selectedWorkspace?.workspace_id,
+      workspaceId: selectedWorkspace.workspace_id,
       timestamp: new Date().toISOString()
     });
-    
-    if (!selectedWorkspace?.workspace_id) {
-      console.error('❌ [loadInitial] Nenhum workspace selecionado!');
-      return;
-    }
 
-    // ✅ SEMPRE invalidar cache ao carregar inicial (buscar dados frescos)
+    // Invalidar cache
     const cacheKey = `${selectedWorkspace.workspace_id}:${conversationId}`;
     cacheRef.current.delete(cacheKey);
 
@@ -106,12 +102,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     setCurrentConversationId(conversationId);
 
     try {
-      console.log('📤 [loadInitial] Chamando whatsapp-get-messages:', {
-        conversationId,
-        headers: Object.keys(headers),
-        timestamp: new Date().toISOString()
-      });
-
       const { data, error } = await supabase.functions.invoke('whatsapp-get-messages', {
         body: { 
           conversation_id: conversationId,
@@ -120,78 +110,51 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         headers
       });
 
-      console.log('📥 [loadInitial] Resposta recebida:', {
-        success: !error,
-        itemsCount: data?.items?.length || 0,
-        hasNextBefore: !!data?.nextBefore,
-        error: error?.message,
-        timestamp: new Date().toISOString()
-      });
-
       if (error) {
-        console.error('❌ [loadInitial] Error loading initial messages:', error);
+        console.error('❌ [useConversationMessages] Erro ao carregar mensagens:', error);
         toast({
-          title: "Erro",
-          description: "Erro ao carregar mensagens",
+          title: "Erro ao carregar mensagens",
+          description: error.message,
           variant: "destructive",
         });
         return;
       }
 
       const newMessages = data?.items || [];
-      console.log('✅ [loadInitial] Mensagens carregadas:', {
-        count: newMessages.length,
-        firstMessage: newMessages[0]?.id,
-        lastMessage: newMessages[newMessages.length - 1]?.id
-      });
+      console.log(`✅ [useConversationMessages] Carregadas ${newMessages.length} mensagens para conversa ${conversationId}`);
 
       setMessages(newMessages);
       setHasMore(!!data?.nextBefore);
       setCursorBefore(data?.nextBefore || null);
 
-      // Cache em memória
       cacheRef.current.set(cacheKey, {
         messages: newMessages,
         timestamp: Date.now()
       });
 
-    } catch (error) {
-      console.error('❌ [loadInitial] Unexpected error loading messages:', error);
+    } catch (error: any) {
+      console.error('❌ [useConversationMessages] Erro ao carregar mensagens:', error);
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao carregar mensagens",
+        title: "Erro ao carregar mensagens",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-      console.log('🏁 [loadInitial] FIM');
     }
-  }, [selectedWorkspace?.workspace_id]); // ✅ Dependências estáveis
+  }, [selectedWorkspace?.workspace_id]); // ✅ SEM getHeaders e toast
 
   const loadMore = useCallback(async () => {
-    if (!selectedWorkspace?.workspace_id || !currentConversationId || !cursorBefore || loadingMore || !hasMore) {
-      console.log('⏭️ [loadMore] Ignorado:', {
-        hasWorkspace: !!selectedWorkspace?.workspace_id,
-        hasConversationId: !!currentConversationId,
-        hasCursor: !!cursorBefore,
-        isLoadingMore: loadingMore,
-        hasMore
-      });
-      return;
-    }
+    if (!currentConversationId || !cursorBefore) return;
 
-    console.log('📜 [loadMore] Carregando mais mensagens...', {
-      currentConversationId,
+    console.log('🔄 [useConversationMessages] loadMore chamado:', {
+      conversationId: currentConversationId,
       cursorBefore,
-      messagesCount: messages.length,
       timestamp: new Date().toISOString()
     });
 
     setLoadingMore(true);
-
     try {
-      const headers = getHeaders();
-
       const { data, error } = await supabase.functions.invoke('whatsapp-get-messages', {
         body: { 
           conversation_id: currentConversationId,
@@ -202,169 +165,112 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
 
       if (error) {
-        console.error('❌ [loadMore] Error loading more messages:', error);
+        console.error('❌ [useConversationMessages] Erro ao carregar mais mensagens:', error);
         toast({
-          title: "Erro",
-          description: "Erro ao carregar mais mensagens",
+          title: "Erro ao carregar mensagens",
+          description: error.message,
           variant: "destructive",
         });
         return;
       }
 
-      const newMessages = data?.items || [];
-      
-      console.log('📥 [loadMore] Mensagens antigas recebidas:', {
-        count: newMessages.length,
-        hasNext: !!data?.nextBefore,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (newMessages.length === 0) {
-        console.log('✅ [loadMore] Sem mais mensagens antigas');
+      const olderMessages = data?.items || [];
+      console.log(`✅ [useConversationMessages] Carregadas ${olderMessages.length} mensagens adicionais`);
+
+      if (olderMessages.length === 0) {
         setHasMore(false);
         return;
       }
 
-      console.log('🔍 [loadMore] Adicionando ao state:', {
-        mensagensAntigas: newMessages.length,
-        mensagensAtuais: messages.length,
-        totalAposCarregar: newMessages.length + messages.length
-      });
-
-      // Concatenar mensagens antigas no início
-      setMessages(prevMessages => [...newMessages, ...prevMessages]);
+      setMessages(prevMessages => [...olderMessages, ...prevMessages]);
       setHasMore(!!data?.nextBefore);
       setCursorBefore(data?.nextBefore || null);
 
-      // Atualizar cache
-      const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
-      const updatedMessages = [...newMessages, ...messages];
-      cacheRef.current.set(cacheKey, {
-        messages: updatedMessages,
-        timestamp: Date.now()
-      });
+      if (selectedWorkspace?.workspace_id) {
+        const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
+        cacheRef.current.set(cacheKey, {
+          messages: [...olderMessages, ...messages],
+          timestamp: Date.now()
+        });
+      }
 
-      console.log('✅ [loadMore] Mensagens antigas carregadas');
-
-    } catch (error) {
-      console.error('❌ [loadMore] Unexpected error:', error);
+    } catch (error: any) {
+      console.error('❌ [useConversationMessages] Erro ao carregar mais mensagens:', error);
       toast({
-        title: "Erro",
-        description: "Erro inesperado ao carregar mais mensagens",
+        title: "Erro ao carregar mensagens",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setLoadingMore(false);
     }
-  }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, getHeaders]);
+  }, [currentConversationId, cursorBefore, messages, selectedWorkspace?.workspace_id]); // ✅ SEM getHeaders e toast
 
   const addMessage = useCallback((message: WhatsAppMessage) => {
-    console.log('📨 [addMessage] Tentando adicionar mensagem:', {
-      id: message.id,
-      sender_type: message.sender_type,
-      conversation_id: message.conversation_id,
-      content_preview: message.content?.substring(0, 30)
+    console.log('➕ [useConversationMessages] addMessage chamado:', {
+      messageId: message.id,
+      conversationId: message.conversation_id,
+      timestamp: new Date().toISOString()
     });
-    
-    setMessages(prevMessages => {
-      // ✅ ÚNICA verificação necessária: ID já existe no state?
-      const exists = prevMessages.some(m => m.id === message.id);
-      
-      if (exists) {
-        console.log(`⏭️ [addMessage] Mensagem já existe no state: ${message.id}`);
-        return prevMessages;
-      }
 
-      console.log('✅ [addMessage] Mensagem nova, adicionando ao state:', {
-        id: message.id,
-        sender_type: message.sender_type,
-        total_messages_after: prevMessages.length + 1
-      });
+    setMessages(prev => {
+      const exists = prev.some(m => m.id === message.id);
+      if (exists) {
+        console.log('⚠️ [useConversationMessages] Mensagem duplicada ignorada:', message.id);
+        return prev;
+      }
       
-      // Adicionar no final e ordenar por created_at
-      return [...prevMessages, message].sort((a, b) => 
+      const newMessages = [...prev, message];
+      newMessages.sort((a, b) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
+      return newMessages;
     });
-
-    // Invalidar cache
+    
     if (selectedWorkspace?.workspace_id && currentConversationId) {
       const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
       cacheRef.current.delete(cacheKey);
     }
   }, [selectedWorkspace?.workspace_id, currentConversationId]);
 
-  // ✅ NOVO: Função para remover mensagem por ID
-  const removeMessage = useCallback((messageId: string) => {
-    console.log('🗑️ [removeMessage] Removendo mensagem:', messageId);
-    
-    setMessages(prevMessages => {
-      const filtered = prevMessages.filter(m => m.id !== messageId);
-      console.log('✅ [removeMessage] Mensagem removida:', {
-        messageId,
-        totalBefore: prevMessages.length,
-        totalAfter: filtered.length
-      });
-      return filtered;
+  const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
+    console.log('🔄 [useConversationMessages] updateMessage chamado:', {
+      messageId,
+      updates,
+      timestamp: new Date().toISOString()
     });
+
+    setMessages(prev => {
+      const messageIndex = prev.findIndex(m => m.id === messageId || m.external_id === messageId);
+      if (messageIndex === -1) {
+        console.log('⚠️ [useConversationMessages] Mensagem não encontrada para update:', messageId);
+        return prev;
+      }
+
+      const newMessages = [...prev];
+      const oldMessage = newMessages[messageIndex];
+      newMessages[messageIndex] = { ...oldMessage, ...updates };
+
+      if (updates.id && updates.id !== messageId) {
+        if (selectedWorkspace?.workspace_id && currentConversationId) {
+          const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
+          cacheRef.current.delete(cacheKey);
+        }
+      }
+
+      return newMessages;
+    });
+  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+
+  const removeMessage = useCallback((messageId: string) => {
+    console.log('🗑️ [useConversationMessages] removeMessage chamado:', {
+      messageId,
+      timestamp: new Date().toISOString()
+    });
+    setMessages(prev => prev.filter(m => m.id !== messageId));
   }, []);
 
-  const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
-    console.log('🔄 updateMessage chamado:', { messageId, updates });
-    
-    setMessages(prevMessages => {
-      // ✅ Atualizar por ID OU por external_id
-      const messageIndex = prevMessages.findIndex(m => 
-        m.id === messageId || m.external_id === messageId
-      );
-      
-      if (messageIndex === -1) {
-        console.log('⚠️ Mensagem não encontrada para atualizar:', messageId);
-        return prevMessages;
-      }
-
-      const currentMessage = prevMessages[messageIndex];
-      
-      // ✅ CRÍTICO: Se está mudando o ID (de temporário para real)
-      if (updates.id && updates.id !== messageId) {
-        console.log('🔄 Tentando mudar ID de temporário para real:', { 
-          oldId: messageId, 
-          newId: updates.id 
-        });
-        
-        // Verificar se já existe mensagem com o novo ID
-        const existingIndex = prevMessages.findIndex(m => m.id === updates.id);
-        if (existingIndex !== -1) {
-          console.log('⚠️ JÁ EXISTE mensagem com o ID real, REMOVENDO a temporária:', updates.id);
-          // ✅ Já existe → remover a temporária
-          return prevMessages.filter(m => m.id !== messageId);
-        }
-        
-        // ✅ Se não existe, atualizar o ID da mensagem temporária
-        console.log('✅ Não existe mensagem com ID real, atualizando temporária');
-      }
-      
-      // Atualizar a mensagem
-      const updatedMessages = [...prevMessages];
-      updatedMessages[messageIndex] = { ...currentMessage, ...updates };
-      
-      console.log('✏️ Mensagem atualizada:', { 
-        id: updatedMessages[messageIndex].id, 
-        status: updatedMessages[messageIndex].status,
-        message_type: updatedMessages[messageIndex].message_type
-      });
-      
-      return updatedMessages;
-    });
-
-    // Invalidar cache
-    if (selectedWorkspace?.workspace_id && currentConversationId) {
-      const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
-      cacheRef.current.delete(cacheKey);
-    }
-   }, [selectedWorkspace?.workspace_id, currentConversationId]);
-
-  // Limpar cache quando o workspace muda (sem recarregar automaticamente)
+  // Limpar cache quando workspace muda
   useEffect(() => {
     if (selectedWorkspace?.workspace_id) {
       cacheRef.current.clear();
@@ -372,12 +278,12 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     }
   }, [selectedWorkspace?.workspace_id]);
 
-  // Limpar cache antigo a cada 30 segundos
+  // Limpar cache antigo periodicamente
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
       for (const [key, value] of cacheRef.current.entries()) {
-        if (now - value.timestamp > CACHE_TTL * 3) { // 3x TTL para cleanup
+        if (now - value.timestamp > CACHE_TTL * 3) {
           cacheRef.current.delete(key);
         }
       }
@@ -386,22 +292,18 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     return () => clearInterval(cleanupInterval);
   }, []);
 
-  // Real-time subscriptions para mensagens
+  // ✅ SUBSCRIPTION DE MENSAGENS (ÚNICO E CENTRALIZADO)
   useEffect(() => {
-    if (!selectedWorkspace?.workspace_id || !currentConversationId) {
-      console.log('⏭️ [Realtime] Sem workspace ou conversa, ignorando subscription');
-      return;
-    }
+    if (!currentConversationId || !selectedWorkspace?.workspace_id) return;
 
-    console.log('🔌 [Realtime] Criando subscription para conversa:', {
+    console.log('🔌 [useConversationMessages] Configurando subscription para:', {
       conversationId: currentConversationId,
       workspaceId: selectedWorkspace.workspace_id,
       timestamp: new Date().toISOString()
     });
 
-    const channelName = `conversation-messages-${currentConversationId}`;
     const channel = supabase
-      .channel(channelName)
+      .channel(`messages-${currentConversationId}-${selectedWorkspace.workspace_id}`)
       .on(
         'postgres_changes',
         {
@@ -411,44 +313,13 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          const newMessage = payload.new as WhatsAppMessage;
-          
-          console.log('📨 [INSERT Realtime] Nova mensagem recebida:', {
-            id: newMessage.id,
-            sender_type: newMessage.sender_type,
-            content_preview: newMessage.content?.substring(0, 30),
-            workspace_id: newMessage.workspace_id,
-            conversation_id: newMessage.conversation_id,
+          console.log('📨 [useConversationMessages] Nova mensagem recebida via real-time:', {
+            messageId: payload.new.id,
+            conversationId: currentConversationId,
             timestamp: new Date().toISOString()
           });
-          
-          // ✅ Verificar workspace
-          if (newMessage.workspace_id !== selectedWorkspace.workspace_id) {
-            console.log('❌ [INSERT Realtime] Workspace diferente, ignorando:', {
-              received: newMessage.workspace_id,
-              expected: selectedWorkspace.workspace_id
-            });
-            return;
-          }
-          
-          // ✅ Adicionar diretamente ao state (sem callback externo)
-          setMessages(prev => {
-            const exists = prev.some(m => m.id === newMessage.id);
-            if (exists) {
-              console.log('⏭️ [INSERT Realtime] Mensagem já existe, ignorando:', newMessage.id);
-              return prev;
-            }
-            
-            console.log('✅ [INSERT Realtime] Adicionando mensagem ao state:', {
-              id: newMessage.id,
-              totalBefore: prev.length,
-              totalAfter: prev.length + 1
-            });
-            
-            return [...prev, newMessage].sort((a, b) => 
-              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-          });
+          const newMessage = payload.new as WhatsAppMessage;
+          addMessage(newMessage);
         }
       )
       .on(
@@ -460,71 +331,31 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          const updatedMessage = payload.new as WhatsAppMessage;
-          
-          console.log('🔄 [UPDATE Realtime] Mensagem atualizada:', {
-            id: updatedMessage.id,
-            status: updatedMessage.status,
-            workspace_id: updatedMessage.workspace_id,
+          console.log('🔄 [useConversationMessages] Mensagem atualizada via real-time:', {
+            messageId: payload.new.id,
+            conversationId: currentConversationId,
             timestamp: new Date().toISOString()
           });
-          
-          // ✅ Verificar workspace
-          if (updatedMessage.workspace_id !== selectedWorkspace.workspace_id) {
-            console.log('❌ [UPDATE Realtime] Workspace diferente, ignorando');
-            return;
-          }
-          
-          // ✅ Atualizar diretamente no state
-          setMessages(prev => {
-            const index = prev.findIndex(m => 
-              m.id === updatedMessage.id || m.external_id === updatedMessage.id
-            );
-            
-            if (index === -1) {
-              console.log('⚠️ [UPDATE Realtime] Mensagem não encontrada para atualizar:', updatedMessage.id);
-              return prev;
-            }
-            
-            console.log('✅ [UPDATE Realtime] Atualizando mensagem no state:', {
-              id: updatedMessage.id,
-              oldStatus: prev[index].status,
-              newStatus: updatedMessage.status
-            });
-            
-            const updated = [...prev];
-            updated[index] = {
-              ...updated[index],
-              ...updatedMessage
-            };
-            
-            return updated;
-          });
+          const updatedMessage = payload.new as WhatsAppMessage;
+          updateMessage(updatedMessage.id, updatedMessage);
         }
       )
-      .subscribe((status, err) => {
-        console.log('📡 [Realtime] Status da subscription:', {
-          channelName,
+      .subscribe((status) => {
+        console.log('📡 [useConversationMessages] Status da subscription:', {
           status,
-          error: err,
+          conversationId: currentConversationId,
           timestamp: new Date().toISOString()
         });
-        
-        if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [Realtime] Erro no canal:', err);
-        } else if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime] Subscription ativa e pronta!');
-        }
       });
 
     return () => {
-      console.log('🔕 [Realtime] Limpando subscription:', {
-        channelName,
+      console.log('🔌 [useConversationMessages] Removendo subscription:', {
+        conversationId: currentConversationId,
         timestamp: new Date().toISOString()
       });
       supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+  }, [currentConversationId, selectedWorkspace?.workspace_id, addMessage, updateMessage]);
 
   return {
     messages,
@@ -535,7 +366,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     loadMore,
     addMessage,
     updateMessage,
-    removeMessage, // ✅ NOVO
+    removeMessage,
     clearMessages
   };
 }
