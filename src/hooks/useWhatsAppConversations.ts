@@ -581,16 +581,25 @@ export const useWhatsAppConversations = () => {
   useEffect(() => {
     const currentUserData = currentUserDataRef.current;
     
+    console.log('🔍 [useWhatsAppConversations] ===== VERIFICANDO CONDIÇÕES PARA SUBSCRIPTION =====');
+    console.log('currentUserData:', currentUserData);
+    console.log('selectedWorkspace:', selectedWorkspace);
+    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
+      console.log('❌ [useWhatsAppConversations] SUBSCRIPTION NÃO INICIADA - faltam dados');
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
+    const channelName = `conversations-workspace-${workspaceId}`;
     
-    console.log('🔌 [useWhatsAppConversations] Configurando subscriptions para workspace:', workspaceId);
+    console.log('🔌 [useWhatsAppConversations] ===== INICIANDO SUBSCRIPTIONS =====');
+    console.log('Channel Name:', channelName);
+    console.log('Workspace ID:', workspaceId);
+    console.log('User ID:', currentUserData.id);
 
     const conversationsChannel = supabase
-      .channel(`conversations-${workspaceId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -598,9 +607,14 @@ export const useWhatsAppConversations = () => {
         filter: `workspace_id=eq.${workspaceId}`
       },
         async (payload) => {
-          console.log('📨 [useWhatsAppConversations] Nova conversa via real-time:', {
+          console.log('📨 [REALTIME-CONVERSATIONS] ✅ NOVA CONVERSA RECEBIDA:', {
             conversationId: payload.new.id,
-            timestamp: new Date().toISOString()
+            contact_id: payload.new.contact_id,
+            status: payload.new.status,
+            canal: payload.new.canal,
+            workspace_id: payload.new.workspace_id,
+            timestamp: new Date().toISOString(),
+            payload: payload.new
           });
           const newConv = payload.new as any;
           
@@ -696,10 +710,14 @@ export const useWhatsAppConversations = () => {
         table: 'conversations',
         filter: `workspace_id=eq.${workspaceId}`
       }, (payload) => {
-          console.log('🔄 [useWhatsAppConversations] Conversa atualizada via real-time:', {
+          console.log('🔄 [REALTIME-CONVERSATIONS] ✅ CONVERSA ATUALIZADA:', {
             conversationId: payload.new.id,
             status: payload.new.status,
-            timestamp: new Date().toISOString()
+            agente_ativo: payload.new.agente_ativo,
+            assigned_user_id: payload.new.assigned_user_id,
+            last_activity_at: payload.new.last_activity_at,
+            timestamp: new Date().toISOString(),
+            changes: payload
           });
 
           const updatedConversation = payload.new as any;
@@ -793,11 +811,23 @@ export const useWhatsAppConversations = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 [useWhatsAppConversations] Status da subscription:', {
+        console.log('📡 [REALTIME-CONVERSATIONS] STATUS DA SUBSCRIPTION:', {
           status,
+          channelName,
           workspaceId,
           timestamp: new Date().toISOString()
         });
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [REALTIME-CONVERSATIONS] SUBSCRIPTION ATIVA E FUNCIONANDO!');
+          console.log('Aguardando eventos de INSERT, UPDATE em conversations e notifications');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [REALTIME-CONVERSATIONS] ERRO NO CANAL!');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ [REALTIME-CONVERSATIONS] TIMEOUT NA SUBSCRIPTION!');
+        } else {
+          console.log(`🔄 [REALTIME-CONVERSATIONS] Status: ${status}`);
+        }
       });
 
     return () => {
