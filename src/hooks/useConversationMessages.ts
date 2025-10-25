@@ -81,10 +81,14 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, []);
 
   const loadInitial = useCallback(async (conversationId: string) => {
-    console.log('🔄 loadInitial chamado para conversationId:', conversationId);
+    console.log('🔄 [loadInitial] INÍCIO:', {
+      conversationId,
+      workspaceId: selectedWorkspace?.workspace_id,
+      timestamp: new Date().toISOString()
+    });
     
     if (!selectedWorkspace?.workspace_id) {
-      console.error('❌ Nenhum workspace selecionado!');
+      console.error('❌ [loadInitial] Nenhum workspace selecionado!');
       return;
     }
 
@@ -100,7 +104,11 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
     try {
       const headers = getHeaders();
-      console.log('📤 Chamando whatsapp-get-messages com headers:', headers);
+      console.log('📤 [loadInitial] Chamando whatsapp-get-messages:', {
+        conversationId,
+        headers: Object.keys(headers),
+        timestamp: new Date().toISOString()
+      });
 
       const { data, error } = await supabase.functions.invoke('whatsapp-get-messages', {
         body: { 
@@ -110,10 +118,16 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         headers
       });
 
-      console.log('📥 Resposta do whatsapp-get-messages:', { data, error });
+      console.log('📥 [loadInitial] Resposta recebida:', {
+        success: !error,
+        itemsCount: data?.items?.length || 0,
+        hasNextBefore: !!data?.nextBefore,
+        error: error?.message,
+        timestamp: new Date().toISOString()
+      });
 
       if (error) {
-        console.error('Error loading initial messages:', error);
+        console.error('❌ [loadInitial] Error loading initial messages:', error);
         toast({
           title: "Erro",
           description: "Erro ao carregar mensagens",
@@ -123,6 +137,12 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       }
 
       const newMessages = data?.items || [];
+      console.log('✅ [loadInitial] Mensagens carregadas:', {
+        count: newMessages.length,
+        firstMessage: newMessages[0]?.id,
+        lastMessage: newMessages[newMessages.length - 1]?.id
+      });
+
       setMessages(newMessages);
       setHasMore(!!data?.nextBefore);
       setCursorBefore(data?.nextBefore || null);
@@ -134,7 +154,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
 
     } catch (error) {
-      console.error('Unexpected error loading messages:', error);
+      console.error('❌ [loadInitial] Unexpected error loading messages:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao carregar mensagens",
@@ -142,12 +162,13 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
     } finally {
       setLoading(false);
+      console.log('🏁 [loadInitial] FIM');
     }
-  }, [selectedWorkspace?.workspace_id, toast]);
+  }, [selectedWorkspace?.workspace_id, getHeaders]);
 
   const loadMore = useCallback(async () => {
     if (!selectedWorkspace?.workspace_id || !currentConversationId || !cursorBefore || loadingMore || !hasMore) {
-      console.log('⏭️ loadMore ignorado:', {
+      console.log('⏭️ [loadMore] Ignorado:', {
         hasWorkspace: !!selectedWorkspace?.workspace_id,
         hasConversationId: !!currentConversationId,
         hasCursor: !!cursorBefore,
@@ -157,10 +178,11 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return;
     }
 
-    console.log('📜 Carregando mais mensagens...', {
+    console.log('📜 [loadMore] Carregando mais mensagens...', {
       currentConversationId,
       cursorBefore,
-      messagesCount: messages.length
+      messagesCount: messages.length,
+      timestamp: new Date().toISOString()
     });
 
     setLoadingMore(true);
@@ -178,7 +200,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
 
       if (error) {
-        console.error('Error loading more messages:', error);
+        console.error('❌ [loadMore] Error loading more messages:', error);
         toast({
           title: "Erro",
           description: "Erro ao carregar mais mensagens",
@@ -189,21 +211,19 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
       const newMessages = data?.items || [];
       
-      console.log('📥 Mensagens antigas recebidas:', {
+      console.log('📥 [loadMore] Mensagens antigas recebidas:', {
         count: newMessages.length,
         hasNext: !!data?.nextBefore,
-        firstMessage: newMessages[0],
-        imagesCount: newMessages.filter((m: WhatsAppMessage) => m.message_type === 'image').length,
-        sampleImage: newMessages.find((m: WhatsAppMessage) => m.message_type === 'image')
+        timestamp: new Date().toISOString()
       });
       
       if (newMessages.length === 0) {
-        console.log('✅ Sem mais mensagens antigas');
+        console.log('✅ [loadMore] Sem mais mensagens antigas');
         setHasMore(false);
         return;
       }
 
-      console.log('🔍 Antes de adicionar mensagens antigas:', {
+      console.log('🔍 [loadMore] Adicionando ao state:', {
         mensagensAntigas: newMessages.length,
         mensagensAtuais: messages.length,
         totalAposCarregar: newMessages.length + messages.length
@@ -222,10 +242,10 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         timestamp: Date.now()
       });
 
-      console.log('✅ Mensagens antigas carregadas - NÃO deve haver scroll automático');
+      console.log('✅ [loadMore] Mensagens antigas carregadas');
 
     } catch (error) {
-      console.error('Unexpected error loading more messages:', error);
+      console.error('❌ [loadMore] Unexpected error:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao carregar mais mensagens",
@@ -234,7 +254,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     } finally {
       setLoadingMore(false);
     }
-  }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, toast, getHeaders]);
+  }, [selectedWorkspace?.workspace_id, currentConversationId, cursorBefore, loadingMore, hasMore, messages, getHeaders]);
 
   const addMessage = useCallback((message: WhatsAppMessage) => {
     console.log('📨 [addMessage] Tentando adicionar mensagem:', {
