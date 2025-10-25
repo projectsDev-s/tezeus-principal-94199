@@ -78,6 +78,19 @@ export const useWhatsAppConversations = () => {
   
   // ✅ MUTEX: Prevenir envio duplicado de mensagens
   const sendingRef = useRef<Map<string, boolean>>(new Map());
+  
+  // ✅ CORREÇÃO 2: Usar useRef para currentUserData para estabilizar subscription
+  const currentUserDataRef = useRef<{ id: string; email?: string; profile?: string } | null>(null);
+  
+  useEffect(() => {
+    const userData = localStorage.getItem('currentUser');
+    currentUserDataRef.current = userData ? JSON.parse(userData) : null;
+    console.log('🔄 [useWhatsAppConversations] Sincronizando currentUserDataRef:', {
+      hasUserData: !!currentUserDataRef.current,
+      userId: currentUserDataRef.current?.id,
+      workspaceId: selectedWorkspace?.workspace_id
+    });
+  }, [selectedWorkspace?.workspace_id]); // ✅ Re-sincronizar quando workspace mudar
 
   const fetchConversations = async () => {
     const DEBUG_CONVERSATIONS = true; // Ativado para debug
@@ -111,6 +124,12 @@ export const useWhatsAppConversations = () => {
       const { data: response, error: functionError } = await supabase.functions.invoke(
         'whatsapp-get-conversations-lite', {
         headers
+      });
+
+      console.log('📦 [useWhatsAppConversations] Resposta da Edge Function:', {
+        hasData: !!response,
+        conversationsCount: response?.items?.length,
+        error: functionError
       });
 
       if (functionError) {
@@ -557,14 +576,6 @@ export const useWhatsAppConversations = () => {
       setLoading(true);
     }
   }, [selectedWorkspace?.workspace_id]); // Re-fetch when workspace changes
-
-  // ✅ CORREÇÃO 2: useRef para currentUserData para estabilizar a subscription
-  const currentUserDataRef = useRef<{ id: string; profile?: string } | null>(null);
-  
-  useEffect(() => {
-    const userData = localStorage.getItem('currentUser');
-    currentUserDataRef.current = userData ? JSON.parse(userData) : null;
-  }, []);
 
   // ✅ CORREÇÃO: Subscription única e otimizada para evitar duplicação
   useEffect(() => {

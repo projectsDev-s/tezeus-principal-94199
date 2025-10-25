@@ -10,19 +10,19 @@ export const useWorkspaceHeaders = () => {
   const { selectedWorkspace } = useWorkspace();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
 
-  // ✅ CORREÇÃO 1: Usar useRef para currentUserData para estabilizar getHeaders
-  const userDataRef = useRef<{ id: string; email?: string } | null>(null);
-  
-  useEffect(() => {
-    const userData = localStorage.getItem('currentUser');
-    userDataRef.current = userData ? JSON.parse(userData) : null;
-  }, []);
-
   const getHeaders = useCallback((overrideWorkspaceId?: string) => {
-    // Usar ref ao invés de leitura direta do localStorage
-    const currentUserData = userDataRef.current;
+    // Ler diretamente do localStorage para garantir dados atualizados
+    const userData = localStorage.getItem('currentUser');
+    const currentUserData = userData ? JSON.parse(userData) : null;
+    
+    console.log('🔍 [workspaceHeaders] Lendo dados do usuário:', {
+      hasUserData: !!currentUserData,
+      userId: currentUserData?.id,
+      email: currentUserData?.email
+    });
     
     if (!currentUserData?.id) {
+      console.error('❌ [workspaceHeaders] Usuário não autenticado - localStorage vazio');
       throw new Error('Usuário não autenticado');
     }
 
@@ -30,6 +30,7 @@ export const useWorkspaceHeaders = () => {
     const workspaceId = overrideWorkspaceId || urlWorkspaceId || selectedWorkspace?.workspace_id;
     
     if (!workspaceId) {
+      console.error('❌ [workspaceHeaders] Nenhum workspace selecionado');
       throw new Error('Nenhum workspace selecionado');
     }
 
@@ -46,7 +47,7 @@ export const useWorkspaceHeaders = () => {
       'x-system-user-email': currentUserData.email || '',
       'x-workspace-id': workspaceId
     };
-  }, [selectedWorkspace?.workspace_id, urlWorkspaceId]); // ✅ Agora estável
+  }, [selectedWorkspace?.workspace_id, urlWorkspaceId]);
 
   return { getHeaders };
 };
