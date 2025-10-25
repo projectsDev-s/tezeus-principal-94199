@@ -1,5 +1,6 @@
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useParams } from 'react-router-dom';
+import { useCallback } from 'react';
 
 /**
  * Standard headers for Edge Function calls that include workspace context
@@ -9,7 +10,7 @@ export const useWorkspaceHeaders = () => {
   const { selectedWorkspace } = useWorkspace();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
 
-  const getHeaders = (overrideWorkspaceId?: string) => {
+  const getHeaders = useCallback((overrideWorkspaceId?: string) => {
     // Get current user from localStorage (custom auth system)
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
@@ -38,7 +39,7 @@ export const useWorkspaceHeaders = () => {
       'x-system-user-email': currentUserData.email || '',
       'x-workspace-id': workspaceId
     };
-  };
+  }, [selectedWorkspace?.workspace_id, urlWorkspaceId]);
 
   return { getHeaders };
 };
