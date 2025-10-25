@@ -703,21 +703,36 @@ export function WhatsAppChat({
     }
   };
 
+  // ✅ CORREÇÃO 3: Usar ref para rastrear conversas já carregadas
+  const loadedConversationsRef = useRef<Set<string>>(new Set());
+
   // ✅ REMOVIDO: Subscription duplicada que causava conflito com useConversationMessages
   // A subscription de UPDATE agora está centralizada em useConversationMessages.ts
 
   // ✅ Selecionar conversa e carregar mensagens lazy
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
+    console.log('🎯 [handleSelectConversation] Selecionando conversa:', {
+      conversationId: conversation.id,
+      contactName: conversation.contact.name,
+      wasLoadedBefore: loadedConversationsRef.current.has(conversation.id)
+    });
+
     setSelectedConversation(conversation);
 
     // Limpar modo de seleção ao trocar de conversa
     setSelectionMode(false);
     setSelectedMessages(new Set());
 
-    // ✅ CRÍTICO: Carregar mensagens APENAS quando conversa é selecionada
-    clearMessages(); // Limpar mensagens da conversa anterior
-    isInitialLoadRef.current = true; // Marcar como carregamento inicial
-    await loadMessages(conversation.id);
+    // ✅ CRÍTICO: Carregar mensagens APENAS se ainda não foram carregadas
+    if (!loadedConversationsRef.current.has(conversation.id)) {
+      console.log('📥 [handleSelectConversation] Carregando mensagens pela primeira vez:', conversation.id);
+      clearMessages(); // Limpar mensagens da conversa anterior
+      isInitialLoadRef.current = true; // Marcar como carregamento inicial
+      await loadMessages(conversation.id);
+      loadedConversationsRef.current.add(conversation.id); // Marcar como carregada
+    } else {
+      console.log('✅ [handleSelectConversation] Conversa já carregada, reutilizando mensagens:', conversation.id);
+    }
     
     // Marcar notificações como lidas SEMPRE ao abrir conversa
     // Isso garante que tanto cliques no card quanto nas notificações zerem o contador

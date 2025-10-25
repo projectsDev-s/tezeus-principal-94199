@@ -558,18 +558,28 @@ export const useWhatsAppConversations = () => {
     }
   }, [selectedWorkspace?.workspace_id]); // Re-fetch when workspace changes
 
+  // ✅ CORREÇÃO 2: useRef para currentUserData para estabilizar a subscription
+  const currentUserDataRef = useRef<{ id: string; profile?: string } | null>(null);
+  
+  useEffect(() => {
+    const userData = localStorage.getItem('currentUser');
+    currentUserDataRef.current = userData ? JSON.parse(userData) : null;
+  }, []);
+
   // ✅ CORREÇÃO: Subscription única e otimizada para evitar duplicação
   useEffect(() => {
-    // Get current user from localStorage
-    const userData = localStorage.getItem('currentUser');
-    const currentUserData = userData ? JSON.parse(userData) : null;
+    const currentUserData = currentUserDataRef.current;
     
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id; // ✅ Capturar workspace_id no closure
-    console.log('🔌 Iniciando subscription de realtime para workspace:', workspaceId);
+    console.log('🔌 [Realtime] Iniciando subscription para workspace:', {
+      workspaceId,
+      userId: currentUserData.id,
+      profile: currentUserData.profile
+    });
 
     // ✅ GARANTIR SUBSCRIPTION ÚNICA
     const messagesChannel = supabase
