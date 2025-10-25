@@ -64,32 +64,38 @@ export function useNotifications() {
     fetchNotifications();
   }, [selectedWorkspace?.workspace_id, user?.id]);
 
-  // Real-time subscription com fallback
+  // Real-time subscription com filtros nativos do Supabase
   useEffect(() => {
     if (!selectedWorkspace?.workspace_id || !user?.id) {
+      console.log('⏭️ [useNotifications] Aguardando workspace ou user');
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
     const userId = user.id;
-    let pollingInterval: NodeJS.Timeout | null = null;
     
-    console.log('🔔 [Realtime] Criando subscription');
+    console.log('🔔 [useNotifications] Criando subscription:', {
+      workspaceId,
+      userId
+    });
     
     const channel = supabase
-      .channel('realtime:public:notifications') // Canal global simples
+      .channel(`notifications-${workspaceId}-${userId}`) // ✅ Canal único por user+workspace
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications'
-          // SEM filtro - filtramos no cliente
+          table: 'notifications',
+          filter: `workspace_id=eq.${workspaceId}` // ✅ Filtro nativo
         },
         (payload: any) => {
-          // Filtrar por workspace E usuário no cliente
-          if (payload.new.workspace_id === workspaceId && payload.new.user_id === userId) {
-            console.log('🔔✅ Nova notificação recebida via Realtime');
+          // ✅ Segundo filtro no cliente para garantir
+          if (payload.new.user_id === userId) {
+            console.log('🔔✅ Nova notificação recebida via Realtime:', {
+              id: payload.new.id,
+              contactName: payload.new.title
+            });
             playNotificationSound();
             fetchNotifications();
           }
@@ -100,44 +106,35 @@ export function useNotifications() {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'notifications'
-          // SEM filtro - filtramos no cliente
+          table: 'notifications',
+          filter: `workspace_id=eq.${workspaceId}` // ✅ Filtro nativo
         },
         (payload: any) => {
-          // Filtrar por workspace E usuário no cliente
-          if (
-            (payload.new.workspace_id === workspaceId && payload.new.user_id === userId) ||
-            (payload.old?.workspace_id === workspaceId && payload.old?.user_id === userId)
-          ) {
-            console.log('🔔✅ Notificação atualizada via Realtime');
+          // ✅ Segundo filtro no cliente para garantir
+          if (payload.new.user_id === userId || payload.old?.user_id === userId) {
+            console.log('🔔✅ Notificação atualizada via Realtime:', {
+              id: payload.new.id,
+              status: payload.new.status
+            });
             fetchNotifications();
           }
         }
       )
       .subscribe((status) => {
-        console.log('🔔 [Realtime] Status:', status);
+        console.log('🔔 [useNotifications Realtime] Status:', status);
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Realtime ATIVO - notificações em tempo real habilitadas');
-          // Limpar polling se existir
-          if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-          }
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('⚠️ Realtime com erro - ativando fallback polling');
-          // Ativar polling como fallback
-          if (!pollingInterval) {
-            pollingInterval = setInterval(fetchNotifications, 5000);
-          }
+          console.log('✅ [useNotifications] Canal de notificações ATIVO');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [useNotifications] ERRO no canal de notificações');
         }
       });
 
     return () => {
-      console.log('🔕 [Realtime] Removendo subscription');
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
+      console.log('🔕 [useNotifications] Removendo subscription:', {
+        workspaceId,
+        userId
+      });
       supabase.removeChannel(channel);
     };
   }, [selectedWorkspace?.workspace_id, user?.id]);

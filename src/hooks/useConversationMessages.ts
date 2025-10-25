@@ -81,6 +81,9 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, []);
 
   const loadInitial = useCallback(async (conversationId: string) => {
+    // ✅ CORREÇÃO: Chamar getHeaders e toast DENTRO da função para estabilizar callback
+    const headers = getHeaders();
+    
     console.log('🔄 [loadInitial] INÍCIO:', {
       conversationId,
       workspaceId: selectedWorkspace?.workspace_id,
@@ -103,7 +106,6 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     setCurrentConversationId(conversationId);
 
     try {
-      const headers = getHeaders();
       console.log('📤 [loadInitial] Chamando whatsapp-get-messages:', {
         conversationId,
         headers: Object.keys(headers),
@@ -164,7 +166,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       setLoading(false);
       console.log('🏁 [loadInitial] FIM');
     }
-  }, [selectedWorkspace?.workspace_id, getHeaders]);
+  }, [selectedWorkspace?.workspace_id]); // ✅ Dependências estáveis
 
   const loadMore = useCallback(async () => {
     if (!selectedWorkspace?.workspace_id || !currentConversationId || !cursorBefore || loadingMore || !hasMore) {

@@ -88,9 +88,10 @@ export const useWhatsAppConversations = () => {
     console.log('🔄 [useWhatsAppConversations] Sincronizando currentUserDataRef:', {
       hasUserData: !!currentUserDataRef.current,
       userId: currentUserDataRef.current?.id,
-      workspaceId: selectedWorkspace?.workspace_id
+      workspaceId: selectedWorkspace?.workspace_id,
+      userIdContext: user?.id
     });
-  }, [selectedWorkspace?.workspace_id]); // ✅ Re-sincronizar quando workspace mudar
+  }, [selectedWorkspace?.workspace_id, user?.id]); // ✅ Re-sincronizar quando workspace OU user mudar
 
   const fetchConversations = async () => {
     const DEBUG_CONVERSATIONS = true; // Ativado para debug
@@ -592,213 +593,11 @@ export const useWhatsAppConversations = () => {
       profile: currentUserData.profile
     });
 
-    // ✅ GARANTIR SUBSCRIPTION ÚNICA
-    const messagesChannel = supabase
-      .channel(`whatsapp-messages-${workspaceId}`) // ✅ Canal único por workspace
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages'
-        // ✅ SEM FILTRO - Filtrar no cliente
-      }, (payload) => {
-        const newMessage = payload.new as any;
-        
-        // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
-        if (newMessage.workspace_id !== workspaceId) {
-          console.log('⏭️ [Realtime] Mensagem de outro workspace ignorada:', {
-            message_workspace: newMessage.workspace_id,
-            current_workspace: workspaceId
-          });
-          return;
-        }
-        
-        console.log('📨 [INSERT useWhatsAppConversations] Nova mensagem recebida:', {
-          id: newMessage.id,
-          sender_type: newMessage.sender_type,
-          workspace_id: newMessage.workspace_id
-        });
-        
-        // ✅ NÃO ignorar mensagens de agent - processar TODAS
-        console.log('✅ [INSERT useWhatsAppConversations] Processando mensagem:', {
-          sender_type: newMessage.sender_type,
-          is_contact: newMessage.sender_type === 'contact',
-          is_agent: newMessage.sender_type === 'agent'
-        });
-          
-          console.log('📨 Realtime: Nova mensagem', {
-            id: newMessage.id,
-            conversation_id: newMessage.conversation_id,
-            sender_type: newMessage.sender_type,
-            workspace_id: newMessage.workspace_id,
-            read_at: newMessage.read_at // ✅ VERIFICAR se vem null ou não
-          });
-          
-          setConversations(prev => {
-            const updated = prev.map(conv => {
-              if (conv.id === newMessage.conversation_id) {
-                // ✅ Verificar se mensagem já existe para evitar duplicatas
-                const messageExists = conv.messages.some(msg => msg.id === newMessage.id);
-                if (messageExists) {
-                  console.log('⚠️ Mensagem duplicada detectada e ignorada:', newMessage.id);
-                  return conv;
-                }
-
-                // Criar objeto da nova mensagem
-                const messageObj = {
-                  id: newMessage.id,
-                  content: newMessage.content,
-                  sender_type: newMessage.sender_type,
-                  created_at: newMessage.created_at,
-                  read_at: newMessage.read_at,
-                  status: newMessage.status,
-                  message_type: newMessage.message_type,
-                  file_url: newMessage.file_url,
-                  file_name: newMessage.file_name,
-                  origem_resposta: newMessage.origem_resposta || 'manual',
-                };
-
-                // Criar a última mensagem para o card
-                const lastMessage = {
-                  content: newMessage.content,
-                  message_type: newMessage.message_type,
-                  sender_type: newMessage.sender_type,
-                  created_at: newMessage.created_at
-                };
-
-                // ✅ CORREÇÃO: NÃO recalcular unread_count aqui - deixar o backend fazer via trigger
-                // O evento UPDATE da tabela conversations virá com o valor correto
-                const newMessages = [...conv.messages, messageObj];
-
-                console.log('📨 [INSERT] Nova mensagem adicionada:', {
-                  conversa: conv.contact.name,
-                  sender_type: newMessage.sender_type,
-                  is_contact: newMessage.sender_type === 'contact',
-                  read_at: newMessage.read_at,
-                  current_unread_count: conv.unread_count,
-                  aguardando_update_do_backend: true
-                });
-
-                // Não atualizar unread_count localmente - deixar o backend fazer
-                // O trigger update_conversation_on_new_message vai calcular e o UPDATE virá via realtime
-                const updatedConv = {
-                  ...conv,
-                  messages: newMessages,
-                  unread_count: conv.unread_count, // Manter valor atual, aguardar UPDATE do backend
-                  last_message: [lastMessage],
-                  last_activity_at: newMessage.created_at,
-                  _updated_at: Date.now() // ✅ Força re-render
-                };
-
-                console.log('✅ [INSERT] Aguardando UPDATE do backend para unread_count:', {
-                  conversation_id: conv.id,
-                  contact: conv.contact.name,
-                  sender_type: newMessage.sender_type,
-                  current_unread: conv.unread_count
-                });
-
-                return updatedConv;
-              }
-              return conv;
-            });
-
-            // Reordenar por atividade para mover conversas com novas mensagens para o topo
-            const sorted = updated.sort((a, b) => 
-              new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
-            );
-            
-            console.log('📊 Estado após INSERT:', {
-              total_conversas: sorted.length,
-              conversas_com_unread: sorted.filter(c => c.unread_count > 0).length,
-              unread_por_conversa: sorted.map(c => ({ 
-                nome: c.contact.name, 
-                unread: c.unread_count,
-                total_msgs: c.messages?.length || 0
-              }))
-            });
-            
-            return [...sorted]; // ✅ SEMPRE criar novo array
-          });
-        }
-      )
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages'
-        // ✅ SEM FILTRO - Filtrar no cliente
-      }, (payload) => {
-        const updatedMessage = payload.new as any;
-        
-        // ✅ FILTRO NO CLIENTE: Ignorar se não for do workspace correto
-        if (updatedMessage.workspace_id !== workspaceId) {
-          console.log('⏭️ [Realtime] Update de mensagem de outro workspace ignorado');
-          return;
-        }
-        
-        console.log('🔄 [UPDATE messages] Mensagem atualizada via realtime:', {
-          id: updatedMessage.id,
-          status: updatedMessage.status,
-          sender_type: updatedMessage.sender_type
-        });
-        
-        // ✅ ATUALIZAR STATUS E FORÇAR RE-RENDER DO CARD
-        setConversations(prev => prev.map(conv => {
-          if (conv.id === updatedMessage.conversation_id) {
-            // ✅ ATUALIZAR last_message se esta mensagem for a mais recente
-            const isLastMessage = conv.messages.length > 0 && 
-              conv.messages[conv.messages.length - 1].id === updatedMessage.id;
-            
-            const updatedConv = {
-              ...conv,
-              messages: conv.messages.map(msg => 
-                msg.id === updatedMessage.id 
-                  ? {
-                      ...msg,
-                      status: updatedMessage.status,
-                      read_at: updatedMessage.read_at,
-                      delivered_at: updatedMessage.delivered_at
-                    }
-                  : msg
-              ),
-              _updated_at: Date.now() // ✅ FORÇAR RE-RENDER
-            };
-            
-            // ✅ Atualizar last_message para refletir no card
-            if (isLastMessage && updatedMessage.content) {
-              updatedConv.last_message = [{
-                content: updatedMessage.content,
-                message_type: updatedMessage.message_type,
-                sender_type: updatedMessage.sender_type,
-                created_at: updatedMessage.created_at
-              }];
-            }
-            
-            return updatedConv;
-          }
-          return conv;
-        }));
-      })
-      .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'messages' },
-        (payload) => {
-          const deletedMessageId = payload.old?.id;
-          console.log('🗑️ Mensagem deletada:', deletedMessageId);
-          
-          if (deletedMessageId) {
-            setConversations(prev => prev.map(conv => ({
-              ...conv,
-              messages: conv.messages.filter(msg => msg.id !== deletedMessageId)
-            })));
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 [Realtime Messages] Status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime Messages] Canal ATIVO');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [Realtime Messages] ERRO no canal');
-        }
-      });
+    // ✅ CORREÇÃO DEFINITIVA: REMOVER subscription de mensagens daqui
+    // As mensagens devem ser gerenciadas APENAS pelo useConversationMessages
+    // Este hook só precisa saber sobre UPDATES de conversas (unread_count, status, etc)
+    
+    console.log('🔕 [Realtime] NÃO criando subscription de mensagens aqui - delegando para useConversationMessages');
 
     // ✅ CORREÇÃO: Subscription única para conversas com canal único por workspace
     const conversationsChannel = supabase
@@ -1074,7 +873,6 @@ export const useWhatsAppConversations = () => {
     // ✅ CLEANUP: Garantir remoção adequada dos canais
     return () => {
       console.log('🔕 Removendo subscriptions do workspace:', workspaceId);
-      supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };
   }, [selectedWorkspace?.workspace_id]); // ✅ Recriar subscriptions quando workspace muda
