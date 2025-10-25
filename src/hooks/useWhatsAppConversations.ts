@@ -82,33 +82,12 @@ export const useWhatsAppConversations = () => {
   // ✅ CORREÇÃO 2: Usar useRef para currentUserData para estabilizar subscription
   const currentUserDataRef = useRef<{ id: string; email?: string; profile?: string } | null>(null);
   
-  // ✅ SINCRONIZAR currentUserDataRef com localStorage usando polling
+  // ✅ SINCRONIZAR currentUserDataRef APENAS UMA VEZ no mount
   useEffect(() => {
     const userData = localStorage.getItem('currentUser');
     currentUserDataRef.current = userData ? JSON.parse(userData) : null;
-
-    console.log('🔄 [useWhatsAppConversations] Iniciando polling de sincronização do usuário');
-
-    const interval = setInterval(() => {
-      const userData = localStorage.getItem('currentUser');
-      const newUserData = userData ? JSON.parse(userData) : null;
-      
-      if (newUserData?.id !== currentUserDataRef.current?.id) {
-        console.log('🔄 [useWhatsAppConversations] User data mudou, sincronizando...', {
-          oldUserId: currentUserDataRef.current?.id,
-          newUserId: newUserData?.id,
-          timestamp: new Date().toISOString()
-        });
-        currentUserDataRef.current = newUserData;
-        fetchConversations();
-      }
-    }, 1000);
-    
-    return () => {
-      console.log('🛑 [useWhatsAppConversations] Parando polling de sincronização');
-      clearInterval(interval);
-    };
-  }, [selectedWorkspace?.workspace_id]);
+    console.log('🔄 [useWhatsAppConversations] User data sincronizado no mount');
+  }, []); // ✅ SEM polling - roda apenas no mount
 
   const fetchConversations = async () => {
     const DEBUG_CONVERSATIONS = true; // Ativado para debug
@@ -570,25 +549,28 @@ export const useWhatsAppConversations = () => {
   }, []);
 
   // Real-time subscriptions and workspace dependency
+  const fetchedRef = useRef(false);
+  
+  useEffect(() => {
+    // Resetar flag quando workspace muda
+    fetchedRef.current = false;
+  }, [selectedWorkspace?.workspace_id]);
+  
   useEffect(() => {
     // Get current user from localStorage
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
-    if (currentUserData?.id && selectedWorkspace?.workspace_id) {
-      const DEBUG_CONVERSATIONS = false;
-      if (DEBUG_CONVERSATIONS) {
-        // Workspace changed - reloading conversations
-      }
+    if (currentUserData?.id && selectedWorkspace?.workspace_id && !fetchedRef.current) {
+      fetchedRef.current = true; // ✅ Marcar como chamado
+      
+      console.log('🔄 [useWhatsAppConversations] Workspace mudou, carregando conversas');
       
       // Forçar limpeza completa das conversas quando workspace muda
       setConversations([]);
       setLoading(true);
       
-      // Aguardar um pouco para garantir que o estado foi limpo antes de recarregar
-      setTimeout(() => {
-        fetchConversations();
-      }, 200);
+      fetchConversations();
     } else if (currentUserData?.id && !selectedWorkspace?.workspace_id) {
       // Awaiting workspace selection
       setLoading(true);

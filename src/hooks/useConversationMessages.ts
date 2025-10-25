@@ -83,16 +83,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, []);
 
   const loadInitial = useCallback(async (conversationId: string) => {
-    if (!selectedWorkspace?.workspace_id) return;
+    const workspaceId = selectedWorkspace?.workspace_id;
+    if (!workspaceId) return;
 
     console.log('🔄 [useConversationMessages] loadInitial chamado:', {
       conversationId,
-      workspaceId: selectedWorkspace.workspace_id,
+      workspaceId,
       timestamp: new Date().toISOString()
     });
 
     // Invalidar cache
-    const cacheKey = `${selectedWorkspace.workspace_id}:${conversationId}`;
+    const cacheKey = `${workspaceId}:${conversationId}`;
     cacheRef.current.delete(cacheKey);
 
     setLoading(true);
@@ -142,7 +143,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     } finally {
       setLoading(false);
     }
-  }, [selectedWorkspace?.workspace_id]); // ✅ SEM getHeaders e toast
+  }, []); // ✅ ESTÁVEL - lê selectedWorkspace dentro da função
 
   const loadMore = useCallback(async () => {
     if (!currentConversationId || !cursorBefore) return;
@@ -227,11 +228,13 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return newMessages;
     });
     
-    if (selectedWorkspace?.workspace_id && currentConversationId) {
-      const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
+    const workspaceId = selectedWorkspace?.workspace_id;
+    const convId = currentConversationId;
+    if (workspaceId && convId) {
+      const cacheKey = `${workspaceId}:${convId}`;
       cacheRef.current.delete(cacheKey);
     }
-  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+  }, []); // ✅ ESTÁVEL - lê variáveis dentro da função
 
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
     console.log('🔄 [useConversationMessages] updateMessage chamado:', {
@@ -252,15 +255,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       newMessages[messageIndex] = { ...oldMessage, ...updates };
 
       if (updates.id && updates.id !== messageId) {
-        if (selectedWorkspace?.workspace_id && currentConversationId) {
-          const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
+        const workspaceId = selectedWorkspace?.workspace_id;
+        const convId = currentConversationId;
+        if (workspaceId && convId) {
+          const cacheKey = `${workspaceId}:${convId}`;
           cacheRef.current.delete(cacheKey);
         }
       }
 
       return newMessages;
     });
-  }, [selectedWorkspace?.workspace_id, currentConversationId]);
+  }, []); // ✅ ESTÁVEL - lê variáveis dentro da função
 
   const removeMessage = useCallback((messageId: string) => {
     console.log('🗑️ [useConversationMessages] removeMessage chamado:', {
@@ -355,7 +360,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
       supabase.removeChannel(channel);
     };
-  }, [currentConversationId, selectedWorkspace?.workspace_id, addMessage, updateMessage]);
+  }, [currentConversationId, selectedWorkspace?.workspace_id]); // ✅ SEM addMessage e updateMessage
 
   return {
     messages,
