@@ -30,6 +30,7 @@ interface FormData {
   workspace_id: string;
   name: string;
   agent_type: string;
+  api_provider: string;
   api_key: string;
   model: string;
   system_instructions: string;
@@ -62,6 +63,7 @@ export function EditarAgenteModal({
     workspace_id: '',
     name: '',
     agent_type: 'conversational',
+    api_provider: 'openai',
     api_key: '',
     model: 'gpt-4o-mini',
     system_instructions: '',
@@ -187,6 +189,7 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
         workspace_id: data.workspace_id || '',
         name: data.name || '',
         agent_type: data.agent_type || 'conversational',
+        api_provider: data.api_provider || 'openai',
         api_key: data.api_key_encrypted || '',
         model: data.model || 'gpt-4o-mini',
         system_instructions: data.system_instructions || '',
@@ -330,6 +333,7 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
           workspace_id: formData.workspace_id,
           name: formData.name,
           agent_type: formData.agent_type,
+          api_provider: formData.api_provider,
           api_key_encrypted: formData.api_key,
           model: formData.model,
           system_instructions: formData.system_instructions,
