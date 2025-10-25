@@ -219,21 +219,21 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const actionText = `[Adicionar Tag: ${tagName} / ${tagId}]`;
+    const actionText = `[Adicionar Tag: ${tagName} / Id: ${tagId}]`;
     editorRef.current?.insertText(actionText);
     setShowTagSelector(false);
     setPendingActionType(null);
   };
 
   const handleQueueSelected = (queueId: string, queueName: string) => {
-    const actionText = `[Transferir Fila: ${queueName} / ${queueId}]`;
+    const actionText = `[Transferir Fila: ${queueName} / Id: ${queueId}]`;
     editorRef.current?.insertText(actionText);
     setShowQueueSelector(false);
     setPendingActionType(null);
   };
 
   const handleConnectionSelected = (connectionId: string, connectionName: string) => {
-    const actionText = `[Transferir Conexão: ${connectionName} / ${connectionId}]`;
+    const actionText = `[Transferir Conexão: ${connectionName} / Id: ${connectionId}]`;
     editorRef.current?.insertText(actionText);
     setShowConnectionSelector(false);
     setPendingActionType(null);
@@ -249,9 +249,9 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `[Criar Card CRM: TÍTULO_DO_CARD | Pipeline: ${pipelineName} / ${pipelineId} | Coluna: ${columnName} / ${columnId}]`;
+      actionText = `[Criar Card CRM: TÍTULO_DO_CARD | Pipeline: ${pipelineName} / Id: ${pipelineId} | Coluna: ${columnName} / Id: ${columnId}]`;
     } else {
-      actionText = `[Transferir para Coluna: ${columnName} / ${columnId} | Pipeline: ${pipelineName} / ${pipelineId}]`;
+      actionText = `[Transferir para Coluna: ${columnName} / Id: ${columnId} | Pipeline: ${pipelineName} / Id: ${pipelineId}]`;
     }
     
     editorRef.current?.insertText(actionText);
