@@ -1768,7 +1768,7 @@ export function WhatsAppChat({
                   
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-gray-900 text-base">
-                      {selectedConversation.contact.name}
+                      {selectedConversation.contact?.name}
                     </h3>
                     <div className="flex items-center gap-2">
                       <ContactTags contactId={selectedConversation.contact.id} isDarkMode={isDarkMode} onTagRemoved={() => {
@@ -1983,7 +1983,7 @@ export function WhatsAppChat({
             {replyingTo && (
               <ReplyPreview
                 message={replyingTo}
-                contactName={selectedConversation.contact.name}
+                contactName={selectedConversation.contact?.name || ''}
                 onCancel={() => setReplyingTo(null)}
               />
             )}
