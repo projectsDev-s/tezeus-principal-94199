@@ -72,11 +72,12 @@ async function getOrCreateConversation(
   workspaceId: string,
   instanceName: string
 ) {
-  // Buscar conversa ativa existente
+  // ✅ Buscar conversa ativa existente por contact_id + connection_id
+  // Isso garante que ao mudar connection_id, a conversa seja vinculada corretamente
   const { data: existing } = await supabase
     .from('conversations')
-    .select('id, contact_id, assigned_user_id')
-    .eq('contact_phone', phoneNumber)
+    .select('id, contact_id, assigned_user_id, connection_id')
+    .eq('contact_id', contactId)
     .eq('connection_id', connectionId)
     .eq('workspace_id', workspaceId)
     .eq('status', 'active')
@@ -85,12 +86,12 @@ async function getOrCreateConversation(
     .maybeSingle();
   
   if (existing) {
-    console.log(`✅ Found existing conversation: ${existing.id}`);
+    console.log(`✅ [ROUTING] Found conversation ${existing.id} for contact ${contactId} on connection ${connectionId}`);
     return existing;
   }
   
   // Criar nova conversa se não existir
-  console.log(`🆕 Creating new conversation for contact ${contactId}`);
+  console.log(`🆕 [ROUTING] Creating new conversation for contact ${contactId} on connection ${connectionId}`);
   const { data: newConv, error } = await supabase
     .from('conversations')
     .insert({
@@ -102,7 +103,7 @@ async function getOrCreateConversation(
       status: 'active',
       last_message_at: new Date().toISOString()
     })
-    .select('id, contact_id, assigned_user_id')
+    .select('id, contact_id, assigned_user_id, connection_id')
     .single();
   
   if (error) {
