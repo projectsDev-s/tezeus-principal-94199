@@ -200,7 +200,8 @@ serve(async (req) => {
           assigned_user_id: selectedUserId,
           assigned_at: new Date().toISOString(),
           queue_id: queue.id,
-          status: 'open'
+          status: 'open',
+          agente_ativo: queue.ai_agent_id ? true : false  // ✅ ATIVAR AGENTE SE EXISTIR
         })
         .eq('id', conversation_id);
 

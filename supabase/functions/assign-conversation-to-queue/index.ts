@@ -74,7 +74,7 @@ serve(async (req) => {
     // 3️⃣ Buscar configurações da fila
     const { data: queue, error: queueError } = await supabase
       .from('queues')
-      .select('id, name, distribution_type, last_assigned_user_index, workspace_id')
+      .select('id, name, distribution_type, last_assigned_user_index, workspace_id, ai_agent_id')
       .eq('id', targetQueueId)
       .eq('is_active', true)
       .single();
@@ -179,7 +179,8 @@ serve(async (req) => {
       .update({
         assigned_user_id: selectedUserId,
         assigned_at: new Date().toISOString(),
-        queue_id: targetQueueId
+        queue_id: targetQueueId,
+        agente_ativo: queue.ai_agent_id ? true : false  // ✅ ATIVAR AGENTE SE EXISTIR
       })
       .eq('id', conversation_id);
 

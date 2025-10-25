@@ -111,6 +111,32 @@ async function getOrCreateConversation(
   }
   
   console.log(`✅ New conversation created: ${newConv.id}`);
+  
+  // 🎯 DISTRIBUIÇÃO AUTOMÁTICA: Se é uma conversa NOVA, distribuir para fila
+  if (newConv && connectionId) {
+    console.log(`🎯 Nova conversa criada - iniciando distribuição automática`);
+    
+    try {
+      const { data: distResult, error: distError } = await supabase.functions.invoke(
+        'assign-conversation-to-queue',
+        {
+          body: {
+            conversation_id: newConv.id,
+            queue_id: null  // Auto-detectar da conexão
+          }
+        }
+      );
+      
+      if (distError) {
+        console.error(`❌ Erro ao distribuir automaticamente:`, distError);
+      } else {
+        console.log(`✅ Distribuição automática concluída:`, distResult);
+      }
+    } catch (distException) {
+      console.error(`❌ Exceção ao distribuir:`, distException);
+    }
+  }
+  
   return newConv;
 }
 
