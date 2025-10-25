@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface ActionMatch {
-  type: 'add_tag' | 'transfer_queue' | 'create_crm_card' | 'save_info' | 'transfer_connection';
+  type: 'inserir-tag' | 'transferir-fila' | 'transferir-conexao' | 'criar-card' | 'transferir-coluna' | 'info-adicionais';
   params: any;
   fullMatch: string;
 }
@@ -37,74 +37,90 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Regex patterns para cada tipo de ação
+    // Regex patterns para detectar ações no novo formato
     const patterns = {
-      add_tag: /\[Adicionar Tag: ([^\]]+)\]/g,
-      transfer_queue: /\[Transferir Fila: ([^\]]+)\]/g,
-      transfer_connection: /\[Transferir Conexão: ([^\]]+)\]/g,
-      create_crm_card: /\[Criar Card CRM: ([^\|]+)\|([^\]]+)\]/g,
-      save_info: /\[Salvar Info: ([^=]+)=([^\]]+)\]/g,
+      inserir_tag: /\[ENVIE PARA O TOOL `inserir-tag` \(METODO POST\) o id: ([a-f0-9-]+)\]/gi,
+      transferir_fila: /\[ENVIE PARA O TOOL `transferir-fila` \(METODO POST\) o id: ([a-f0-9-]+)\]/gi,
+      transferir_conexao: /\[ENVIE PARA O TOOL `transferir-conexao` \(METODO POST\) o id: ([a-f0-9-]+)\]/gi,
+      criar_card: /\[ENVIE PARA O TOOL `criar-card` \(METODO POST\) o pipeline_id: ([a-f0-9-]+) e a coluna_id: ([a-f0-9-]+)(?:\s+com o title (.+?))?\]/gi,
+      transferir_coluna: /\[ENVIE PARA O TOOL `transferir-coluna` \(METODO POST\) (?:o pipeline_id: ([a-f0-9-]+) e a coluna_id: ([a-f0-9-]+)|movendo o card atual para a coluna_id: ([a-f0-9-]+) dentro do pipeline_id: ([a-f0-9-]+))\]/gi,
+      info_adicionais: /\[ENVIE PARA O TOOL `info-adicionais` \(METODO POST\) o id: ([a-f0-9-]+) e o valor (.+?)\]/gi,
     };
 
     const actions: ActionMatch[] = [];
     let cleanText = agentResponse;
 
-    // Detectar: [Adicionar Tag: Nome da Tag]
+    // Detectar: [ENVIE PARA O TOOL `inserir-tag` (METODO POST) o id: ID_DA_TAG]
     let match;
-    while ((match = patterns.add_tag.exec(agentResponse)) !== null) {
-      const tagName = match[1].trim();
+    while ((match = patterns.inserir_tag.exec(agentResponse)) !== null) {
+      const tagId = match[1].trim();
       actions.push({
-        type: 'add_tag',
-        params: { tagName },
+        type: 'inserir-tag',
+        params: { id: tagId },
         fullMatch: match[0]
       });
-      console.log('📌 Ação detectada: Adicionar Tag ->', tagName);
+      console.log('📌 Ação detectada: Inserir Tag ->', tagId);
     }
 
-    // Detectar: [Transferir Fila: Nome da Fila]
-    while ((match = patterns.transfer_queue.exec(agentResponse)) !== null) {
-      const queueName = match[1].trim();
+    // Detectar: [ENVIE PARA O TOOL `transferir-fila` (METODO POST) o id: ID_DA_FILA]
+    while ((match = patterns.transferir_fila.exec(agentResponse)) !== null) {
+      const queueId = match[1].trim();
       actions.push({
-        type: 'transfer_queue',
-        params: { queueName },
+        type: 'transferir-fila',
+        params: { id: queueId },
         fullMatch: match[0]
       });
-      console.log('🔀 Ação detectada: Transferir Fila ->', queueName);
+      console.log('🔀 Ação detectada: Transferir Fila ->', queueId);
     }
 
-    // Detectar: [Transferir Conexão: Nome da Conexão]
-    while ((match = patterns.transfer_connection.exec(agentResponse)) !== null) {
-      const connectionName = match[1].trim();
+    // Detectar: [ENVIE PARA O TOOL `transferir-conexao` (METODO POST) o id: ID_DA_CONEXAO]
+    while ((match = patterns.transferir_conexao.exec(agentResponse)) !== null) {
+      const connectionId = match[1].trim();
       actions.push({
-        type: 'transfer_connection',
-        params: { connectionName },
+        type: 'transferir-conexao',
+        params: { id: connectionId },
         fullMatch: match[0]
       });
-      console.log('🔀 Ação detectada: Transferir Conexão ->', connectionName);
+      console.log('🔀 Ação detectada: Transferir Conexão ->', connectionId);
     }
 
-    // Detectar: [Criar Card CRM: Pipeline | Coluna]
-    while ((match = patterns.create_crm_card.exec(agentResponse)) !== null) {
-      const pipelineName = match[1].trim();
-      const columnName = match[2].trim();
+    // Detectar: [ENVIE PARA O TOOL `criar-card` (METODO POST) o pipeline_id: ID_DO_PIPELINE e a coluna_id: ID_DA_COLUNA]
+    while ((match = patterns.criar_card.exec(agentResponse)) !== null) {
+      const pipelineId = match[1].trim();
+      const colunaId = match[2].trim();
+      const title = match[3] ? match[3].trim() : 'Novo Card';
       actions.push({
-        type: 'create_crm_card',
-        params: { pipelineName, columnName },
+        type: 'criar-card',
+        params: { pipeline_id: pipelineId, coluna_id: colunaId, title },
         fullMatch: match[0]
       });
-      console.log('📋 Ação detectada: Criar Card CRM ->', pipelineName, '|', columnName);
+      console.log('📋 Ação detectada: Criar Card CRM ->', pipelineId, colunaId, title);
     }
 
-    // Detectar: [Salvar Info: chave=valor]
-    while ((match = patterns.save_info.exec(agentResponse)) !== null) {
-      const key = match[1].trim();
+    // Detectar: [ENVIE PARA O TOOL `transferir-coluna` (METODO POST) ...]
+    while ((match = patterns.transferir_coluna.exec(agentResponse)) !== null) {
+      const pipelineId = match[1] || match[4];
+      const colunaId = match[2] || match[3];
+      if (pipelineId && colunaId) {
+        actions.push({
+          type: 'transferir-coluna',
+          params: { pipeline_id: pipelineId.trim(), coluna_id: colunaId.trim() },
+          fullMatch: match[0]
+        });
+        console.log('↔️ Ação detectada: Transferir Coluna ->', pipelineId, colunaId);
+      }
+    }
+
+    // Detectar: [ENVIE PARA O TOOL `info-adicionais` (METODO POST) o id: ID_DA_INFO e o valor ...]
+    while ((match = patterns.info_adicionais.exec(agentResponse)) !== null) {
+      const infoId = match[1].trim();
       const value = match[2].trim();
       actions.push({
-        type: 'save_info',
-        params: { key, value },
+        type: 'info-adicionais',
+        params: { id: infoId, value },
         fullMatch: match[0]
       });
-      console.log('💾 Ação detectada: Salvar Info ->', key, '=', value);
+      console.log('💾 Ação detectada: Info Adicionais ->', infoId, value);
     }
 
     // Executar todas as ações

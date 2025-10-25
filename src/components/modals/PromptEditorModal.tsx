@@ -219,21 +219,21 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const actionText = `{"tool": "inserir-tag", "id": "${tagId}"}`;
+    const actionText = `\n[ENVIE PARA O TOOL \`inserir-tag\` (METODO POST) o id: ${tagId}]\n`;
     editorRef.current?.insertText(actionText);
     setShowTagSelector(false);
     setPendingActionType(null);
   };
 
   const handleQueueSelected = (queueId: string, queueName: string) => {
-    const actionText = `{"tool": "transferir-fila", "id": "${queueId}"}`;
+    const actionText = `\n[ENVIE PARA O TOOL \`transferir-fila\` (METODO POST) o id: ${queueId}]\n`;
     editorRef.current?.insertText(actionText);
     setShowQueueSelector(false);
     setPendingActionType(null);
   };
 
   const handleConnectionSelected = (connectionId: string, connectionName: string) => {
-    const actionText = `{"tool": "transferir-conexao", "id": "${connectionId}"}`;
+    const actionText = `\n[ENVIE PARA O TOOL \`transferir-conexao\` (METODO POST) o id: ${connectionId}]\n`;
     editorRef.current?.insertText(actionText);
     setShowConnectionSelector(false);
     setPendingActionType(null);
@@ -249,9 +249,9 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `{"tool": "criar-card", "pipeline_id": "${pipelineId}", "coluna_id": "${columnId}"}`;
+      actionText = `\n[ENVIE PARA O TOOL \`criar-card\` (METODO POST) o pipeline_id: ${pipelineId} e a coluna_id: ${columnId}]\n`;
     } else {
-      actionText = `{"tool": "transferir-coluna", "pipeline_id": "${pipelineId}", "coluna_id": "${columnId}"}`;
+      actionText = `\n[ENVIE PARA O TOOL \`transferir-coluna\` (METODO POST) o pipeline_id: ${pipelineId} e a coluna_id: ${columnId}]\n`;
     }
     
     editorRef.current?.insertText(actionText);
