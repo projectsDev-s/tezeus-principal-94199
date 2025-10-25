@@ -397,10 +397,66 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                  <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
-                  <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                  <SelectItem value="gpt-4.1-mini">gpt-4.1-mini</SelectItem>
+                  <SelectItem value="gpt-3.5-turbo">gpt-3.5-turbo</SelectItem>
+                  <SelectItem value="gpt-3.5-turbo-0125">gpt-3.5-turbo-0125</SelectItem>
+                  <SelectItem value="gpt-3.5-turbo-1106">gpt-3.5-turbo-1106</SelectItem>
+                  <SelectItem value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</SelectItem>
+                  <SelectItem value="gpt-4.1">gpt-4.1</SelectItem>
+                  <SelectItem value="gpt-4.1-2025-04-14">gpt-4.1-2025-04-14</SelectItem>
+                  <SelectItem value="gpt-4.1-mini-2025-04-14">gpt-4.1-mini-2025-04-14</SelectItem>
+                  <SelectItem value="gpt-4.1-nano">gpt-4.1-nano</SelectItem>
+                  <SelectItem value="gpt-4.1-nano-2025-04-14">gpt-4.1-nano-2025-04-14</SelectItem>
+                  <SelectItem value="gpt-4o">gpt-4o</SelectItem>
+                  <SelectItem value="gpt-4o-2024-05-13">gpt-4o-2024-05-13</SelectItem>
+                  <SelectItem value="gpt-4o-2024-08-06">gpt-4o-2024-08-06</SelectItem>
+                  <SelectItem value="gpt-4o-2024-11-20">gpt-4o-2024-11-20</SelectItem>
+                  <SelectItem value="gpt-4o-audio-preview">gpt-4o-audio-preview</SelectItem>
+                  <SelectItem value="gpt-4o-audio-preview-2024-10-01">gpt-4o-audio-preview-2024-10-01</SelectItem>
+                  <SelectItem value="gpt-4o-audio-preview-2024-12-17">gpt-4o-audio-preview-2024-12-17</SelectItem>
+                  <SelectItem value="gpt-4o-audio-preview-2025-06-03">gpt-4o-audio-preview-2025-06-03</SelectItem>
+                  <SelectItem value="gpt-4o-mini">gpt-4o-mini</SelectItem>
+                  <SelectItem value="gpt-4o-mini-2024-07-18">gpt-4o-mini-2024-07-18</SelectItem>
+                  <SelectItem value="gpt-4o-mini-audio-preview">gpt-4o-mini-audio-preview</SelectItem>
+                  <SelectItem value="gpt-4o-mini-audio-preview-2024-12-17">gpt-4o-mini-audio-preview-2024-12-17</SelectItem>
+                  <SelectItem value="gpt-4o-mini-search-preview">gpt-4o-mini-search-preview</SelectItem>
+                  <SelectItem value="gpt-4o-mini-search-preview-2025-03-11">gpt-4o-mini-search-preview-2025-03-11</SelectItem>
+                  <SelectItem value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe</SelectItem>
+                  <SelectItem value="gpt-4o-mini-tts">gpt-4o-mini-tts</SelectItem>
+                  <SelectItem value="gpt-4o-search-preview">gpt-4o-search-preview</SelectItem>
+                  <SelectItem value="gpt-4o-search-preview-2025-03-11">gpt-4o-search-preview-2025-03-11</SelectItem>
+                  <SelectItem value="gpt-4o-transcribe">gpt-4o-transcribe</SelectItem>
+                  <SelectItem value="gpt-4o-transcribe-diarize">gpt-4o-transcribe-diarize</SelectItem>
+                  <SelectItem value="gpt-5">gpt-5</SelectItem>
+                  <SelectItem value="gpt-5-2025-08-07">gpt-5-2025-08-07</SelectItem>
+                  <SelectItem value="gpt-5-chat-latest">gpt-5-chat-latest</SelectItem>
+                  <SelectItem value="gpt-5-codex">gpt-5-codex</SelectItem>
+                  <SelectItem value="gpt-5-mini">gpt-5-mini</SelectItem>
+                  <SelectItem value="gpt-5-mini-2025-08-07">gpt-5-mini-2025-08-07</SelectItem>
+                  <SelectItem value="gpt-5-nano">gpt-5-nano</SelectItem>
+                  <SelectItem value="gpt-5-nano-2025-08-07">gpt-5-nano-2025-08-07</SelectItem>
+                  <SelectItem value="gpt-5-pro">gpt-5-pro</SelectItem>
+                  <SelectItem value="gpt-5-pro-2025-10-06">gpt-5-pro-2025-10-06</SelectItem>
+                  <SelectItem value="gpt-5-search-api">gpt-5-search-api</SelectItem>
+                  <SelectItem value="gpt-5-search-api-2025-10-14">gpt-5-search-api-2025-10-14</SelectItem>
+                  <SelectItem value="gpt-audio">gpt-audio</SelectItem>
+                  <SelectItem value="gpt-audio-2025-08-28">gpt-audio-2025-08-28</SelectItem>
+                  <SelectItem value="gpt-audio-mini">gpt-audio-mini</SelectItem>
+                  <SelectItem value="gpt-audio-mini-2025-10-06">gpt-audio-mini-2025-10-06</SelectItem>
+                  <SelectItem value="gpt-image-1">gpt-image-1</SelectItem>
+                  <SelectItem value="gpt-image-1-mini">gpt-image-1-mini</SelectItem>
+                  <SelectItem value="o1">o1</SelectItem>
+                  <SelectItem value="o1-2024-12-17">o1-2024-12-17</SelectItem>
+                  <SelectItem value="o1-mini">o1-mini</SelectItem>
+                  <SelectItem value="o1-mini-2024-09-12">o1-mini-2024-09-12</SelectItem>
+                  <SelectItem value="o3">o3</SelectItem>
+                  <SelectItem value="o3-2025-04-16">o3-2025-04-16</SelectItem>
+                  <SelectItem value="o3-mini">o3-mini</SelectItem>
+                  <SelectItem value="o3-mini-2025-01-31">o3-mini-2025-01-31</SelectItem>
+                  <SelectItem value="o4-mini">o4-mini</SelectItem>
+                  <SelectItem value="o4-mini-2025-04-16">o4-mini-2025-04-16</SelectItem>
+                  <SelectItem value="sora-2">sora-2</SelectItem>
+                  <SelectItem value="sora-2-pro">sora-2-pro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
