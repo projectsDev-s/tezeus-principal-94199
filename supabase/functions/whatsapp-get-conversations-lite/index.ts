@@ -161,7 +161,7 @@ serve(async (req) => {
     console.log('👤 USER FILTER:', userProfile !== 'master' && userProfile !== 'admin' ? `assigned_user_id = ${systemUserId} OR assigned_user_id IS NULL` : 'NONE (master/admin)');
 
     query = query
-      .order('last_activity_at', { ascending: false, nullsFirst: false })
+      .order('last_activity_at', { ascending: false, nullsFirst: true })
       .order('id', { ascending: false })
       .limit(limit);
 
