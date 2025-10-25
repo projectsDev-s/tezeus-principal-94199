@@ -140,6 +140,8 @@ export function WhatsAppChat({
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   // Log do estado do agente após selectedConversation estar disponível
   useEffect(() => {
@@ -723,11 +725,15 @@ export function WhatsAppChat({
     setSelectionMode(false);
     setSelectedMessages(new Set());
 
+    // Resetar estados de scroll
+    isInitialLoadRef.current = true;
+    setShouldAutoScroll(true);
+    setIsAtBottom(true);
+
     // ✅ CRÍTICO: Carregar mensagens APENAS se ainda não foram carregadas
     if (!loadedConversationsRef.current.has(conversation.id)) {
       console.log('📥 [handleSelectConversation] Carregando mensagens pela primeira vez:', conversation.id);
       clearMessages(); // Limpar mensagens da conversa anterior
-      isInitialLoadRef.current = true; // Marcar como carregamento inicial
       await loadMessages(conversation.id);
       loadedConversationsRef.current.add(conversation.id); // Marcar como carregada
     } else {
@@ -1257,6 +1263,23 @@ export function WhatsAppChat({
     }, 100);
   };
 
+  // Detectar se o usuário está no final do chat
+  const handleScroll = useCallback((event: React.UIEvent<HTMLElement>) => {
+    const element = event.currentTarget;
+    const threshold = 100; // pixels de tolerância
+    const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+    
+    setIsAtBottom(isNearBottom);
+    setShouldAutoScroll(isNearBottom);
+    
+    console.log('📜 Posição do scroll:', {
+      isNearBottom,
+      scrollTop: element.scrollTop,
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight
+    });
+  }, []);
+
   // Efeito para selecionar conversa via notificação
   useEffect(() => {
     if (selectedConversationId && conversations.length > 0) {
@@ -1267,23 +1290,33 @@ export function WhatsAppChat({
     }
   }, [selectedConversationId, conversations]);
 
-  // ✅ Scroll para última mensagem APENAS no carregamento inicial da conversa
+  // ✅ Scroll inteligente para última mensagem
   useEffect(() => {
     if (!selectedConversation || messages.length === 0) return;
     
-    // Scroll apenas se for carregamento inicial
+    // Sempre fazer scroll no carregamento inicial da conversa
     if (isInitialLoadRef.current) {
       const timer = setTimeout(() => {
         if (messagesEndRef.current) {
-          console.log('📜 Fazendo scroll inicial para última mensagem');
+          console.log('📜 Scroll inicial para última mensagem');
           messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
           isInitialLoadRef.current = false;
         }
       }, 150);
-      
       return () => clearTimeout(timer);
     }
-  }, [selectedConversation?.id, messages.length]);
+    
+    // Auto-scroll APENAS se o usuário estava no final do chat
+    if (shouldAutoScroll) {
+      const timer = setTimeout(() => {
+        if (messagesEndRef.current) {
+          console.log('📜 Auto-scroll para nova mensagem');
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedConversation?.id, messages.length, shouldAutoScroll]);
 
 
   // ✅ CORREÇÃO: Listener ESC para voltar da conversa
@@ -1839,14 +1872,18 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-        <ScrollArea className="flex-1 h-0 px-4 py-2" ref={node => {
-          if (node) {
-            const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
-            if (scrollContainer) {
-              messagesScrollRef.current = scrollContainer as HTMLElement;
+        <ScrollArea 
+          className="flex-1 h-0 px-4 py-2" 
+          ref={node => {
+            if (node) {
+              const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
+              if (scrollContainer) {
+                messagesScrollRef.current = scrollContainer as HTMLElement;
+              }
             }
-          }
-        }}>
+          }}
+          onScroll={handleScroll}
+        >
               {/* Botão Carregar Mais Mensagens */}
               {hasMore && !loadingMore && messages.length > 0 && (
                 <div className="flex justify-center py-3">
