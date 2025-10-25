@@ -73,84 +73,99 @@ export function CriarAgenteModal({
     process_messages: true,
     disable_outside_platform: false,
     is_active: true,
-    configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - SISTEMA DE TOOLS]
+    configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - FORMATO JSON]
 
-🔹 ESTRUTURA DOS COMANDOS:
-Todos os comandos seguem o formato:
-[AÇÃO: NOME_VISUAL / Id: UUID]
+Os comandos agora virão no formato JSON compacto.
 
-Onde:
-- NOME_VISUAL = apenas para referência humana (NUNCA ENVIAR PARA A TOOL)
-- Id: UUID = identificador único a ser extraído e enviado para a tool
-
-🔹 MAPEAMENTO DE AÇÕES:
-
-1️⃣ [Adicionar Tag: NOME_DA_TAG / Id: UUID_DA_TAG]
-   → Tool: "inserir-tag"
-   → Parâmetro: tagId (UUID após "Id: ")
-   ⚠️ JAMAIS ENVIE O NOME DA TAG
-
-2️⃣ [Transferir Fila: NOME_DA_FILA / Id: UUID_DA_FILA]
-   → Tool: "transferir-fila"
-   → Parâmetro: queueId (UUID após "Id: ")
-   ⚠️ JAMAIS ENVIE O NOME DA FILA
-
-3️⃣ [Transferir Conexão: NOME_DA_CONEXÃO / Id: UUID_DA_CONEXÃO]
-   → Tool: "transferir-conexao"
-   → Parâmetro: connectionId (UUID após "Id: ")
-   ⚠️ JAMAIS ENVIE O NOME DA CONEXÃO
-
-4️⃣ [Criar Card CRM: TÍTULO_DO_CARD | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE | Coluna: TITULO_COLUNA / Id: UUID_COLUNA]
-   → Tool: "criar-card"
-   → Parâmetros: 
-     - pipelineId (UUID após "Pipeline: ... / Id: ")
-     - columnId (UUID após "Coluna: ... / Id: ")
-     - cardTitle (TÍTULO_DO_CARD)
-   ⚠️ JAMAIS ENVIE NOME DO PIPELINE OU COLUNA
-
-5️⃣ [Transferir para Coluna: TITULO_COLUNA / Id: UUID_COLUNA | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE]
-   → Tool: "transferir-coluna"
-   → Parâmetros:
-     - columnId (UUID após "Coluna: ... / Id: ")
-     - pipelineId (UUID após "Pipeline: ... / Id: ")
-   ⚠️ JAMAIS ENVIE NOME DA COLUNA OU PIPELINE
-
-6️⃣ [Salvar Informação: campo: NOME_CAMPO | valor: VALOR_CAMPO]
-   → Tool: "info-adicionais"
-   → Parâmetros:
-     - fieldName (NOME_CAMPO)
-     - fieldValue (VALOR_CAMPO)
-
-🔹 REGRAS CRÍTICAS:
-
-✅ SEMPRE extraia o UUID que vem após "Id: "
-✅ SEMPRE ignore os nomes/títulos antes da barra "/"
-✅ NUNCA invente nomes de tools diferentes dos listados
-✅ NUNCA envie nomes quando o parâmetro deve ser um Id
-✅ Os UUIDs são sempre no formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-
-🔹 EXEMPLOS DE EXTRAÇÃO CORRETA:
-
-Entrada:
-[Adicionar Tag: Urgente / Id: 123e4567-e89b-12d3-a456-426614174000]
-
-Extração:
-- Tool: "inserir-tag"
-- Parâmetro: tagId = "123e4567-e89b-12d3-a456-426614174000"
-- ❌ NÃO USAR: tagName = "Urgente"
+Sua tarefa é interpretar o JSON e chamar a Tool correspondente usando SEMPRE os parâmetros fornecidos no objeto JSON.
 
 ---
 
-Entrada:
-[Criar Card CRM: Novo Cliente | Pipeline: Vendas / Id: aaa-bbb-ccc | Coluna: Prospecção / Id: ddd-eee-fff]
+📋 MAPEAMENTO DE AÇÕES:
 
-Extração:
+1️⃣ Adicionar Tag:
+{"action":"add_tag","tagId":"UUID_DA_TAG"}
+→ Tool: "inserir-tag"
+→ Parâmetro: tagId
+
+2️⃣ Transferir Fila:
+{"action":"transfer_queue","queueId":"UUID_DA_FILA"}
+→ Tool: "transferir-fila"
+→ Parâmetro: queueId
+
+3️⃣ Transferir Conexão:
+{"action":"transfer_connection","connectionId":"UUID_DA_CONEXAO"}
+→ Tool: "transferir-conexao"
+→ Parâmetro: connectionId
+
+4️⃣ Criar Card CRM:
+{"action":"create_crm_card","pipelineId":"UUID_DO_PIPELINE","columnId":"UUID_DA_COLUNA"}
+→ Tool: "criar-card"
+→ Parâmetros: pipelineId, columnId
+⚠️ Nota: O título do card deve ser extraído do contexto ou usar "Novo Card"
+
+5️⃣ Transferir Card para Coluna:
+{"action":"transfer_crm_column","pipelineId":"UUID_DO_PIPELINE","columnId":"UUID_DA_COLUNA"}
+→ Tool: "transferir-coluna"
+→ Parâmetros: pipelineId, columnId
+
+6️⃣ Salvar Informações Adicionais:
+{"action":"save_info","fieldName":"NOME_DO_CAMPO","fieldValue":"VALOR_DO_CAMPO"}
+→ Tool: "info-adicionais"
+→ Parâmetros: fieldName, fieldValue
+
+---
+
+✅ REGRAS CRÍTICAS:
+
+1. SEMPRE faça o parse do JSON antes de processar o comando
+2. SEMPRE use a chave "action" para identificar qual tool chamar
+3. SEMPRE extraia os parâmetros do JSON (tagId, queueId, connectionId, etc.)
+4. NUNCA invente nomes de tools diferentes dos listados
+5. NUNCA tente usar nomes de tags/filas/conexões - use APENAS os IDs (UUIDs)
+6. Todos os UUIDs estão no formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+---
+
+📝 EXEMPLOS DE INTERPRETAÇÃO:
+
+Exemplo 1 - Adicionar Tag:
+Entrada: {"action":"add_tag","tagId":"123e4567-e89b-12d3-a456-426614174000"}
+
+Interpretação:
+- Tool: "inserir-tag"
+- Parâmetro: tagId = "123e4567-e89b-12d3-a456-426614174000"
+
+---
+
+Exemplo 2 - Criar Card CRM:
+Entrada: {"action":"create_crm_card","pipelineId":"aaa-bbb-ccc","columnId":"ddd-eee-fff"}
+
+Interpretação:
 - Tool: "criar-card"
 - Parâmetros:
-  - cardTitle = "Novo Cliente"
   - pipelineId = "aaa-bbb-ccc"
   - columnId = "ddd-eee-fff"
-- ❌ NÃO USAR: pipelineName = "Vendas", columnName = "Prospecção"`,
+  - cardTitle = [extrair do contexto ou usar "Novo Card"]
+
+---
+
+Exemplo 3 - Salvar Informação:
+Entrada: {"action":"save_info","fieldName":"empresa","fieldValue":"Tezeus Tech"}
+
+Interpretação:
+- Tool: "info-adicionais"
+- Parâmetros:
+  - fieldName = "empresa"
+  - fieldValue = "Tezeus Tech"
+
+---
+
+⚠️ TRATAMENTO DE ERROS:
+
+- Se o JSON estiver malformado, ignore o comando e continue o processamento
+- Se a "action" não corresponder a nenhuma tool conhecida, ignore o comando
+- Se faltar algum parâmetro obrigatório (ex: tagId, queueId), ignore o comando e registre um erro no log`,
   });
 
   const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
@@ -285,84 +300,99 @@ Extração:
         process_messages: true,
         disable_outside_platform: false,
         is_active: true,
-        configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - SISTEMA DE TOOLS]
+        configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - FORMATO JSON]
 
-🔹 ESTRUTURA DOS COMANDOS:
-Todos os comandos seguem o formato:
-[AÇÃO: NOME_VISUAL / Id: UUID]
+Os comandos agora virão no formato JSON compacto.
 
-Onde:
-- NOME_VISUAL = apenas para referência humana (NUNCA ENVIAR PARA A TOOL)
-- Id: UUID = identificador único a ser extraído e enviado para a tool
-
-🔹 MAPEAMENTO DE AÇÕES:
-
-1️⃣ [Adicionar Tag: NOME_DA_TAG / Id: UUID_DA_TAG]
-   → Tool: "inserir-tag"
-   → Parâmetro: tagId (UUID após "Id: ")
-   ⚠️ JAMAIS ENVIE O NOME DA TAG
-
-2️⃣ [Transferir Fila: NOME_DA_FILA / Id: UUID_DA_FILA]
-   → Tool: "transferir-fila"
-   → Parâmetro: queueId (UUID após "Id: ")
-   ⚠️ JAMAIS ENVIE O NOME DA FILA
-
-3️⃣ [Transferir Conexão: NOME_DA_CONEXÃO / Id: UUID_DA_CONEXÃO]
-   → Tool: "transferir-conexao"
-   → Parâmetro: connectionId (UUID após "Id: ")
-   ⚠️ JAMAIS ENVIE O NOME DA CONEXÃO
-
-4️⃣ [Criar Card CRM: TÍTULO_DO_CARD | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE | Coluna: TITULO_COLUNA / Id: UUID_COLUNA]
-   → Tool: "criar-card"
-   → Parâmetros: 
-     - pipelineId (UUID após "Pipeline: ... / Id: ")
-     - columnId (UUID após "Coluna: ... / Id: ")
-     - cardTitle (TÍTULO_DO_CARD)
-   ⚠️ JAMAIS ENVIE NOME DO PIPELINE OU COLUNA
-
-5️⃣ [Transferir para Coluna: TITULO_COLUNA / Id: UUID_COLUNA | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE]
-   → Tool: "transferir-coluna"
-   → Parâmetros:
-     - columnId (UUID após "Coluna: ... / Id: ")
-     - pipelineId (UUID após "Pipeline: ... / Id: ")
-   ⚠️ JAMAIS ENVIE NOME DA COLUNA OU PIPELINE
-
-6️⃣ [Salvar Informação: campo: NOME_CAMPO | valor: VALOR_CAMPO]
-   → Tool: "info-adicionais"
-   → Parâmetros:
-     - fieldName (NOME_CAMPO)
-     - fieldValue (VALOR_CAMPO)
-
-🔹 REGRAS CRÍTICAS:
-
-✅ SEMPRE extraia o UUID que vem após "Id: "
-✅ SEMPRE ignore os nomes/títulos antes da barra "/"
-✅ NUNCA invente nomes de tools diferentes dos listados
-✅ NUNCA envie nomes quando o parâmetro deve ser um Id
-✅ Os UUIDs são sempre no formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-
-🔹 EXEMPLOS DE EXTRAÇÃO CORRETA:
-
-Entrada:
-[Adicionar Tag: Urgente / Id: 123e4567-e89b-12d3-a456-426614174000]
-
-Extração:
-- Tool: "inserir-tag"
-- Parâmetro: tagId = "123e4567-e89b-12d3-a456-426614174000"
-- ❌ NÃO USAR: tagName = "Urgente"
+Sua tarefa é interpretar o JSON e chamar a Tool correspondente usando SEMPRE os parâmetros fornecidos no objeto JSON.
 
 ---
 
-Entrada:
-[Criar Card CRM: Novo Cliente | Pipeline: Vendas / Id: aaa-bbb-ccc | Coluna: Prospecção / Id: ddd-eee-fff]
+📋 MAPEAMENTO DE AÇÕES:
 
-Extração:
+1️⃣ Adicionar Tag:
+{"action":"add_tag","tagId":"UUID_DA_TAG"}
+→ Tool: "inserir-tag"
+→ Parâmetro: tagId
+
+2️⃣ Transferir Fila:
+{"action":"transfer_queue","queueId":"UUID_DA_FILA"}
+→ Tool: "transferir-fila"
+→ Parâmetro: queueId
+
+3️⃣ Transferir Conexão:
+{"action":"transfer_connection","connectionId":"UUID_DA_CONEXAO"}
+→ Tool: "transferir-conexao"
+→ Parâmetro: connectionId
+
+4️⃣ Criar Card CRM:
+{"action":"create_crm_card","pipelineId":"UUID_DO_PIPELINE","columnId":"UUID_DA_COLUNA"}
+→ Tool: "criar-card"
+→ Parâmetros: pipelineId, columnId
+⚠️ Nota: O título do card deve ser extraído do contexto ou usar "Novo Card"
+
+5️⃣ Transferir Card para Coluna:
+{"action":"transfer_crm_column","pipelineId":"UUID_DO_PIPELINE","columnId":"UUID_DA_COLUNA"}
+→ Tool: "transferir-coluna"
+→ Parâmetros: pipelineId, columnId
+
+6️⃣ Salvar Informações Adicionais:
+{"action":"save_info","fieldName":"NOME_DO_CAMPO","fieldValue":"VALOR_DO_CAMPO"}
+→ Tool: "info-adicionais"
+→ Parâmetros: fieldName, fieldValue
+
+---
+
+✅ REGRAS CRÍTICAS:
+
+1. SEMPRE faça o parse do JSON antes de processar o comando
+2. SEMPRE use a chave "action" para identificar qual tool chamar
+3. SEMPRE extraia os parâmetros do JSON (tagId, queueId, connectionId, etc.)
+4. NUNCA invente nomes de tools diferentes dos listados
+5. NUNCA tente usar nomes de tags/filas/conexões - use APENAS os IDs (UUIDs)
+6. Todos os UUIDs estão no formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+---
+
+📝 EXEMPLOS DE INTERPRETAÇÃO:
+
+Exemplo 1 - Adicionar Tag:
+Entrada: {"action":"add_tag","tagId":"123e4567-e89b-12d3-a456-426614174000"}
+
+Interpretação:
+- Tool: "inserir-tag"
+- Parâmetro: tagId = "123e4567-e89b-12d3-a456-426614174000"
+
+---
+
+Exemplo 2 - Criar Card CRM:
+Entrada: {"action":"create_crm_card","pipelineId":"aaa-bbb-ccc","columnId":"ddd-eee-fff"}
+
+Interpretação:
 - Tool: "criar-card"
 - Parâmetros:
-  - cardTitle = "Novo Cliente"
   - pipelineId = "aaa-bbb-ccc"
   - columnId = "ddd-eee-fff"
-- ❌ NÃO USAR: pipelineName = "Vendas", columnName = "Prospecção"`,
+  - cardTitle = [extrair do contexto ou usar "Novo Card"]
+
+---
+
+Exemplo 3 - Salvar Informação:
+Entrada: {"action":"save_info","fieldName":"empresa","fieldValue":"Tezeus Tech"}
+
+Interpretação:
+- Tool: "info-adicionais"
+- Parâmetros:
+  - fieldName = "empresa"
+  - fieldValue = "Tezeus Tech"
+
+---
+
+⚠️ TRATAMENTO DE ERROS:
+
+- Se o JSON estiver malformado, ignore o comando e continue o processamento
+- Se a "action" não corresponder a nenhuma tool conhecida, ignore o comando
+- Se faltar algum parâmetro obrigatório (ex: tagId, queueId), ignore o comando e registre um erro no log`,
       });
       setKnowledgeFile(null);
     } catch (error: any) {
