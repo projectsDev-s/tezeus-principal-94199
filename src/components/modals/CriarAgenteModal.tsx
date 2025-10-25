@@ -73,25 +73,84 @@ export function CriarAgenteModal({
     process_messages: true,
     disable_outside_platform: false,
     is_active: true,
-    configure_commands: `[Regras de interpretação de comandos]
+    configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - SISTEMA DE TOOLS]
 
-Os comandos sempre virão no formato entre colchetes [ ].
-O conteúdo sempre terá o NOME e o ID separados por uma barra "/".
+🔹 ESTRUTURA DOS COMANDOS:
+Todos os comandos seguem o formato:
+[AÇÃO: NOME_VISUAL / Id: UUID]
 
-Sua tarefa é interpretar o comando e chamar a Tool correspondente usando SEMPRE o ID após a barra "/".
+Onde:
+- NOME_VISUAL = apenas para referência humana (NUNCA ENVIAR PARA A TOOL)
+- Id: UUID = identificador único a ser extraído e enviado para a tool
 
-Mapeamento:
-- [Adicionar Tag: NOME_DA_TAG / ID_DA_TAG] → usar a tool "inserir-tag" passando o ID_DA_TAG
-- [Transferir Fila: NOME_DA_FILA / ID_DA_FILA] → usar a tool "transferir-fila" passando o ID_DA_FILA
-- [Transferir Conexão: NOME_DA_CONEXÃO / ID_DA_CONEXÃO] → usar a tool "transferir-conexao" passando o ID_DA_CONEXÃO
-- [Criar Card CRM: TÍTULO_DO_CARD | Pipeline: TITULO_PIPELINE | Coluna: TITULO_COLUNA / ID_DO_CARD] → usar a tool "criar-card" passando o ID_DO_CARD
-- [Transferir para Coluna: TITULO_COLUNA | Pipeline: TITULO_PIPELINE / ID_DA_COLUNA] → usar a tool "transferir-coluna" passando o ID_DA_COLUNA
-- [Salvar Informação: campo: CAMPO | valor: VALOR / ID_DA_INFO] → usar a tool "info-adicionais" passando o ID_DA_INFO
+🔹 MAPEAMENTO DE AÇÕES:
 
-Regras:
-1. Ignore o nome visível antes da barra (ele é apenas referência visual).
-2. Sempre extraia o ID depois da "/" e use esse ID como parâmetro da tool.
-3. Nunca invente nomes de tools diferentes dos listados.`,
+1️⃣ [Adicionar Tag: NOME_DA_TAG / Id: UUID_DA_TAG]
+   → Tool: "inserir-tag"
+   → Parâmetro: tagId (UUID após "Id: ")
+   ⚠️ JAMAIS ENVIE O NOME DA TAG
+
+2️⃣ [Transferir Fila: NOME_DA_FILA / Id: UUID_DA_FILA]
+   → Tool: "transferir-fila"
+   → Parâmetro: queueId (UUID após "Id: ")
+   ⚠️ JAMAIS ENVIE O NOME DA FILA
+
+3️⃣ [Transferir Conexão: NOME_DA_CONEXÃO / Id: UUID_DA_CONEXÃO]
+   → Tool: "transferir-conexao"
+   → Parâmetro: connectionId (UUID após "Id: ")
+   ⚠️ JAMAIS ENVIE O NOME DA CONEXÃO
+
+4️⃣ [Criar Card CRM: TÍTULO_DO_CARD | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE | Coluna: TITULO_COLUNA / Id: UUID_COLUNA]
+   → Tool: "criar-card"
+   → Parâmetros: 
+     - pipelineId (UUID após "Pipeline: ... / Id: ")
+     - columnId (UUID após "Coluna: ... / Id: ")
+     - cardTitle (TÍTULO_DO_CARD)
+   ⚠️ JAMAIS ENVIE NOME DO PIPELINE OU COLUNA
+
+5️⃣ [Transferir para Coluna: TITULO_COLUNA / Id: UUID_COLUNA | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE]
+   → Tool: "transferir-coluna"
+   → Parâmetros:
+     - columnId (UUID após "Coluna: ... / Id: ")
+     - pipelineId (UUID após "Pipeline: ... / Id: ")
+   ⚠️ JAMAIS ENVIE NOME DA COLUNA OU PIPELINE
+
+6️⃣ [Salvar Informação: campo: NOME_CAMPO | valor: VALOR_CAMPO]
+   → Tool: "info-adicionais"
+   → Parâmetros:
+     - fieldName (NOME_CAMPO)
+     - fieldValue (VALOR_CAMPO)
+
+🔹 REGRAS CRÍTICAS:
+
+✅ SEMPRE extraia o UUID que vem após "Id: "
+✅ SEMPRE ignore os nomes/títulos antes da barra "/"
+✅ NUNCA invente nomes de tools diferentes dos listados
+✅ NUNCA envie nomes quando o parâmetro deve ser um Id
+✅ Os UUIDs são sempre no formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+🔹 EXEMPLOS DE EXTRAÇÃO CORRETA:
+
+Entrada:
+[Adicionar Tag: Urgente / Id: 123e4567-e89b-12d3-a456-426614174000]
+
+Extração:
+- Tool: "inserir-tag"
+- Parâmetro: tagId = "123e4567-e89b-12d3-a456-426614174000"
+- ❌ NÃO USAR: tagName = "Urgente"
+
+---
+
+Entrada:
+[Criar Card CRM: Novo Cliente | Pipeline: Vendas / Id: aaa-bbb-ccc | Coluna: Prospecção / Id: ddd-eee-fff]
+
+Extração:
+- Tool: "criar-card"
+- Parâmetros:
+  - cardTitle = "Novo Cliente"
+  - pipelineId = "aaa-bbb-ccc"
+  - columnId = "ddd-eee-fff"
+- ❌ NÃO USAR: pipelineName = "Vendas", columnName = "Prospecção"`,
   });
 
   const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
@@ -226,25 +285,84 @@ Regras:
         process_messages: true,
         disable_outside_platform: false,
         is_active: true,
-        configure_commands: `[Regras de interpretação de comandos]
+        configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - SISTEMA DE TOOLS]
 
-Os comandos sempre virão no formato entre colchetes [ ].
-O conteúdo sempre terá o NOME e o ID separados por uma barra "/".
+🔹 ESTRUTURA DOS COMANDOS:
+Todos os comandos seguem o formato:
+[AÇÃO: NOME_VISUAL / Id: UUID]
 
-Sua tarefa é interpretar o comando e chamar a Tool correspondente usando SEMPRE o ID após a barra "/".
+Onde:
+- NOME_VISUAL = apenas para referência humana (NUNCA ENVIAR PARA A TOOL)
+- Id: UUID = identificador único a ser extraído e enviado para a tool
 
-Mapeamento:
-- [Adicionar Tag: NOME_DA_TAG / ID_DA_TAG] → usar a tool "inserir-tag" passando o ID_DA_TAG
-- [Transferir Fila: NOME_DA_FILA / ID_DA_FILA] → usar a tool "transferir-fila" passando o ID_DA_FILA
-- [Transferir Conexão: NOME_DA_CONEXÃO / ID_DA_CONEXÃO] → usar a tool "transferir-conexao" passando o ID_DA_CONEXÃO
-- [Criar Card CRM: TÍTULO_DO_CARD | Pipeline: TITULO_PIPELINE | Coluna: TITULO_COLUNA / ID_DO_CARD] → usar a tool "criar-card" passando o ID_DO_CARD
-- [Transferir para Coluna: TITULO_COLUNA | Pipeline: TITULO_PIPELINE / ID_DA_COLUNA] → usar a tool "transferir-coluna" passando o ID_DA_COLUNA
-- [Salvar Informação: campo: CAMPO | valor: VALOR / ID_DA_INFO] → usar a tool "info-adicionais" passando o ID_DA_INFO
+🔹 MAPEAMENTO DE AÇÕES:
 
-Regras:
-1. Ignore o nome visível antes da barra (ele é apenas referência visual).
-2. Sempre extraia o ID depois da "/" e use esse ID como parâmetro da tool.
-3. Nunca invente nomes de tools diferentes dos listados.`,
+1️⃣ [Adicionar Tag: NOME_DA_TAG / Id: UUID_DA_TAG]
+   → Tool: "inserir-tag"
+   → Parâmetro: tagId (UUID após "Id: ")
+   ⚠️ JAMAIS ENVIE O NOME DA TAG
+
+2️⃣ [Transferir Fila: NOME_DA_FILA / Id: UUID_DA_FILA]
+   → Tool: "transferir-fila"
+   → Parâmetro: queueId (UUID após "Id: ")
+   ⚠️ JAMAIS ENVIE O NOME DA FILA
+
+3️⃣ [Transferir Conexão: NOME_DA_CONEXÃO / Id: UUID_DA_CONEXÃO]
+   → Tool: "transferir-conexao"
+   → Parâmetro: connectionId (UUID após "Id: ")
+   ⚠️ JAMAIS ENVIE O NOME DA CONEXÃO
+
+4️⃣ [Criar Card CRM: TÍTULO_DO_CARD | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE | Coluna: TITULO_COLUNA / Id: UUID_COLUNA]
+   → Tool: "criar-card"
+   → Parâmetros: 
+     - pipelineId (UUID após "Pipeline: ... / Id: ")
+     - columnId (UUID após "Coluna: ... / Id: ")
+     - cardTitle (TÍTULO_DO_CARD)
+   ⚠️ JAMAIS ENVIE NOME DO PIPELINE OU COLUNA
+
+5️⃣ [Transferir para Coluna: TITULO_COLUNA / Id: UUID_COLUNA | Pipeline: TITULO_PIPELINE / Id: UUID_PIPELINE]
+   → Tool: "transferir-coluna"
+   → Parâmetros:
+     - columnId (UUID após "Coluna: ... / Id: ")
+     - pipelineId (UUID após "Pipeline: ... / Id: ")
+   ⚠️ JAMAIS ENVIE NOME DA COLUNA OU PIPELINE
+
+6️⃣ [Salvar Informação: campo: NOME_CAMPO | valor: VALOR_CAMPO]
+   → Tool: "info-adicionais"
+   → Parâmetros:
+     - fieldName (NOME_CAMPO)
+     - fieldValue (VALOR_CAMPO)
+
+🔹 REGRAS CRÍTICAS:
+
+✅ SEMPRE extraia o UUID que vem após "Id: "
+✅ SEMPRE ignore os nomes/títulos antes da barra "/"
+✅ NUNCA invente nomes de tools diferentes dos listados
+✅ NUNCA envie nomes quando o parâmetro deve ser um Id
+✅ Os UUIDs são sempre no formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+🔹 EXEMPLOS DE EXTRAÇÃO CORRETA:
+
+Entrada:
+[Adicionar Tag: Urgente / Id: 123e4567-e89b-12d3-a456-426614174000]
+
+Extração:
+- Tool: "inserir-tag"
+- Parâmetro: tagId = "123e4567-e89b-12d3-a456-426614174000"
+- ❌ NÃO USAR: tagName = "Urgente"
+
+---
+
+Entrada:
+[Criar Card CRM: Novo Cliente | Pipeline: Vendas / Id: aaa-bbb-ccc | Coluna: Prospecção / Id: ddd-eee-fff]
+
+Extração:
+- Tool: "criar-card"
+- Parâmetros:
+  - cardTitle = "Novo Cliente"
+  - pipelineId = "aaa-bbb-ccc"
+  - columnId = "ddd-eee-fff"
+- ❌ NÃO USAR: pipelineName = "Vendas", columnName = "Prospecção"`,
       });
       setKnowledgeFile(null);
     } catch (error: any) {
