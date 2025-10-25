@@ -21,20 +21,26 @@ export interface Queue {
   };
 }
 
-export function useQueues() {
+export function useQueues(workspaceIdProp?: string) {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
 
+  // Priorizar workspaceId da prop, senão usar do contexto
+  const workspaceId = workspaceIdProp || selectedWorkspace?.workspace_id;
+
   const fetchQueues = async () => {
-    if (!selectedWorkspace?.workspace_id) {
-      console.log('🚫 useQueues: Nenhum workspace selecionado');
+    if (!workspaceId) {
+      console.log('🚫 useQueues: Nenhum workspace disponível', { 
+        prop: workspaceIdProp, 
+        context: selectedWorkspace?.workspace_id 
+      });
       return;
     }
 
     try {
       setLoading(true);
-      console.log('🔍 useQueues: Buscando filas para workspace:', selectedWorkspace.workspace_id);
+      console.log('🔍 useQueues: Buscando filas para workspace:', workspaceId);
       
       const { data, error } = await supabase
         .from('queues')
@@ -42,7 +48,7 @@ export function useQueues() {
           *,
           ai_agent:ai_agents(id, name)
         `)
-        .eq('workspace_id', selectedWorkspace.workspace_id)
+        .eq('workspace_id', workspaceId)
         .eq('is_active', true)
         .order('order_position', { ascending: true });
 
@@ -62,7 +68,7 @@ export function useQueues() {
 
   useEffect(() => {
     fetchQueues();
-  }, [selectedWorkspace?.workspace_id]);
+  }, [workspaceId]);
 
   return {
     queues,

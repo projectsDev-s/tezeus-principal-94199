@@ -62,7 +62,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { usage, isLoading: isLoadingLimits, refreshLimits } = useWorkspaceLimits(workspaceId);
   const { canCreateConnections } = useWorkspaceRole();
   const navigate = useNavigate();
-  const { queues } = useQueues();
+  const { queues } = useQueues(workspaceId);
   const { userRole } = useAuth();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
   
