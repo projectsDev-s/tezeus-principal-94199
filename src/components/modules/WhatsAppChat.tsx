@@ -1758,11 +1758,11 @@ export function WhatsAppChat({
                   </TooltipProvider>
 
                    <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all" onClick={() => setContactPanelOpen(true)}>
-                    {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
+                    {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
                     <AvatarFallback style={{
-                  backgroundColor: getAvatarColor(selectedConversation.contact.name)
+                  backgroundColor: getAvatarColor(selectedConversation.contact?.name || '')
                 }} className="text-white">
-                      {getInitials(selectedConversation.contact.name)}
+                      {getInitials(selectedConversation.contact?.name || '')}
                     </AvatarFallback>
                   </Avatar>
                   
@@ -1921,9 +1921,9 @@ export function WhatsAppChat({
                 <div className="space-y-4">
                 {messages.map(message => <div key={message.id} data-message-id={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
                     {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
-                        {selectedConversation.contact.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact.name} className="object-cover" />}
-                        <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact.name))}>
-                          {getInitials(selectedConversation.contact.name)}
+                        {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
+                        <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact?.name || ''))}>
+                          {getInitials(selectedConversation.contact?.name || '')}
                         </AvatarFallback>
                       </Avatar>}
                      
@@ -1952,7 +1952,7 @@ export function WhatsAppChat({
                       )}
 
                       {/* Renderizar conteúdo baseado no tipo */}
-                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
+                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact?.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact?.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
                     <p className="text-sm break-words flex-1">{message.content}</p>
                     
                     <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
