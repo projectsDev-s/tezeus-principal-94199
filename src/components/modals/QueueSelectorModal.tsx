@@ -32,7 +32,7 @@ export function QueueSelectorModal({
   workspaceId,
 }: QueueSelectorModalProps) {
   const [selectedQueueId, setSelectedQueueId] = useState<string>("");
-  const { queues, loading } = useQueues();
+  const { queues, loading } = useQueues(workspaceId);
 
   useEffect(() => {
     if (!open) {
