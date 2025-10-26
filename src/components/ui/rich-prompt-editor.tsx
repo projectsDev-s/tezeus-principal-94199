@@ -10,6 +10,13 @@ export interface ActionBadge {
   position: number;
 }
 
+interface ParsedAction {
+  fullText: string;
+  displayLabel: string;
+  type: string;
+  params: Record<string, string>;
+}
+
 interface RichPromptEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -24,7 +31,49 @@ export interface PromptEditorRef {
 
 type EditorNode = 
   | { type: 'text', content: string }
-  | { type: 'action', content: string, id: string };
+  | { type: 'action', content: string, displayLabel: string, id: string };
+
+function parseAction(actionText: string): ParsedAction {
+  // Extrair parâmetros usando regex
+  const paramRegex = /\[([^\]]+):\s*([^\]]+)\]/g;
+  const params: Record<string, string> = {};
+  
+  let match;
+  while ((match = paramRegex.exec(actionText)) !== null) {
+    const key = match[1].trim();
+    const value = match[2].trim();
+    params[key] = value;
+  }
+  
+  // Determinar tipo e criar label amigável
+  let displayLabel = "";
+  let type = "";
+  
+  if (params.tag_name) {
+    type = "add-tag";
+    displayLabel = `Adicionar tag: ${params.tag_name}`;
+  } else if (params.fila_id) {
+    type = "transfer-queue";
+    displayLabel = `Transferir para fila`;
+  } else if (params.conection_name) {
+    type = "transfer-connection";
+    displayLabel = `Transferir para conexão: ${params.conection_name}`;
+  } else if (params.pipeline_id && params.coluna_id) {
+    type = params.card_id ? "transfer-crm-card" : "create-crm-card";
+    displayLabel = `${type === "create-crm-card" ? "Criar" : "Transferir"} card CRM`;
+  } else {
+    // Fallback para ações não reconhecidas
+    displayLabel = actionText.substring(0, 50) + (actionText.length > 50 ? "..." : "");
+    type = "unknown";
+  }
+  
+  return {
+    fullText: actionText,
+    displayLabel,
+    type,
+    params
+  };
+}
 
 function parseTextToNodes(text: string): EditorNode[] {
   const actionRegex = /(\[ADD_ACTION\]:[^\n]+)/g;
@@ -41,10 +90,12 @@ function parseTextToNodes(text: string): EditorNode[] {
       }
     }
     
-    // A ação em si
+    // A ação em si - parse para obter displayLabel
+    const parsedAction = parseAction(match[0]);
     nodes.push({ 
       type: 'action', 
-      content: match[0],
+      content: parsedAction.fullText, // String completa para salvar
+      displayLabel: parsedAction.displayLabel, // Label amigável para exibir
       id: `action-${match.index}-${Math.random().toString(36).substr(2, 9)}`
     });
     
@@ -204,7 +255,7 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
               className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20"
               style={{ userSelect: 'none' }}
             >
-              <span>{node.content}</span>
+              <span>{node.displayLabel}</span>
               <button
                 onClick={(e) => {
                   e.preventDefault();
