@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 
@@ -25,6 +25,9 @@ export function useQueues(workspaceIdProp?: string) {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
+  const isFetchingRef = useRef(false);
+  const lastFetchTime = useRef<number>(0);
+  const MIN_FETCH_INTERVAL = 500; // ms
 
   // Priorizar workspaceId da prop, senão usar do contexto
   const workspaceId = workspaceIdProp || selectedWorkspace?.workspace_id;
@@ -35,8 +38,25 @@ export function useQueues(workspaceIdProp?: string) {
         prop: workspaceIdProp, 
         context: selectedWorkspace?.workspace_id 
       });
+      setLoading(false);
       return;
     }
+
+    // Proteção anti-loop: evitar requisições duplicadas
+    if (isFetchingRef.current) {
+      console.log('⏸️ useQueues: Fetch já em andamento, ignorando...');
+      return;
+    }
+
+    // Proteção anti-loop: evitar requisições muito rápidas
+    const now = Date.now();
+    if (now - lastFetchTime.current < MIN_FETCH_INTERVAL) {
+      console.log('⏸️ useQueues: Requisição muito rápida, aguardando...');
+      return;
+    }
+    lastFetchTime.current = now;
+
+    isFetchingRef.current = true;
 
     try {
       setLoading(true);
@@ -63,6 +83,7 @@ export function useQueues(workspaceIdProp?: string) {
       console.error('❌ useQueues: Erro ao carregar filas:', error);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
