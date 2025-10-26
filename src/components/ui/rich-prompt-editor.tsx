@@ -212,15 +212,16 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
     insertText,
   }));
 
-  const extractValueFromDOM = (): string => {
-    if (!containerRef.current) return "";
+  const handleContainerInput = (e: React.FormEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    
+    if (!containerRef.current) return;
     
     const parts: string[] = [];
     
     // Percorrer nós filhos do contentEditable
     containerRef.current.childNodes.forEach(node => {
       if (node.nodeType === Node.TEXT_NODE) {
-        // Texto normal
         parts.push(node.textContent || "");
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as HTMLElement;
@@ -229,76 +230,107 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
         if (element.dataset.actionContent) {
           parts.push(element.dataset.actionContent);
         } else {
-          // Outros elementos (spans de texto, etc)
           parts.push(element.textContent || "");
         }
       }
     });
     
-    return parts.join('');
-  };
-
-  const handleContainerInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newValue = extractValueFromDOM();
-    onChange(newValue);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Permitir navegação e edição normal
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      insertText('\n');
+    const newValue = parts.join('');
+    
+    // Evitar loop infinito verificando se o valor realmente mudou
+    if (newValue !== value) {
+      onChange(newValue);
     }
   };
 
-  return (
-    <div
-      ref={containerRef}
-      contentEditable
-      suppressContentEditableWarning
-      onInput={handleContainerInput}
-      onKeyDown={handleKeyDown}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      className={cn(
-        "w-full min-h-[400px] p-4 rounded-md border border-input bg-background",
-        "text-sm resize-none overflow-y-auto",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        isFocused && nodes.length === 0 && !value && "before:content-[attr(data-placeholder)] before:text-muted-foreground before:pointer-events-none",
-        className
-      )}
-      data-placeholder={placeholder}
-      style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-    >
-      {nodes.map((node, index) => {
-        if (node.type === 'text') {
-          return <span key={`text-${index}`}>{node.content}</span>;
-        } else {
-          return (
-            <span
-              key={node.id}
-              contentEditable={false}
-              data-action-id={node.id}
-              data-action-content={node.content}
-              className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20"
-              style={{ userSelect: 'none' }}
-            >
-              <span>{node.displayLabel}</span>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleRemoveAction(node.id);
-                }}
-                className="hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors"
-                tabIndex={-1}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          );
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      insertText('\n');
+      return;
+    }
+    
+    // Prevenir edição direta de badges
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      
+      // Verificar se está tentando editar dentro de um badge
+      let node: Node | null = container;
+      while (node && node !== containerRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement;
+          if (element.dataset.actionId) {
+            // Está dentro de um badge, prevenir edição
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+              return; // Deixar o handleRemoveAction cuidar disso
+            }
+            e.preventDefault();
+            return;
+          }
         }
-      })}
+        node = node.parentNode;
+      }
+    }
+  };
+
+  // Gerar key única baseada no conteúdo para forçar re-render quando necessário
+  const contentKey = React.useMemo(() => {
+    return nodes.map(n => n.type === 'action' ? n.id : `text-${n.content.substring(0, 10)}`).join('|');
+  }, [nodes]);
+
+  return (
+    <div className="relative">
+      <div
+        ref={containerRef}
+        key={contentKey}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleContainerInput}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className={cn(
+          "w-full min-h-[400px] p-4 rounded-md border border-input bg-background",
+          "text-sm resize-none overflow-y-auto",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          isFocused && nodes.length === 0 && !value && "before:content-[attr(data-placeholder)] before:text-muted-foreground before:pointer-events-none",
+          className
+        )}
+        data-placeholder={placeholder}
+        style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+      >
+        {nodes.map((node, index) => {
+          if (node.type === 'text') {
+            return <span key={`text-${index}`}>{node.content}</span>;
+          } else {
+            return (
+              <span
+                key={node.id}
+                contentEditable={false}
+                data-action-id={node.id}
+                data-action-content={node.content}
+                className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20"
+                style={{ userSelect: 'none' }}
+              >
+                <span>{node.displayLabel}</span>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleRemoveAction(node.id);
+                  }}
+                  className="hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors"
+                  tabIndex={-1}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            );
+          }
+        })}
+      </div>
     </div>
   );
 });
