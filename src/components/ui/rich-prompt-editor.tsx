@@ -124,22 +124,112 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
   className,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes] = useState<EditorNode[]>([]);
   const [isFocused, setIsFocused] = useState(false);
+  const isUpdatingRef = useRef(false);
 
-  // Parse value to nodes quando o valor mudar
+  // Renderizar conteúdo inicial e quando value mudar EXTERNAMENTE
   useEffect(() => {
-    setNodes(parseTextToNodes(value || ""));
+    if (!containerRef.current || isUpdatingRef.current) return;
+    
+    const currentDOMValue = extractValueFromDOM();
+    
+    // Só atualizar se o valor externo for diferente do DOM atual
+    if (value !== currentDOMValue) {
+      const nodes = parseTextToNodes(value || "");
+      renderNodes(nodes);
+    }
   }, [value]);
 
+  const extractValueFromDOM = (): string => {
+    if (!containerRef.current) return "";
+    
+    const parts: string[] = [];
+    
+    containerRef.current.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        parts.push(node.textContent || "");
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        if (element.dataset.actionContent) {
+          parts.push(element.dataset.actionContent);
+        } else {
+          parts.push(element.textContent || "");
+        }
+      }
+    });
+    
+    return parts.join('');
+  };
+
+  const renderNodes = (nodes: EditorNode[]) => {
+    if (!containerRef.current) return;
+    
+    // Salvar posição do cursor
+    const selection = window.getSelection();
+    let savedRange: Range | null = null;
+    
+    if (selection && selection.rangeCount > 0) {
+      savedRange = selection.getRangeAt(0).cloneRange();
+    }
+    
+    // Limpar e renderizar
+    containerRef.current.innerHTML = '';
+    
+    nodes.forEach((node) => {
+      if (node.type === 'text') {
+        const textNode = document.createTextNode(node.content);
+        containerRef.current!.appendChild(textNode);
+      } else {
+        const badge = document.createElement('span');
+        badge.contentEditable = 'false';
+        badge.dataset.actionId = node.id;
+        badge.dataset.actionContent = node.content;
+        badge.className = 'inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20';
+        badge.style.userSelect = 'none';
+        
+        const label = document.createElement('span');
+        label.textContent = node.displayLabel;
+        badge.appendChild(label);
+        
+        const button = document.createElement('button');
+        button.className = 'hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors';
+        button.tabIndex = -1;
+        button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+        button.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleRemoveAction(node.id);
+        };
+        badge.appendChild(button);
+        
+        containerRef.current!.appendChild(badge);
+      }
+    });
+    
+    // Restaurar cursor (se possível)
+    if (savedRange && selection) {
+      try {
+        selection.removeAllRanges();
+        selection.addRange(savedRange);
+      } catch (e) {
+        // Cursor pode não ser restaurável
+      }
+    }
+  };
 
   const handleRemoveAction = (actionId: string) => {
-    const updatedNodes = nodes.filter(node => 
-      !(node.type === 'action' && node.id === actionId)
-    );
+    if (!containerRef.current) return;
     
-    const newText = nodesToText(updatedNodes);
-    onChange(newText);
+    const badge = containerRef.current.querySelector(`[data-action-id="${actionId}"]`);
+    if (badge) {
+      badge.remove();
+      
+      // Atualizar valor
+      const newValue = extractValueFromDOM();
+      isUpdatingRef.current = true;
+      onChange(newValue);
+      setTimeout(() => { isUpdatingRef.current = false; }, 0);
+    }
   };
 
   const getCursorPosition = (): number => {
@@ -159,52 +249,73 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
   const insertText = (text: string) => {
     if (!containerRef.current) return;
 
-    const position = getCursorPosition();
-    const currentText = value || "";
-    const newValue = currentText.substring(0, position) + text + currentText.substring(position);
-    
-    onChange(newValue);
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      // Se não há seleção, adicionar no final
+      containerRef.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(containerRef.current);
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
 
-    // Mover cursor para depois do texto inserido
-    setTimeout(() => {
-      if (containerRef.current) {
-        containerRef.current.focus();
-        
-        const selection = window.getSelection();
-        const range = document.createRange();
-        
-        let charCount = 0;
-        let targetNode: Node | null = null;
-        let targetOffset = 0;
-        const newPosition = position + text.length;
-        
-        const walker = document.createTreeWalker(
-          containerRef.current,
-          NodeFilter.SHOW_TEXT,
-          null
-        );
-        
-        while (walker.nextNode()) {
-          const node = walker.currentNode;
-          const nodeLength = node.textContent?.length || 0;
+    // Inserir o texto
+    const isAction = text.startsWith('[ADD_ACTION]:');
+    
+    if (isAction) {
+      const parsed = parseAction(text);
+      const nodes = parseTextToNodes(text);
+      
+      nodes.forEach(node => {
+        if (node.type === 'action') {
+          const badge = document.createElement('span');
+          badge.contentEditable = 'false';
+          badge.dataset.actionId = node.id;
+          badge.dataset.actionContent = node.content;
+          badge.className = 'inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20';
+          badge.style.userSelect = 'none';
           
-          if (charCount + nodeLength >= newPosition) {
-            targetNode = node;
-            targetOffset = newPosition - charCount;
-            break;
-          }
+          const label = document.createElement('span');
+          label.textContent = node.displayLabel;
+          badge.appendChild(label);
           
-          charCount += nodeLength;
-        }
-        
-        if (targetNode && selection) {
-          range.setStart(targetNode, targetOffset);
+          const button = document.createElement('button');
+          button.className = 'hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors';
+          button.tabIndex = -1;
+          button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+          button.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleRemoveAction(node.id);
+          };
+          badge.appendChild(button);
+          
+          const range = selection!.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(badge);
+          range.setStartAfter(badge);
           range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
+          selection!.removeAllRanges();
+          selection!.addRange(range);
         }
-      }
-    }, 0);
+      });
+    } else {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    // Atualizar valor
+    const newValue = extractValueFromDOM();
+    isUpdatingRef.current = true;
+    onChange(newValue);
+    setTimeout(() => { isUpdatingRef.current = false; }, 0);
   };
 
   useImperativeHandle(ref, () => ({
@@ -212,33 +323,12 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
     insertText,
   }));
 
-  const handleContainerInput = (e: React.FormEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
+  const handleContainerInput = () => {
+    const newValue = extractValueFromDOM();
     
-    const parts: string[] = [];
-    
-    // Percorrer nós filhos do contentEditable
-    containerRef.current.childNodes.forEach(node => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        parts.push(node.textContent || "");
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        
-        // Verificar se é uma badge de ação
-        if (element.dataset.actionContent) {
-          parts.push(element.dataset.actionContent);
-        } else {
-          parts.push(element.textContent || "");
-        }
-      }
-    });
-    
-    const newValue = parts.join('');
-    
-    // Evitar loop infinito verificando se o valor realmente mudou
-    if (newValue !== value) {
-      onChange(newValue);
-    }
+    isUpdatingRef.current = true;
+    onChange(newValue);
+    setTimeout(() => { isUpdatingRef.current = false; }, 0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -287,42 +377,12 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
           "w-full min-h-[400px] p-4 rounded-md border border-input bg-background",
           "text-sm resize-none overflow-y-auto",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isFocused && nodes.length === 0 && !value && "before:content-[attr(data-placeholder)] before:text-muted-foreground before:pointer-events-none",
+          "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground empty:before:pointer-events-none",
           className
         )}
         data-placeholder={placeholder}
         style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-      >
-        {nodes.map((node, index) => {
-          if (node.type === 'text') {
-            return <span key={`text-${index}`}>{node.content}</span>;
-          } else {
-            return (
-              <span
-                key={node.id}
-                contentEditable={false}
-                data-action-id={node.id}
-                data-action-content={node.content}
-                className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20"
-                style={{ userSelect: 'none' }}
-              >
-                <span>{node.displayLabel}</span>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleRemoveAction(node.id);
-                  }}
-                  className="hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors"
-                  tabIndex={-1}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            );
-          }
-        })}
-      </div>
+      />
     </div>
   );
 });
