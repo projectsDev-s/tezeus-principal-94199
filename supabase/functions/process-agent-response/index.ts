@@ -92,9 +92,9 @@ serve(async (req) => {
       } else if ('pipeline_id' in processedParams && 'coluna_id' in processedParams && !('card_id' in processedParams)) {
         actionType = 'create-card';
         console.log('📋 Ação detectada: Criar Card ->', processedParams.pipeline_id, processedParams.coluna_id);
-      } else if ('field_name' in processedParams && 'field_value' in processedParams && 'workspace_id' in processedParams) {
+      } else if ('field_name' in processedParams && 'field_value' in processedParams) {
         actionType = 'save-info';
-        console.log('💾 Ação detectada: Salvar Info ->', processedParams.field_name, '=', processedParams.field_value);
+        console.log('💾 Ação detectada: Salvar Info ->', processedParams.field_name);
       }
 
       if (actionType) {
