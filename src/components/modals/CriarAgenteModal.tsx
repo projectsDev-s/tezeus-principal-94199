@@ -16,7 +16,8 @@ import { Eye, EyeOff, FileText, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
-
+import { PromptEditorModal } from "./PromptEditorModal";
+import { ActionPreviewDisplay } from "@/components/ui/action-preview-display";
 import { useQueryClient } from '@tanstack/react-query';
 
 interface CriarAgenteModalProps {
@@ -52,6 +53,7 @@ export function CriarAgenteModal({
 }: CriarAgenteModalProps) {
   const [loading, setLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
   const { workspaces } = useWorkspaces();
   const queryClient = useQueryClient();
 
@@ -485,14 +487,19 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
 
           {/* Instruções do Sistema */}
           <div className="space-y-2">
-            <Label htmlFor="system_instructions">Instruções do Sistema</Label>
-            <Textarea
-              id="system_instructions"
-              value={formData.system_instructions}
-              onChange={(e) => setFormData({ ...formData, system_instructions: e.target.value })}
-              placeholder="Instruções para o comportamento do agente"
-              rows={6}
-            />
+            <Label htmlFor="system_instructions">Instruções do Sistema (Prompt)</Label>
+            <div 
+              onClick={() => setShowPromptEditor(true)}
+              className="min-h-[100px] p-3 rounded-md border border-input bg-background cursor-pointer hover:bg-accent/50 transition-colors"
+            >
+              {formData.system_instructions ? (
+                <ActionPreviewDisplay value={formData.system_instructions} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Clique para editar o prompt com ações avançadas...
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Base de Conhecimento */}
@@ -643,6 +650,14 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
           </div>
         </form>
       </DialogContent>
+
+      <PromptEditorModal
+        open={showPromptEditor}
+        onOpenChange={setShowPromptEditor}
+        value={formData.system_instructions}
+        onChange={(value) => setFormData({ ...formData, system_instructions: value })}
+        workspaceId={formData.workspace_id}
+      />
     </Dialog>
   );
 }
