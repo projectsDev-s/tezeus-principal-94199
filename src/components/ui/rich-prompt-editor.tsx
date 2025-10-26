@@ -212,9 +212,35 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
     insertText,
   }));
 
+  const extractValueFromDOM = (): string => {
+    if (!containerRef.current) return "";
+    
+    const parts: string[] = [];
+    
+    // Percorrer nós filhos do contentEditable
+    containerRef.current.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        // Texto normal
+        parts.push(node.textContent || "");
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        
+        // Verificar se é uma badge de ação
+        if (element.dataset.actionContent) {
+          parts.push(element.dataset.actionContent);
+        } else {
+          // Outros elementos (spans de texto, etc)
+          parts.push(element.textContent || "");
+        }
+      }
+    });
+    
+    return parts.join('');
+  };
+
   const handleContainerInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || "";
-    onChange(newText);
+    const newValue = extractValueFromDOM();
+    onChange(newValue);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -252,6 +278,8 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
             <span
               key={node.id}
               contentEditable={false}
+              data-action-id={node.id}
+              data-action-content={node.content}
               className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20"
               style={{ userSelect: 'none' }}
             >
