@@ -161,8 +161,31 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
     insertText,
   }));
 
+  const extractValueFromDOM = (): string => {
+    if (!containerRef.current) return "";
+    
+    let result = "";
+    const children = Array.from(containerRef.current.childNodes);
+    
+    for (const child of children) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        result += child.textContent || "";
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const element = child as HTMLElement;
+        // Se for um badge de ação, extrair o texto da tag
+        if (element.classList.contains('inline-flex') && element.hasAttribute('data-action')) {
+          result += element.getAttribute('data-action') || "";
+        } else {
+          result += element.textContent || "";
+        }
+      }
+    }
+    
+    return result;
+  };
+
   const handleContainerInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || "";
+    const newText = extractValueFromDOM();
     onChange(newText);
   };
 
@@ -179,6 +202,7 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
       ref={containerRef}
       contentEditable
       suppressContentEditableWarning
+      suppressHydrationWarning
       onInput={handleContainerInput}
       onKeyDown={handleKeyDown}
       onFocus={() => setIsFocused(true)}
@@ -201,6 +225,7 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
             <span
               key={node.id}
               contentEditable={false}
+              data-action={node.content}
               className="inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20"
               style={{ userSelect: 'none' }}
             >
