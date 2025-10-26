@@ -16,8 +16,7 @@ import { Eye, EyeOff, FileText, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
-import { PromptEditorModal } from "./PromptEditorModal";
-import { ActionPreviewDisplay } from "@/components/ui/action-preview-display";
+import { PromptEditorModal, formatPromptPreview } from "./PromptEditorModal";
 import { useQueryClient } from '@tanstack/react-query';
 
 interface EditarAgenteModalProps {
@@ -515,18 +514,15 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
           {/* Instruções do Sistema */}
           <div className="space-y-2">
             <Label htmlFor="system_instructions">Instruções do Sistema (Prompt)</Label>
-            <div 
+            <Textarea
+              id="system_instructions"
+              value={formatPromptPreview(formData.system_instructions)}
               onClick={() => setShowPromptEditor(true)}
-              className="min-h-[100px] p-3 rounded-md border border-input bg-background cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              {formData.system_instructions ? (
-                <ActionPreviewDisplay value={formData.system_instructions} />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Clique para editar o prompt com ações avançadas...
-                </p>
-              )}
-            </div>
+              placeholder="Clique para editar o prompt com ações avançadas..."
+              rows={4}
+              readOnly
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+            />
           </div>
 
           {/* Base de Conhecimento */}
