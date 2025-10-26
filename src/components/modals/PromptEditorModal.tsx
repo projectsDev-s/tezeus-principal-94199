@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PromptEditor, ActionBadge, PromptEditorRef } from "@/components/ui/prompt-editor";
+import { RichPromptEditor, PromptEditorRef } from "@/components/ui/rich-prompt-editor";
 import { 
   Tag, 
   ArrowRightLeft, 
@@ -201,7 +201,7 @@ export function PromptEditorModal({
           <div className="flex-1 p-6 overflow-y-auto">
             <ContextMenu>
               <ContextMenuTrigger className="w-full">
-                <PromptEditor
+                <RichPromptEditor
                   ref={editorRef}
                   value={localValue}
                   onChange={setLocalValue}
