@@ -27,7 +27,7 @@ type EditorNode =
   | { type: 'action', content: string, id: string };
 
 function parseTextToNodes(text: string): EditorNode[] {
-  const actionRegex = /(\[[^\]]+\])/g;
+  const actionRegex = /(\[ADD_ACTION\]:[^\n]+)/g;
   const nodes: EditorNode[] = [];
   let lastIndex = 0;
   let match;
