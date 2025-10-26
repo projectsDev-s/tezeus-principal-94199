@@ -29,6 +29,7 @@ import { TagSelectorModal } from "./TagSelectorModal";
 import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
 import { QueueSelectorModal } from "./QueueSelectorModal";
 import { ConnectionSelectorModal } from "./ConnectionSelectorModal";
+import { SaveInfoModal } from "./SaveInfoModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -80,7 +81,7 @@ const actionButtons: ActionButton[] = [
     id: "save-info",
     label: "Salvar informações adicionais",
     icon: <Database className="w-4 h-4" />,
-    tag: '[Salvar Informação: campo: valor]',
+    tag: '[ADD_ACTION]: [workspace_id: WORKSPACE_ID], [contact_id: CONTACT_ID], [field_name: ...], [field_value: ...]',
   },
 ];
 
@@ -177,6 +178,7 @@ export function PromptEditorModal({
   const [showQueueSelector, setShowQueueSelector] = useState(false);
   const [showConnectionSelector, setShowConnectionSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
+  const [showSaveInfoModal, setShowSaveInfoModal] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<string | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
 
@@ -210,6 +212,12 @@ export function PromptEditorModal({
     if (action.id === "transfer-crm-column" || action.id === "create-crm-card") {
       setPendingActionType(action.id);
       setShowPipelineColumnSelector(true);
+      return;
+    }
+
+    if (action.id === "save-info") {
+      setPendingActionType(action.id);
+      setShowSaveInfoModal(true);
       return;
     }
 
@@ -256,6 +264,13 @@ export function PromptEditorModal({
     
     editorRef.current?.insertText(actionText);
     setShowPipelineColumnSelector(false);
+    setPendingActionType(null);
+  };
+
+  const handleSaveInfoSelected = (fieldName: string, fieldValue: string) => {
+    const actionText = `\n[ADD_ACTION]: [workspace_id: WORKSPACE_ID], [contact_id: CONTACT_ID], [field_name: ${fieldName}], [field_value: ${fieldValue}]\n`;
+    editorRef.current?.insertText(actionText);
+    setShowSaveInfoModal(false);
     setPendingActionType(null);
   };
 
@@ -344,6 +359,12 @@ export function PromptEditorModal({
         onOpenChange={setShowPipelineColumnSelector}
         onColumnSelected={handlePipelineColumnSelected}
         workspaceId={workspaceId}
+      />
+
+      <SaveInfoModal
+        open={showSaveInfoModal}
+        onOpenChange={setShowSaveInfoModal}
+        onSave={handleSaveInfoSelected}
       />
     </Dialog>
   );
