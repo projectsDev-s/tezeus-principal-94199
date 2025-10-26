@@ -8,8 +8,8 @@ interface ActionBadge {
 }
 
 function parseActions(text: string): { normalText: string; actions: ActionBadge[] } {
-  // Regex para detectar [ADD_ACTION]: [param1: value], [param2: value]
-  const actionRegex = /\[ADD_ACTION\]:\s*(\[.*?\](?:,\s*\[.*?\])*)/g;
+  // Regex melhorado para detectar [ADD_ACTION]: até o final da linha ou próxima ação
+  const actionRegex = /\[ADD_ACTION\]:\s*(.+?)(?=\n\[ADD_ACTION\]|\n\n|$)/gs;
   
   const actions: ActionBadge[] = [];
   let normalText = text;
@@ -20,9 +20,9 @@ function parseActions(text: string): { normalText: string; actions: ActionBadge[
     const actionText = match[0];
     const paramsText = match[1];
     
-    // Parse dos parâmetros
+    // Parse dos parâmetros (melhorado para capturar UUIDs e valores complexos)
     const params: Record<string, string> = {};
-    const paramRegex = /\[([^:]+):\s*([^\]]+)\]/g;
+    const paramRegex = /\[([^\]]+?):\s*([^\]]+?)\](?=,|\s*$)/g;
     let paramMatch;
     while ((paramMatch = paramRegex.exec(paramsText)) !== null) {
       params[paramMatch[1].trim()] = paramMatch[2].trim();
@@ -38,10 +38,10 @@ function parseActions(text: string): { normalText: string; actions: ActionBadge[
     actions.push({ type, text: actionText, params });
     
     // Remover da string para deixar só o texto normal
-    normalText = normalText.replace(actionText, '');
+    normalText = normalText.replace(actionText, '').trim();
   }
   
-  return { normalText: normalText.trim(), actions };
+  return { normalText, actions };
 }
 
 function ActionBadgeItem({ action }: { action: ActionBadge }) {
