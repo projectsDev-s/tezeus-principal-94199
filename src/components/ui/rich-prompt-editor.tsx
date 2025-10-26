@@ -213,8 +213,6 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
   }));
 
   const handleContainerInput = (e: React.FormEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    
     if (!containerRef.current) return;
     
     const parts: string[] = [];
@@ -275,16 +273,10 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
     }
   };
 
-  // Gerar key única baseada no conteúdo para forçar re-render quando necessário
-  const contentKey = React.useMemo(() => {
-    return nodes.map(n => n.type === 'action' ? n.id : `text-${n.content.substring(0, 10)}`).join('|');
-  }, [nodes]);
-
   return (
     <div className="relative">
       <div
         ref={containerRef}
-        key={contentKey}
         contentEditable
         suppressContentEditableWarning
         onInput={handleContainerInput}
