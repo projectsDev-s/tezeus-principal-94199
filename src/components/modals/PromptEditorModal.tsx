@@ -29,7 +29,6 @@ import { TagSelectorModal } from "./TagSelectorModal";
 import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
 import { QueueSelectorModal } from "./QueueSelectorModal";
 import { ConnectionSelectorModal } from "./ConnectionSelectorModal";
-import { SaveInfoModal } from "./SaveInfoModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -81,7 +80,7 @@ const actionButtons: ActionButton[] = [
     id: "save-info",
     label: "Salvar informações adicionais",
     icon: <Database className="w-4 h-4" />,
-    tag: '[ADD_ACTION]: [workspace_id: WORKSPACE_ID], [contact_id: CONTACT_ID], [field_name: ...], [field_value: ...]',
+    tag: '[ADD_ACTION]: [workspace_id: WORKSPACE_ID], [contact_id: CONTACT_ID], [field_name: FIELD_NAME], [field_value: FIELD_VALUE]',
   },
 ];
 
@@ -178,7 +177,6 @@ export function PromptEditorModal({
   const [showQueueSelector, setShowQueueSelector] = useState(false);
   const [showConnectionSelector, setShowConnectionSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
-  const [showSaveInfoModal, setShowSaveInfoModal] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<string | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
 
@@ -215,13 +213,7 @@ export function PromptEditorModal({
       return;
     }
 
-    if (action.id === "save-info") {
-      setPendingActionType(action.id);
-      setShowSaveInfoModal(true);
-      return;
-    }
-
-    // Para outras ações genéricas, inserir texto diretamente
+    // Para outras ações genéricas (incluindo save-info), inserir texto diretamente
     const actionText = `\n${action.tag}\n`;
     editorRef.current?.insertText(actionText);
   };
@@ -264,13 +256,6 @@ export function PromptEditorModal({
     
     editorRef.current?.insertText(actionText);
     setShowPipelineColumnSelector(false);
-    setPendingActionType(null);
-  };
-
-  const handleSaveInfoSelected = (fieldName: string, fieldValue: string) => {
-    const actionText = `\n[ADD_ACTION]: [workspace_id: WORKSPACE_ID], [contact_id: CONTACT_ID], [field_name: ${fieldName}], [field_value: ${fieldValue}]\n`;
-    editorRef.current?.insertText(actionText);
-    setShowSaveInfoModal(false);
     setPendingActionType(null);
   };
 
@@ -359,12 +344,6 @@ export function PromptEditorModal({
         onOpenChange={setShowPipelineColumnSelector}
         onColumnSelected={handlePipelineColumnSelected}
         workspaceId={workspaceId}
-      />
-
-      <SaveInfoModal
-        open={showSaveInfoModal}
-        onOpenChange={setShowSaveInfoModal}
-        onSave={handleSaveInfoSelected}
       />
     </Dialog>
   );
