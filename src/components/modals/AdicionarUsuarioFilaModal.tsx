@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,7 +22,11 @@ export function AdicionarUsuarioFilaModal({
   excludeUserIds = [],
 }: AdicionarUsuarioFilaModalProps) {
   const { selectedWorkspace } = useWorkspace();
-  const { users, isLoading } = useWorkspaceUsers(selectedWorkspace?.workspace_id, ['admin', 'user']);
+  
+  // Estabilizar a referência do array de filtros para evitar loops infinitos
+  const filterProfiles = useMemo<('user' | 'admin' | 'master')[]>(() => ['admin', 'user'], []);
+  const { users, isLoading } = useWorkspaceUsers(selectedWorkspace?.workspace_id, filterProfiles);
+  
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
 

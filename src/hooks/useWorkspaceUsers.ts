@@ -12,6 +12,11 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const isFetchingRef = useRef(false);
+  const lastFetchTime = useRef<number>(0);
+  const MIN_FETCH_INTERVAL = 500; // ms
+
+  // Usar comparação profunda para filterProfiles
+  const filterProfilesKey = JSON.stringify(filterProfiles);
 
   useEffect(() => {
     console.log('🔍 [useWorkspaceUsers] useEffect triggered:', { 
@@ -31,6 +36,14 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
       console.log('⏸️ Fetch já em andamento, ignorando...');
       return;
     }
+
+    // Proteção anti-loop: evitar requisições muito rápidas
+    const now = Date.now();
+    if (now - lastFetchTime.current < MIN_FETCH_INTERVAL) {
+      console.log('⏸️ Requisição muito rápida, aguardando...');
+      return;
+    }
+    lastFetchTime.current = now;
 
     let cancelled = false;
     isFetchingRef.current = true;
@@ -99,7 +112,7 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
       cancelled = true;
       isFetchingRef.current = false;
     };
-  }, [workspaceId, filterProfiles]);
+  }, [workspaceId, filterProfilesKey]); // Usar string serializada para comparação profunda
 
   return {
     users,
