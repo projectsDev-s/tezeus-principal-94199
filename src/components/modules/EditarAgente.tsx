@@ -33,6 +33,11 @@ interface AIAgent {
   fallback_message: string;
   is_active: boolean;
   api_key_encrypted?: string;
+  split_responses: boolean;
+  process_messages: boolean;
+  disable_outside_platform: boolean;
+  assign_responsible: boolean;
+  ignore_interval: number;
 }
 
 interface KnowledgeFile {
@@ -86,6 +91,11 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
     fallback_message: 'Desculpe, não estou disponível no momento.',
     is_active: true,
     api_key_encrypted: '',
+    split_responses: true,
+    process_messages: true,
+    disable_outside_platform: false,
+    assign_responsible: false,
+    ignore_interval: 0,
   });
 
   useEffect(() => {
@@ -448,6 +458,38 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
+                  <Label htmlFor="split-responses">Dividir respostas em blocos</Label>
+                  <Switch
+                    id="split-responses"
+                    checked={agent.split_responses}
+                    onCheckedChange={(checked) => setAgent({ ...agent, split_responses: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="process-messages">Processar mensagens automaticamente</Label>
+                  <Switch
+                    id="process-messages"
+                    checked={agent.process_messages}
+                    onCheckedChange={(checked) => setAgent({ ...agent, process_messages: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="disable-outside">Desabilitar quando responder fora da plataforma</Label>
+                  <Switch
+                    id="disable-outside"
+                    checked={agent.disable_outside_platform}
+                    onCheckedChange={(checked) => setAgent({ ...agent, disable_outside_platform: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="assign-responsible">Responder tickets com responsável</Label>
+                  <Switch
+                    id="assign-responsible"
+                    checked={agent.assign_responsible}
+                    onCheckedChange={(checked) => setAgent({ ...agent, assign_responsible: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
                   <Label htmlFor="active">Agente Ativo</Label>
                   <Switch
                     id="active"
@@ -455,6 +497,19 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
                     onCheckedChange={(checked) => setAgent({ ...agent, is_active: checked })}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ignore-interval">Ignorar mensagens até X segundos</Label>
+                  <Input
+                    id="ignore-interval"
+                    type="number"
+                    value={agent.ignore_interval}
+                    onChange={(e) => setAgent({ ...agent, ignore_interval: parseInt(e.target.value) || 0 })}
+                    min={0}
+                    placeholder="0"
+                  />
+                </div>
+
                 <div className="flex items-center justify-between">
                   <Label htmlFor="auto-responses">Respostas Automáticas</Label>
                   <Switch
