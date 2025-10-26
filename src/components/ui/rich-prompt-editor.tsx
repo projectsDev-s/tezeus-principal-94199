@@ -249,6 +249,8 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
   const insertText = (text: string) => {
     if (!containerRef.current) return;
 
+    console.log('🔍 insertText chamado com:', text);
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       // Se não há seleção, adicionar no final
@@ -262,10 +264,11 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
 
     // Inserir o texto
     const isAction = text.startsWith('[ADD_ACTION]:');
+    console.log('🔍 isAction:', isAction);
     
     if (isAction) {
-      const parsed = parseAction(text);
       const nodes = parseTextToNodes(text);
+      console.log('🔍 nodes parseados:', nodes);
       
       nodes.forEach(node => {
         if (node.type === 'action') {
@@ -313,6 +316,7 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
 
     // Atualizar valor
     const newValue = extractValueFromDOM();
+    console.log('🔍 newValue após inserção:', newValue);
     isUpdatingRef.current = true;
     onChange(newValue);
     setTimeout(() => { isUpdatingRef.current = false; }, 0);
@@ -325,6 +329,7 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
 
   const handleContainerInput = () => {
     const newValue = extractValueFromDOM();
+    console.log('🔍 handleContainerInput - newValue:', newValue);
     
     isUpdatingRef.current = true;
     onChange(newValue);
