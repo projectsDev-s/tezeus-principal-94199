@@ -219,21 +219,21 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const actionText = `\n[ENVIE PARA O TOOL \`inserir-tag\` (METODO POST) o id: ${tagId}]\n`;
+    const actionText = `\n[ADD_ACTION]: [tag_name: ${tagName}], [tag_id: ${tagId}], [contact_id: CONTACT_ID]\n`;
     editorRef.current?.insertText(actionText);
     setShowTagSelector(false);
     setPendingActionType(null);
   };
 
   const handleQueueSelected = (queueId: string, queueName: string) => {
-    const actionText = `\n[ENVIE PARA O TOOL \`transferir-fila\` (METODO POST) o id: ${queueId}]\n`;
+    const actionText = `\n[ADD_ACTION]: [fila_id: ${queueId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
     editorRef.current?.insertText(actionText);
     setShowQueueSelector(false);
     setPendingActionType(null);
   };
 
   const handleConnectionSelected = (connectionId: string, connectionName: string) => {
-    const actionText = `\n[ENVIE PARA O TOOL \`transferir-conexao\` (METODO POST) o id: ${connectionId}]\n`;
+    const actionText = `\n[ADD_ACTION]: [conection_name: ${connectionName}], [conection_id: ${connectionId}], [contact_id: CONTACT_ID]\n`;
     editorRef.current?.insertText(actionText);
     setShowConnectionSelector(false);
     setPendingActionType(null);
@@ -249,9 +249,9 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `\n[ENVIE PARA O TOOL \`criar-card\` (METODO POST) o pipeline_id: ${pipelineId} e a coluna_id: ${columnId}]\n`;
+      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
     } else {
-      actionText = `\n[ENVIE PARA O TOOL \`transferir-coluna\` (METODO POST) o pipeline_id: ${pipelineId} e a coluna_id: ${columnId}]\n`;
+      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [card_id: ID_DO_CARD], [contact_id: CONTACT_ID]\n`;
     }
     
     editorRef.current?.insertText(actionText);

@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface ActionMatch {
-  type: 'inserir-tag' | 'transferir-fila' | 'transferir-conexao' | 'criar-card' | 'transferir-coluna' | 'info-adicionais';
+  type: 'add-tag' | 'transfer-queue' | 'transfer-connection' | 'create-card' | 'transfer-column' | 'save-info';
   params: any;
   fullMatch: string;
 }
@@ -37,90 +37,73 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Regex patterns para detectar ações no novo formato
-    const patterns = {
-      inserir_tag: /\[ENVIE PARA O TOOL `inserir-tag` \(METODO POST\) o id: ([a-f0-9-]+)\]/gi,
-      transferir_fila: /\[ENVIE PARA O TOOL `transferir-fila` \(METODO POST\) o id: ([a-f0-9-]+)\]/gi,
-      transferir_conexao: /\[ENVIE PARA O TOOL `transferir-conexao` \(METODO POST\) o id: ([a-f0-9-]+)\]/gi,
-      criar_card: /\[ENVIE PARA O TOOL `criar-card` \(METODO POST\) o pipeline_id: ([a-f0-9-]+) e a coluna_id: ([a-f0-9-]+)(?:\s+com o title (.+?))?\]/gi,
-      transferir_coluna: /\[ENVIE PARA O TOOL `transferir-coluna` \(METODO POST\) (?:o pipeline_id: ([a-f0-9-]+) e a coluna_id: ([a-f0-9-]+)|movendo o card atual para a coluna_id: ([a-f0-9-]+) dentro do pipeline_id: ([a-f0-9-]+))\]/gi,
-      info_adicionais: /\[ENVIE PARA O TOOL `info-adicionais` \(METODO POST\) o id: ([a-f0-9-]+) e o valor (.+?)\]/gi,
-    };
-
+    // Regex para detectar ações no formato [ADD_ACTION]: [param1: value1], [param2: value2]
+    const actionPattern = /\[ADD_ACTION\]:\s*(?:\[([^\]]+)\](?:,\s*)?)+/gi;
+    
     const actions: ActionMatch[] = [];
     let cleanText = agentResponse;
 
-    // Detectar: [ENVIE PARA O TOOL `inserir-tag` (METODO POST) o id: ID_DA_TAG]
     let match;
-    while ((match = patterns.inserir_tag.exec(agentResponse)) !== null) {
-      const tagId = match[1].trim();
-      actions.push({
-        type: 'inserir-tag',
-        params: { id: tagId },
-        fullMatch: match[0]
-      });
-      console.log('📌 Ação detectada: Inserir Tag ->', tagId);
-    }
-
-    // Detectar: [ENVIE PARA O TOOL `transferir-fila` (METODO POST) o id: ID_DA_FILA]
-    while ((match = patterns.transferir_fila.exec(agentResponse)) !== null) {
-      const queueId = match[1].trim();
-      actions.push({
-        type: 'transferir-fila',
-        params: { id: queueId },
-        fullMatch: match[0]
-      });
-      console.log('🔀 Ação detectada: Transferir Fila ->', queueId);
-    }
-
-    // Detectar: [ENVIE PARA O TOOL `transferir-conexao` (METODO POST) o id: ID_DA_CONEXAO]
-    while ((match = patterns.transferir_conexao.exec(agentResponse)) !== null) {
-      const connectionId = match[1].trim();
-      actions.push({
-        type: 'transferir-conexao',
-        params: { id: connectionId },
-        fullMatch: match[0]
-      });
-      console.log('🔀 Ação detectada: Transferir Conexão ->', connectionId);
-    }
-
-    // Detectar: [ENVIE PARA O TOOL `criar-card` (METODO POST) o pipeline_id: ID_DO_PIPELINE e a coluna_id: ID_DA_COLUNA]
-    while ((match = patterns.criar_card.exec(agentResponse)) !== null) {
-      const pipelineId = match[1].trim();
-      const colunaId = match[2].trim();
-      const title = match[3] ? match[3].trim() : 'Novo Card';
-      actions.push({
-        type: 'criar-card',
-        params: { pipeline_id: pipelineId, coluna_id: colunaId, title },
-        fullMatch: match[0]
-      });
-      console.log('📋 Ação detectada: Criar Card CRM ->', pipelineId, colunaId, title);
-    }
-
-    // Detectar: [ENVIE PARA O TOOL `transferir-coluna` (METODO POST) ...]
-    while ((match = patterns.transferir_coluna.exec(agentResponse)) !== null) {
-      const pipelineId = match[1] || match[4];
-      const colunaId = match[2] || match[3];
-      if (pipelineId && colunaId) {
-        actions.push({
-          type: 'transferir-coluna',
-          params: { pipeline_id: pipelineId.trim(), coluna_id: colunaId.trim() },
-          fullMatch: match[0]
-        });
-        console.log('↔️ Ação detectada: Transferir Coluna ->', pipelineId, colunaId);
+    while ((match = actionPattern.exec(agentResponse)) !== null) {
+      const fullMatch = match[0];
+      
+      // Extrair todos os parâmetros [key: value]
+      const paramPattern = /\[([^:]+):\s*([^\]]+)\]/g;
+      const params: Record<string, string> = {};
+      let paramMatch;
+      
+      while ((paramMatch = paramPattern.exec(fullMatch)) !== null) {
+        const key = paramMatch[1].trim();
+        const value = paramMatch[2].trim();
+        params[key] = value;
       }
-    }
 
-    // Detectar: [ENVIE PARA O TOOL `info-adicionais` (METODO POST) o id: ID_DA_INFO e o valor ...]
-    while ((match = patterns.info_adicionais.exec(agentResponse)) !== null) {
-      const infoId = match[1].trim();
-      const value = match[2].trim();
-      actions.push({
-        type: 'info-adicionais',
-        params: { id: infoId, value },
-        fullMatch: match[0]
-      });
-      console.log('💾 Ação detectada: Info Adicionais ->', infoId, value);
+      console.log('🔍 Parâmetros detectados:', params);
+
+      // Substituir placeholders pelos valores reais
+      const processedParams: Record<string, string> = {};
+      for (const [key, value] of Object.entries(params)) {
+        if (value === 'CONTACT_ID') {
+          processedParams[key] = contactId;
+        } else if (value === 'CONVERSATION_ID') {
+          processedParams[key] = conversationId;
+        } else if (value === 'WORKSPACE_ID') {
+          processedParams[key] = workspaceId;
+        } else {
+          processedParams[key] = value;
+        }
+      }
+
+      // Determinar tipo de ação baseado nos parâmetros
+      let actionType: ActionMatch['type'] | null = null;
+      
+      if ('tag_id' in processedParams) {
+        actionType = 'add-tag';
+        console.log('📌 Ação detectada: Adicionar Tag ->', processedParams.tag_id);
+      } else if ('fila_id' in processedParams) {
+        actionType = 'transfer-queue';
+        console.log('🔀 Ação detectada: Transferir Fila ->', processedParams.fila_id);
+      } else if ('conection_id' in processedParams) {
+        actionType = 'transfer-connection';
+        console.log('🔀 Ação detectada: Transferir Conexão ->', processedParams.conection_id);
+      } else if ('card_id' in processedParams && processedParams.card_id === 'ID_DO_CARD') {
+        actionType = 'transfer-column';
+        console.log('↔️ Ação detectada: Transferir Coluna ->', processedParams.pipeline_id, processedParams.coluna_id);
+      } else if ('pipeline_id' in processedParams && 'coluna_id' in processedParams && !('card_id' in processedParams)) {
+        actionType = 'create-card';
+        console.log('📋 Ação detectada: Criar Card ->', processedParams.pipeline_id, processedParams.coluna_id);
+      } else if ('field_name' in processedParams && 'field_value' in processedParams) {
+        actionType = 'save-info';
+        console.log('💾 Ação detectada: Salvar Info ->', processedParams.field_name);
+      }
+
+      if (actionType) {
+        actions.push({
+          type: actionType,
+          params: processedParams,
+          fullMatch
+        });
+      }
     }
 
     // Executar todas as ações
