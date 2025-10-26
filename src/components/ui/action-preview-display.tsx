@@ -1,5 +1,5 @@
 function highlightActions(text: string) {
-  const actionRegex = /(\[ADD_ACTION\]:[^\n]+)/g;
+  const actionRegex = /(\[[^\]]+\])/g;
   
   const parts: { text: string; isAction: boolean }[] = [];
   let lastIndex = 0;
