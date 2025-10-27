@@ -33,9 +33,12 @@ interface ActionDetails {
 }
 
 function parseActionDetails(actionText: string): ActionDetails | null {
+  console.log('🔍 Tentando fazer parse de:', actionText);
+  
   // Adicionar Tag
-  const tagMatch = actionText.match(/\[ADD_ACTION\]: \[tag_name: (.*?)\],\[tag_id: (.*?)\],\[contact_id: CONTACT_ID\]/);
+  const tagMatch = actionText.match(/\[ADD_ACTION\]:\s*\[tag_name:\s*(.*?)\],?\s*\[tag_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\]/);
   if (tagMatch) {
+    console.log('✅ Match encontrado: adicionar tag');
     return {
       type: 'adicionar_tag',
       label: `Adicionar Tag: ${tagMatch[1]}`,
@@ -45,8 +48,9 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Coluna CRM
-  const colunaMatch = actionText.match(/\[ADD_ACTION\]: \[pipeline_id: (.*?)\], \[coluna_id: (.*?)\], \[card_id: ID_DO_CARD\], \[contact_id: CONTACT_ID\]/);
+  const colunaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\],?\s*\[coluna_id:\s*(.*?)\],?\s*\[card_id:\s*ID_DO_CARD\],?\s*\[contact_id:\s*CONTACT_ID\]/);
   if (colunaMatch) {
+    console.log('✅ Match encontrado: transferir coluna crm');
     return {
       type: 'transferir_coluna_crm',
       label: 'Transferir Coluna CRM',
@@ -56,8 +60,9 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Conexão
-  const conexaoMatch = actionText.match(/\[ADD_ACTION\]: \[conection_name: (.*?)\], \[conection_id: (.*?)\], \[contact_id: CONTACT_ID\]/);
+  const conexaoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[conection_name:\s*(.*?)\],?\s*\[conection_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\]/);
   if (conexaoMatch) {
+    console.log('✅ Match encontrado: transferir conexão');
     return {
       type: 'transferir_conexao',
       label: `Transferir Conexão: ${conexaoMatch[1]}`,
@@ -67,8 +72,9 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Fila
-  const filaMatch = actionText.match(/\[ADD_ACTION\]: \[fila_id: (.*?)\], \[contact_id: CONTACT_ID\], \[conversation_id: CONVERSATION_ID\]/);
+  const filaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[fila_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\],?\s*\[conversation_id:\s*CONVERSATION_ID\]/);
   if (filaMatch) {
+    console.log('✅ Match encontrado: transferir fila');
     return {
       type: 'transferir_fila',
       label: 'Transferir Fila',
@@ -78,8 +84,9 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Criar Card
-  const criarCardMatch = actionText.match(/\[ADD_ACTION\]: \[pipeline_id: (.*?)\], \[coluna_id: (.*?)\], \[contact_id: CONTACT_ID\], \[conversation_id: CONVERSATION_ID\]/);
+  const criarCardMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\],?\s*\[coluna_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\],?\s*\[conversation_id:\s*CONVERSATION_ID\]/);
   if (criarCardMatch) {
+    console.log('✅ Match encontrado: criar card');
     return {
       type: 'criar_card',
       label: 'Criar Card no CRM',
@@ -89,8 +96,9 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Salvar Informações Adicionais
-  const salvarInfoMatch = actionText.match(/\[ADD_ACTION\]: \[workspace_id: WORKSPACE_ID\], \[contact_id: CONTACT_ID\], \[field_name: (.*?)\], \[field_value: (.*?)\]/);
+  const salvarInfoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[workspace_id:\s*WORKSPACE_ID\],?\s*\[contact_id:\s*CONTACT_ID\],?\s*\[field_name:\s*(.*?)\],?\s*\[field_value:\s*(.*?)\]/);
   if (salvarInfoMatch) {
+    console.log('✅ Match encontrado: salvar informações adicionais');
     return {
       type: 'salvar_informacoes',
       label: `Salvar campo ${salvarInfoMatch[1]}`,
@@ -99,11 +107,12 @@ function parseActionDetails(actionText: string): ActionDetails | null {
     };
   }
 
+  console.log('❌ Nenhum match encontrado');
   return null;
 }
 
 function parseTextToNodes(text: string): EditorNode[] {
-  const actionRegex = /(\[ADD_ACTION\]:[^\n]+)/g;
+  const actionRegex = /\[ADD_ACTION\]:[^\[]*(?:\[[^\]]+\])+/g;
   const nodes: EditorNode[] = [];
   let lastIndex = 0;
   let match;
