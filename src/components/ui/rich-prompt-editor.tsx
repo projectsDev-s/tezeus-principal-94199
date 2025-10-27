@@ -36,7 +36,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   console.log('🔍 Tentando fazer parse de:', actionText);
   
   // Adicionar Tag
-  const tagMatch = actionText.match(/\[ADD_ACTION\]:\s*\[tag_name:\s*(.*?)\],?\s*\[tag_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\]/);
+  const tagMatch = actionText.match(/\[ADD_ACTION\]:\s*\[tag_name:\s*(.*?)\]\s*,\s*\[tag_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]/);
   if (tagMatch) {
     console.log('✅ Match encontrado: adicionar tag');
     return {
@@ -48,7 +48,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Coluna CRM
-  const colunaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\],?\s*\[coluna_id:\s*(.*?)\],?\s*\[card_id:\s*ID_DO_CARD\],?\s*\[contact_id:\s*CONTACT_ID\]/);
+  const colunaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\]\s*,\s*\[coluna_id:\s*(.*?)\]\s*,\s*\[card_id:\s*ID_DO_CARD\]\s*,\s*\[contact_id:\s*CONTACT_ID\]/);
   if (colunaMatch) {
     console.log('✅ Match encontrado: transferir coluna crm');
     return {
@@ -60,7 +60,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Conexão
-  const conexaoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[conection_name:\s*(.*?)\],?\s*\[conection_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\]/);
+  const conexaoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[conection_name:\s*(.*?)\]\s*,\s*\[conection_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]/);
   if (conexaoMatch) {
     console.log('✅ Match encontrado: transferir conexão');
     return {
@@ -72,7 +72,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Fila
-  const filaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[fila_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\],?\s*\[conversation_id:\s*CONVERSATION_ID\]/);
+  const filaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[fila_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[conversation_id:\s*CONVERSATION_ID\]/);
   if (filaMatch) {
     console.log('✅ Match encontrado: transferir fila');
     return {
@@ -84,7 +84,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Criar Card
-  const criarCardMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\],?\s*\[coluna_id:\s*(.*?)\],?\s*\[contact_id:\s*CONTACT_ID\],?\s*\[conversation_id:\s*CONVERSATION_ID\]/);
+  const criarCardMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\]\s*,\s*\[coluna_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[conversation_id:\s*CONVERSATION_ID\]/);
   if (criarCardMatch) {
     console.log('✅ Match encontrado: criar card');
     return {
@@ -96,7 +96,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Salvar Informações Adicionais
-  const salvarInfoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[workspace_id:\s*WORKSPACE_ID\],?\s*\[contact_id:\s*CONTACT_ID\],?\s*\[field_name:\s*(.*?)\],?\s*\[field_value:\s*(.*?)\]/);
+  const salvarInfoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[workspace_id:\s*WORKSPACE_ID\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[field_name:\s*(.*?)\]\s*,\s*\[field_value:\s*(.*?)\]/);
   if (salvarInfoMatch) {
     console.log('✅ Match encontrado: salvar informações adicionais');
     return {
