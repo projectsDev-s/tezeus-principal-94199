@@ -1344,9 +1344,6 @@ export function WhatsAppChat({
     window.history.pushState({}, '', url.toString());
   };
 
-  if (loading) {
-    return <WhatsAppChatSkeleton />;
-  }
   return <div className="flex h-full bg-white overflow-hidden w-full">
       {/* Sidebar de Filtros */}
       <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-40 lg:w-48")}>
@@ -1529,26 +1526,27 @@ export function WhatsAppChat({
 
         {/* Lista de conversas */}
         <ScrollArea className="flex-1">
-          {loading ? <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Carregando conversas...</p>
-              </div>
-            </div> : filteredConversations.length === 0 ? <div className="flex items-center justify-center h-32">
+          {loading ? (
+            <WhatsAppChatSkeleton />
+          ) : filteredConversations.length === 0 ? (
+            <div className="flex items-center justify-center h-32">
               <div className="text-center space-y-3">
                 <MessageCircle className="h-8 w-8 text-muted-foreground mx-auto" />
                 <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada</p>
                 <p className="text-xs text-muted-foreground">Configure conexões WhatsApp para ver conversas</p>
               </div>
-            </div> : <div className="space-y-0 group/list flex flex-col">
-            {getFilteredConversations().map(conversation => {
-            // ✅ Removido lastMessage (lazy loading)
-            const lastActivity = getActivityDisplay(conversation);
-            const initials = getInitials(conversation.contact?.name || conversation.contact?.phone || 'U');
-            const avatarColor = getAvatarColor(conversation.contact?.name || conversation.contact?.phone || 'U');
-            // ✅ CRÍTICO: Key dinâmica para forçar re-render do card quando conversa atualizar
-            const cardKey = `${conversation.id}-${conversation._updated_at || 0}-${conversation.last_activity_at}`;
-            return <li key={cardKey} className="list-none">
+            </div>
+          ) : (
+            <div className="space-y-0 group/list flex flex-col">
+              {getFilteredConversations().map(conversation => {
+                // ✅ Removido lastMessage (lazy loading)
+                const lastActivity = getActivityDisplay(conversation);
+                const initials = getInitials(conversation.contact?.name || conversation.contact?.phone || 'U');
+                const avatarColor = getAvatarColor(conversation.contact?.name || conversation.contact?.phone || 'U');
+                // ✅ CRÍTICO: Key dinâmica para forçar re-render do card quando conversa atualizar
+                const cardKey = `${conversation.id}-${conversation._updated_at || 0}-${conversation.last_activity_at}`;
+                return (
+                  <li key={cardKey} className="list-none">
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
                       <div className={cn("relative flex items-center px-4 py-2 cursor-pointer rounded-lg transition-all duration-300 ease-in-out border-b border-border/50", "group-hover/list:opacity-30 hover:!opacity-100 hover:shadow-lg hover:scale-[1.02] hover:translate-x-1 hover:bg-white hover:z-10", selectedConversation?.id === conversation.id && "bg-muted !opacity-100")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
@@ -1701,10 +1699,12 @@ export function WhatsAppChat({
                         Espiar
                       </ContextMenuItem>
                     </ContextMenuContent>
-                  </ContextMenu>
-                </li>;
-          })}
-          </div>}
+                    </ContextMenu>
+                  </li>
+                );
+              })}
+            </div>
+          )}
         </ScrollArea>
 
         {/* Campo para nova conversa */}
