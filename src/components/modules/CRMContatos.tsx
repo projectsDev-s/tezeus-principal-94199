@@ -302,15 +302,26 @@ export function CRMContatos() {
       const { error: conversationsError } = await supabase.from("conversations").delete().eq("contact_id", contact.id);
       if (conversationsError) throw conversationsError;
 
-      // 5. Delete activities
+      // 5. Delete n8n chat histories (usando telefone do contato como session_id)
+      if (contact.phone) {
+        const { error: n8nError } = await supabase
+          .from("n8n_chat_histories")
+          .delete()
+          .eq("session_id", contact.phone);
+        if (n8nError) {
+          console.warn("Error deleting n8n chat histories:", n8nError);
+        }
+      }
+
+      // 6. Delete activities
       const { error: activitiesError } = await supabase.from("activities").delete().eq("contact_id", contact.id);
       if (activitiesError) throw activitiesError;
 
-      // 6. Delete contact tags
+      // 7. Delete contact tags
       const { error: contactTagsError } = await supabase.from("contact_tags").delete().eq("contact_id", contact.id);
       if (contactTagsError) throw contactTagsError;
 
-      // 7. Finally delete the contact
+      // 8. Finally delete the contact
       const { error: contactError } = await supabase.from("contacts").delete().eq("id", contact.id);
       if (contactError) throw contactError;
 
