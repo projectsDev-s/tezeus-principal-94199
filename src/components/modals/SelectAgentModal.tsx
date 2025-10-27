@@ -17,7 +17,7 @@ interface SelectAgentModalProps {
 
 export const SelectAgentModal = ({ open, onOpenChange, conversationId, currentAgentId }: SelectAgentModalProps) => {
   const { selectedWorkspace } = useWorkspace();
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(currentAgentId || '');
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(currentAgentId || 'none');
   const queryClient = useQueryClient();
 
   const { data: agents, isLoading } = useQuery({
@@ -40,11 +40,12 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId, currentAg
 
   const assignAgentMutation = useMutation({
     mutationFn: async (agentId: string | null) => {
+      const agentIdValue = agentId === 'none' ? null : agentId;
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agent_id: agentId,
-          agente_ativo: !!agentId
+          agent_id: agentIdValue,
+          agente_ativo: !!agentIdValue
         })
         .eq('id', conversationId);
       
@@ -53,7 +54,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId, currentAg
     onSuccess: () => {
       toast({
         title: 'Agente atualizado',
-        description: selectedAgentId ? 'Agente ativado para esta conversa' : 'Agente desativado',
+        description: selectedAgentId !== 'none' ? 'Agente ativado para esta conversa' : 'Agente desativado',
       });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       onOpenChange(false);
@@ -69,7 +70,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId, currentAg
   });
 
   const handleSave = () => {
-    assignAgentMutation.mutate(selectedAgentId || null);
+    assignAgentMutation.mutate(selectedAgentId === 'none' ? null : selectedAgentId);
   };
 
   return (
@@ -94,7 +95,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId, currentAg
                 <SelectValue placeholder="Selecione um agente" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum agente</SelectItem>
+                <SelectItem value="none">Nenhum agente</SelectItem>
                 {agents?.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id}>
                     {agent.name}
