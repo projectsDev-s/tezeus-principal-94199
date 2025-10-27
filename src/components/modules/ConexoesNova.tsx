@@ -974,28 +974,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                     className="h-11"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Formato: 55 + DDD + número (será normalizado automaticamente)
-                  </p>
-                </div>
+                  Formato: 55 + DDD + número (será normalizado automaticamente)
+                </p>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="historyRecovery" className="text-sm font-medium text-foreground">
-                    Recuperar mensagens a partir de
-                  </Label>
-                  <Select value={historyRecovery} onValueChange={setHistoryRecovery} disabled={isEditMode}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      <SelectItem value="week">Uma semana</SelectItem>
-                      <SelectItem value="month">Um mês</SelectItem>
-                      <SelectItem value="quarter">Três meses</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label htmlFor="queue" className="text-sm font-medium text-foreground">
                     Fila (Opcional)
                   </Label>
