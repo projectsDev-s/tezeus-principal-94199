@@ -41,6 +41,7 @@ import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2 } from "lucide-react";
+import { WhatsAppChatSkeleton } from "@/components/chat/WhatsAppChatSkeleton";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1344,12 +1345,7 @@ export function WhatsAppChat({
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>;
+    return <WhatsAppChatSkeleton />;
   }
   return <div className="flex h-full bg-white overflow-hidden w-full">
       {/* Sidebar de Filtros */}
