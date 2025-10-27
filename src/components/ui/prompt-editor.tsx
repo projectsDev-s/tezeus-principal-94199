@@ -34,7 +34,7 @@ function parseContent(content: string): { tags: Array<{ match: string; display: 
   
   // Processar padrões complexos [ADD_ACTION]: [tag name: ...], [tag id: ...], [contact id: ...];
   while ((match = actionPattern.exec(content)) !== null) {
-    const fullMatch = match[0].trim();
+    const fullMatch = match[0];
     const startPos = match.index!;
     
     // Extrair todos os pares [chave: valor] da ação
