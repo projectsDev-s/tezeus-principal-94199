@@ -112,7 +112,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
 }
 
 function parseTextToNodes(text: string): EditorNode[] {
-  const actionRegex = /\[ADD_ACTION\]:[^\[]*(?:\[[^\]]+\])+/g;
+  const actionRegex = /\[ADD_ACTION\]:\s*(?:\[[^\]]+\]\s*,?\s*)+/g;
   const nodes: EditorNode[] = [];
   let lastIndex = 0;
   let match;
