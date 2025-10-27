@@ -112,16 +112,13 @@ function parseActionDetails(actionText: string): ActionDetails | null {
 }
 
 function parseTextToNodes(text: string): EditorNode[] {
-  // Regex robusta: captura [ADD_ACTION]: seguido de qualquer coisa até o final da linha
-  const actionRegex = /\[ADD_ACTION\]:[^\n]+/g;
   const nodes: EditorNode[] = [];
+  // Regex simplificada: captura [ADD_ACTION]: seguido de tudo até nova linha ou fim
+  const actionRegex = /\[ADD_ACTION\]:[^\n]*/g;
   let lastIndex = 0;
   let match;
   
-  console.log('🔍 Parseando texto:', text);
-  
   while ((match = actionRegex.exec(text)) !== null) {
-    console.log('✅ Match encontrado:', match[0]);
     // Texto antes da ação
     if (match.index > lastIndex) {
       const textContent = text.substring(lastIndex, match.index);
@@ -130,18 +127,18 @@ function parseTextToNodes(text: string): EditorNode[] {
       }
     }
     
-    // A ação em si
-    const actionDetails = parseActionDetails(match[0]);
-    nodes.push({ 
-      type: 'action', 
-      content: match[0],
-      id: `action-${match.index}-${Math.random().toString(36).substr(2, 9)}`,
-      actionType: actionDetails?.type || 'unknown',
-      // Mostra o texto completo da ação inline
-      label: match[0],
-      // Destaque visual amarelo para todas as ações
-      className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700'
-    });
+    // A ação em si - sempre renderiza com destaque amarelo
+    const actionText = match[0].trim();
+    if (actionText) {
+      nodes.push({ 
+        type: 'action', 
+        content: actionText,
+        id: `action-${match.index}-${Math.random().toString(36).substr(2, 9)}`,
+        actionType: 'action',
+        label: actionText,
+        className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700'
+      });
+    }
     
     lastIndex = match.index + match[0].length;
   }
