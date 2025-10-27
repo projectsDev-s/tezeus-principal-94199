@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { WebhooksEvolutionConfig } from "./WebhooksEvolutionConfig";
-import { EvolutionApiConfig } from "./EvolutionApiConfig";
+import { WebhooksEvolutionConfigMaster } from "./master/WebhooksEvolutionConfigMaster";
+import { EvolutionApiConfigMaster } from "./master/EvolutionApiConfigMaster";
 import { WorkspaceSelector } from "@/components/WorkspaceSelector";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ColorPickerModal } from "@/components/modals/ColorPickerModal";
@@ -430,11 +430,11 @@ export function AdministracaoConfiguracoes() {
           </TabsContent>
 
           <TabsContent value="webhooks" className="p-0 mt-0">
-            <WebhooksEvolutionConfig />
+            <WebhooksEvolutionConfigMaster />
           </TabsContent>
 
           <TabsContent value="evolution-api" className="p-0 mt-0">
-            <EvolutionApiConfig />
+            <EvolutionApiConfigMaster />
           </TabsContent>
 
         </Tabs>
