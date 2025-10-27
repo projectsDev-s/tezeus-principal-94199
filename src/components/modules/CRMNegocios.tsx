@@ -79,6 +79,7 @@ interface Deal {
   conversation?: {
     id: string;
     connection_id?: string;
+    agente_ativo?: boolean;
     connection?: {
       id: string;
       instance_name: string;
@@ -278,9 +279,28 @@ function DraggableDeal({
           {/* Nome + Produto/Valor na MESMA LINHA */}
           <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
             {/* Nome do cliente à esquerda */}
-            <h3 className={cn("text-xs font-medium truncate flex-1 min-w-0", "text-foreground")}>
-              {deal.contact?.name || deal.name}
-            </h3>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <h3 className={cn("text-xs font-medium truncate", "text-foreground")}>
+                {deal.contact?.name || deal.name}
+              </h3>
+              
+              {/* Badge de Agente IA Ativo */}
+              {deal.conversation?.agente_ativo && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 border border-purple-200">
+                        <Bot className="w-2.5 h-2.5" />
+                        <span className="text-[9px] font-medium">IA</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Agente IA Ativo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             
             {/* Produto + Valor à direita */}
             <div className="flex items-center gap-1 text-xs flex-shrink-0">
