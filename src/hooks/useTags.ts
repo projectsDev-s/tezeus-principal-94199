@@ -24,8 +24,10 @@ export function useTags(workspaceIdProp?: string, startDate?: Date, endDate?: Da
   const workspaceId = workspaceIdProp || selectedWorkspace?.workspace_id;
 
   const fetchTags = async () => {
-    if (!workspaceId) {
-      console.log('🚫 useTags: Nenhum workspace disponível');
+    // Validar se há workspace válido (não vazio)
+    if (!workspaceId || workspaceId.trim() === '') {
+      console.log('🚫 useTags: Nenhum workspace selecionado');
+      setTags([]);
       setIsLoading(false);
       return;
     }
