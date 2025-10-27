@@ -35,7 +35,7 @@ function parseContent(content: string): { tags: Array<{ match: string; display: 
   // Processar padrões complexos [ADD_ACTION]: [tag name: ...], [tag id: ...], [contact id: ...];
   while ((match = actionPattern.exec(content)) !== null) {
     const fullMatch = match[0];
-    const startPos = match.index!;
+    const startPos = match.index ?? 0;
     
     // Extrair todos os pares [chave: valor] da ação
     const paramMatches = fullMatch.match(/\[[^\]]+\]/g);
@@ -74,7 +74,7 @@ function parseContent(content: string): { tags: Array<{ match: string; display: 
     tags.push({
       match: fullMatch,
       display: fullMatch,
-      position: match.index!
+      position: match.index ?? 0
     });
   }
   
