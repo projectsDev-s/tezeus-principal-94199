@@ -173,42 +173,36 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
                 }
               }
               
-              // Adicionar badge estilo "Imagem 2" - roxo claro com bordas arredondadas
-              // Truncar texto longo com "..."
-              const finalDisplay = tag.match;
+              // Adicionar badge apenas para [ADD_ACTION]
+              // O resto do texto da ação fica normal
+              const actionKeyword = "[ADD_ACTION]";
+              const restOfAction = tag.match.substring(actionKeyword.length);
               
               elements.push(
-                <span
-                  key={`tag-${idx}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    backgroundColor: 'rgba(147, 51, 234, 0.1)',
-                    border: '1px solid rgba(147, 51, 234, 0.3)',
-                    borderRadius: '12px',
-                    padding: '2px 8px',
-                    margin: '0 2px',
-                    fontSize: '11px',
-                    fontWeight: '500',
-                    lineHeight: '1.5',
-                    verticalAlign: 'baseline',
-                    maxWidth: '500px',
-                  }}
-                >
-                  <div
+                <React.Fragment key={`action-${idx}`}>
+                  <span
                     style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      color: 'rgb(147, 51, 234)',
-                      maxWidth: '450px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                      border: '1px solid rgba(147, 51, 234, 0.3)',
+                      borderRadius: '12px',
+                      padding: '2px 8px',
+                      margin: '0 2px',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      lineHeight: '1.5',
+                      verticalAlign: 'baseline',
                     }}
                   >
-                    {finalDisplay}
-                  </div>
-                  <X className="w-3 h-3" style={{ cursor: 'pointer', flexShrink: 0 }} />
-                </span>
+                    <span style={{ color: 'rgb(147, 51, 234)' }}>
+                      {actionKeyword}
+                    </span>
+                    <X className="w-3 h-3" style={{ cursor: 'pointer', flexShrink: 0 }} />
+                  </span>
+                  <span>{restOfAction}</span>
+                </React.Fragment>
               );
               
               lastIndex = tag.position + tag.match.length;
