@@ -40,7 +40,6 @@ interface FormData {
   ignore_interval: number;
   assign_responsible: boolean;
   split_responses: boolean;
-  process_messages: boolean;
   disable_outside_platform: boolean;
   is_active: boolean;
   configure_commands: string;
@@ -71,7 +70,6 @@ export function CriarAgenteModal({
     ignore_interval: 0,
     assign_responsible: false,
     split_responses: true,
-    process_messages: true,
     disable_outside_platform: false,
     is_active: true,
     configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - FORMATO COLCHETES]
@@ -231,7 +229,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
           ignore_interval: formData.ignore_interval,
           assign_responsible: formData.assign_responsible,
           split_responses: formData.split_responses,
-          process_messages: formData.process_messages,
           disable_outside_platform: formData.disable_outside_platform,
           is_active: formData.is_active,
           api_provider: 'openai',
@@ -266,7 +263,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
         ignore_interval: 0,
         assign_responsible: false,
         split_responses: true,
-        process_messages: true,
         disable_outside_platform: false,
         is_active: true,
         configure_commands: `[REGRAS DE INTERPRETAÇÃO DE COMANDOS - FORMATO COLCHETES]
@@ -612,14 +608,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
               <Switch
                 checked={formData.split_responses}
                 onCheckedChange={(checked) => setFormData({ ...formData, split_responses: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label>Processar mensagens automaticamente</Label>
-              <Switch
-                checked={formData.process_messages}
-                onCheckedChange={(checked) => setFormData({ ...formData, process_messages: checked })}
               />
             </div>
 
