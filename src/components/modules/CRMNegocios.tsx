@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag } from "lucide-react";
+import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
@@ -45,6 +45,7 @@ import { useContactTags } from "@/hooks/useContactTags";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
+import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 
 // Interface compatível com o componente existente
 interface Deal {
@@ -120,6 +121,7 @@ interface DraggableDealProps {
   onDeleteCard?: (cardId: string) => void;
   onOpenTransferModal?: (cardId: string) => void;
   onVincularResponsavel?: (cardId: string, conversationId?: string, currentResponsibleId?: string, contactId?: string) => void;
+  onConfigureAgent?: (conversationId: string) => void;
 }
 function DraggableDeal({
   deal,
@@ -135,7 +137,8 @@ function DraggableDeal({
   onLinkProduct,
   onDeleteCard,
   onOpenTransferModal,
-  onVincularResponsavel
+  onVincularResponsavel,
+  onConfigureAgent
 }: DraggableDealProps) {
   const {
     selectedWorkspace
@@ -475,6 +478,29 @@ function DraggableDeal({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-5 w-5 p-0 hover:bg-purple-100 hover:text-purple-600" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (deal.conversation?.id && onConfigureAgent) {
+                        onConfigureAgent(deal.conversation.id);
+                      }
+                    }}
+                  >
+                    <Bot className="w-3 h-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Configurar Agente IA</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           <div className="flex items-center gap-2">
@@ -596,6 +622,8 @@ function CRMNegociosContent({
     name: string;
   } | null>(null);
   const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([]);
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [selectedConversationForAgent, setSelectedConversationForAgent] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -1307,6 +1335,9 @@ function CRMNegociosContent({
                           }} onValueClick={dealData => {
                             setSelectedCardForValue(dealData);
                             setIsSetValueModalOpen(true);
+                          }} onConfigureAgent={(conversationId) => {
+                            setSelectedConversationForAgent(conversationId);
+                            setAgentModalOpen(true);
                           }} isSelectionMode={isSelectionMode && selectedColumnForAction === column.id} isSelected={selectedCardsForTransfer.has(card.id)} onToggleSelection={() => {
                             const newSet = new Set(selectedCardsForTransfer);
                             if (newSet.has(card.id)) {
@@ -1372,6 +1403,9 @@ function CRMNegociosContent({
             }} onValueClick={dealData => {
               setSelectedCardForValue(dealData);
               setIsSetValueModalOpen(true);
+            }} onConfigureAgent={(conversationId) => {
+              setSelectedConversationForAgent(conversationId);
+              setAgentModalOpen(true);
             }} />;
           }
           return null;
@@ -1446,6 +1480,12 @@ function CRMNegociosContent({
       console.log('🔄 Responsável atualizado, refreshing active users...');
       refreshActiveUsers();
     }} />
+
+      <SelectAgentModal 
+        open={agentModalOpen} 
+        onOpenChange={setAgentModalOpen} 
+        conversationId={selectedConversationForAgent || ''} 
+      />
 
       <DeleteDealModal isOpen={isDeleteDealModalOpen} onClose={() => {
       setIsDeleteDealModalOpen(false);
