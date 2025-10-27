@@ -77,11 +77,14 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
   } = useQueueUsers(fila?.id);
 
   const loadAIAgents = async () => {
+    if (!fila?.workspace_id) return;
+    
     try {
       const { data, error } = await supabase
         .from('ai_agents')
         .select('id, name, is_active')
         .eq('is_active', true)
+        .eq('workspace_id', fila.workspace_id)
         .order('name');
 
       if (error) throw error;
