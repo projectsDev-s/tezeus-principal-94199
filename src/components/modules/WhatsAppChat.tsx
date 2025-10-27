@@ -717,8 +717,7 @@ export function WhatsAppChat({
   const handleSelectConversation = async (conversation: WhatsAppConversation) => {
     console.log('🎯 [handleSelectConversation] Selecionando conversa:', {
       conversationId: conversation.id,
-      contactName: conversation.contact.name,
-      wasLoadedBefore: loadedConversationsRef.current.has(conversation.id)
+      contactName: conversation.contact.name
     });
 
     setSelectedConversation(conversation);
@@ -732,18 +731,12 @@ export function WhatsAppChat({
     setShouldAutoScroll(true);
     setIsAtBottom(true);
 
-    // ✅ CRÍTICO: Carregar mensagens APENAS se ainda não foram carregadas
-    if (!loadedConversationsRef.current.has(conversation.id)) {
-      console.log('📥 [handleSelectConversation] Carregando mensagens pela primeira vez:', conversation.id);
-      clearMessages(); // Limpar mensagens da conversa anterior
-      await loadMessages(conversation.id);
-      loadedConversationsRef.current.add(conversation.id); // Marcar como carregada
-    } else {
-      console.log('✅ [handleSelectConversation] Conversa já carregada, reutilizando mensagens:', conversation.id);
-    }
+    // ✅ SEMPRE carregar mensagens ao clicar na conversa
+    console.log('📥 [handleSelectConversation] Atualizando mensagens:', conversation.id);
+    clearMessages(); // Limpar mensagens da conversa anterior
+    await loadMessages(conversation.id);
     
     // Marcar notificações como lidas SEMPRE ao abrir conversa
-    // Isso garante que tanto cliques no card quanto nas notificações zerem o contador
     console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
     markContactAsRead(conversation.id);
   };
