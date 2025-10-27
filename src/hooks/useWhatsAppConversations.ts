@@ -637,27 +637,14 @@ export const useWhatsAppConversations = () => {
               _updated_at: Date.now() // Força re-render
             };
 
-            // Filtrar conversas baseado no status e usuário
-            const userData = localStorage.getItem('currentUser');
-            const currentUserData = userData ? JSON.parse(userData) : null;
-            const shouldKeepConversation = (() => {
-              if (!currentUserData) return false;
-
-              if (updatedFields.status === 'pending') return true;
-
-              if (updatedFields.status === 'active') {
-                return updatedFields.assigned_user_id === currentUserData.id;
-              }
-
-              if (updatedFields.status === 'closed') return false;
-
-              return true;
-            })();
-
-            if (!shouldKeepConversation) {
-              console.log('🗑️ Removendo conversa da lista:', updatedFields.id);
+            // ✅ Remover conversas APENAS se forem explicitamente encerradas
+            if (updatedFields.status === 'closed') {
+              console.log('🗑️ Removendo conversa encerrada da lista:', updatedFields.id);
               return prev.filter(c => c.id !== updatedFields.id);
             }
+
+            // Para qualquer outro status, MANTER a conversa na lista
+            // Os filtros de UI (tabs) cuidarão da visualização
 
             // Atualizar conversa e reordenar lista
             return prev
