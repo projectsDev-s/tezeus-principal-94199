@@ -13,7 +13,7 @@ interface Tag {
   }>;
 }
 
-export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
+export function useTags(startDate?: Date, endDate?: Date, userId?: string, workspaceId?: string) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +38,11 @@ export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
           )
         `)
         .order('name');
+
+      // Filtro por workspace
+      if (workspaceId) {
+        query = query.eq('workspace_id', workspaceId);
+      }
 
       // Filtro por período (data de criação da tag)
       if (startDate && endDate) {
@@ -105,7 +110,7 @@ export function useTags(startDate?: Date, endDate?: Date, userId?: string) {
 
   useEffect(() => {
     fetchTags();
-  }, [startDate, endDate, userId]);
+  }, [startDate, endDate, userId, workspaceId]);
 
   return { tags, isLoading, error, refetch: fetchTags };
 }

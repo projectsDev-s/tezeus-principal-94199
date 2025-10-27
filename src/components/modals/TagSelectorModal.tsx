@@ -28,9 +28,10 @@ export function TagSelectorModal({
   open,
   onOpenChange,
   onTagSelected,
+  workspaceId,
 }: TagSelectorModalProps) {
   const [selectedTagId, setSelectedTagId] = useState<string>("");
-  const { tags, isLoading } = useTags();
+  const { tags, isLoading } = useTags(undefined, undefined, undefined, workspaceId);
 
   const handleConfirm = () => {
     if (!selectedTagId) return;
