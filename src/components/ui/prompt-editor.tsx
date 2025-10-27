@@ -174,7 +174,7 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
               }
               
               // Adicionar badge estilo "Imagem 2" - roxo claro com bordas arredondadas
-              // Mostrar TODA a tag completa SEM truncar
+              // Truncar texto longo com "..."
               const finalDisplay = tag.match;
               
               elements.push(
@@ -189,16 +189,24 @@ export const PromptEditor = forwardRef<PromptEditorRef, PromptEditorProps>(({
                     borderRadius: '12px',
                     padding: '2px 8px',
                     margin: '0 2px',
-                    color: 'rgb(147, 51, 234)',
                     fontSize: '11px',
                     fontWeight: '500',
                     lineHeight: '1.5',
                     verticalAlign: 'baseline',
-                    maxWidth: '100%',
-                    wordBreak: 'break-word'
+                    maxWidth: '500px',
                   }}
                 >
-                  {finalDisplay}
+                  <div
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: 'rgb(147, 51, 234)',
+                      maxWidth: '450px',
+                    }}
+                  >
+                    {finalDisplay}
+                  </div>
                   <X className="w-3 h-3" style={{ cursor: 'pointer', flexShrink: 0 }} />
                 </span>
               );
