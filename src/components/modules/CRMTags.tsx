@@ -38,7 +38,7 @@ export function CRMTags() {
     shouldFetchMembers ? (selectedWorkspace?.workspace_id || "") : ""
   );
   const members = fetchedMembers || [];
-  const { tags, isLoading, error, refetch } = useTags(startDate, endDate, selectedUserId);
+  const { tags, isLoading, error, refetch } = useTags(selectedWorkspace?.workspace_id, startDate, endDate, selectedUserId);
 
   const selectedUser = members.find(m => m.user_id === selectedUserId);
   

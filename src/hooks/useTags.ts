@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface Tag {
   id: string;
@@ -13,12 +14,22 @@ interface Tag {
   }>;
 }
 
-export function useTags(startDate?: Date, endDate?: Date, userId?: string, workspaceId?: string) {
+export function useTags(workspaceIdProp?: string, startDate?: Date, endDate?: Date, userId?: string) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { selectedWorkspace } = useWorkspace();
+
+  // Priorizar workspaceId da prop, senão usar do contexto
+  const workspaceId = workspaceIdProp || selectedWorkspace?.workspace_id;
 
   const fetchTags = async () => {
+    if (!workspaceId) {
+      console.log('🚫 useTags: Nenhum workspace disponível');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
