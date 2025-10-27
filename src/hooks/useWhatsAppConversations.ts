@@ -70,165 +70,41 @@ export const useWhatsAppConversations = () => {
   const { user, logout } = useAuth();
   const { getHeaders } = useWorkspaceHeaders();
   
-  // ✅ Rastrear último update processado para evitar duplicatas
-  const lastUpdateProcessed = useRef<Map<string, number>>(new Map());
-  
-  // ✅ DEBOUNCE: Rastrear UPDATEs recentes para evitar processamento duplicado
-  const recentUpdates = useRef<Map<string, number>>(new Map());
-  
-  // ✅ MUTEX: Prevenir envio duplicado de mensagens
+  // Refs simples
   const sendingRef = useRef<Map<string, boolean>>(new Map());
-  
-  // ✅ CORREÇÃO 2: Usar useRef para currentUserData para estabilizar subscription
-  const currentUserDataRef = useRef<{ id: string; email?: string; profile?: string } | null>(null);
-  
-  // ✅ SINCRONIZAR currentUserDataRef APENAS UMA VEZ no mount
-  useEffect(() => {
-    const userData = localStorage.getItem('currentUser');
-    currentUserDataRef.current = userData ? JSON.parse(userData) : null;
-    console.log('🔄 [useWhatsAppConversations] User data sincronizado no mount');
-  }, []); // ✅ SEM polling - roda apenas no mount
 
-  const fetchConversations = async (retryCount = 0): Promise<boolean> => {
-    const DEBUG_CONVERSATIONS = true;
-    const MAX_RETRIES = 3;
-    
+  const fetchConversations = async (): Promise<boolean> => {
     try {
       setLoading(true);
-      console.log(`🔄 [fetchConversations] Tentativa ${retryCount + 1}/${MAX_RETRIES}`);
+      console.log('🔄 Carregando conversas...');
 
       const userData = localStorage.getItem('currentUser');
       const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (!currentUserData?.id) {
-        console.log('No user data in localStorage');
-        toast({
-          title: "Erro de autenticação",
-          description: "Usuário não autenticado. Faça login novamente.",
-          variant: "destructive",
-        });
+
+      if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
+        console.log('❌ Dados ausentes');
+        setLoading(false);
         return false;
       }
 
-      const headers = getHeaders();
-
-      const { data: response, error: functionError } = await supabase.functions.invoke(
-        'whatsapp-get-conversations-lite', {
-        headers
+      const { data, error } = await supabase.functions.invoke('whatsapp-get-conversations-lite', {
+        body: { workspace_id: selectedWorkspace.workspace_id },
+        headers: getHeaders()
       });
 
-      console.log('📦 [fetchConversations] Resposta:', {
-        hasData: !!response,
-        conversationsCount: response?.items?.length,
-        error: functionError,
-        retryCount
-      });
+      if (error) throw error;
 
-      if (functionError) {
-        throw functionError;
+      if (data?.conversations) {
+        console.log(`✅ ${data.conversations.length} conversas carregadas`);
+        setConversations(data.conversations);
+        setLoading(false);
+        return true;
       }
 
-      const conversationsOnly = response.items || [];
-      
-      // ✅ CRÍTICO: Se retornou vazio E ainda há tentativas, tentar novamente
-      if (conversationsOnly.length === 0 && retryCount < MAX_RETRIES - 1) {
-        console.log(`⚠️ [fetchConversations] Lista vazia. Retry em 2s...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return await fetchConversations(retryCount + 1);
-      }
-      
-      const formattedConversations = conversationsOnly.map(conv => ({
-        id: conv.id,
-        contact: {
-          id: conv.contacts.id,
-          name: conv.contacts.name,
-          phone: conv.contacts.phone,
-          profile_image_url: conv.contacts.profile_image_url
-        },
-        agente_ativo: conv.agente_ativo || false,
-        status: conv.status,
-        unread_count: conv.unread_count || 0,
-        last_activity_at: conv.last_activity_at,
-        created_at: conv.created_at || conv.last_activity_at,
-        assigned_user_id: conv.assigned_user_id,
-        assigned_user_name: conv.assigned_user_name,
-        priority: conv.priority,
-        last_message: conv.last_message,
-        conversation_tags: conv.conversation_tags || [],
-        connection_id: conv.connection_id,
-        connection: conv.connection,
-        workspace_id: conv.workspace_id,
-        messages: []
-      }));
-      
-      console.log('🤖 Conversas carregadas com status de agente:', 
-        formattedConversations.map(c => ({ 
-          contact: c.contact.name, 
-          agente_ativo: c.agente_ativo 
-        }))
-      );
-      
-      let filteredConversations = formattedConversations;
-      
-      if (currentUserData.profile === 'user') {
-        filteredConversations = formattedConversations.filter(conv => 
-          conv.assigned_user_id === currentUserData.id || 
-          conv.assigned_user_id === null
-        );
-        console.log('🔒 [Filter] Conversas filtradas para user:', {
-          total: formattedConversations.length,
-          filtradas: filteredConversations.length,
-          criterio: 'assigned_user_id = ' + currentUserData.id + ' OR NULL'
-        });
-      } else {
-        console.log('👑 [Filter] Admin/Master vê todas as conversas:', formattedConversations.length);
-      }
-      
-      setConversations(filteredConversations);
-      
-      if (DEBUG_CONVERSATIONS) {
-        console.log(`✅ [fetchConversations] ${filteredConversations.length} conversas carregadas (tentativa ${retryCount + 1})`);
-        
-        if (formattedConversations.length === 0) {
-          console.log('ℹ️ Nenhuma conversa encontrada. Verifique se há conexões configuradas e conversas ativas.');
-        }
-      }
-      
-      // ✅ CRÍTICO: Só desativa loading após processar conversas
       setLoading(false);
-      
-      return filteredConversations.length > 0; // ✅ Retorna true se teve sucesso
-      
-    } catch (error) {
-      console.error('❌ Erro ao buscar conversas:', error);
-      console.error('Error details:', error.message, error.details);
-      
-      // ✅ RETRY automático em caso de erro de conexão
-      const isConnectionError = 
-        error?.name === 'FunctionsFetchError' ||
-        error?.message?.includes('Failed to fetch');
-      
-      if (isConnectionError && retryCount < MAX_RETRIES - 1) {
-        console.log(`🔄 [fetchConversations] Erro de conexão. Retry ${retryCount + 1}/${MAX_RETRIES} em 2s...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return await fetchConversations(retryCount + 1);
-      }
-      
-      if (error.name === 'FunctionsFetchError') {
-        toast({
-          title: "Erro de conexão",
-          description: "Não foi possível conectar ao servidor. Verifique sua conexão.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: `Erro ao carregar conversas do WhatsApp: ${error.message}`,
-          variant: "destructive",
-        });
-      }
-      
-      // ✅ Em caso de erro, também desativa loading
+      return false;
+    } catch (error: any) {
+      console.error('❌ Erro:', error);
       setLoading(false);
       return false;
     }
@@ -567,66 +443,37 @@ export const useWhatsAppConversations = () => {
   }, []);
 
   // ✅ CORREÇÃO: Flag de sucesso separada da flag de tentativa
-  const fetchedRef = useRef(false);
-  const hasLoadedSuccessfully = useRef(false);
-  
+  // Carregar conversas quando workspace muda
   useEffect(() => {
-    // Resetar flags quando workspace muda
-    fetchedRef.current = false;
-    hasLoadedSuccessfully.current = false;
+    if (!selectedWorkspace?.workspace_id) {
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
+
+    const userData = localStorage.getItem('currentUser');
+    if (!userData) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('🔄 Workspace mudou, carregando conversas');
+    fetchConversations();
   }, [selectedWorkspace?.workspace_id]);
-  
+
+  // Subscription para atualizações em tempo real
   useEffect(() => {
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
-    if (currentUserData?.id && selectedWorkspace?.workspace_id && !fetchedRef.current) {
-      fetchedRef.current = true; // ✅ Marca tentativa
-      
-      console.log('🔄 [useWhatsAppConversations] Workspace mudou, carregando conversas');
-      
-      setConversations([]);
-      setLoading(true);
-      
-      // ✅ CRÍTICO: Só marcar sucesso se de fato carregar dados
-      fetchConversations().then(success => {
-        hasLoadedSuccessfully.current = success;
-        
-        // ✅ Se falhou, permitir nova tentativa após 5s
-        if (!success) {
-          console.log('⚠️ Fetch inicial falhou. Nova tentativa em 5s...');
-          setTimeout(() => {
-            if (!hasLoadedSuccessfully.current) {
-              fetchedRef.current = false; // ✅ Permite retry
-            }
-          }, 5000);
-        }
-      });
-    } else if (currentUserData?.id && !selectedWorkspace?.workspace_id) {
-      setLoading(true);
-    }
-  }, [selectedWorkspace?.workspace_id]);
-
-  // ✅ SUBSCRIPTION ÚNICA E SIMPLIFICADA
-  useEffect(() => {
-    const currentUserData = currentUserDataRef.current;
-    
-    console.log('🔍 [useWhatsAppConversations] ===== VERIFICANDO CONDIÇÕES PARA SUBSCRIPTION =====');
-    console.log('currentUserData:', currentUserData);
-    console.log('selectedWorkspace:', selectedWorkspace);
-    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
-      console.log('❌ [useWhatsAppConversations] SUBSCRIPTION NÃO INICIADA - faltam dados');
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
-    const channelName = `conversations-workspace-${workspaceId}`;
+    const channelName = `conversations-${workspaceId}`;
     
-    console.log('🔌 [useWhatsAppConversations] ===== INICIANDO SUBSCRIPTIONS =====');
-    console.log('Channel Name:', channelName);
-    console.log('Workspace ID:', workspaceId);
-    console.log('User ID:', currentUserData.id);
+    console.log('🔌 Iniciando subscriptions:', workspaceId);
 
     const conversationsChannel = supabase
       .channel(channelName)
@@ -765,13 +612,15 @@ export const useWhatsAppConversations = () => {
             };
 
             // Filtrar conversas baseado no status e usuário
+            const userData = localStorage.getItem('currentUser');
+            const currentUserData = userData ? JSON.parse(userData) : null;
             const shouldKeepConversation = (() => {
-              if (!currentUserDataRef.current) return false;
+              if (!currentUserData) return false;
 
               if (updatedFields.status === 'pending') return true;
 
               if (updatedFields.status === 'active') {
-                return updatedFields.assigned_user_id === currentUserDataRef.current.id;
+                return updatedFields.assigned_user_id === currentUserData.id;
               }
 
               if (updatedFields.status === 'closed') return false;
@@ -889,27 +738,13 @@ export const useWhatsAppConversations = () => {
           console.log('✅ [REALTIME-CONVERSATIONS] SUBSCRIPTION ATIVA E FUNCIONANDO!');
           console.log('Aguardando eventos de INSERT, UPDATE em conversations e notifications');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [REALTIME-CONVERSATIONS] ERRO NO CANAL!');
-          // ✅ FALLBACK: Se subscription falhar, usar polling
-          console.log('🔄 Iniciando fallback polling a cada 10s...');
-          const pollingInterval = setInterval(() => {
-            if (!hasLoadedSuccessfully.current) {
-              console.log('🔄 [Polling] Tentando recarregar conversas...');
-              fetchConversations();
-            }
-          }, 10000);
-          
-          // Cleanup polling quando subscription for restaurada
-          return () => clearInterval(pollingInterval);
+          console.error('❌ Erro no canal, tentando reconectar...');
+          setTimeout(() => fetchConversations(), 3000);
         } else if (status === 'TIMED_OUT') {
-          console.error('⏱️ [REALTIME-CONVERSATIONS] TIMEOUT NA SUBSCRIPTION!');
-          console.log('🔄 Tentando reconectar em 3s...');
-          setTimeout(() => {
-            console.log('🔄 Forçando refresh de conversas...');
-            fetchConversations();
-          }, 3000);
+          console.error('⏱️ Timeout, reconectando...');
+          setTimeout(() => fetchConversations(), 3000);
         } else if (status === 'CLOSED') {
-          console.error('🔌 [REALTIME-CONVERSATIONS] CANAL FECHADO!');
+          console.error('🔌 Canal fechado');
         } else {
           console.log(`🔄 [REALTIME-CONVERSATIONS] Status: ${status}`);
         }
