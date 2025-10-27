@@ -23,7 +23,84 @@ export interface PromptEditorRef {
 
 type EditorNode = 
   | { type: 'text', content: string }
-  | { type: 'action', content: string, id: string };
+  | { type: 'action', content: string, id: string, actionType: string, label: string, className: string };
+
+interface ActionDetails {
+  type: string;
+  label: string;
+  className: string;
+  values: Record<string, string>;
+}
+
+function parseActionDetails(actionText: string): ActionDetails | null {
+  // Adicionar Tag
+  const tagMatch = actionText.match(/\[ADD_ACTION\]: \[tag_name: (.*?)\],\[tag_id: (.*?)\],\[contact_id: CONTACT_ID\]/);
+  if (tagMatch) {
+    return {
+      type: 'adicionar_tag',
+      label: `Adicionar Tag: ${tagMatch[1]}`,
+      className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+      values: { tag_name: tagMatch[1], tag_id: tagMatch[2] }
+    };
+  }
+
+  // Transferir Coluna CRM
+  const colunaMatch = actionText.match(/\[ADD_ACTION\]: \[pipeline_id: (.*?)\], \[coluna_id: (.*?)\], \[card_id: ID_DO_CARD\], \[contact_id: CONTACT_ID\]/);
+  if (colunaMatch) {
+    return {
+      type: 'transferir_coluna_crm',
+      label: 'Transferir Coluna CRM',
+      className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+      values: { pipeline_id: colunaMatch[1], coluna_id: colunaMatch[2] }
+    };
+  }
+
+  // Transferir Conexão
+  const conexaoMatch = actionText.match(/\[ADD_ACTION\]: \[conection_name: (.*?)\], \[conection_id: (.*?)\], \[contact_id: CONTACT_ID\]/);
+  if (conexaoMatch) {
+    return {
+      type: 'transferir_conexao',
+      label: `Transferir Conexão: ${conexaoMatch[1]}`,
+      className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      values: { conection_name: conexaoMatch[1], conection_id: conexaoMatch[2] }
+    };
+  }
+
+  // Transferir Fila
+  const filaMatch = actionText.match(/\[ADD_ACTION\]: \[fila_id: (.*?)\], \[contact_id: CONTACT_ID\], \[conversation_id: CONVERSATION_ID\]/);
+  if (filaMatch) {
+    return {
+      type: 'transferir_fila',
+      label: 'Transferir Fila',
+      className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+      values: { fila_id: filaMatch[1] }
+    };
+  }
+
+  // Criar Card
+  const criarCardMatch = actionText.match(/\[ADD_ACTION\]: \[pipeline_id: (.*?)\], \[coluna_id: (.*?)\], \[contact_id: CONTACT_ID\], \[conversation_id: CONVERSATION_ID\]/);
+  if (criarCardMatch) {
+    return {
+      type: 'criar_card',
+      label: 'Criar Card no CRM',
+      className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+      values: { pipeline_id: criarCardMatch[1], coluna_id: criarCardMatch[2] }
+    };
+  }
+
+  // Salvar Informações Adicionais
+  const salvarInfoMatch = actionText.match(/\[ADD_ACTION\]: \[workspace_id: WORKSPACE_ID\], \[contact_id: CONTACT_ID\], \[field_name: (.*?)\], \[field_value: (.*?)\]/);
+  if (salvarInfoMatch) {
+    return {
+      type: 'salvar_informacoes',
+      label: `Salvar campo ${salvarInfoMatch[1]}`,
+      className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
+      values: { field_name: salvarInfoMatch[1], field_value: salvarInfoMatch[2] }
+    };
+  }
+
+  return null;
+}
 
 function parseTextToNodes(text: string): EditorNode[] {
   const actionRegex = /(\[ADD_ACTION\]:[^\n]+)/g;
@@ -41,10 +118,14 @@ function parseTextToNodes(text: string): EditorNode[] {
     }
     
     // A ação em si
+    const actionDetails = parseActionDetails(match[0]);
     nodes.push({ 
       type: 'action', 
       content: match[0],
-      id: `action-${match.index}-${Math.random().toString(36).substr(2, 9)}`
+      id: `action-${match.index}-${Math.random().toString(36).substr(2, 9)}`,
+      actionType: actionDetails?.type || 'unknown',
+      label: actionDetails?.label || match[0],
+      className: actionDetails?.className || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
     });
     
     lastIndex = match.index + match[0].length;
@@ -121,15 +202,15 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
         badge.setAttribute('contentEditable', 'false');
         badge.setAttribute('data-action', node.content);
         badge.setAttribute('data-action-id', node.id);
-        badge.className = 'inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20';
+        badge.className = `inline-flex items-center gap-1 px-2 py-1 rounded-xl text-sm m-1 ${node.className}`;
         badge.style.userSelect = 'none';
         
         const textSpan = document.createElement('span');
-        textSpan.textContent = node.content;
+        textSpan.textContent = node.label;
         badge.appendChild(textSpan);
         
         const removeBtn = document.createElement('button');
-        removeBtn.className = 'hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors';
+        removeBtn.className = 'hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors';
         removeBtn.tabIndex = -1;
         removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
         removeBtn.onclick = (e) => {
@@ -199,20 +280,21 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
 
     // Se for uma ação, insere como badge
     if (text.startsWith('[ADD_ACTION]:')) {
+      const actionDetails = parseActionDetails(text);
       const badge = document.createElement('span');
       const actionId = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       badge.setAttribute('contentEditable', 'false');
       badge.setAttribute('data-action', text);
       badge.setAttribute('data-action-id', actionId);
-      badge.className = 'inline-flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium mx-0.5 border border-primary/20';
+      badge.className = `inline-flex items-center gap-1 px-2 py-1 rounded-xl text-sm m-1 ${actionDetails?.className || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`;
       badge.style.userSelect = 'none';
       
       const textSpan = document.createElement('span');
-      textSpan.textContent = text;
+      textSpan.textContent = actionDetails?.label || text;
       badge.appendChild(textSpan);
       
       const removeBtn = document.createElement('button');
-      removeBtn.className = 'hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors';
+      removeBtn.className = 'hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors';
       removeBtn.tabIndex = -1;
       removeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
       removeBtn.onclick = (e) => {
