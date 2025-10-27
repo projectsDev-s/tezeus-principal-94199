@@ -27,7 +27,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       
       const { data, error } = await supabase
         .from('conversations')
-        .select('agent_id, agente_ativo')
+        .select('agente_ativo')
         .eq('id', conversationId)
         .single();
       
@@ -39,8 +39,10 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
 
   // Atualizar selectedAgentId quando carregar a conversa
   useEffect(() => {
-    if (conversation?.agent_id) {
-      setSelectedAgentId(conversation.agent_id);
+    // Por enquanto, sem agent_id na tabela, usar agente padrão do workspace
+    if (conversation?.agente_ativo) {
+      // Quando tiver agent_id, usar aqui
+      setSelectedAgentId('default');
     } else {
       setSelectedAgentId('none');
     }
@@ -66,12 +68,10 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
 
   const activateAgentMutation = useMutation({
     mutationFn: async () => {
-      const agentIdValue = selectedAgentId === 'none' ? null : selectedAgentId;
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agent_id: agentIdValue,
-          agente_ativo: !!agentIdValue
+          agente_ativo: true
         })
         .eq('id', conversationId);
       
@@ -101,7 +101,6 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agent_id: null,
           agente_ativo: false
         })
         .eq('id', conversationId);
@@ -110,8 +109,8 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
     },
     onSuccess: () => {
       toast({
-        title: 'Agente desativado',
-        description: 'Agente IA desativado para esta conversa',
+        title: 'Agente Desativado',
+        description: 'O agente não irá mais interagir nessa conversa',
       });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
@@ -143,7 +142,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
     deactivateAgentMutation.mutate();
   };
 
-  const isAgentActive = conversation?.agente_ativo && conversation?.agent_id;
+  const isAgentActive = conversation?.agente_ativo;
   const isLoading = isLoadingConversation || isLoadingAgents;
 
   return (
@@ -187,7 +186,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
                 <div className="flex items-center gap-2">
                   <Bot className="w-4 h-4 text-purple-600" />
                   <span className="text-sm font-medium text-purple-900">
-                    {agents?.find(a => a.id === conversation.agent_id)?.name || 'Agente IA'}
+                    {agents?.[0]?.name || 'Agente IA'}
                   </span>
                 </div>
               </div>
