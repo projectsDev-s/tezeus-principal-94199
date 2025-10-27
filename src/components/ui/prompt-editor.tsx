@@ -27,7 +27,7 @@ function parseContent(content: string): { tags: Array<{ match: string; display: 
   const tags: Array<{ match: string; display: string; position: number; data?: Record<string, string> }> = [];
   
   // Regex que captura [ADD_ACTION]: seguido de TUDO até encontrar o ;
-  const actionPattern = /\[ADD_ACTION\]:[^;]+;/g;
+  const actionPattern = /\[ADD_ACTION\]:[^;]*;/g;
   const simpleActionPattern = /\[Adicionar Tag:\s*[^\]]+\]|\[Transferir Fila:\s*[^\]]+\]|\[Transferir Conexão:\s*[^\]]+\]|\[Criar Card CRM:\s*[^\]]+\]|\[Transferir para Coluna:\s*[^\]]+\]/g;
   
   let match;
