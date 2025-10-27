@@ -737,49 +737,86 @@ export const useWhatsAppConversations = () => {
         table: 'conversations',
         filter: `workspace_id=eq.${workspaceId}`
       }, (payload) => {
-          console.log('🔄 [REALTIME-CONVERSATIONS] ✅ CONVERSA ATUALIZADA:', {
-            conversationId: payload.new.id,
-            status: payload.new.status,
-            agente_ativo: payload.new.agente_ativo,
-            assigned_user_id: payload.new.assigned_user_id,
-            last_activity_at: payload.new.last_activity_at,
-            timestamp: new Date().toISOString(),
-            changes: payload
-          });
+          console.log('🔄 [REALTIME-CONVERSATIONS] ✅ CONVERSA ATUALIZADA:', payload.new.id);
 
-          const updatedConversation = payload.new as any;
+          const updatedFields = payload.new as any;
 
           setConversations(prev => {
-            const conversationExists = prev.some(c => c.id === updatedConversation.id);
+            const existingConv = prev.find(c => c.id === updatedFields.id);
 
+            if (!existingConv) {
+              console.log('⚠️ Conversa atualizada não existe na lista local, ignorando...');
+              return prev;
+            }
+
+            // ✅ MERGE: Manter dados relacionados, atualizar apenas campos básicos
+            const mergedConversation = {
+              ...existingConv,  // Mantém contact, last_message, connection, etc
+              agente_ativo: updatedFields.agente_ativo,
+              status: updatedFields.status,
+              unread_count: updatedFields.unread_count ?? existingConv.unread_count,
+              last_activity_at: updatedFields.last_activity_at,
+              assigned_user_id: updatedFields.assigned_user_id,
+              assigned_user_name: updatedFields.assigned_user_name ?? existingConv.assigned_user_name,
+              _updated_at: Date.now() // Força re-render
+            };
+
+            // Filtrar conversas baseado no status e usuário
             const shouldKeepConversation = (() => {
               if (!currentUserDataRef.current) return false;
 
-              if (updatedConversation.status === 'pending') return true;
+              if (updatedFields.status === 'pending') return true;
 
-              if (updatedConversation.status === 'active') {
-                return updatedConversation.assigned_user_id === currentUserDataRef.current.id;
+              if (updatedFields.status === 'active') {
+                return updatedFields.assigned_user_id === currentUserDataRef.current.id;
               }
 
-              if (updatedConversation.status === 'closed') return false;
+              if (updatedFields.status === 'closed') return false;
 
-              return conversationExists;
+              return true;
             })();
 
             if (!shouldKeepConversation) {
-              console.log('🗑️ [useWhatsAppConversations] Removendo conversa da lista:', updatedConversation.id);
-              return prev.filter(c => c.id !== updatedConversation.id);
+              console.log('🗑️ Removendo conversa da lista:', updatedFields.id);
+              return prev.filter(c => c.id !== updatedFields.id);
             }
 
-            const newConversations = conversationExists
-              ? prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
-              : [updatedConversation, ...prev];
-
-            return newConversations.sort((a, b) => 
-              new Date(b.last_activity_at || b.updated_at).getTime() - 
-              new Date(a.last_activity_at || a.updated_at).getTime()
-            );
+            // Atualizar conversa e reordenar lista
+            return prev
+              .map(c => c.id === updatedFields.id ? mergedConversation : c)
+              .sort((a, b) => 
+                new Date(b.last_activity_at || b.created_at).getTime() - 
+                new Date(a.last_activity_at || a.created_at).getTime()
+              );
           });
+        }
+      )
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `workspace_id=eq.${workspaceId}`
+      }, (payload) => {
+          console.log('📨 [REALTIME-MESSAGES] Nova mensagem recebida');
+
+          const newMessage = payload.new as any;
+
+          setConversations(prev => prev.map(conv => {
+            if (conv.id === newMessage.conversation_id) {
+              return {
+                ...conv,
+                last_message: [{
+                  content: newMessage.content,
+                  message_type: newMessage.message_type,
+                  sender_type: newMessage.sender_type,
+                  created_at: newMessage.created_at
+                }],
+                last_activity_at: newMessage.created_at,
+                _updated_at: Date.now()
+              };
+            }
+            return conv;
+          }));
         }
       )
       .on('postgres_changes', {
