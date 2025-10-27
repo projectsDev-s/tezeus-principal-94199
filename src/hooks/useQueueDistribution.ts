@@ -25,9 +25,10 @@ export const useQueueDistribution = () => {
       }
 
       if (data.action === 'no_queue' || data.action === 'no_distribution') {
+        console.log('📋 Resposta da distribuição:', data);
         toast({
-          title: "Sem fila configurada",
-          description: data.message,
+          title: data.action === 'no_queue' ? "Sem fila configurada" : "Conversa vinculada à fila",
+          description: data.message + (data.agent_activated ? ' - Agente IA ativado!' : ''),
           variant: "default",
         });
         return { success: true, action: data.action, message: data.message };

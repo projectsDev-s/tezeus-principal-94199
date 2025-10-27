@@ -155,6 +155,8 @@ serve(async (req) => {
       case 'nao_distribuir':
         // Não distribuir, mas vincular à fila e ativar agente se configurado
         console.log(`⏸️ Fila configurada para não distribuir automaticamente`);
+        console.log(`📋 Queue AI Agent ID: ${queue.ai_agent_id}`);
+        console.log(`🤖 Agente será ativado? ${queue.ai_agent_id ? 'SIM' : 'NÃO'}`);
         
         // Atualizar conversa apenas com queue_id e agente se houver
         const { error: updateNoDistError } = await supabase
@@ -174,6 +176,7 @@ serve(async (req) => {
         }
 
         console.log(`✅ Conversa vinculada à fila ${queue.name}${queue.ai_agent_id ? ' com agente ativado' : ''}`);
+        console.log(`✅ agente_ativo definido como: ${queue.ai_agent_id ? true : false}`);
 
         return new Response(
           JSON.stringify({ 
