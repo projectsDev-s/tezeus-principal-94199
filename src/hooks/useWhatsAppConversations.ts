@@ -94,9 +94,35 @@ export const useWhatsAppConversations = () => {
 
       if (error) throw error;
 
-      if (data?.conversations) {
-        console.log(`✅ ${data.conversations.length} conversas carregadas`);
-        setConversations(data.conversations);
+      if (data?.items) {
+        console.log(`✅ ${data.items.length} conversas carregadas`);
+        
+        // Transformar items para o formato esperado
+        const transformedConversations = data.items.map((item: any) => ({
+          id: item.id,
+          contact: {
+            id: item.contacts.id,
+            name: item.contacts.name,
+            phone: item.contacts.phone,
+            email: item.contacts.email || null,
+            profile_image_url: item.contacts.profile_image_url
+          },
+          agente_ativo: item.agente_ativo,
+          status: item.status,
+          unread_count: item.unread_count,
+          last_activity_at: item.last_activity_at,
+          created_at: item.created_at || item.last_activity_at,
+          assigned_user_id: item.assigned_user_id,
+          assigned_user_name: item.assigned_user_name,
+          connection_id: item.connection_id,
+          connection: item.connection,
+          workspace_id: selectedWorkspace.workspace_id,
+          conversation_tags: item.conversation_tags || [],
+          last_message: item.last_message || [],
+          messages: []
+        }));
+        
+        setConversations(transformedConversations);
         setLoading(false);
         return true;
       }
