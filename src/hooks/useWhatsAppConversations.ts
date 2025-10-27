@@ -194,6 +194,9 @@ export const useWhatsAppConversations = () => {
         }
       }
       
+      // ✅ CRÍTICO: Só desativa loading após processar conversas
+      setLoading(false);
+      
       return filteredConversations.length > 0; // ✅ Retorna true se teve sucesso
       
     } catch (error) {
@@ -225,9 +228,9 @@ export const useWhatsAppConversations = () => {
         });
       }
       
-      return false;
-    } finally {
+      // ✅ Em caso de erro, também desativa loading
       setLoading(false);
+      return false;
     }
   };
 
