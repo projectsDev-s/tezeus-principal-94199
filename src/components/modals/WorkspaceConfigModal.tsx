@@ -1,9 +1,6 @@
-import { Cable, Webhook, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConexoesNova } from "@/components/modules/ConexoesNova";
-import { WebhooksEvolutionConfig } from "@/components/modules/WebhooksEvolutionConfig";
-import { EvolutionApiConfig } from "@/components/modules/EvolutionApiConfig";
 interface WorkspaceConfigModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,34 +22,9 @@ export function WorkspaceConfigModal({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="conexoes" className="mt-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="conexoes" className="flex items-center gap-2">
-              <Cable className="w-4 h-4" />
-              Conexões
-            </TabsTrigger>
-            <TabsTrigger value="webhooks" className="flex items-center gap-2">
-              <Webhook className="w-4 h-4" />
-              Webhooks Evolution
-            </TabsTrigger>
-            <TabsTrigger value="evolution-api" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Evolution API
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="conexoes" className="mt-6">
-            <ConexoesNova workspaceId={workspaceId} />
-          </TabsContent>
-
-          <TabsContent value="webhooks" className="mt-6">
-            <WebhooksEvolutionConfig workspaceId={workspaceId} />
-          </TabsContent>
-
-          <TabsContent value="evolution-api" className="mt-6">
-            <EvolutionApiConfig workspaceId={workspaceId} />
-          </TabsContent>
-        </Tabs>
+        <div className="mt-6">
+          <ConexoesNova workspaceId={workspaceId} />
+        </div>
       </DialogContent>
     </Dialog>;
 }
