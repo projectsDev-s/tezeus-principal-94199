@@ -339,8 +339,8 @@ export const useWhatsAppConversations = () => {
       console.log('✅ IA desativada com sucesso');
 
       toast({
-        title: "Atendimento assumido",
-        description: "Você assumiu o atendimento desta conversa",
+        title: "Agente Desativado",
+        description: "O agente não irá mais interagir nessa conversa",
       });
     } catch (error) {
       console.error('❌ Erro ao assumir atendimento:', error);
