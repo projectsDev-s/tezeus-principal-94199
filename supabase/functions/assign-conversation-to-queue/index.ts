@@ -153,15 +153,37 @@ serve(async (req) => {
         break;
 
       case 'nao_distribuir':
-        // Não atribuir a nenhum usuário
+        // Não distribuir, mas vincular à fila e ativar agente se configurado
         console.log(`⏸️ Fila configurada para não distribuir automaticamente`);
+        
+        // Atualizar conversa apenas com queue_id e agente se houver
+        const { error: updateNoDistError } = await supabase
+          .from('conversations')
+          .update({
+            queue_id: targetQueueId,
+            agente_ativo: queue.ai_agent_id ? true : false  // ✅ ATIVAR AGENTE SE EXISTIR
+          })
+          .eq('id', conversation_id);
+
+        if (updateNoDistError) {
+          console.error('❌ Erro ao vincular conversa à fila:', updateNoDistError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao vincular conversa à fila' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`✅ Conversa vinculada à fila ${queue.name}${queue.ai_agent_id ? ' com agente ativado' : ''}`);
+
         return new Response(
           JSON.stringify({ 
             success: true, 
             action: 'no_distribution',
-            message: 'Fila configurada para não distribuir automaticamente',
+            message: `Conversa vinculada à fila${queue.ai_agent_id ? ' com agente ativo' : ''}`,
             queue_name: queue.name,
-            conversation_id 
+            queue_id: targetQueueId,
+            conversation_id,
+            agent_activated: queue.ai_agent_id ? true : false
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
