@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RichPromptEditor, PromptEditorRef } from "@/components/ui/rich-prompt-editor";
+import { PromptEditor, ActionBadge, PromptEditorRef } from "@/components/ui/prompt-editor";
 import { 
   Tag, 
   ArrowRightLeft, 
@@ -84,6 +84,86 @@ const actionButtons: ActionButton[] = [
   },
 ];
 
+// Função para fazer parsing de badges do prompt salvo
+function parseBadgesFromPrompt(prompt: string): { text: string; badges: ActionBadge[] } {
+  if (!prompt.includes("--- AÇÕES CONFIGURADAS ---")) {
+    return { text: prompt, badges: [] };
+  }
+
+  const [textPart, actionsPart] = prompt.split("--- AÇÕES CONFIGURADAS ---");
+  const text = textPart;
+  const badges: ActionBadge[] = [];
+
+  if (actionsPart) {
+    const lines = actionsPart.split("\n").filter(line => line.trim().startsWith("["));
+    lines.forEach((line, index) => {
+      const match = line.match(/\[(.*?)\]/);
+      if (match) {
+        const content = match[1];
+        let badge: ActionBadge | null = null;
+
+        if (content.startsWith("Adicionar Tag: ")) {
+          const tagName = content.replace("Adicionar Tag: ", "");
+          badge = {
+            id: `add-tag-${Date.now()}-${index}`,
+            type: "add-tag",
+            label: content,
+            data: { tagName },
+            position: text.length,
+          };
+        } else if (content.startsWith("Criar Card CRM: ")) {
+          const parts = content.replace("Criar Card CRM: ", "").split(" | ");
+          badge = {
+            id: `create-crm-card-${Date.now()}-${index}`,
+            type: "create-crm-card",
+            label: content,
+            data: { pipelineName: parts[0], columnName: parts[1] },
+            position: text.length,
+          };
+        } else if (content.startsWith("Transferir Coluna CRM: ")) {
+          const columnName = content.replace("Transferir Coluna CRM: ", "");
+          badge = {
+            id: `transfer-crm-column-${Date.now()}-${index}`,
+            type: "transfer-crm-column",
+            label: content,
+            data: { columnName },
+            position: text.length,
+          };
+        } else {
+          badge = {
+            id: `action-${Date.now()}-${index}`,
+            type: "generic",
+            label: content,
+            data: {},
+            position: text.length,
+          };
+        }
+
+        if (badge) badges.push(badge);
+      }
+    });
+  }
+
+  return { text, badges };
+}
+
+// Função para formatar o preview do prompt para exibição no textarea
+export function formatPromptPreview(prompt: string): string {
+  if (!prompt) return "";
+  
+  const parsed = parseBadgesFromPrompt(prompt);
+  let preview = parsed.text;
+  
+  // Adicionar badges formatados no final
+  if (parsed.badges.length > 0) {
+    preview += "\n\n--- AÇÕES CONFIGURADAS ---\n";
+    parsed.badges.forEach((badge) => {
+      preview += `\n[${badge.label}]`;
+    });
+  }
+  
+  return preview;
+}
 
 export function PromptEditorModal({
   open,
@@ -139,21 +219,21 @@ export function PromptEditorModal({
   };
 
   const handleTagSelected = (tagId: string, tagName: string) => {
-    const actionText = `\n[ADD_ACTION]: [tag_name: ${tagName}], [tag_id: ${tagId}], [contact_id: CONTACT_ID]\n`;
+    const actionText = `\n[ADD_ACTION]: [tag_name: ${tagName}], [tag_id: ${tagId}], [contact_id: CONTACT_ID];\n`;
     editorRef.current?.insertText(actionText);
     setShowTagSelector(false);
     setPendingActionType(null);
   };
 
   const handleQueueSelected = (queueId: string, queueName: string) => {
-    const actionText = `\n[ADD_ACTION]: [fila_id: ${queueId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+    const actionText = `\n[ADD_ACTION]: [fila_id: ${queueId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID];\n`;
     editorRef.current?.insertText(actionText);
     setShowQueueSelector(false);
     setPendingActionType(null);
   };
 
   const handleConnectionSelected = (connectionId: string, connectionName: string) => {
-    const actionText = `\n[ADD_ACTION]: [conection_name: ${connectionName}], [conection_id: ${connectionId}], [contact_id: CONTACT_ID]\n`;
+    const actionText = `\n[ADD_ACTION]: [conection_name: ${connectionName}], [conection_id: ${connectionId}], [contact_id: CONTACT_ID];\n`;
     editorRef.current?.insertText(actionText);
     setShowConnectionSelector(false);
     setPendingActionType(null);
@@ -169,9 +249,9 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID];\n`;
     } else {
-      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [card_id: ID_DO_CARD], [contact_id: CONTACT_ID]\n`;
+      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [card_id: ID_DO_CARD], [contact_id: CONTACT_ID];\n`;
     }
     
     editorRef.current?.insertText(actionText);
@@ -201,7 +281,7 @@ export function PromptEditorModal({
           <div className="flex-1 p-6 overflow-y-auto">
             <ContextMenu>
               <ContextMenuTrigger className="w-full">
-                <RichPromptEditor
+                <PromptEditor
                   ref={editorRef}
                   value={localValue}
                   onChange={setLocalValue}
