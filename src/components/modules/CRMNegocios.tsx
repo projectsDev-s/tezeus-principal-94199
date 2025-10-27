@@ -1003,8 +1003,18 @@ function CRMNegociosContent({
                 )}
               </div>
 
-              {/* Filtrar Button */}
-              <div className="relative flex-shrink-0">
+              {/* Criar Pipeline e Filtrar Buttons */}
+              <div className="relative flex-shrink-0 flex items-center gap-2">
+                {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    className="h-10 w-10 p-0 text-yellow-500 hover:bg-yellow-500/10"
+                    onClick={() => setIsCriarPipelineModalOpen(true)}
+                  >
+                    <Plus className="w-5 h-5" />
+                  </Button>
+                )}
                 <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-orange-500 text-white hover:bg-orange-600" : isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
                   <Filter className="w-4 h-4 mr-2" />
                   Filtrar
