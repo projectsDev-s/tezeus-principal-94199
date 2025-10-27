@@ -1509,11 +1509,32 @@ export function WhatsAppChat({
         {/* Header */}
         <div className="p-4 border-b border-border">
           {/* Search bar */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-[#d1d1d1]/30" />
             </div>
+            
+            {/* Botão de atualizar */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={async () => {
+                      console.log('🔄 Recarregando conversas manualmente...');
+                      await fetchConversations();
+                    }}
+                    disabled={loading}
+                    className="h-9 w-9 shrink-0"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Atualizar conversas</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
