@@ -112,12 +112,16 @@ function parseActionDetails(actionText: string): ActionDetails | null {
 }
 
 function parseTextToNodes(text: string): EditorNode[] {
-  const actionRegex = /\[ADD_ACTION\]:\s*(?:\[[^\]]+\]\s*,?\s*)+/g;
+  // Regex robusta: captura [ADD_ACTION]: seguido de qualquer coisa até o final da linha
+  const actionRegex = /\[ADD_ACTION\]:[^\n]+/g;
   const nodes: EditorNode[] = [];
   let lastIndex = 0;
   let match;
   
+  console.log('🔍 Parseando texto:', text);
+  
   while ((match = actionRegex.exec(text)) !== null) {
+    console.log('✅ Match encontrado:', match[0]);
     // Texto antes da ação
     if (match.index > lastIndex) {
       const textContent = text.substring(lastIndex, match.index);
