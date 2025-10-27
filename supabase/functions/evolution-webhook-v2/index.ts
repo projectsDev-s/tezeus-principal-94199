@@ -87,6 +87,34 @@ async function getOrCreateConversation(
   
   if (existing) {
     console.log(`✅ [ROUTING] Found conversation ${existing.id} for contact ${contactId} on connection ${connectionId}`);
+    
+    // 🤖 Verificar e ativar agente IA se necessário
+    const { data: existingWithQueue } = await supabase
+      .from('conversations')
+      .select('id, queue_id, agente_ativo')
+      .eq('id', existing.id)
+      .single();
+    
+    if (existingWithQueue?.queue_id) {
+      const { data: queue } = await supabase
+        .from('queues')
+        .select('ai_agent_id')
+        .eq('id', existingWithQueue.queue_id)
+        .single();
+      
+      if (queue?.ai_agent_id && !existingWithQueue.agente_ativo) {
+        console.log(`🤖 [${instanceName}] Ativando agente IA para conversa ${existing.id}`);
+        
+        await supabase
+          .from('conversations')
+          .update({ agente_ativo: true })
+          .eq('id', existing.id);
+        
+        existing.agente_ativo = true;
+        console.log(`✅ [${instanceName}] Agente IA ativado automaticamente`);
+      }
+    }
+    
     return existing;
   }
   
