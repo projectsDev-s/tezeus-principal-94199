@@ -133,8 +133,10 @@ function parseTextToNodes(text: string): EditorNode[] {
       content: match[0],
       id: `action-${match.index}-${Math.random().toString(36).substr(2, 9)}`,
       actionType: actionDetails?.type || 'unknown',
-      label: actionDetails?.label || match[0],
-      className: actionDetails?.className || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+      // Mostra o texto completo da ação inline
+      label: match[0],
+      // Destaque visual amarelo para todas as ações
+      className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700'
     });
     
     lastIndex = match.index + match[0].length;
@@ -211,7 +213,7 @@ export const RichPromptEditor = forwardRef<PromptEditorRef, RichPromptEditorProp
         badge.setAttribute('contentEditable', 'false');
         badge.setAttribute('data-action', node.content);
         badge.setAttribute('data-action-id', node.id);
-        badge.className = `inline-flex items-center gap-1 px-2 py-1 rounded-xl text-sm m-1 ${node.className}`;
+        badge.className = `inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono m-0.5 ${node.className}`;
         badge.style.userSelect = 'none';
         
         const textSpan = document.createElement('span');
