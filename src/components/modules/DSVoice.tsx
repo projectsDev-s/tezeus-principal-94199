@@ -10,6 +10,7 @@ import { useQuickMessages } from "@/hooks/useQuickMessages";
 import { useQuickAudios } from "@/hooks/useQuickAudios";
 import { useQuickMedia } from "@/hooks/useQuickMedia";
 import { useQuickDocuments } from "@/hooks/useQuickDocuments";
+import { useQuickFunnels, FunnelStep } from "@/hooks/useQuickFunnels";
 
 const categories = [
   { id: "mensagens", label: "Mensagens", icon: MessageSquare },
@@ -58,13 +59,13 @@ export function DSVoice() {
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [stepMinutes, setStepMinutes] = useState(0);
   const [stepSeconds, setStepSeconds] = useState(0);
-  const [funnels, setFunnels] = useState<any[]>([]);
 
   // Hooks para dados reais
   const { messages, loading: messagesLoading, createMessage, updateMessage, deleteMessage } = useQuickMessages();
   const { audios, loading: audiosLoading, createAudio, updateAudio, deleteAudio } = useQuickAudios();
   const { media, loading: mediaLoading, createMedia, updateMedia, deleteMedia } = useQuickMedia();
   const { documents, loading: documentsLoading, createDocument, updateDocument, deleteDocument } = useQuickDocuments();
+  const { funnels, loading: funnelsLoading, createFunnel, updateFunnel, deleteFunnel } = useQuickFunnels();
 
   // Handlers para mensagens
   const handleCreateMessage = async () => {
@@ -234,16 +235,23 @@ export function DSVoice() {
     }
   };
 
-  const handleSaveFunnel = () => {
+  const handleSaveFunnel = async () => {
     if (funnelName.trim() && funnelSteps.length > 0) {
-      const newFunnel = {
-        id: Date.now().toString(),
-        name: funnelName,
-        steps: funnelSteps,
-        createdAt: new Date().toISOString(),
-      };
-      setFunnels([...funnels, newFunnel]);
+      const formattedSteps: FunnelStep[] = funnelSteps.map((step, index) => ({
+        type: step.type as 'message' | 'audio' | 'media' | 'document',
+        item_id: step.itemId,
+        delay_seconds: (step.delayMinutes * 60) + step.delaySeconds,
+        order: index
+      }));
+      
+      await createFunnel(funnelName, formattedSteps);
       handleCloseFunnelModal();
+    }
+  };
+
+  const handleDeleteFunnel = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este funil?')) {
+      await deleteFunnel(id);
     }
   };
 
@@ -281,7 +289,7 @@ export function DSVoice() {
   );
 
   const renderContent = () => {
-    const loading = messagesLoading || audiosLoading || mediaLoading || documentsLoading;
+    const loading = messagesLoading || audiosLoading || mediaLoading || documentsLoading || funnelsLoading;
 
     if (loading) {
       return (
@@ -516,28 +524,25 @@ export function DSVoice() {
                   <Card key={funnel.id} className="p-4">
                     <div className="space-y-3">
                       <div className="flex justify-between items-start">
-                        <h4 className="font-medium text-lg">{funnel.name}</h4>
+                        <h4 className="font-medium text-lg">{funnel.title}</h4>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteFunnel(funnel.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        {funnel.steps.map((step: any, index: number) => {
-                          const itemDetails = getItemDetails(step.type, step.itemId);
+                        {funnel.steps.map((step: FunnelStep, index: number) => {
+                          const itemDetails = getItemDetails(step.type, step.item_id);
                           return (
-                            <div key={step.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                            <div key={index} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                               <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">
                                 {index + 1}
                               </div>
                               <div className="flex-1">
                                 <p className="text-sm font-medium">{itemDetails?.title || 'Item não encontrado'}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  Tipo: {step.type} • Delay: {step.delayMinutes}m {step.delaySeconds}s
+                                  Tipo: {step.type} • Delay: {Math.floor(step.delay_seconds / 60)}m {step.delay_seconds % 60}s
                                 </p>
                               </div>
                             </div>
@@ -629,6 +634,7 @@ export function DSVoice() {
               else if (activeCategory === "audios") setIsAudioModalOpen(true);
               else if (activeCategory === "midias") setIsMediaModalOpen(true);
               else if (activeCategory === "documentos") setIsDocumentModalOpen(true);
+              else if (activeCategory === "funis") handleOpenFunnelModal();
             }}
           >
             Novo Item
