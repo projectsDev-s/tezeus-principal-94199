@@ -1,33 +1,40 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { useAuth } from './useAuth';
-import { toast } from 'sonner';
 
 export interface FunnelStep {
+  id: string;
   type: 'message' | 'audio' | 'media' | 'document';
   item_id: string;
   delay_seconds: number;
   order: number;
 }
 
-export interface QuickFunnel {
+export interface Funnel {
   id: string;
-  workspace_id: string;
   title: string;
+  workspace_id: string;
   steps: FunnelStep[];
   created_at: string;
-  updated_at: string;
 }
 
 export function useQuickFunnels() {
-  const [funnels, setFunnels] = useState<QuickFunnel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { selectedWorkspace } = useWorkspace();
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const { user } = useAuth();
+  const { selectedWorkspace } = useWorkspace();
+
+  useEffect(() => {
+    if (selectedWorkspace?.workspace_id && user) {
+      fetchFunnels();
+    }
+  }, [selectedWorkspace?.workspace_id, user]);
 
   const fetchFunnels = async () => {
-    if (!selectedWorkspace?.workspace_id) {
+    if (!selectedWorkspace?.workspace_id || !user) {
       setFunnels([]);
       setLoading(false);
       return;
@@ -39,22 +46,29 @@ export function useQuickFunnels() {
         .from('quick_funnels')
         .select('*')
         .eq('workspace_id', selectedWorkspace.workspace_id)
-        .order('title', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFunnels((data || []) as unknown as QuickFunnel[]);
+      setFunnels(data || []);
     } catch (error) {
-      console.error('Error fetching quick funnels:', error);
-      toast.error('Erro ao carregar funis rápidos');
-      setFunnels([]);
+      console.error('Error fetching funnels:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao buscar funis',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const createFunnel = async (title: string, steps: FunnelStep[]) => {
-    if (!selectedWorkspace?.workspace_id) {
-      toast.error('Nenhum workspace selecionado');
+    if (!selectedWorkspace?.workspace_id || !user) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não autenticado',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -62,21 +76,28 @@ export function useQuickFunnels() {
       const { data, error } = await supabase
         .from('quick_funnels')
         .insert({
-          workspace_id: selectedWorkspace.workspace_id,
           title,
-          steps: steps as any
+          steps,
+          workspace_id: selectedWorkspace.workspace_id,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setFunnels(prev => [...prev, data as unknown as QuickFunnel]);
-      toast.success('Funil criado com sucesso');
-      return data as unknown as QuickFunnel;
+      setFunnels(prev => [data, ...prev]);
+      toast({
+        title: 'Sucesso',
+        description: 'Funil criado com sucesso',
+      });
+      return data;
     } catch (error) {
       console.error('Error creating funnel:', error);
-      toast.error('Erro ao criar funil');
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar funil',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -84,19 +105,25 @@ export function useQuickFunnels() {
     try {
       const { data, error } = await supabase
         .from('quick_funnels')
-        .update({ title, steps: steps as any })
+        .update({ title, steps })
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setFunnels(prev => prev.map(f => f.id === id ? data as unknown as QuickFunnel : f));
-      toast.success('Funil atualizado com sucesso');
-      return data as unknown as QuickFunnel;
+      setFunnels(prev => prev.map(funnel => funnel.id === id ? data : funnel));
+      toast({
+        title: 'Sucesso',
+        description: 'Funil atualizado com sucesso',
+      });
     } catch (error) {
       console.error('Error updating funnel:', error);
-      toast.error('Erro ao atualizar funil');
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar funil',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -109,17 +136,20 @@ export function useQuickFunnels() {
 
       if (error) throw error;
 
-      setFunnels(prev => prev.filter(f => f.id !== id));
-      toast.success('Funil deletado com sucesso');
+      setFunnels(prev => prev.filter(funnel => funnel.id !== id));
+      toast({
+        title: 'Sucesso',
+        description: 'Funil excluído com sucesso',
+      });
     } catch (error) {
       console.error('Error deleting funnel:', error);
-      toast.error('Erro ao deletar funil');
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir funil',
+        variant: 'destructive',
+      });
     }
   };
-
-  useEffect(() => {
-    fetchFunnels();
-  }, [selectedWorkspace, user]);
 
   return {
     funnels,
@@ -127,6 +157,6 @@ export function useQuickFunnels() {
     createFunnel,
     updateFunnel,
     deleteFunnel,
-    refetch: fetchFunnels
+    refetch: fetchFunnels,
   };
 }

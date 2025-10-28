@@ -20,11 +20,6 @@ import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQueues } from "@/hooks/useQueues";
 import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
-import { useQuickMessages } from '@/hooks/useQuickMessages';
-import { useQuickAudios } from '@/hooks/useQuickAudios';
-import { useQuickMedia } from '@/hooks/useQuickMedia';
-import { useQuickDocuments } from '@/hooks/useQuickDocuments';
-import { QuickFunnel } from '@/hooks/useQuickFunnels';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { parsePhoneNumber } from 'libphonenumber-js';
@@ -44,9 +39,10 @@ import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
+import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2 } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2, Workflow } from "lucide-react";
 import { WhatsAppChatSkeleton } from "@/components/chat/WhatsAppChatSkeleton";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -103,12 +99,6 @@ export function WhatsAppChat({
 
   // Verificar se há agente ativo no workspace
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent();
-  
-  // Hooks para itens rápidos (necessários para envio de funis)
-  const { messages: quickMessages } = useQuickMessages();
-  const { audios: quickAudios } = useQuickAudios();
-  const { media: quickMedia } = useQuickMedia();
-  const { documents: quickDocuments } = useQuickDocuments();
 
   // ✅ Hook específico para mensagens (lazy loading)
   const {
@@ -211,6 +201,7 @@ export function WhatsAppChat({
   const [showAllQueues, setShowAllQueues] = useState(true);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [showSelectAgentModal, setShowSelectAgentModal] = useState(false);
+  const [quickFunnelsModalOpen, setQuickFunnelsModalOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
@@ -717,93 +708,6 @@ export function WhatsAppChat({
       console.error('Erro ao enviar documento rápido:', error);
     } finally {
       setTimeout(() => sendingRef.current.delete(messageKey), 1000);
-    }
-  };
-
-  // Handler para enviar funil completo
-  const handleSendFunnel = async (funnel: QuickFunnel) => {
-    if (!selectedConversation) return;
-
-    try {
-      const sortedSteps = [...funnel.steps].sort((a, b) => a.order - b.order);
-      
-      console.log(`🚀 Iniciando envio de funil: ${funnel.title} (${sortedSteps.length} steps)`);
-
-      for (let i = 0; i < sortedSteps.length; i++) {
-        const step = sortedSteps[i];
-        let item: any = null;
-
-        console.log(`📤 Step ${i + 1}/${sortedSteps.length}: ${step.type} (delay: ${step.delay_seconds}s)`);
-
-        try {
-          switch (step.type) {
-            case 'message':
-              item = quickMessages.find((m: any) => m.id === step.item_id);
-              if (item) {
-                await handleSendQuickMessage(item.content, 'text');
-                console.log(`✅ Mensagem enviada: ${item.title}`);
-              }
-              break;
-
-            case 'audio':
-              item = quickAudios.find((a: any) => a.id === step.item_id);
-              if (item) {
-                await handleSendQuickAudio(
-                  { name: item.file_name, url: item.file_url },
-                  item.title
-                );
-                console.log(`✅ Áudio enviado: ${item.title}`);
-              }
-              break;
-
-            case 'media':
-              item = quickMedia.find((m: any) => m.id === step.item_id);
-              if (item) {
-                const mediaType = item.file_type?.startsWith('image/') ? 'image' : 'video';
-                await handleSendQuickMedia(
-                  { name: item.file_name, url: item.file_url },
-                  item.title,
-                  mediaType
-                );
-                console.log(`✅ Mídia enviada: ${item.title}`);
-              }
-              break;
-
-            case 'document':
-              item = quickDocuments.find((d: any) => d.id === step.item_id);
-              if (item) {
-                await handleSendQuickDocument(
-                  { name: item.file_name, url: item.file_url },
-                  item.title
-                );
-                console.log(`✅ Documento enviado: ${item.title}`);
-              }
-              break;
-          }
-        } catch (stepError) {
-          console.error(`❌ Erro ao enviar step ${i + 1}:`, stepError);
-          // Continuar com próximo step mesmo em caso de erro
-        }
-
-        // ✅ Aguardar delay SOMENTE entre steps (não depois do último)
-        if (i < sortedSteps.length - 1 && step.delay_seconds > 0) {
-          console.log(`⏱️ Aguardando ${step.delay_seconds}s antes do próximo step...`);
-          await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
-        }
-      }
-
-      console.log(`✅ Funil completo enviado: ${funnel.title}`);
-      toast({
-        title: "Funil enviado",
-        description: `${sortedSteps.length} mensagens enviadas com sucesso`,
-      });
-    } catch (error) {
-      console.error('❌ Erro ao enviar funil:', error);
-      toast({
-        title: "Erro ao enviar funil",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o funil",
-        variant: "destructive"
-      });
     }
   };
 
@@ -1927,10 +1831,10 @@ export function WhatsAppChat({
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {agentLoading ? "⏳ Carregando configuração do agente..." :
-                         !hasAgent ? "⚠️ Configure um agente IA no módulo DS Agente" :
-                         selectedConversation.agente_ativo ? "🤖 IA respondendo automaticamente - Clique para assumir atendimento" :
-                         "👤 Atendimento manual - Clique para ativar IA"}
+                        {agentLoading && "⏳ Carregando configuração do agente..."}
+                        {!agentLoading && !hasAgent && "⚠️ Nenhum agente de IA cadastrado"}
+                        {!agentLoading && hasAgent && selectedConversation.agente_ativo && "🤖 IA respondendo - Clique para assumir atendimento"}
+                        {!agentLoading && hasAgent && !selectedConversation.agente_ativo && "👤 Atendimento manual - Clique para ativar IA"}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -2270,15 +2174,7 @@ export function WhatsAppChat({
       
       <ContactSidePanel isOpen={contactPanelOpen} onClose={() => setContactPanelOpen(false)} contact={selectedConversation?.contact || null} />
       
-      <QuickItemsModal 
-        open={quickItemsModalOpen} 
-        onOpenChange={setQuickItemsModalOpen} 
-        onSendMessage={handleSendQuickMessage} 
-        onSendAudio={handleSendQuickAudio} 
-        onSendMedia={handleSendQuickMedia} 
-        onSendDocument={handleSendQuickDocument}
-        onSendFunnel={handleSendFunnel}
-      />
+      <QuickItemsModal open={quickItemsModalOpen} onOpenChange={setQuickItemsModalOpen} onSendMessage={handleSendQuickMessage} onSendAudio={handleSendQuickAudio} onSendMedia={handleSendQuickMedia} onSendDocument={handleSendQuickDocument} />
       
       <ForwardMessageModal isOpen={forwardModalOpen} onClose={() => setForwardModalOpen(false)} onForward={handleForwardMessages} />
       
