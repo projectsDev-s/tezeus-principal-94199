@@ -13,17 +13,17 @@ import { useQuickDocuments } from "@/hooks/useQuickDocuments";
 import { useQuickFunnels, FunnelStep } from "@/hooks/useQuickFunnels";
 
 const categories = [
-  { id: "mensagens", label: "Mensagens", icon: MessageSquare },
-  { id: "audios", label: "Áudios", icon: Mic },
-  { id: "midias", label: "Mídias", icon: Image },
-  { id: "documentos", label: "Documentos", icon: FileText },
-  { id: "funis", label: "Funis", icon: Filter },
+  { id: "message", label: "Mensagens", icon: MessageSquare },
+  { id: "audio", label: "Áudios", icon: Mic },
+  { id: "media", label: "Mídias", icon: Image },
+  { id: "document", label: "Documentos", icon: FileText },
+  { id: "funnel", label: "Funis", icon: Filter },
   // Ocultado temporariamente - { id: "gatilhos", label: "Gatilhos", icon: Play },
   // Ocultado temporariamente - { id: "configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export function DSVoice() {
-  const [activeCategory, setActiveCategory] = useState("mensagens");
+  const [activeCategory, setActiveCategory] = useState("message");
   const [searchTerm, setSearchTerm] = useState("");
   
   // Estados para modais de mensagens
@@ -257,13 +257,13 @@ export function DSVoice() {
 
   const getItemDetails = (type: string, itemId: string) => {
     switch (type) {
-      case "mensagens":
+      case "message":
         return messages.find(m => m.id === itemId);
-      case "audios":
+      case "audio":
         return audios.find(a => a.id === itemId);
-      case "midias":
+      case "media":
         return media.find(m => m.id === itemId);
-      case "documentos":
+      case "document":
         return documents.find(d => d.id === itemId);
       default:
         return null;
@@ -300,7 +300,7 @@ export function DSVoice() {
     }
 
     switch (activeCategory) {
-      case "mensagens":
+      case "message":
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredMessages.length === 0 ? (
@@ -342,7 +342,7 @@ export function DSVoice() {
           </div>
         );
 
-      case "audios":
+      case "audio":
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -395,7 +395,7 @@ export function DSVoice() {
           </div>
         );
 
-      case "midias":
+      case "media":
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -444,7 +444,7 @@ export function DSVoice() {
           </div>
         );
 
-      case "documentos":
+      case "document":
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -496,7 +496,7 @@ export function DSVoice() {
           </div>
         );
 
-      case "funis":
+      case "funnel":
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
