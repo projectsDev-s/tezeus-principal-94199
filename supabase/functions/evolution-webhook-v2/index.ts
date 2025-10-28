@@ -671,8 +671,73 @@ serve(async (req) => {
         
         console.log(`✅ [${requestId}] Metadata prepared for N8N processing:`, processedData);
         
-        // ℹ️ AI agent logic is now handled entirely by N8N
-        // N8N will query conversations.agente_ativo and invoke AI processing as needed
+        // ✅ VERIFICAR SE AGENTE IA ESTÁ ATIVO NA CONVERSA E INVOCAR
+        try {
+          // 1. Buscar ou criar contato primeiro
+          let contactId: string | null = null;
+          const { data: existingContact } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('phone', phoneNumber)
+            .eq('workspace_id', workspaceId)
+            .maybeSingle();
+          
+          contactId = existingContact?.id || null;
+          
+          // 2. Buscar ou criar conversa
+          const conversation = await getOrCreateConversation(
+            supabase,
+            phoneNumber,
+            contactId || '',
+            connectionData?.id || '',
+            workspaceId,
+            instanceName
+          );
+          
+          if (conversation && conversation.agente_ativo) {
+            console.log(`🤖 [${requestId}] Agente IA ATIVO detectado na conversa ${conversation.id} - invocando ai-chat-response`);
+            
+            // Buscar agente ativo do workspace
+            const { data: agent, error: agentError } = await supabase
+              .from('ai_agents')
+              .select('id, name')
+              .eq('workspace_id', workspaceId)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (agentError) {
+              console.error(`❌ [${requestId}] Erro ao buscar agente:`, agentError);
+            } else if (agent) {
+              console.log(`✅ [${requestId}] Agente encontrado: ${agent.name} (${agent.id})`);
+              
+              // Invocar AI de forma assíncrona (não bloquear webhook)
+              supabase.functions.invoke('ai-chat-response', {
+                body: {
+                  conversationId: conversation.id,
+                  contactId: contactId || conversation.contact_id,
+                  workspaceId: workspaceId,
+                  agentId: agent.id,
+                  phoneNumber: phoneNumber,
+                  instanceName: instanceName
+                }
+              }).then((result) => {
+                if (result.error) {
+                  console.error(`❌ [${requestId}] Erro ao invocar AI:`, result.error);
+                } else {
+                  console.log(`✅ [${requestId}] AI invocada com sucesso:`, result.data);
+                }
+              }).catch((err) => {
+                console.error(`❌ [${requestId}] Exceção ao invocar AI:`, err);
+              });
+            } else {
+              console.warn(`⚠️ [${requestId}] Nenhum agente ativo encontrado no workspace ${workspaceId}`);
+            }
+          } else if (conversation) {
+            console.log(`ℹ️ [${requestId}] Agente NÃO ativo na conversa ${conversation.id}`);
+          }
+        } catch (agentCheckError) {
+          console.error(`❌ [${requestId}] Erro ao verificar/invocar agente IA:`, agentCheckError);
+        }
         
         // ✅ AUTO-CRIAR CARD NO CRM (se habilitado na conexão)
         if (connectionData?.auto_create_crm_card && processedData?.requires_processing) {

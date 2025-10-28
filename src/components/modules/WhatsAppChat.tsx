@@ -1927,10 +1927,10 @@ export function WhatsAppChat({
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {agentLoading && "⏳ Carregando configuração do agente..."}
-                        {!agentLoading && !hasAgent && "⚠️ Nenhum agente de IA cadastrado"}
-                        {!agentLoading && hasAgent && selectedConversation.agente_ativo && "🤖 IA respondendo - Clique para assumir atendimento"}
-                        {!agentLoading && hasAgent && !selectedConversation.agente_ativo && "👤 Atendimento manual - Clique para ativar IA"}
+                        {agentLoading ? "⏳ Carregando configuração do agente..." :
+                         !hasAgent ? "⚠️ Configure um agente IA no módulo DS Agente" :
+                         selectedConversation.agente_ativo ? "🤖 IA respondendo automaticamente - Clique para assumir atendimento" :
+                         "👤 Atendimento manual - Clique para ativar IA"}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
