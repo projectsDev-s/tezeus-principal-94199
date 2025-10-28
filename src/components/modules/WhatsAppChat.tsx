@@ -1826,7 +1826,7 @@ export function WhatsAppChat({
                             )}
                           </Button>
                           {selectedConversation.agente_ativo && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-background animate-pulse" />
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse shadow-lg shadow-green-500/50" />
                           )}
                         </div>
                       </TooltipTrigger>
