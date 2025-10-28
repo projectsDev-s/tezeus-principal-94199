@@ -1210,12 +1210,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Excluir
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => forceResyncHistory(connection)}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Forçar Ressincronização
-                      </DropdownMenuItem>
                      </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
