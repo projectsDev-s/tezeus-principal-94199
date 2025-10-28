@@ -38,6 +38,7 @@ import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
 import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
+import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2 } from "lucide-react";
@@ -198,6 +199,7 @@ export function WhatsAppChat({
   const [isCreatingQuickConversation, setIsCreatingQuickConversation] = useState(false);
   const [showAllQueues, setShowAllQueues] = useState(true);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [showSelectAgentModal, setShowSelectAgentModal] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
@@ -865,20 +867,20 @@ export function WhatsAppChat({
         willCall: selectedConversation.agente_ativo ? 'assumirAtendimento' : 'reativarIA'
       });
       
-      const newAgenteAtivoState = !selectedConversation.agente_ativo;
-      
-      // ✅ ATUALIZAR IMEDIATAMENTE a selectedConversation ANTES de chamar a função
-      setSelectedConversation(prev => prev ? {
-        ...prev,
-        agente_ativo: newAgenteAtivoState,
-        _updated_at: Date.now()
-      } : null);
-      
-      // Chamar a função para persistir no banco
+      // Se está ativo, desativar (assumir atendimento)
       if (selectedConversation.agente_ativo) {
+        const newAgenteAtivoState = false;
+        
+        setSelectedConversation(prev => prev ? {
+          ...prev,
+          agente_ativo: newAgenteAtivoState,
+          _updated_at: Date.now()
+        } : null);
+        
         await assumirAtendimento(selectedConversation.id);
       } else {
-        await reativarIA(selectedConversation.id);
+        // Se está inativo, abrir modal de seleção de agente
+        setShowSelectAgentModal(true);
       }
     }
   };
@@ -2173,6 +2175,12 @@ export function WhatsAppChat({
       <QuickItemsModal open={quickItemsModalOpen} onOpenChange={setQuickItemsModalOpen} onSendMessage={handleSendQuickMessage} onSendAudio={handleSendQuickAudio} onSendMedia={handleSendQuickMedia} onSendDocument={handleSendQuickDocument} />
       
       <ForwardMessageModal isOpen={forwardModalOpen} onClose={() => setForwardModalOpen(false)} onForward={handleForwardMessages} />
+      
+      <SelectAgentModal 
+        open={showSelectAgentModal} 
+        onOpenChange={setShowSelectAgentModal} 
+        conversationId={selectedConversation?.id || ''} 
+      />
       </div>
 
     </div>;
