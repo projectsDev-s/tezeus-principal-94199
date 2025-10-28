@@ -725,69 +725,83 @@ export function WhatsAppChat({
     if (!selectedConversation) return;
 
     try {
-      // Ordenar steps
       const sortedSteps = [...funnel.steps].sort((a, b) => a.order - b.order);
+      
+      console.log(`🚀 Iniciando envio de funil: ${funnel.title} (${sortedSteps.length} steps)`);
 
-      for (const step of sortedSteps) {
-        // Buscar o item correspondente ao step
+      for (let i = 0; i < sortedSteps.length; i++) {
+        const step = sortedSteps[i];
         let item: any = null;
 
-        switch (step.type) {
-          case 'message':
-            item = quickMessages.find((m: any) => m.id === step.item_id);
-            if (item) {
-              await handleSendQuickMessage(item.content, 'text');
-            }
-            break;
+        console.log(`📤 Step ${i + 1}/${sortedSteps.length}: ${step.type} (delay: ${step.delay_seconds}s)`);
 
-          case 'audio':
-            item = quickAudios.find((a: any) => a.id === step.item_id);
-            if (item) {
-              await handleSendQuickAudio(
-                { name: item.file_name, url: item.file_url },
-                item.title
-              );
-            }
-            break;
+        try {
+          switch (step.type) {
+            case 'message':
+              item = quickMessages.find((m: any) => m.id === step.item_id);
+              if (item) {
+                await handleSendQuickMessage(item.content, 'text');
+                console.log(`✅ Mensagem enviada: ${item.title}`);
+              }
+              break;
 
-          case 'media':
-            item = quickMedia.find((m: any) => m.id === step.item_id);
-            if (item) {
-              const mediaType = item.file_type?.startsWith('image/') ? 'image' : 'video';
-              await handleSendQuickMedia(
-                { name: item.file_name, url: item.file_url },
-                item.title,
-                mediaType
-              );
-            }
-            break;
+            case 'audio':
+              item = quickAudios.find((a: any) => a.id === step.item_id);
+              if (item) {
+                await handleSendQuickAudio(
+                  { name: item.file_name, url: item.file_url },
+                  item.title
+                );
+                console.log(`✅ Áudio enviado: ${item.title}`);
+              }
+              break;
 
-          case 'document':
-            item = quickDocuments.find((d: any) => d.id === step.item_id);
-            if (item) {
-              await handleSendQuickDocument(
-                { name: item.file_name, url: item.file_url },
-                item.title
-              );
-            }
-            break;
+            case 'media':
+              item = quickMedia.find((m: any) => m.id === step.item_id);
+              if (item) {
+                const mediaType = item.file_type?.startsWith('image/') ? 'image' : 'video';
+                await handleSendQuickMedia(
+                  { name: item.file_name, url: item.file_url },
+                  item.title,
+                  mediaType
+                );
+                console.log(`✅ Mídia enviada: ${item.title}`);
+              }
+              break;
+
+            case 'document':
+              item = quickDocuments.find((d: any) => d.id === step.item_id);
+              if (item) {
+                await handleSendQuickDocument(
+                  { name: item.file_name, url: item.file_url },
+                  item.title
+                );
+                console.log(`✅ Documento enviado: ${item.title}`);
+              }
+              break;
+          }
+        } catch (stepError) {
+          console.error(`❌ Erro ao enviar step ${i + 1}:`, stepError);
+          // Continuar com próximo step mesmo em caso de erro
         }
 
-        // Aguardar delay configurado antes do próximo step
-        if (step.delay_seconds > 0) {
+        // ✅ Aguardar delay SOMENTE entre steps (não depois do último)
+        if (i < sortedSteps.length - 1 && step.delay_seconds > 0) {
+          console.log(`⏱️ Aguardando ${step.delay_seconds}s antes do próximo step...`);
           await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
         }
       }
 
+      console.log(`✅ Funil completo enviado: ${funnel.title}`);
       toast({
         title: "Funil enviado",
         description: `${sortedSteps.length} mensagens enviadas com sucesso`,
       });
     } catch (error) {
-      console.error('Erro ao enviar funil:', error);
+      console.error('❌ Erro ao enviar funil:', error);
       toast({
         title: "Erro ao enviar funil",
-        description: "Ocorreu um erro ao enviar o funil",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o funil",
         variant: "destructive"
       });
     }
