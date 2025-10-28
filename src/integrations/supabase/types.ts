@@ -261,6 +261,27 @@ export type Database = {
           },
         ]
       }
+      base_de_conhecimento: {
+        Row: {
+          contexto: string | null
+          created_at: string
+          id: string
+          id_agent: string | null
+        }
+        Insert: {
+          contexto?: string | null
+          created_at?: string
+          id?: string
+          id_agent?: string | null
+        }
+        Update: {
+          contexto?: string | null
+          created_at?: string
+          id?: string
+          id_agent?: string | null
+        }
+        Relationships: []
+      }
       cargos: {
         Row: {
           created_at: string
@@ -972,6 +993,30 @@ export type Database = {
           type?: string
           updated_at?: string
           workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      documents_base: {
+        Row: {
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          text: string
+        }
+        Insert: {
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          text: string
+        }
+        Update: {
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          text?: string
         }
         Relationships: []
       }
@@ -1827,6 +1872,33 @@ export type Database = {
           file_type?: string
           file_url?: string
           id?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      quick_funnels: {
+        Row: {
+          created_at: string
+          id: string
+          steps: Json
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          steps?: Json
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          steps?: Json
           title?: string
           updated_at?: string
           workspace_id?: string

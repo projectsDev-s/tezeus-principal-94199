@@ -3,12 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Music, Image, FileText, Send } from 'lucide-react';
+import { MessageSquare, Music, Image, FileText, Send, Workflow } from 'lucide-react';
 import { useQuickMessages } from '@/hooks/useQuickMessages';
 import { useQuickAudios } from '@/hooks/useQuickAudios';
 import { useQuickMedia } from '@/hooks/useQuickMedia';
 import { useQuickDocuments } from '@/hooks/useQuickDocuments';
-import { cn } from '@/lib/utils';
+import { useQuickFunnels, QuickFunnel } from '@/hooks/useQuickFunnels';
 
 interface QuickItemsModalProps {
   open: boolean;
@@ -17,6 +17,7 @@ interface QuickItemsModalProps {
   onSendAudio?: (file: { name: string; url: string }, content: string) => void;
   onSendMedia?: (file: { name: string; url: string }, content: string, type: 'image' | 'video') => void;
   onSendDocument?: (file: { name: string; url: string }, content: string) => void;
+  onSendFunnel?: (funnel: QuickFunnel) => Promise<void>;
 }
 
 export function QuickItemsModal({ 
@@ -25,7 +26,8 @@ export function QuickItemsModal({
   onSendMessage, 
   onSendAudio, 
   onSendMedia, 
-  onSendDocument 
+  onSendDocument,
+  onSendFunnel 
 }: QuickItemsModalProps) {
   const [activeTab, setActiveTab] = useState('messages');
   
@@ -33,6 +35,7 @@ export function QuickItemsModal({
   const { audios, loading: audiosLoading } = useQuickAudios();
   const { media, loading: mediaLoading } = useQuickMedia();
   const { documents, loading: documentsLoading } = useQuickDocuments();
+  const { funnels, loading: funnelsLoading } = useQuickFunnels();
 
   const handleSendMessage = (message: any) => {
     if (onSendMessage) {
@@ -69,6 +72,13 @@ export function QuickItemsModal({
         { name: document.file_name, url: document.file_url },
         document.title
       );
+      onOpenChange(false);
+    }
+  };
+
+  const handleSendFunnel = async (funnel: QuickFunnel) => {
+    if (onSendFunnel) {
+      await onSendFunnel(funnel);
       onOpenChange(false);
     }
   };
@@ -163,6 +173,42 @@ export function QuickItemsModal({
     </div>
   );
 
+  const renderFunnelItem = (funnel: QuickFunnel) => {
+    const stepCount = funnel.steps.length;
+    const stepTypes = funnel.steps.reduce((acc, step) => {
+      acc[step.type] = (acc[step.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return (
+      <div key={funnel.id} className="flex items-center justify-between p-3 border-b border-border hover:bg-accent/50 transition-colors">
+        <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+          <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
+            <Workflow className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h4 className="font-medium text-sm truncate text-foreground">{funnel.title}</h4>
+            <p className="text-xs text-muted-foreground">
+              {stepCount} {stepCount === 1 ? 'etapa' : 'etapas'}
+              {stepTypes.message && ` • ${stepTypes.message} msg`}
+              {stepTypes.audio && ` • ${stepTypes.audio} áudio`}
+              {stepTypes.media && ` • ${stepTypes.media} mídia`}
+              {stepTypes.document && ` • ${stepTypes.document} doc`}
+            </p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => handleSendFunnel(funnel)}
+          className="w-8 h-8 p-0 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
+        >
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  };
+
   const renderEmptyState = (type: string) => (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
@@ -170,6 +216,7 @@ export function QuickItemsModal({
         {type === 'audios' && <Music className="w-6 h-6 text-muted-foreground" />}
         {type === 'media' && <Image className="w-6 h-6 text-muted-foreground" />}
         {type === 'documents' && <FileText className="w-6 h-6 text-muted-foreground" />}
+        {type === 'funnels' && <Workflow className="w-6 h-6 text-muted-foreground" />}
       </div>
       <p className="text-sm text-muted-foreground">
         Nenhum item encontrado
@@ -185,7 +232,7 @@ export function QuickItemsModal({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="messages" className="p-2" title="Mensagens">
               <MessageSquare className="w-4 h-4" />
             </TabsTrigger>
@@ -197,6 +244,9 @@ export function QuickItemsModal({
             </TabsTrigger>
             <TabsTrigger value="documents" className="p-2" title="Documentos">
               <FileText className="w-4 h-4" />
+            </TabsTrigger>
+            <TabsTrigger value="funnels" className="p-2" title="Funis">
+              <Workflow className="w-4 h-4" />
             </TabsTrigger>
           </TabsList>
 
@@ -261,6 +311,22 @@ export function QuickItemsModal({
                   </div>
                 ) : (
                   renderEmptyState('documents')
+                )}
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="funnels" className="mt-0">
+              <ScrollArea className="h-80">
+                {funnelsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-sm text-muted-foreground">Carregando...</div>
+                  </div>
+                ) : funnels && funnels.length > 0 ? (
+                  <div className="space-y-0">
+                    {funnels.map(renderFunnelItem)}
+                  </div>
+                ) : (
+                  renderEmptyState('funnels')
                 )}
               </ScrollArea>
             </TabsContent>
