@@ -39,10 +39,9 @@ import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
-import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2, Workflow } from "lucide-react";
+import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2 } from "lucide-react";
 import { WhatsAppChatSkeleton } from "@/components/chat/WhatsAppChatSkeleton";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -201,7 +200,6 @@ export function WhatsAppChat({
   const [showAllQueues, setShowAllQueues] = useState(true);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [showSelectAgentModal, setShowSelectAgentModal] = useState(false);
-  const [quickFunnelsModalOpen, setQuickFunnelsModalOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
@@ -2126,10 +2124,6 @@ export function WhatsAppChat({
                       <path d="M9 15c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm7.76-9.64l-1.68 1.69c.84 1.18.84 2.71 0 3.89l1.68 1.69c2.02-2.02 2.02-5.07 0-7.27zM20.07 2l-1.63 1.63c2.77 3.02 2.77 7.56 0 10.74L20.07 16c3.9-3.89 3.91-9.95 0-14z"></path>
                     </svg>
                   </Button>
-
-                  <Button variant="ghost" size="sm" title="Funis" onClick={() => setQuickFunnelsModalOpen(true)}>
-                    <Workflow className="w-4 h-4" />
-                  </Button>
                   <div className="flex-1">
                     <Input 
                       placeholder="Digite sua mensagem..." 
@@ -2186,79 +2180,6 @@ export function WhatsAppChat({
         open={showSelectAgentModal} 
         onOpenChange={setShowSelectAgentModal} 
         conversationId={selectedConversation?.id || ''} 
-      />
-
-      <QuickFunnelsModal 
-        open={quickFunnelsModalOpen} 
-        onOpenChange={setQuickFunnelsModalOpen} 
-        onSendFunnel={async (funnel) => {
-          if (!selectedConversation) return;
-          
-          for (const step of funnel.steps) {
-            if (step.type === 'message') {
-              const message = await supabase
-                .from('quick_messages')
-                .select('*')
-                .eq('id', step.item_id)
-                .single();
-              
-              if (message.data) {
-                await handleSendQuickMessage(message.data.content, 'text');
-              }
-            } else if (step.type === 'audio') {
-              const audio = await supabase
-                .from('quick_audios')
-                .select('*')
-                .eq('id', step.item_id)
-                .single();
-              
-              if (audio.data) {
-                await handleSendQuickAudio(
-                  { name: audio.data.file_name, url: audio.data.file_url },
-                  audio.data.title
-                );
-              }
-            } else if (step.type === 'media') {
-              const mediaItem = await supabase
-                .from('quick_media')
-                .select('*')
-                .eq('id', step.item_id)
-                .single();
-              
-              if (mediaItem.data) {
-                const type = mediaItem.data.file_type?.startsWith('image/') ? 'image' : 'video';
-                await handleSendQuickMedia(
-                  { name: mediaItem.data.file_name, url: mediaItem.data.file_url },
-                  mediaItem.data.title,
-                  type
-                );
-              }
-            } else if (step.type === 'document') {
-              const document = await supabase
-                .from('quick_documents')
-                .select('*')
-                .eq('id', step.item_id)
-                .single();
-              
-              if (document.data) {
-                await handleSendQuickDocument(
-                  { name: document.data.file_name, url: document.data.file_url },
-                  document.data.title
-                );
-              }
-            }
-
-            // Aguardar o delay antes da próxima etapa
-            if (step.delay_seconds > 0) {
-              await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
-            }
-          }
-
-          toast({
-            title: 'Funil enviado',
-            description: `${funnel.steps.length} mensagens enviadas com sucesso`,
-          });
-        }}
       />
       </div>
 
