@@ -87,6 +87,14 @@ interface Deal {
       status: string;
       metadata?: any;
     };
+    queue?: {
+      id: string;
+      name: string;
+      ai_agent?: {
+        id: string;
+        name: string;
+      };
+    };
   };
 }
 interface DroppableColumnProps {
@@ -285,21 +293,28 @@ function DraggableDeal({
               </h3>
               
               {/* Badge de Agente IA Ativo */}
-              {deal.conversation?.agente_ativo && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 border border-purple-200">
-                        <Bot className="w-2.5 h-2.5" />
-                        <span className="text-[9px] font-medium">IA</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Agente IA Ativo</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {deal.conversation?.agente_ativo && (() => {
+                console.log('🤖 Debug agente:', {
+                  conversation: deal.conversation,
+                  queue: deal.conversation?.queue,
+                  ai_agent: deal.conversation?.queue?.ai_agent
+                });
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 border border-purple-200">
+                          <Bot className="w-2.5 h-2.5" />
+                          <span className="text-[9px] font-medium">IA</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{deal.conversation?.queue?.ai_agent?.name || 'Agente IA Ativo'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })()}
             </div>
             
             {/* Produto + Valor à direita */}

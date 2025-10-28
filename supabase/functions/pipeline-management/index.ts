@@ -429,6 +429,14 @@ serve(async (req) => {
                     phone_number,
                     status,
                     metadata
+                  ),
+                  queue:queues(
+                    id,
+                    name,
+                    ai_agent:ai_agents(
+                      id,
+                      name
+                    )
                   )
                 ),
                 responsible_user:system_users!responsible_user_id(id, name)
@@ -469,6 +477,14 @@ serve(async (req) => {
                   phone_number,
                   status,
                   metadata
+                ),
+                queue:queues(
+                  id,
+                  name,
+                  ai_agent:ai_agents(
+                    id,
+                    name
+                  )
                 )
               ),
               responsible_user:system_users!responsible_user_id(id, name)
