@@ -16,8 +16,9 @@ export interface Funnel {
   id: string;
   title: string;
   workspace_id: string;
-  steps: FunnelStep[];
+  steps: any; // JSONB do Supabase
   created_at: string;
+  updated_at: string;
 }
 
 export function useQuickFunnels() {
@@ -49,7 +50,7 @@ export function useQuickFunnels() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFunnels(data || []);
+      setFunnels((data || []) as Funnel[]);
     } catch (error) {
       console.error('Error fetching funnels:', error);
       toast({
@@ -77,7 +78,7 @@ export function useQuickFunnels() {
         .from('quick_funnels')
         .insert({
           title,
-          steps,
+          steps: steps as any,
           workspace_id: selectedWorkspace.workspace_id,
         })
         .select()
@@ -85,7 +86,7 @@ export function useQuickFunnels() {
 
       if (error) throw error;
 
-      setFunnels(prev => [data, ...prev]);
+      setFunnels(prev => [data as Funnel, ...prev]);
       toast({
         title: 'Sucesso',
         description: 'Funil criado com sucesso',
@@ -105,14 +106,14 @@ export function useQuickFunnels() {
     try {
       const { data, error } = await supabase
         .from('quick_funnels')
-        .update({ title, steps })
+        .update({ title, steps: steps as any })
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setFunnels(prev => prev.map(funnel => funnel.id === id ? data : funnel));
+      setFunnels(prev => prev.map(funnel => funnel.id === id ? (data as Funnel) : funnel));
       toast({
         title: 'Sucesso',
         description: 'Funil atualizado com sucesso',
