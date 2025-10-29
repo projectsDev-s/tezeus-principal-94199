@@ -17,6 +17,11 @@ interface AIAgent {
   max_tokens: number;
   is_active: boolean;
   created_at: string;
+  workspace_id?: string;
+  workspace?: {
+    id: string;
+    name: string;
+  };
 }
 
 export function DSAgenteMaster() {
@@ -28,9 +33,10 @@ export function DSAgenteMaster() {
 
   const loadAgents = async () => {
     try {
+      // Tentar query com JOIN automático do Supabase
       const { data, error } = await supabase
         .from('ai_agents')
-        .select('*')
+        .select('*, workspaces(id, name)')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -39,7 +45,45 @@ export function DSAgenteMaster() {
         return;
       }
 
-      setAgents(data || []);
+      if (!data || data.length === 0) {
+        setAgents([]);
+        return;
+      }
+
+      // Verificar se RLS está bloqueando o JOIN (workspace_id existe mas workspaces é null)
+      const needsManualJoin = data.some((agent: any) => agent.workspace_id && !agent.workspaces);
+
+      if (needsManualJoin) {
+        // Fallback: fetch manual dos workspaces
+        const workspaceIds = [...new Set(data.map((a: any) => a.workspace_id).filter(Boolean))];
+        let workspacesMap = new Map();
+        
+        if (workspaceIds.length > 0) {
+          const { data: workspacesData, error: workspacesError } = await supabase
+            .from('workspaces')
+            .select('id, name')
+            .in('id', workspaceIds);
+
+          if (!workspacesError && workspacesData) {
+            workspacesMap = new Map(workspacesData.map(w => [w.id, w]));
+          }
+        }
+
+        const agentsWithWorkspace = data.map((agent: any) => ({
+          ...agent,
+          workspace: agent.workspace_id ? workspacesMap.get(agent.workspace_id) : null
+        }));
+
+        setAgents(agentsWithWorkspace);
+      } else {
+        // JOIN automático funcionou, apenas mapear o resultado
+        const agentsWithWorkspace = data.map((agent: any) => ({
+          ...agent,
+          workspace: agent.workspaces
+        }));
+        
+        setAgents(agentsWithWorkspace);
+      }
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);
       toast.error('Erro ao carregar agentes');
@@ -140,6 +184,7 @@ export function DSAgenteMaster() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Empresa</TableHead>
                   <TableHead>Máximo Tokens Resposta</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -163,6 +208,13 @@ export function DSAgenteMaster() {
                         {agent.agent_type === 'conversational' ? 'Conversacional' : 
                          agent.agent_type === 'assistant' ? 'Assistente' : agent.agent_type}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {agent.workspace ? (
+                        <span className="text-sm">{agent.workspace.name}</span>
+                      ) : (
+                        <Badge variant="secondary">Global</Badge>
+                      )}
                     </TableCell>
                     <TableCell>{agent.max_tokens}</TableCell>
                     <TableCell>
