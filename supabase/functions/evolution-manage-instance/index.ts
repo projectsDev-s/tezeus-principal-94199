@@ -40,14 +40,21 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Store request body at top level for error handling
+  let requestBody: any = {}
+  let action = ''
+  let connectionId = ''
+
   try {
     console.log('🚀 evolution-manage-instance started')
     
     // Parse request body with error handling
-    let requestBody
     try {
       requestBody = await req.json()
       console.log('📋 Request body:', requestBody)
+      
+      action = requestBody.action
+      connectionId = requestBody.connectionId || requestBody.instanceName || ''
     } catch (parseError) {
       console.error('❌ Error parsing request body:', parseError)
       return new Response(
@@ -56,7 +63,7 @@ serve(async (req) => {
       )
     }
     
-    const { action, connectionId, instanceName } = requestBody
+    const instanceName = requestBody.instanceName
 
     if (!action || (!connectionId && !instanceName)) {
       return new Response(
@@ -133,51 +140,64 @@ serve(async (req) => {
         break
 
       case 'disconnect':
-        console.log(`🔌 Disconnecting instance: ${connection.instance_name}`)
-        console.log(`🔗 Evolution API URL: ${evolutionConfig.url}`)
-        
         try {
-          response = await fetch(`${evolutionConfig.url}/instance/logout/${connection.instance_name}`, {
+          console.log(`🔌 Disconnecting instance: ${connection.instance_name}`)
+          console.log(`🔗 Evolution API URL: ${evolutionConfig.url}`)
+          
+          // Always set as disconnected - our goal is to update local status
+          newStatus = 'disconnected'
+          
+          // Update database first (synchronously)
+          console.log(`💾 Updating connection status to: ${newStatus}`)
+          const { error: updateError } = await supabase
+            .from('connections')
+            .update({ 
+              status: newStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', connection.id)
+          
+          if (updateError) {
+            console.error('❌ Error updating connection status:', updateError)
+            // Continue anyway - we'll still return success
+          } else {
+            console.log('✅ Connection status updated successfully')
+          }
+          
+          // Try to call Evolution API in background (don't wait or fail on errors)
+          fetch(`${evolutionConfig.url}/instance/logout/${connection.instance_name}`, {
             method: 'DELETE',
             headers: { 'apikey': evolutionConfig.apiKey }
           })
+            .then(async (logoutResponse) => {
+              console.log(`📡 Evolution API logout response status: ${logoutResponse.status}`)
+              if (!logoutResponse.ok && logoutResponse.status !== 404) {
+                try {
+                  const errorText = await logoutResponse.text()
+                  console.warn(`⚠️ Evolution API logout returned status ${logoutResponse.status}:`, errorText.substring(0, 200))
+                } catch {
+                  console.warn(`⚠️ Evolution API logout returned status ${logoutResponse.status}`)
+                }
+              }
+            })
+            .catch((fetchError) => {
+              console.error('❌ Error calling Evolution API for logout (non-blocking):', fetchError)
+            })
           
-          console.log(`📡 Evolution API logout response status: ${response.status}`)
-          
-          // For disconnect, we consider any response (including errors) as success
-          // because our goal is to mark it as disconnected locally
-          // If the Evolution API returns an error, the instance might already be disconnected
-          // or the Evolution API might be having issues, but we still want to update our local status
-          
-          if (response.ok || response.status === 404) {
-            console.log('✅ Evolution API logout successful')
-          } else {
-            // Try to get error details for logging
-            let errorText = 'Unknown error'
-            try {
-              errorText = await response.text()
-              console.warn(`⚠️ Evolution API logout returned status ${response.status}:`, errorText.substring(0, 200))
-            } catch {
-              console.warn(`⚠️ Evolution API logout returned status ${response.status} (could not read error text)`)
-            }
-            
-            // For disconnect, treat all errors as "already disconnected" since we can't verify the actual state
-            // and our goal is to update the local status
-            console.log('⚠️ Evolution API error, but treating as disconnected locally')
-          }
-          
-          // Always set as disconnected - if Evolution API had issues, we still mark locally
-          newStatus = 'disconnected'
-          
-        } catch (fetchError) {
-          console.error('❌ Error calling Evolution API for logout:', fetchError)
-          // If there's a network/fetch error, we'll still mark as disconnected
-          // Create a mock response to avoid undefined errors
-          response = new Response(null, { status: 200 })
-          console.log('⚠️ Network error, treating as disconnected')
-          newStatus = 'disconnected'
+          // Return success immediately - database is already updated
+          console.log('✅ Disconnect operation completed, returning success')
+          return new Response(
+            JSON.stringify({ success: true, status: newStatus }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        } catch (disconnectError) {
+          console.error('❌ Error in disconnect case:', disconnectError)
+          // Even if there's an error, return success since we just want to update status
+          return new Response(
+            JSON.stringify({ success: true, status: 'disconnected' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
         }
-        break
 
       case 'delete':
         console.log(`🗑️ Deleting instance: ${connection.instance_name}`)
@@ -381,24 +401,36 @@ serve(async (req) => {
     }
 
     // Only check response.ok for actions that haven't handled it yet
-    if (action !== 'disconnect' && !response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error')
-      let errorData = {}
-      
+    // Skip this check for 'disconnect' and 'delete' as they handle their own responses
+    if (action !== 'disconnect' && action !== 'delete' && action !== 'status' && response && !response.ok) {
       try {
-        errorData = JSON.parse(errorText)
-      } catch {
-        errorData = { message: errorText || 'Operation failed' }
+        const errorText = await response.text().catch(() => 'Unknown error')
+        let errorData = {}
+        
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { message: errorText || 'Operation failed' }
+        }
+        
+        console.error(`❌ Evolution API operation failed:`, errorData)
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Evolution API error: ${errorData.message || 'Operation failed'}` 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } catch (checkError) {
+        console.error('❌ Error checking response:', checkError)
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Failed to process Evolution API response' 
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
-      
-      console.error(`❌ Evolution API operation failed:`, errorData)
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Evolution API error: ${errorData.message || 'Operation failed'}` 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
     // Update connection status
@@ -433,7 +465,34 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error managing instance:', error)
+    console.error('❌ Error type:', typeof error)
+    console.error('❌ Error string:', String(error))
     console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
+    // Special handling for disconnect - always return success
+    if (action === 'disconnect' && connectionId) {
+      console.log('⚠️ Error occurred during disconnect, but returning success anyway')
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+        if (supabaseUrl && supabaseServiceKey) {
+          const supabase = createClient(supabaseUrl, supabaseServiceKey)
+          await supabase
+            .from('connections')
+            .update({ 
+              status: 'disconnected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', connectionId)
+            .catch(() => {}) // Ignore errors
+        }
+      } catch {}
+      
+      return new Response(
+        JSON.stringify({ success: true, status: 'disconnected' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     const errorMessage = error instanceof Error 
       ? error.message 

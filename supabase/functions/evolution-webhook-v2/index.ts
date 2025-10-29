@@ -538,23 +538,78 @@ serve(async (req) => {
       const state = connectionUpdate.state; // 'open', 'close', etc
       const phoneNumber = connectionUpdate.owner || connectionUpdate.phoneNumber;
       
-      if (phoneNumber) {
-        console.log(`📱 [${requestId}] Updating connection phone number: ${phoneNumber}`);
-        
-        const { error: updateError } = await supabase
-          .from('connections')
-          .update({
-            phone_number: phoneNumber,
-            status: state === 'open' ? 'connected' : 'disconnected',
-            updated_at: new Date().toISOString()
-          })
-          .eq('instance_name', instanceName)
-          .eq('workspace_id', workspaceId);
-        
-        if (updateError) {
-          console.error(`❌ [${requestId}] Error updating connection:`, updateError);
-        } else {
-          console.log(`✅ [${requestId}] Connection updated with phone: ${phoneNumber}`);
+      // Get current connection status first to check if it was manually disconnected
+      const { data: currentConnection } = await supabase
+        .from('connections')
+        .select('status, updated_at')
+        .eq('instance_name', instanceName)
+        .eq('workspace_id', workspaceId)
+        .single();
+      
+      // Don't override 'disconnected' status if it was set recently (within last 30 seconds)
+      // This prevents webhook from overriding manual disconnect actions
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+      const wasRecentlyDisconnected = 
+        currentConnection?.status === 'disconnected' &&
+        currentConnection?.updated_at &&
+        new Date(currentConnection.updated_at) > thirtySecondsAgo;
+      
+      if (wasRecentlyDisconnected && state === 'open') {
+        console.log(`⚠️ [${requestId}] Connection was manually disconnected recently, ignoring CONNECTION_UPDATE event`);
+        // Only update phone number, not status
+        if (phoneNumber) {
+          const { error: updateError } = await supabase
+            .from('connections')
+            .update({
+              phone_number: phoneNumber,
+              // Don't update status - keep as disconnected
+              updated_at: new Date().toISOString()
+            })
+            .eq('instance_name', instanceName)
+            .eq('workspace_id', workspaceId);
+          
+          if (updateError) {
+            console.error(`❌ [${requestId}] Error updating phone number:`, updateError);
+          }
+        }
+      } else {
+        // Normal update - update both phone and status
+        if (phoneNumber) {
+          console.log(`📱 [${requestId}] Updating connection phone number: ${phoneNumber}`);
+          
+          const { error: updateError } = await supabase
+            .from('connections')
+            .update({
+              phone_number: phoneNumber,
+              status: state === 'open' ? 'connected' : 'disconnected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('instance_name', instanceName)
+            .eq('workspace_id', workspaceId);
+          
+          if (updateError) {
+            console.error(`❌ [${requestId}] Error updating connection:`, updateError);
+          } else {
+            console.log(`✅ [${requestId}] Connection updated with phone: ${phoneNumber}, status: ${state === 'open' ? 'connected' : 'disconnected'}`);
+          }
+        } else if (state === 'close') {
+          // Update status even without phone number (for disconnect events)
+          console.log(`📱 [${requestId}] Updating connection status to disconnected`);
+          
+          const { error: updateError } = await supabase
+            .from('connections')
+            .update({
+              status: 'disconnected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('instance_name', instanceName)
+            .eq('workspace_id', workspaceId);
+          
+          if (updateError) {
+            console.error(`❌ [${requestId}] Error updating connection status:`, updateError);
+          } else {
+            console.log(`✅ [${requestId}] Connection status updated to disconnected`);
+          }
         }
       }
 
