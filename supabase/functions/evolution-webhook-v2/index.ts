@@ -233,6 +233,9 @@ serve(async (req) => {
           history_sync_started_at,
           auto_create_crm_card,
           default_pipeline_id,
+          default_column_id,
+          default_column_name,
+          queue_id,
           created_at
         `)
         .eq('instance_name', instanceName)
@@ -265,7 +268,11 @@ serve(async (req) => {
           webhook_url: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NOT FOUND',
           has_secret: !!webhookSecret,
           auto_create_crm_card: conn.auto_create_crm_card,
-          default_pipeline_id: conn.default_pipeline_id
+          default_pipeline_id: conn.default_pipeline_id,
+          default_column_id: conn.default_column_id,
+          default_column_name: conn.default_column_name,
+          queue_id: conn.queue_id,
+          connection_status: conn.status
         });
       } else {
         console.warn(`⚠️ [${requestId}] Connection not found for instance: ${instanceName}`);

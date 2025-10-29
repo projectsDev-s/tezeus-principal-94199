@@ -7,6 +7,8 @@ interface ConnectionCreateRequest {
   workspaceId: string;
   autoCreateCrmCard?: boolean;
   defaultPipelineId?: string;
+  defaultColumnId?: string;
+  defaultColumnName?: string;
   queueId?: string;
   phoneNumber?: string;
   metadata?: Record<string, any>;
@@ -17,6 +19,8 @@ interface ConnectionUpdateRequest {
   phone_number?: string;
   auto_create_crm_card?: boolean;
   default_pipeline_id?: string;
+  default_column_id?: string;
+  default_column_name?: string;
   queue_id?: string;
 }
 

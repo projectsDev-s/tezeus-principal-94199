@@ -313,12 +313,17 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       // Gera cor aleatória para a nova conexão
       const connectionColor = getRandomConnectionColor();
 
+      // Buscar nome da coluna selecionada
+      const selectedColumnData = pipelineColumns.find(col => col.id === selectedColumn);
+      
       const connection = await evolutionProvider.createConnection({
         instanceName: instanceName.trim(),
         historyRecovery: historyRecovery as 'none' | 'week' | 'month' | 'quarter',
         workspaceId,
         autoCreateCrmCard: createCrmCard,
         defaultPipelineId: selectedPipeline || undefined,
+        defaultColumnId: selectedColumn || undefined,
+        defaultColumnName: selectedColumnData?.name || undefined,
         queueId: selectedQueueId || undefined,
         phoneNumber: phoneNumber?.trim() || undefined,
         metadata: {
