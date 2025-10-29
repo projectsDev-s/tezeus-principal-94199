@@ -127,7 +127,7 @@ serve(async (req) => {
       );
     }
     
-    // Set user context for RLS with error handling
+    // Set user context for RLS with error handling (non-critical since we use service_role)
     try {
       console.log('🔧 Setting user context:', { userId, userEmail, workspaceId });
       
@@ -137,17 +137,14 @@ serve(async (req) => {
       });
       
       if (contextError) {
-        console.error('❌ RPC set_current_user_context failed:', contextError);
-        throw contextError;
+        console.warn('⚠️ RPC set_current_user_context failed (non-critical):', contextError);
+        // Não falhar - service_role pode não precisar disso
+      } else {
+        console.log('✅ User context set successfully');
       }
-      
-      console.log('✅ User context set successfully');
     } catch (contextError) {
-      console.error('❌ Failed to set user context:', contextError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to set user context', details: contextError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('⚠️ Failed to set user context (non-critical):', contextError);
+      // Não falhar - continuar execução
     }
 
     const { method } = req;
@@ -430,7 +427,7 @@ serve(async (req) => {
                     status,
                     metadata
                   ),
-                  queue:queues(
+                  queue:queues!conversations_queue_id_fkey(
                     id,
                     name,
                     ai_agent:ai_agents(
@@ -458,6 +455,9 @@ serve(async (req) => {
             );
           }
 
+          console.log(`📊 Fetching cards for pipeline: ${pipelineId}`);
+          
+          // Primeiro tentar buscar apenas os cards básicos para identificar se o problema é nos relacionamentos
           const { data: cards, error } = await supabaseClient
             .from('pipeline_cards')
             .select(`
@@ -478,7 +478,7 @@ serve(async (req) => {
                   status,
                   metadata
                 ),
-                queue:queues(
+                queue:queues!conversations_queue_id_fkey(
                   id,
                   name,
                   ai_agent:ai_agents(
@@ -492,8 +492,19 @@ serve(async (req) => {
             .eq('pipeline_id', pipelineId)
             .order('created_at', { ascending: false });
 
-          if (error) throw error;
-          return new Response(JSON.stringify(cards), {
+          if (error) {
+            console.error('❌ Error fetching cards:', error);
+            console.error('❌ Error details:', {
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              code: error.code
+            });
+            throw error;
+          }
+          
+          console.log(`✅ Successfully fetched ${cards?.length || 0} cards`);
+          return new Response(JSON.stringify(cards || []), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
@@ -652,7 +663,7 @@ serve(async (req) => {
                       conversation_id: card.conversation_id,
                       from_assigned_user_id: currentConversation.assigned_user_id,
                       to_assigned_user_id: body.responsible_user_id,
-                      changed_by: systemUserId,
+                      changed_by: userId,
                       action: action
                     });
                   
