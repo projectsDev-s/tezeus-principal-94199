@@ -77,12 +77,13 @@ serve(async (req) => {
               url: webhookUrl,
               webhook_by_events: true,
               webhook_base64: true,
+              // CRITICAL: Evolution API usa eventos em minúsculas com pontos quando configurados via /webhook/set
               events: [
-                'QRCODE_UPDATED',
-                'CONNECTION_UPDATE',
-                'MESSAGES_UPSERT',
-                'MESSAGES_UPDATE',
-                'SEND_MESSAGE'
+                'qrcode.updated',      // QR Code atualizado
+                'connection.update',   // Status da conexão
+                'messages.upsert',     // ← CRÍTICO: Mensagens recebidas do WhatsApp
+                'messages.update',     // Status de mensagens (lido, entregue)
+                'send.message'         // Mensagens enviadas
               ]
             })
           }
