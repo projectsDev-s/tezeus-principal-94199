@@ -91,11 +91,7 @@ serve(async (req) => {
     const events = customEvents || [
       'QRCODE_UPDATED',
       'CONNECTION_UPDATE',
-      'MESSAGES_UPSERT',
-      'MESSAGES_UPDATE',
-      'SEND_MESSAGE',
-      'messages.upsert',
-      'messages.update'
+      'MESSAGES_UPSERT'
     ];
     
     console.log(`🔧 [${requestId}] Setting webhook URL: ${webhookUrl}`);
@@ -111,10 +107,7 @@ serve(async (req) => {
         url: webhookUrl,
         webhook_by_events: true,
         webhook_base64: true,
-        events: events,
-        headers: {
-          'X-Webhook-Source': 'tezeus-crm'
-        }
+        events: events
       })
     });
 

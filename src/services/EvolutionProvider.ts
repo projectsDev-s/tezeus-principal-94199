@@ -293,29 +293,63 @@ class EvolutionProvider {
     return { success: data?.success || false };
   }
 
-  async pauseInstance(connectionId: string): Promise<{ success: boolean }> {
+  async pauseInstance(connectionId: string, workspaceId: string): Promise<{ success: boolean }> {
     try {
-      console.log('⏸️ EvolutionProvider.pauseInstance called with connectionId:', connectionId);
+      console.log('⏸️ EvolutionProvider.pauseInstance called with connectionId:', connectionId, 'workspaceId:', workspaceId);
       
-      // Use the new dedicated disconnect function
-      const { data, error } = await supabase.functions.invoke('disconnect-connection', {
-        body: { connectionId }
+      // Get user data for headers
+      const userData = localStorage.getItem('currentUser');
+      const currentUserData = userData ? JSON.parse(userData) : null;
+      
+      if (!currentUserData?.id) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const headers = {
+        'x-system-user-id': currentUserData.id,
+        'x-system-user-email': currentUserData.email || '',
+        'x-workspace-id': workspaceId
+      };
+      
+      console.log('📤 Calling evolution-manage-instance disconnect with headers:', headers);
+
+      const { data, error } = await supabase.functions.invoke('evolution-manage-instance', {
+        body: { action: 'disconnect', connectionId },
+        headers
       });
       
       console.log('📥 Disconnect response:', { data, error });
       
       if (error) {
         console.error('❌ Supabase function error:', error);
-        // Even on error, try to return success as fallback
-        return { success: true };
+        
+        // Try to extract error message from the error object
+        let errorMessage = error.message || 'Erro ao chamar função de desconexão';
+        
+        // If the error has a context or response, try to extract more info
+        if (error.context) {
+          try {
+            const context = typeof error.context === 'string' ? JSON.parse(error.context) : error.context;
+            if (context.error) {
+              errorMessage = context.error;
+            }
+          } catch {
+            // Ignore parsing errors
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      // Always return success - the function always succeeds
-      return { success: data?.success !== false };
+      // Check if data indicates success
+      if (data && !data.success) {
+        throw new Error(data.error || 'Falha ao desconectar instância');
+      }
+      
+      return { success: data?.success || false };
     } catch (error) {
       console.error('❌ Error in pauseInstance:', error);
-      // Always return success on disconnect
-      return { success: true };
+      throw error;
     }
   }
 

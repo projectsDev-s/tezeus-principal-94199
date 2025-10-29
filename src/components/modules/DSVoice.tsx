@@ -10,7 +10,6 @@ import { useQuickMessages } from "@/hooks/useQuickMessages";
 import { useQuickAudios } from "@/hooks/useQuickAudios";
 import { useQuickMedia } from "@/hooks/useQuickMedia";
 import { useQuickDocuments } from "@/hooks/useQuickDocuments";
-import { useQuickFunnels, FunnelStep, Funnel } from "@/hooks/useQuickFunnels";
 
 const categories = [
   { id: "mensagens", label: "Mensagens", icon: MessageSquare },
@@ -59,55 +58,13 @@ export function DSVoice() {
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [stepMinutes, setStepMinutes] = useState(0);
   const [stepSeconds, setStepSeconds] = useState(0);
-  const [editingFunnelId, setEditingFunnelId] = useState<string | null>(null);
+  const [funnels, setFunnels] = useState<any[]>([]);
 
   // Hooks para dados reais
   const { messages, loading: messagesLoading, createMessage, updateMessage, deleteMessage } = useQuickMessages();
   const { audios, loading: audiosLoading, createAudio, updateAudio, deleteAudio } = useQuickAudios();
   const { media, loading: mediaLoading, createMedia, updateMedia, deleteMedia } = useQuickMedia();
   const { documents, loading: documentsLoading, createDocument, updateDocument, deleteDocument } = useQuickDocuments();
-  const { funnels, loading: funnelsLoading, createFunnel, updateFunnel, deleteFunnel } = useQuickFunnels();
-
-  // Funções de conversão entre formato do componente e formato do banco
-  const componentTypeToDbType = (type: string): 'message' | 'audio' | 'media' | 'document' => {
-    switch (type) {
-      case 'mensagens': return 'message';
-      case 'audios': return 'audio';
-      case 'midias': return 'media';
-      case 'documentos': return 'document';
-      default: return 'message';
-    }
-  };
-
-  const dbTypeToComponentType = (type: string): string => {
-    switch (type) {
-      case 'message': return 'mensagens';
-      case 'audio': return 'audios';
-      case 'media': return 'midias';
-      case 'document': return 'documentos';
-      default: return type;
-    }
-  };
-
-  const convertStepToDbFormat = (step: any, index: number): FunnelStep => {
-    return {
-      id: step.id || Date.now().toString() + index,
-      type: componentTypeToDbType(step.type),
-      item_id: step.itemId,
-      delay_seconds: (step.delayMinutes || 0) * 60 + (step.delaySeconds || 0),
-      order: index,
-    };
-  };
-
-  const convertStepFromDbFormat = (step: FunnelStep): any => {
-    return {
-      id: step.id,
-      type: dbTypeToComponentType(step.type),
-      itemId: step.item_id,
-      delayMinutes: Math.floor(step.delay_seconds / 60),
-      delaySeconds: step.delay_seconds % 60,
-    };
-  };
 
   // Handlers para mensagens
   const handleCreateMessage = async () => {
@@ -238,7 +195,6 @@ export function DSVoice() {
   const handleOpenFunnelModal = () => {
     setFunnelName("");
     setFunnelSteps([]);
-    setEditingFunnelId(null);
     setIsFunnelModalOpen(true);
   };
 
@@ -246,20 +202,6 @@ export function DSVoice() {
     setIsFunnelModalOpen(false);
     setFunnelName("");
     setFunnelSteps([]);
-    setEditingFunnelId(null);
-  };
-
-  const handleEditFunnel = (funnel: Funnel) => {
-    setFunnelName(funnel.title);
-    setFunnelSteps(funnel.steps.map(convertStepFromDbFormat));
-    setEditingFunnelId(funnel.id);
-    setIsFunnelModalOpen(true);
-  };
-
-  const handleDeleteFunnel = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este funil?')) {
-      await deleteFunnel(id);
-    }
   };
 
   const handleOpenAddStepModal = () => {
@@ -292,29 +234,21 @@ export function DSVoice() {
     }
   };
 
-  const handleSaveFunnel = async () => {
+  const handleSaveFunnel = () => {
     if (funnelName.trim() && funnelSteps.length > 0) {
-      // Converter steps para formato do banco
-      const dbSteps: FunnelStep[] = funnelSteps.map((step, index) => 
-        convertStepToDbFormat(step, index)
-      );
-
-      if (editingFunnelId) {
-        // Atualizar funil existente
-        await updateFunnel(editingFunnelId, funnelName, dbSteps);
-      } else {
-        // Criar novo funil
-        await createFunnel(funnelName, dbSteps);
-      }
+      const newFunnel = {
+        id: Date.now().toString(),
+        name: funnelName,
+        steps: funnelSteps,
+        createdAt: new Date().toISOString(),
+      };
+      setFunnels([...funnels, newFunnel]);
       handleCloseFunnelModal();
     }
   };
 
   const getItemDetails = (type: string, itemId: string) => {
-    // Converter tipo do banco para tipo do componente se necessário
-    const componentType = dbTypeToComponentType(type);
-    
-    switch (componentType) {
+    switch (type) {
       case "mensagens":
         return messages.find(m => m.id === itemId);
       case "audios":
@@ -346,12 +280,8 @@ export function DSVoice() {
     doc.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredFunnels = funnels.filter(funnel => 
-    funnel.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const renderContent = () => {
-    const loading = messagesLoading || audiosLoading || mediaLoading || documentsLoading || funnelsLoading;
+    const loading = messagesLoading || audiosLoading || mediaLoading || documentsLoading;
 
     if (loading) {
       return (
@@ -576,62 +506,47 @@ export function DSVoice() {
               </Button>
             </div>
             
-            {filteredFunnels.length === 0 ? (
+            {funnels.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm ? 'Nenhum funil encontrado.' : 'Nenhum funil criado ainda.'}
+                Nenhum funil criado ainda.
               </div>
             ) : (
               <div className="grid gap-4">
-                {filteredFunnels.map((funnel) => {
-                  // Ordenar steps por order
-                  const sortedSteps = [...funnel.steps].sort((a, b) => a.order - b.order);
-                  
-                  return (
-                    <Card key={funnel.id} className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-medium text-lg">{funnel.title}</h4>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditFunnel(funnel)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteFunnel(funnel.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {sortedSteps.map((step: FunnelStep, index: number) => {
-                            const itemDetails = getItemDetails(step.type, step.item_id);
-                            const delayMinutes = Math.floor(step.delay_seconds / 60);
-                            const delaySeconds = step.delay_seconds % 60;
-                            return (
-                              <div key={step.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                                <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">
-                                  {index + 1}
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{itemDetails?.title || 'Item não encontrado'}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Tipo: {dbTypeToComponentType(step.type)} • Delay: {delayMinutes}m {delaySeconds}s
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
+                {funnels.map((funnel) => (
+                  <Card key={funnel.id} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-medium text-lg">{funnel.name}</h4>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    </Card>
-                  );
-                })}
+                      <div className="space-y-2">
+                        {funnel.steps.map((step: any, index: number) => {
+                          const itemDetails = getItemDetails(step.type, step.itemId);
+                          return (
+                            <div key={step.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                              <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{itemDetails?.title || 'Item não encontrado'}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Tipo: {step.type} • Delay: {step.delayMinutes}m {step.delaySeconds}s
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             )}
           </div>
@@ -883,7 +798,7 @@ export function DSVoice() {
       <Dialog open={isFunnelModalOpen} onOpenChange={setIsFunnelModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingFunnelId ? 'Editar Funil' : 'Novo Funil'}</DialogTitle>
+            <DialogTitle>Novo Funil</DialogTitle>
             <DialogDescription>
               Crie um funil com múltiplas etapas e delays configuráveis.
             </DialogDescription>
@@ -953,7 +868,7 @@ export function DSVoice() {
                 Cancelar
               </Button>
               <Button onClick={handleSaveFunnel} disabled={!funnelName.trim() || funnelSteps.length === 0}>
-                {editingFunnelId ? 'Salvar Alterações' : 'Salvar Funil'}
+                Salvar Funil
               </Button>
             </div>
           </div>

@@ -169,14 +169,7 @@ serve(async (req) => {
             let phoneNumber = connection.phone_number;
 
             // Update status based on Evolution API response
-            // Don't override 'disconnected' if it was set recently (within 30 seconds)
-            const thirtySecondsAgo = new Date(Date.now() - 30000);
-            const wasRecentlyDisconnected = 
-              connection.status === 'disconnected' &&
-              connection.updated_at &&
-              new Date(connection.updated_at) > thirtySecondsAgo;
-            
-            if (currentStatus === 'open' && connection.status !== 'connected' && !wasRecentlyDisconnected) {
+            if (currentStatus === 'open' && connection.status !== 'connected') {
               newStatus = 'connected';
               // Extract phone number if available
               if (statusData.instance?.owner) {
@@ -194,30 +187,17 @@ serve(async (req) => {
                 })
                 .eq('id', connection.id);
                 
-            } else if (currentStatus === 'close') {
-              // Only update to disconnected if Evolution confirms it's closed
-              // Don't update to connected if we recently set it to disconnected
-              const thirtySecondsAgo = new Date(Date.now() - 30000);
-              const wasRecentlyDisconnected = 
-                connection.status === 'disconnected' &&
-                connection.updated_at &&
-                new Date(connection.updated_at) > thirtySecondsAgo;
+            } else if (currentStatus === 'close' && connection.status === 'connected') {
+              newStatus = 'disconnected';
               
-              if (!wasRecentlyDisconnected || connection.status !== 'disconnected') {
-                newStatus = 'disconnected';
-                
-                console.log(`❌ Updating ${connection.instance_name} to disconnected`);
-                await supabase
-                  .from('connections')
-                  .update({ 
-                    status: 'disconnected',
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', connection.id);
-              } else {
-                console.log(`ℹ️ Keeping ${connection.instance_name} as disconnected (recently set)`);
-                newStatus = 'disconnected';
-              }
+              console.log(`❌ Updating ${connection.instance_name} to disconnected`);
+              await supabase
+                .from('connections')
+                .update({ 
+                  status: 'disconnected',
+                  updated_at: new Date().toISOString()
+                })
+                 .eq('id', connection.id);
             }
 
             return { 

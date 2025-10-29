@@ -304,79 +304,12 @@ export function CRMContatos() {
 
       // 5. Delete n8n chat histories (usando telefone do contato como session_id)
       if (contact.phone) {
-        console.log(`🗑️ Deleting n8n_chat_histories for contact phone: ${contact.phone}`);
-        
-        // Função para normalizar telefone (remove caracteres não numéricos)
-        const normalizePhone = (phone: string): string => {
-          return phone.replace(/\D/g, '');
-        };
-
-        // Gerar variações possíveis do telefone para buscar
-        const phoneVariations = [
-          contact.phone, // Formato original
-          normalizePhone(contact.phone), // Apenas números
-          contact.phone.replace(/[^\d+]/g, ''), // Com + se houver
-        ];
-
-        // Adicionar variações com código do país (55 para Brasil) se não tiver
-        const normalized = normalizePhone(contact.phone);
-        if (normalized.length > 0) {
-          // Se não começa com 55, adicionar variações com e sem
-          if (!normalized.startsWith('55')) {
-            phoneVariations.push(`55${normalized}`);
-            phoneVariations.push(`+55${normalized}`);
-            // Variação sem 55 no início
-            if (normalized.length >= 10) {
-              // Remove o 55 se estiver no meio (ex: 5511999999999 -> 11999999999)
-              const withoutCountry = normalized.replace(/^55/, '');
-              if (withoutCountry !== normalized) {
-                phoneVariations.push(withoutCountry);
-              }
-            }
-          } else {
-            // Se começa com 55, adicionar variação sem
-            phoneVariations.push(normalized.substring(2));
-          }
-        }
-
-        // Remover duplicatas
-        const uniqueVariations = [...new Set(phoneVariations.filter(p => p))];
-        console.log(`📋 Trying ${uniqueVariations.length} phone variations:`, uniqueVariations);
-
-        // Tentar deletar com cada variação (OR query não é suportado diretamente, então fazemos múltiplas tentativas)
-        let successCount = 0;
-        let errors: string[] = [];
-
-        for (const phoneVar of uniqueVariations) {
-          try {
-            const { error: n8nError } = await supabase
-              .from("n8n_chat_histories")
-              .delete()
-              .eq("session_id", phoneVar);
-            
-            if (n8nError) {
-              // Apenas logar se não for erro de "não encontrado" ou permissão
-              if (!n8nError.message.includes('No rows') && !n8nError.message.includes('permission')) {
-                console.warn(`⚠️ Error deleting n8n_chat_histories for ${phoneVar}:`, n8nError);
-                errors.push(`${phoneVar}: ${n8nError.message}`);
-              }
-            } else {
-              console.log(`✅ Successfully attempted deletion of n8n_chat_histories for ${phoneVar}`);
-              successCount++;
-            }
-          } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            console.warn(`⚠️ Exception deleting n8n_chat_histories for ${phoneVar}:`, errorMsg);
-            errors.push(`${phoneVar}: ${errorMsg}`);
-          }
-        }
-
-        if (successCount > 0) {
-          console.log(`✅ Deletion attempts completed for ${successCount} phone variation(s)`);
-        } else if (errors.length > 0) {
-          console.warn(`⚠️ Errors occurred during deletion attempts:`, errors);
-        } else {
-          console.log(`ℹ️ Deletion attempts completed (no records found or no errors)`);
+        const { error: n8nError } = await supabase
+          .from("n8n_chat_histories")
+          .delete()
+          .eq("session_id", contact.phone);
+        if (n8nError) {
+          console.warn("Error deleting n8n chat histories:", n8nError);
         }
       }
 

@@ -113,20 +113,6 @@ serve(async (req) => {
               shouldClearQr = true;
             }
 
-            // Don't override 'disconnected' status if it was set recently (within last 30 seconds)
-            // This prevents sync from overriding manual disconnect actions
-            const thirtySecondsAgo = new Date(Date.now() - 30000);
-            const wasRecentlyDisconnected = 
-              connection.status === 'disconnected' &&
-              connection.updated_at &&
-              new Date(connection.updated_at) > thirtySecondsAgo;
-            
-            // Skip status update if was recently disconnected and Evolution still shows 'open'
-            if (wasRecentlyDisconnected && evolutionStatus === 'open') {
-              console.log(`⚠️ [${requestId}] ${connection.instance_name} was manually disconnected recently, skipping status sync`);
-              newStatus = 'disconnected'; // Keep as disconnected
-            }
-            
             // Update connection in database if status changed
             if (newStatus !== connection.status || 
                 newPhoneNumber !== connection.phone_number ||

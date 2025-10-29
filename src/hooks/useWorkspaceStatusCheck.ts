@@ -15,30 +15,17 @@ export function useWorkspaceStatusCheck() {
     if (userRole === 'master' || !selectedWorkspace) return;
 
     const checkWorkspaceStatus = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('workspaces')
-          .select('is_active')
-          .eq('id', selectedWorkspace.workspace_id)
-          .maybeSingle(); // Use maybeSingle instead of single to avoid 406
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select('is_active')
+        .eq('id', selectedWorkspace.workspace_id)
+        .single();
 
-        // Se der erro 406 ou similar, ignorar silenciosamente
-        // (pode ser problema de RLS ou configuração)
-        if (error) {
-          console.warn('⚠️ [useWorkspaceStatusCheck] Erro ao verificar status do workspace:', error.message);
-          // Não fazer logout em caso de erro de query
-          return;
-        }
-
-        if (data && (data as any).is_active === false) {
-          // Workspace inativo - forçar logout
-          toast.error('Sua empresa foi inativada. Entre em contato com o administrador.');
-          await logout();
-          navigate('/login');
-        }
-      } catch (err) {
-        console.warn('⚠️ [useWorkspaceStatusCheck] Erro inesperado:', err);
-        // Ignorar erros silenciosamente para não bloquear a aplicação
+      if (!error && data && (data as any).is_active === false) {
+        // Workspace inativo - forçar logout
+        toast.error('Sua empresa foi inativada. Entre em contato com o administrador.');
+        await logout();
+        navigate('/login');
       }
     };
 

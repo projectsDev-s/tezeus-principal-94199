@@ -689,26 +689,31 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     try {
       setIsDisconnecting(true);
       
-      // Use the new dedicated disconnect function
-      const result = await evolutionProvider.pauseInstance(connection.id);
+      const result = await evolutionProvider.pauseInstance(connection.id, workspaceId);
 
-      // The function always returns success, but let's verify
-      toast({
-        title: 'Sucesso',
-        description: 'Instância desconectada com sucesso!',
-      });
+      if (result.success) {
+        toast({
+          title: 'Sucesso',
+          description: 'Instância desconectada com sucesso!',
+        });
+      } else {
+        toast({
+          title: 'Aviso',
+          description: 'Instância desconectada localmente, mas pode ainda estar ativa na API',
+          variant: 'destructive',
+        });
+      }
       
-      // Reload connections to show updated status
+      // Reload connections (silently)
       loadConnections();
 
     } catch (error) {
       console.error('Error disconnecting instance:', error);
-      // Even on error, show success since the function handles it
       toast({
-        title: 'Desconectado',
-        description: 'Instância marcada como desconectada.',
+        title: 'Erro',
+        description: `Erro ao desconectar instância: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        variant: 'destructive',
       });
-      loadConnections();
     } finally {
       setIsDisconnecting(false);
     }

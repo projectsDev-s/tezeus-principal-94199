@@ -233,6 +233,3 @@ verify_jwt = false
 
 [functions.execute-agent-action]
 verify_jwt = false
-
-[functions.disconnect-connection]
-verify_jwt = false
