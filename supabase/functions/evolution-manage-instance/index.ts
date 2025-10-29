@@ -11,18 +11,19 @@ async function getEvolutionConfig(supabase: any, workspaceId: string, connection
   console.log('🔧 Getting Evolution config for workspace:', workspaceId, 'connection:', connectionId);
   
   try {
-    // Try workspace-specific config first
+    // Try workspace-specific config first (master config)
     const { data: config, error } = await supabase
       .from('evolution_instance_tokens')
       .select('token, evolution_url')
       .eq('workspace_id', workspaceId)
-      .single();
+      .eq('instance_name', '_master_config')
+      .maybeSingle();
 
     if (!error && config) {
       console.log('✅ Using workspace-specific Evolution config');
       return {
         url: config.evolution_url,
-        apiKey: config.token
+        apiKey: config.token !== 'config_only' ? config.token : null
       };
     }
     
