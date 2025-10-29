@@ -211,8 +211,25 @@ serve(async (req) => {
     const payload = await req.json();
     console.log(`📨 [${requestId}] Evolution webhook received:`, JSON.stringify(payload, null, 2));
 
-    // Extract instance name from payload
-    const instanceName = payload.instance || payload.instanceName;
+    // Extract instance name from payload - verificar múltiplas possibilidades
+    const instanceName = payload.instance || payload.instanceName || payload.data?.instance || payload.data?.instanceName;
+    
+    // Log detalhado para debug
+    console.log(`🔍 [${requestId}] Instance name extraction:`, {
+      'payload.instance': payload.instance,
+      'payload.instanceName': payload.instanceName,
+      'payload.data.instance': payload.data?.instance,
+      'payload.data.instanceName': payload.data?.instanceName,
+      'final_instanceName': instanceName,
+      'payload_keys': Object.keys(payload),
+      'payload_data_keys': payload.data ? Object.keys(payload.data) : []
+    });
+    
+    if (!instanceName) {
+      console.error(`❌ [${requestId}] CRITICAL: Instance name not found in payload!`, {
+        payload_structure: JSON.stringify(payload, null, 2).substring(0, 500)
+      });
+    }
     
     // ✅ FASE 1.2: Buscar dados da conexão UMA ÚNICA VEZ (consolidação de queries)
     let connectionData = null;
@@ -222,7 +239,7 @@ serve(async (req) => {
     
     if (instanceName) {
       console.log(`🔍 [${requestId}] Fetching connection data for instance: ${instanceName}`);
-      const { data: conn } = await supabase
+      const { data: conn, error: connError } = await supabase
         .from('connections')
         .select(`
           id,
@@ -233,31 +250,57 @@ serve(async (req) => {
           history_sync_started_at,
           auto_create_crm_card,
           default_pipeline_id,
-          created_at
+          created_at,
+          instance_name,
+          status
         `)
         .eq('instance_name', instanceName)
-        .single();
+        .maybeSingle();
+      
+      if (connError) {
+        console.error(`❌ [${requestId}] Error fetching connection for instance ${instanceName}:`, connError);
+      }
       
       if (conn) {
         connectionData = conn;
         workspaceId = conn.workspace_id;
         
+        console.log(`✅ [${requestId}] Connection found for instance ${instanceName}:`, {
+          connection_id: conn.id,
+          workspace_id: workspaceId,
+          status: conn.status,
+          instance_name: conn.instance_name
+        });
+        
         // Get webhook settings for this workspace
-        const { data: webhookSettings } = await supabase
+        const { data: webhookSettings, error: webhookSettingsError } = await supabase
           .from('workspace_webhook_settings')
           .select('webhook_url, webhook_secret')
           .eq('workspace_id', workspaceId)
-          .single();
+          .maybeSingle();
+
+        if (webhookSettingsError) {
+          console.error(`❌ [${requestId}] Error fetching webhook settings:`, webhookSettingsError);
+        }
 
         if (webhookSettings) {
           webhookUrl = webhookSettings.webhook_url;
           webhookSecret = webhookSettings.webhook_secret;
+          console.log(`✅ [${requestId}] Found workspace webhook settings for workspace ${workspaceId}`);
+        } else {
+          console.warn(`⚠️ [${requestId}] No webhook settings found in workspace_webhook_settings for workspace ${workspaceId}`);
         }
         
         // Fallback to environment variables if no workspace webhook configured
         if (!webhookUrl) {
           webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
           webhookSecret = Deno.env.get('N8N_WEBHOOK_TOKEN');
+          
+          if (webhookUrl) {
+            console.log(`✅ [${requestId}] Using fallback environment webhook URL`);
+          } else {
+            console.error(`❌ [${requestId}] NO WEBHOOK URL FOUND - neither workspace settings nor environment variable!`);
+          }
         }
         
         console.log(`🔧 [${requestId}] Connection data loaded:`, {
@@ -265,10 +308,38 @@ serve(async (req) => {
           webhook_url: webhookUrl ? webhookUrl.substring(0, 50) + '...' : 'NOT FOUND',
           has_secret: !!webhookSecret,
           auto_create_crm_card: conn.auto_create_crm_card,
-          default_pipeline_id: conn.default_pipeline_id
+          default_pipeline_id: conn.default_pipeline_id,
+          connection_status: conn.status
         });
       } else {
-        console.warn(`⚠️ [${requestId}] Connection not found for instance: ${instanceName}`);
+        console.error(`❌ [${requestId}] CRITICAL: Connection not found for instance: ${instanceName}`, {
+          searched_instance_name: instanceName,
+          payload_instance: payload.instance,
+          payload_instanceName: payload.instanceName
+        });
+        
+        // Ainda assim, tentar usar fallback para não perder mensagem
+        webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
+        webhookSecret = Deno.env.get('N8N_WEBHOOK_TOKEN');
+        
+        if (webhookUrl) {
+          console.warn(`⚠️ [${requestId}] Using fallback webhook URL because connection not found - message may be processed without workspace context`);
+        } else {
+          console.error(`❌ [${requestId}] CRITICAL: No fallback webhook URL available - message will be lost!`);
+        }
+      }
+    } else {
+      console.error(`❌ [${requestId}] CRITICAL: Instance name not provided in payload!`, {
+        payload_keys: Object.keys(payload),
+        payload_sample: JSON.stringify(payload).substring(0, 500)
+      });
+      
+      // Tentar fallback mesmo sem instance name
+      webhookUrl = Deno.env.get('N8N_INBOUND_WEBHOOK_URL');
+      webhookSecret = Deno.env.get('N8N_WEBHOOK_TOKEN');
+      
+      if (webhookUrl) {
+        console.warn(`⚠️ [${requestId}] Using fallback webhook URL without instance context`);
       }
     }
     
