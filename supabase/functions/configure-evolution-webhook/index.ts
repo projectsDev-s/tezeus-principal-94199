@@ -88,10 +88,13 @@ serve(async (req) => {
 
     // Configure webhook in Evolution API - Use v2 for proper message routing
     const webhookUrl = customWebhookUrl || `${publicAppUrl}/functions/v1/evolution-webhook-v2`;
+    
+    // CRITICAL: Evolution API usa eventos em minúsculas com pontos!
     const events = customEvents || [
-      'QRCODE_UPDATED',
-      'CONNECTION_UPDATE',
-      'MESSAGES_UPSERT'
+      'qrcode.updated',
+      'connection.update', 
+      'messages.upsert',    // ← ESTE é o evento de mensagens recebidas!
+      'messages.update'     // ← Este é só para status (lido, entregue)
     ];
     
     console.log(`🔧 [${requestId}] Setting webhook URL: ${webhookUrl}`);
