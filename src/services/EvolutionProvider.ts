@@ -293,9 +293,9 @@ class EvolutionProvider {
     return { success: data?.success || false };
   }
 
-  async pauseInstance(connectionId: string): Promise<{ success: boolean }> {
+  async pauseInstance(connectionId: string, workspaceId: string): Promise<{ success: boolean }> {
     try {
-      console.log('⏸️ EvolutionProvider.pauseInstance called with connectionId:', connectionId);
+      console.log('⏸️ EvolutionProvider.pauseInstance called with connectionId:', connectionId, 'workspaceId:', workspaceId);
       
       // Get user data for headers
       const userData = localStorage.getItem('currentUser');
@@ -308,7 +308,7 @@ class EvolutionProvider {
       const headers = {
         'x-system-user-id': currentUserData.id,
         'x-system-user-email': currentUserData.email || '',
-        'x-workspace-id': currentUserData.workspace_id || ''
+        'x-workspace-id': workspaceId
       };
       
       console.log('📤 Calling evolution-manage-instance disconnect with headers:', headers);

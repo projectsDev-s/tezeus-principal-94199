@@ -689,7 +689,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     try {
       setIsDisconnecting(true);
       
-      const result = await evolutionProvider.pauseInstance(connection.id);
+      const result = await evolutionProvider.pauseInstance(connection.id, workspaceId);
 
       if (result.success) {
         toast({
