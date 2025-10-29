@@ -42,14 +42,14 @@ export function useQuickFunnels() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('quick_funnels')
         .select('*')
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFunnels(data || []);
+      setFunnels((data || []) as Funnel[]);
     } catch (error) {
       console.error('Error fetching funnels:', error);
       toast({
@@ -73,7 +73,7 @@ export function useQuickFunnels() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('quick_funnels')
         .insert({
           title,
@@ -85,7 +85,7 @@ export function useQuickFunnels() {
 
       if (error) throw error;
 
-      setFunnels(prev => [data, ...prev]);
+      setFunnels(prev => [data as Funnel, ...prev]);
       toast({
         title: 'Sucesso',
         description: 'Funil criado com sucesso',
@@ -103,7 +103,7 @@ export function useQuickFunnels() {
 
   const updateFunnel = async (id: string, title: string, steps: FunnelStep[]) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('quick_funnels')
         .update({ title, steps })
         .eq('id', id)
@@ -112,7 +112,7 @@ export function useQuickFunnels() {
 
       if (error) throw error;
 
-      setFunnels(prev => prev.map(funnel => funnel.id === id ? data : funnel));
+      setFunnels(prev => prev.map(funnel => funnel.id === id ? (data as Funnel) : funnel));
       toast({
         title: 'Sucesso',
         description: 'Funil atualizado com sucesso',
@@ -129,7 +129,7 @@ export function useQuickFunnels() {
 
   const deleteFunnel = async (id: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('quick_funnels')
         .delete()
         .eq('id', id);

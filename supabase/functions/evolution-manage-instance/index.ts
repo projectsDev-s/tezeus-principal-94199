@@ -6,32 +6,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-system-user-id, x-system-user-email, x-workspace-id',
 }
 
-// Get Evolution API configuration from workspace-specific settings
-async function getEvolutionConfig(supabase: any, workspaceId: string) {
-  console.log('🔧 Getting Evolution config for workspace:', workspaceId);
+// Get Evolution API configuration from workspace-specific settings or connection secrets
+async function getEvolutionConfig(supabase: any, workspaceId: string, connectionId?: string) {
+  console.log('🔧 Getting Evolution config for workspace:', workspaceId, 'connection:', connectionId);
   
   try {
-    // Get workspace-specific config
+    // Try workspace-specific config first (master config)
     const { data: config, error } = await supabase
       .from('evolution_instance_tokens')
       .select('token, evolution_url')
       .eq('workspace_id', workspaceId)
-      .single();
+      .eq('instance_name', '_master_config')
+      .maybeSingle();
 
     if (!error && config) {
       console.log('✅ Using workspace-specific Evolution config');
       return {
         url: config.evolution_url,
-        apiKey: config.token
+        apiKey: config.token !== 'config_only' ? config.token : null
       };
     }
     
-    console.log('⚠️ No workspace config found, using environment fallback');
+    console.log('⚠️ No workspace config found, trying connection secrets');
+    
+    // If no workspace config, try connection-specific secrets
+    if (connectionId) {
+      const { data: connSecret, error: connError } = await supabase
+        .from('connection_secrets')
+        .select('evolution_url, token')
+        .eq('connection_id', connectionId)
+        .single();
+        
+      if (!connError && connSecret) {
+        console.log('✅ Using connection-specific Evolution config');
+        return {
+          url: connSecret.evolution_url,
+          apiKey: connSecret.token
+        };
+      }
+    }
+    
+    console.log('⚠️ No connection secrets found, using environment fallback');
   } catch (error) {
-    console.log('⚠️ Error getting workspace config:', error);
+    console.log('⚠️ Error getting config:', error);
   }
 
-  // No fallback - require workspace configuration
+  // Fallback to environment variables
+  const envUrl = Deno.env.get('EVOLUTION_API_URL');
+  const envKey = Deno.env.get('EVOLUTION_API_KEY');
+  
+  if (envUrl && envKey) {
+    console.log('✅ Using environment Evolution config');
+    return {
+      url: envUrl,
+      apiKey: envKey
+    };
+  }
+
+  // No configuration found
   throw new Error('Evolution API not configured for workspace. Please configure URL and API key in Evolution settings.');
 }
 
@@ -107,10 +139,10 @@ serve(async (req) => {
 
     console.log('✅ Connection found:', connection.id, connection.instance_name, connection.workspace_id)
 
-    // Get Evolution config after we have the connection (for workspace_id)
+    // Get Evolution config after we have the connection (for workspace_id and connection_id)
     let evolutionConfig
     try {
-      evolutionConfig = await getEvolutionConfig(supabase, connection.workspace_id)
+      evolutionConfig = await getEvolutionConfig(supabase, connection.workspace_id, connection.id)
     } catch (configError) {
       console.error('❌ Error getting Evolution config:', configError)
       return new Response(
