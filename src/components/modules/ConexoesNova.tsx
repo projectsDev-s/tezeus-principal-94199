@@ -635,13 +635,24 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     
     console.log(`🔄 Starting polling for connection ${connectionId}`);
     
-    const interval = setInterval(async () => {
+    // Verificação inicial imediata
+    const checkStatus = async () => {
       try {
         const connectionStatus = await evolutionProvider.getConnectionStatus(connectionId);
+        console.log(`📊 Status recebido:`, connectionStatus);
+        
+        // Atualizar selectedConnection com o status atual
+        if (selectedConnection) {
+          setSelectedConnection(prev => prev ? { 
+            ...prev, 
+            status: connectionStatus.status,
+            phone_number: connectionStatus.phone_number || prev.phone_number
+          } : null);
+        }
         
         if (connectionStatus.status === 'connected') {
           // Clear polling
-          clearInterval(interval);
+          if (pollInterval) clearInterval(pollInterval);
           setPollInterval(null);
           
           // Close modal and update UI
@@ -649,7 +660,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           setSelectedConnection(null);
           
           // Reload connections (silently)
-          loadConnections();
+          await loadConnections();
           
           toast({
             title: '✅ Conectado!',
@@ -657,24 +668,38 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               `WhatsApp conectado como ${connectionStatus.phone_number}!` : 
               'WhatsApp conectado com sucesso!',
           });
-        } else if (connectionStatus.status === 'disconnected') {
-          clearInterval(interval);
+          
+          return true; // Indica que conectou
+        } else if (connectionStatus.status === 'disconnected' && selectedConnection?.status !== 'qr') {
+          // Só desconecta se não estiver aguardando QR
+          if (pollInterval) clearInterval(pollInterval);
           setPollInterval(null);
           setIsQRModalOpen(false);
           setSelectedConnection(null);
           
-          loadConnections(); // Silent reload
+          await loadConnections();
           
           toast({
             title: 'Desconectado',
-            description: `${connectionStatus.instance_name} foi desconectado.`,
+            description: `Conexão foi desconectada.`,
             variant: "destructive",
           });
+          
+          return true; // Indica que finalizou
         }
+        
+        return false; // Continua polling
       } catch (error) {
         console.error('Error polling connection status:', error);
+        return false;
       }
-    }, 3000); // Poll every 3 seconds
+    };
+    
+    // Primeira verificação imediata
+    checkStatus();
+    
+    // Polling mais rápido (1.5 segundos) para melhor responsividade
+    const interval = setInterval(checkStatus, 1500);
     
     setPollInterval(interval);
   };
