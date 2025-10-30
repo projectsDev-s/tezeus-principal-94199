@@ -252,7 +252,7 @@ export function CRMContatos() {
 
     return matchesSearch && matchesTag;
   });
-  const handleDeleteContact = async (contact: Contact, muteToast?: boolean) => {
+  const handleDeleteContact = async (contact: Contact, muteToast?: boolean): Promise<boolean> => {
     try {
       // Delete in the correct order due to foreign key constraints
 
@@ -400,6 +400,7 @@ export function CRMContatos() {
           description: "O contato e todos os dados relacionados foram removidos com sucesso.",
         });
       }
+      return true;
     } catch (error) {
       console.error("Error deleting contact:", error);
       if (!muteToast) {
@@ -409,17 +410,28 @@ export function CRMContatos() {
           variant: "destructive",
         });
       }
+      // Propagar erro para operações em massa poderem reagir corretamente
+      if (muteToast) throw error;
+      return false;
     }
   };
   const handleBulkDelete = async () => {
     const contactsToDelete = contacts.filter((c) => selectedIds.includes(c.id));
     try {
+      let success = 0;
       for (const contact of contactsToDelete) {
-        await handleDeleteContact(contact, true);
+        try {
+          const ok = await handleDeleteContact(contact, true);
+          if (ok) success++;
+        } catch (e) {
+          // já tratado por handleDeleteContact quando muteToast=true (rethrow)
+        }
       }
+      // Recarregar lista da base para garantir consistência visual
+      await fetchContacts();
       toast({
-        title: "Contatos excluídos",
-        description: `${contactsToDelete.length} contatos foram removidos com sucesso.`,
+        title: "Exclusão em massa finalizada",
+        description: `${success} de ${contactsToDelete.length} contatos foram removidos.`,
       });
       setSelectedIds([]);
       setIsBulkDeleteOpen(false);
