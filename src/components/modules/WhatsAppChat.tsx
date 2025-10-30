@@ -52,10 +52,12 @@ import { cn } from "@/lib/utils";
 interface WhatsAppChatProps {
   isDarkMode?: boolean;
   selectedConversationId?: string | null;
+  onlyMessages?: boolean;
 }
 export function WhatsAppChat({
   isDarkMode = false,
-  selectedConversationId
+  selectedConversationId,
+  onlyMessages = false
 }: WhatsAppChatProps) {
   // Usar notificações para saber quais conversas têm mensagens não lidas  
   const { notifications } = useRealtimeNotifications();
@@ -1343,6 +1345,7 @@ export function WhatsAppChat({
 
   return <div className="flex h-full bg-white overflow-hidden w-full">
       {/* Sidebar de Filtros */}
+      {(!onlyMessages) && (
       <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-40 lg:w-48")}>
         {/* Header da sidebar */}
         <div className="p-3 border-b border-border flex items-center justify-between bg-white">
@@ -1507,8 +1510,10 @@ export function WhatsAppChat({
             </Collapsible>
           </div>}
       </div>
+      )}
 
       {/* Sidebar com lista de conversas */}
+      {(!onlyMessages) && (
       <div className="w-full md:w-72 lg:w-72 md:min-w-72 lg:min-w-72 border-r border-border flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border">
@@ -1569,7 +1574,10 @@ export function WhatsAppChat({
                     <ContextMenuTrigger asChild>
                       <div className={cn("relative flex items-center px-4 py-2 cursor-pointer rounded-lg transition-all duration-300 ease-in-out border-b border-border/50", "group-hover/list:opacity-30 hover:!opacity-100 hover:shadow-lg hover:scale-[1.02] hover:translate-x-1 hover:bg-white hover:z-10", selectedConversation?.id === conversation.id && "bg-muted !opacity-100")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
                   {/* Status indicator bar - cor da conexão */}
-                  <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
+                  {/* Barra de status/identificação da conexão com tooltip detalhado */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
                     backgroundColor: (() => {
                       // Se tem conexão, usa cor da conexão (salva ou gerada por hash)
                       if (conversation.connection) {
@@ -1581,7 +1589,43 @@ export function WhatsAppChat({
                       // Senão, usa lógica do agente
                       return conversation.agente_ativo ? 'rgb(83, 0, 235)' : 'rgb(76, 175, 80)';
                     })()
-                  }} title={conversation.connection?.instance_name || (conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO')} />
+                  }} />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      {conversation.connection ? (
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold">{conversation.connection.instance_name || 'Instância'}</p>
+                          {conversation.connection.phone_number && (
+                            <p className="text-xs text-muted-foreground">{conversation.connection.phone_number}</p>
+                          )}
+                          <p className="text-[10px] mt-1">
+                            {(() => {
+                              const status = (conversation.connection.status || '').toLowerCase();
+                              switch (status) {
+                                case 'open':
+                                case 'connected':
+                                  return 'Status: Conectado';
+                                case 'creating':
+                                  return 'Status: Criando';
+                                case 'connecting':
+                                  return 'Status: Conectando';
+                                case 'closed':
+                                case 'disconnected':
+                                  return 'Status: Desconectado';
+                                default:
+                                  return `Status: ${conversation.connection.status || 'N/A'}`;
+                              }
+                            })()}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold">{conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO'}</p>
+                          <p className="text-[10px] text-muted-foreground">Sem conexão vinculada</p>
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
                     
                     {/* Avatar container */}
                     <div className="flex-shrink-0 mr-3 ml-2">
@@ -1745,6 +1789,7 @@ export function WhatsAppChat({
           </div>
         </div>
       </div>
+      )}
 
       {/* Área principal de chat */}
       <div className="flex-1 flex flex-col">
@@ -1753,7 +1798,7 @@ export function WhatsAppChat({
             <div className="p-4 border-b border-border bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {/* ✅ CORREÇÃO: Botão Voltar visível */}
+                  {!onlyMessages && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1771,6 +1816,7 @@ export function WhatsAppChat({
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  )}
 
                    <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all" onClick={() => setContactPanelOpen(true)}>
                     {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
@@ -1831,10 +1877,13 @@ export function WhatsAppChat({
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {agentLoading && "⏳ Carregando configuração do agente..."}
-                        {!agentLoading && !hasAgent && "⚠️ Nenhum agente de IA cadastrado"}
-                        {!agentLoading && hasAgent && selectedConversation.agente_ativo && "🤖 IA respondendo - Clique para assumir atendimento"}
-                        {!agentLoading && hasAgent && !selectedConversation.agente_ativo && "👤 Atendimento manual - Clique para ativar IA"}
+                        {agentLoading ? (
+                          <p className="text-xs">⏳ Carregando...</p>
+                        ) : hasAgent ? (
+                          <p className="text-xs font-semibold">{agent?.name || 'Agente IA'}</p>
+                        ) : (
+                          <p className="text-xs">⚠️ Nenhum agente de IA cadastrado</p>
+                        )}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

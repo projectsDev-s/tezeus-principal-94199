@@ -3,11 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Music, Image, FileText, Send } from 'lucide-react';
+import { MessageSquare, Music, Image, FileText, Send, Workflow } from 'lucide-react';
 import { useQuickMessages } from '@/hooks/useQuickMessages';
 import { useQuickAudios } from '@/hooks/useQuickAudios';
 import { useQuickMedia } from '@/hooks/useQuickMedia';
 import { useQuickDocuments } from '@/hooks/useQuickDocuments';
+import { useQuickFunnels, Funnel } from '@/hooks/useQuickFunnels';
 import { cn } from '@/lib/utils';
 
 interface QuickItemsModalProps {
@@ -33,6 +34,7 @@ export function QuickItemsModal({
   const { audios, loading: audiosLoading } = useQuickAudios();
   const { media, loading: mediaLoading } = useQuickMedia();
   const { documents, loading: documentsLoading } = useQuickDocuments();
+  const { funnels, loading: funnelsLoading } = useQuickFunnels();
 
   const handleSendMessage = (message: any) => {
     if (onSendMessage) {
@@ -163,6 +165,63 @@ export function QuickItemsModal({
     </div>
   );
 
+  const handleSendFunnel = async (funnel: Funnel) => {
+    // Enviar cada etapa do funil de forma sequencial
+    const orderedSteps = [...(funnel.steps || [])].sort((a, b) => a.order - b.order);
+    for (const step of orderedSteps) {
+      if (step.type === 'message' && onSendMessage) {
+        const msg = messages?.find((m: any) => m.id === step.item_id);
+        if (msg) {
+          await onSendMessage(msg.content, 'text');
+        }
+      } else if (step.type === 'audio' && onSendAudio) {
+        const audio = audios?.find((a: any) => a.id === step.item_id);
+        if (audio) {
+          await onSendAudio({ name: audio.file_name, url: audio.file_url }, audio.title);
+        }
+      } else if (step.type === 'media' && onSendMedia) {
+        const mediaItem = media?.find((m: any) => m.id === step.item_id);
+        if (mediaItem) {
+          const type = mediaItem.file_type?.startsWith('image/') ? 'image' : 'video';
+          await onSendMedia({ name: mediaItem.file_name, url: mediaItem.file_url }, mediaItem.title, type);
+        }
+      } else if (step.type === 'document' && onSendDocument) {
+        const doc = documents?.find((d: any) => d.id === step.item_id);
+        if (doc) {
+          await onSendDocument({ name: doc.file_name, url: doc.file_url }, doc.title);
+        }
+      }
+      // Delay opcional entre etapas
+      if (step.delay_seconds && step.delay_seconds > 0) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
+      }
+    }
+    onOpenChange(false);
+  };
+
+  const renderFunnelItem = (funnel: Funnel) => (
+    <div key={funnel.id} className="flex items-center justify-between p-3 border-b border-border hover:bg-accent/50 transition-colors">
+      <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+        <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
+          <Workflow className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <h4 className="font-medium text-sm truncate text-foreground overflow-hidden whitespace-nowrap">{funnel.title}</h4>
+          <p className="text-xs text-muted-foreground truncate overflow-hidden whitespace-nowrap">{(funnel.steps || []).length} etapas</p>
+        </div>
+      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => handleSendFunnel(funnel)}
+        className="w-8 h-8 p-0 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent"
+      >
+        <Send className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+
   const renderEmptyState = (type: string) => (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
@@ -185,7 +244,7 @@ export function QuickItemsModal({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="messages" className="p-2" title="Mensagens">
               <MessageSquare className="w-4 h-4" />
             </TabsTrigger>
@@ -198,6 +257,9 @@ export function QuickItemsModal({
             <TabsTrigger value="documents" className="p-2" title="Documentos">
               <FileText className="w-4 h-4" />
             </TabsTrigger>
+          <TabsTrigger value="funnels" className="p-2" title="Funis">
+            <Workflow className="w-4 h-4" />
+          </TabsTrigger>
           </TabsList>
 
           <div className="mt-4">
@@ -264,6 +326,27 @@ export function QuickItemsModal({
                 )}
               </ScrollArea>
             </TabsContent>
+
+          <TabsContent value="funnels" className="mt-0">
+            <ScrollArea className="h-80">
+              {funnelsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-sm text-muted-foreground">Carregando...</div>
+                </div>
+              ) : funnels && funnels.length > 0 ? (
+                <div className="space-y-0">
+                  {funnels.map(renderFunnelItem)}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
+                    <Workflow className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Nenhum funil encontrado</p>
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
           </div>
         </Tabs>
       </DialogContent>
