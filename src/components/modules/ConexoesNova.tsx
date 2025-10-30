@@ -640,6 +640,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     
     console.log(`🔄 Starting polling for connection ${connectionId}`);
     
+    // Rastrear último status notificado para evitar loops
+    let lastNotifiedStatus: string | null = null;
+    
     // Verificação inicial imediata
     const checkStatus = async () => {
       try {
@@ -655,7 +658,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           } : null);
         }
         
-        if (connectionStatus.status === 'connected') {
+        // Conectado - notificar apenas uma vez
+        if (connectionStatus.status === 'connected' && lastNotifiedStatus !== 'connected') {
+          lastNotifiedStatus = 'connected';
+          
           // Clear polling
           if (pollInterval) clearInterval(pollInterval);
           setPollInterval(null);
@@ -675,7 +681,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           });
           
           return true; // Indica que conectou
-        } else if (connectionStatus.status === 'disconnected' && selectedConnection?.status !== 'qr') {
+        } 
+        
+        // Desconectado - notificar apenas se não estiver esperando QR e não foi notificado
+        if (connectionStatus.status === 'disconnected' && 
+            selectedConnection?.status !== 'qr' && 
+            lastNotifiedStatus !== 'disconnected') {
+          lastNotifiedStatus = 'disconnected';
+          
           // Só desconecta se não estiver aguardando QR
           if (pollInterval) clearInterval(pollInterval);
           setPollInterval(null);
