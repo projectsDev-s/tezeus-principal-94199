@@ -1184,17 +1184,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                     </>
                   )}
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium text-foreground">
-                        Habilitar Chats em Grupos
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Permitir conversas em grupos do WhatsApp
-                      </p>
-                    </div>
-                    <Switch defaultChecked={true} />
-                  </div>
                 </div>
               </div>
             </div>
