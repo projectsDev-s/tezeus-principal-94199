@@ -717,7 +717,33 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         return false; // Continua polling
       } catch (error) {
         console.error('Error polling connection status:', error);
-        return false;
+        
+        // Se for erro 404 ou conexão não encontrada, parar polling
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('Connection not found')) {
+          console.log('⚠️ Conexão não encontrada (404), parando polling');
+          
+          // Limpar polling
+          if (pollInterval) clearInterval(pollInterval);
+          setPollInterval(null);
+          
+          // Fechar modal
+          setIsQRModalOpen(false);
+          setSelectedConnection(null);
+          
+          // Recarregar lista
+          await loadConnections();
+          
+          toast({
+            title: "Erro",
+            description: "Conexão não encontrada. A instância pode ter sido deletada.",
+            variant: "destructive"
+          });
+          
+          return true; // Para o polling
+        }
+        
+        return false; // Tentar novamente para outros erros
       }
     };
     
