@@ -77,6 +77,21 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       
       if (error) throw error;
     },
+    onMutate: async () => {
+      // Cancelar queries em andamento
+      await queryClient.cancelQueries({ queryKey: ['conversation', conversationId] });
+      
+      // Snapshot do valor anterior
+      const previousConversation = queryClient.getQueryData(['conversation', conversationId]);
+      
+      // Atualização otimista
+      queryClient.setQueryData(['conversation', conversationId], (old: any) => ({
+        ...old,
+        agente_ativo: true
+      }));
+      
+      return { previousConversation };
+    },
     onSuccess: () => {
       toast({
         title: 'Agente ativado',
@@ -86,7 +101,11 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Reverter em caso de erro
+      if (context?.previousConversation) {
+        queryClient.setQueryData(['conversation', conversationId], context.previousConversation);
+      }
       console.error('Erro ao ativar agente:', error);
       toast({
         title: 'Erro',
@@ -107,6 +126,21 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       
       if (error) throw error;
     },
+    onMutate: async () => {
+      // Cancelar queries em andamento
+      await queryClient.cancelQueries({ queryKey: ['conversation', conversationId] });
+      
+      // Snapshot do valor anterior
+      const previousConversation = queryClient.getQueryData(['conversation', conversationId]);
+      
+      // Atualização otimista
+      queryClient.setQueryData(['conversation', conversationId], (old: any) => ({
+        ...old,
+        agente_ativo: false
+      }));
+      
+      return { previousConversation };
+    },
     onSuccess: () => {
       toast({
         title: 'Agente Desativado',
@@ -116,7 +150,11 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Reverter em caso de erro
+      if (context?.previousConversation) {
+        queryClient.setQueryData(['conversation', conversationId], context.previousConversation);
+      }
       console.error('Erro ao desativar agente:', error);
       toast({
         title: 'Erro',
