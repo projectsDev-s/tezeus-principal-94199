@@ -150,8 +150,12 @@ serve(async (req) => {
       workspaceId, 
       autoCreateCrmCard, 
       defaultPipelineId,
+      defaultColumnId,
+      defaultColumnName,
+      queueId,
       historyRecovery = 'none',
-      phoneNumber
+      phoneNumber,
+      metadata
     } = requestBody;
     
     // Map historyRecovery to days
@@ -281,9 +285,10 @@ serve(async (req) => {
         phone_number: phoneNumber || null,
         auto_create_crm_card: autoCreateCrmCard || false,
         default_pipeline_id: defaultPipelineId || null,
-        default_column_id: requestBody.defaultColumnId || null,
-        default_column_name: requestBody.defaultColumnName || null,
-        queue_id: requestBody.queueId || null,
+        default_column_id: defaultColumnId || null,
+        default_column_name: defaultColumnName || null,
+        queue_id: queueId || null,
+        metadata: metadata || null,
       })
       .select()
       .single();
