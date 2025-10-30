@@ -1435,7 +1435,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               {selectedConnection?.qr_code ? (
                 <div className="text-center space-y-4">
                   <img 
-                    src={selectedConnection.qr_code} 
+                    src={selectedConnection.qr_code.replace(/^data:image\/png;base64,data:image\/png;base64,/, 'data:image/png;base64,')} 
                     alt="QR Code" 
                     className="mx-auto border border-border rounded-lg bg-white p-4"
                     style={{ width: '280px', height: '280px' }}
