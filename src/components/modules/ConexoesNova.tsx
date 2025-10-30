@@ -321,11 +321,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         historyRecovery: historyRecovery as 'none' | 'week' | 'month' | 'quarter',
         workspaceId,
         autoCreateCrmCard: createCrmCard,
-        defaultPipelineId: selectedPipeline || undefined,
-        defaultColumnId: selectedColumn || undefined,
-        defaultColumnName: selectedColumnData?.name || undefined,
-        queueId: selectedQueueId || undefined,
-        phoneNumber: phoneNumber?.trim() || undefined,
+        defaultPipelineId: selectedPipeline || null,
+        defaultColumnId: selectedColumn || null,
+        defaultColumnName: selectedColumnData?.name || null,
+        queueId: selectedQueueId || null,
+        phoneNumber: phoneNumber?.trim() || null,
         metadata: {
           border_color: connectionColor
         }
