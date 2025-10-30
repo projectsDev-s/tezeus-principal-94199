@@ -642,8 +642,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     
     // Rastrear último status notificado para evitar loops
     let lastNotifiedStatus: string | null = null;
+    let isInitialCheck = true; // Flag para primeira verificação
     
-    // Verificação inicial imediata
+    // Verificação de status
     const checkStatus = async () => {
       try {
         const connectionStatus = await evolutionProvider.getConnectionStatus(connectionId);
@@ -683,8 +684,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           return true; // Indica que conectou
         } 
         
-        // Desconectado - notificar apenas se não estiver esperando QR e não foi notificado
+        // Desconectado - NÃO notificar na verificação inicial do modal
+        // Só notificar se for uma desconexão que aconteceu durante o processo
         if (connectionStatus.status === 'disconnected' && 
+            !isInitialCheck && 
             selectedConnection?.status !== 'qr' && 
             lastNotifiedStatus !== 'disconnected') {
           lastNotifiedStatus = 'disconnected';
@@ -704,6 +707,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           });
           
           return true; // Indica que finalizou
+        }
+        
+        // Após primeira verificação, desabilitar flag
+        if (isInitialCheck) {
+          isInitialCheck = false;
         }
         
         return false; // Continua polling
