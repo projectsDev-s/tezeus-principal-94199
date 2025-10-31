@@ -7,14 +7,17 @@ export const useConversationAccept = () => {
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const { getHeaders } = useWorkspaceHeaders();
 
-  const acceptConversation = async (conversationId: string) => {
+  const acceptConversation = async (conversationId: string, agentId: string | null = null) => {
     try {
       setIsAccepting(conversationId);
       
       const headers = getHeaders();
       
       const { data: response, error } = await supabase.functions.invoke('accept-conversation', {
-        body: { conversation_id: conversationId },
+        body: { 
+          conversation_id: conversationId,
+          agent_id: agentId 
+        },
         headers
       });
 

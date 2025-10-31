@@ -56,7 +56,7 @@ serve(async (req) => {
       });
     }
 
-    const { conversation_id } = await req.json();
+    const { conversation_id, agent_id } = await req.json();
     
     if (!conversation_id) {
       return new Response(JSON.stringify({ 
@@ -89,18 +89,30 @@ serve(async (req) => {
       });
     }
 
+    // Preparar dados de atualização
+    const updateData: any = {
+      assigned_user_id: systemUserId,
+      assigned_at: new Date().toISOString(),
+      status: 'open'
+    };
+
+    // Se agent_id foi fornecido, incluir nos dados de atualização
+    if (agent_id) {
+      updateData.agent_active_id = agent_id;
+      updateData.agente_ativo = true;
+    } else {
+      updateData.agent_active_id = null;
+      updateData.agente_ativo = false;
+    }
+
     // Update atômico com condição para evitar corrida
     const { data: updateResult, error: updateError } = await supabase
       .from('conversations')
-      .update({
-        assigned_user_id: systemUserId,
-        assigned_at: new Date().toISOString(),
-        status: 'open'
-      })
+      .update(updateData)
       .eq('id', conversation_id)
       .eq('workspace_id', workspaceId) // Garantir que é do workspace correto
       .is('assigned_user_id', null) // Condição crítica para evitar corrida - usar .is() para NULL
-      .select('id, assigned_user_id, status');
+      .select('id, assigned_user_id, status, agent_active_id, agente_ativo');
 
     if (updateError) {
       console.error('❌ Error updating conversation:', updateError);

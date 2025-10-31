@@ -843,6 +843,7 @@ export type Database = {
       }
       conversations: {
         Row: {
+          agent_active_id: string | null
           agente_ativo: boolean | null
           assigned_at: string | null
           assigned_user_id: string | null
@@ -862,6 +863,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          agent_active_id?: string | null
           agente_ativo?: boolean | null
           assigned_at?: string | null
           assigned_user_id?: string | null
@@ -881,6 +883,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          agent_active_id?: string | null
           agente_ativo?: boolean | null
           assigned_at?: string | null
           assigned_user_id?: string | null
@@ -900,6 +903,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_agent_active_id_fkey"
+            columns: ["agent_active_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_connection_fk"
             columns: ["connection_id"]
