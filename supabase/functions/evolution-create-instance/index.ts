@@ -366,7 +366,6 @@ serve(async (req) => {
           "MESSAGES_UPDATE",
           "MESSAGES_UPSERT",
           "QRCODE_UPDATED",
-          "CONNECTION_UPDATE",
         ]
       }
     };
