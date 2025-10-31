@@ -210,14 +210,23 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   const addMessage = useCallback((message: WhatsAppMessage) => {
     console.log('➕ [useConversationMessages] addMessage chamado:', {
       messageId: message.id,
+      external_id: message.external_id,
       conversationId: message.conversation_id,
       timestamp: new Date().toISOString()
     });
 
     setMessages(prev => {
-      const exists = prev.some(m => m.id === message.id);
-      if (exists) {
-        console.log('⚠️ [useConversationMessages] Mensagem duplicada ignorada:', message.id);
+      // ✅ Verificar duplicata por ID ou external_id
+      const existsById = prev.some(m => m.id === message.id);
+      const existsByExternalId = message.external_id && prev.some(m => m.external_id === message.external_id);
+      
+      if (existsById || existsByExternalId) {
+        console.log('⚠️ [useConversationMessages] Mensagem duplicada ignorada:', {
+          id: message.id,
+          external_id: message.external_id,
+          existsById,
+          existsByExternalId
+        });
         return prev;
       }
       
@@ -328,6 +337,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         (payload) => {
           console.log('📨 [REALTIME] ✅ NOVA MENSAGEM RECEBIDA:', {
             messageId: payload.new.id,
+            external_id: payload.new.external_id,
             content: payload.new.content?.substring(0, 50),
             conversationId: currentConversationId,
             sender_type: payload.new.sender_type,
@@ -336,9 +346,64 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           });
           
           const newMessage = payload.new as WhatsAppMessage;
-          addMessage(newMessage);
           
-          console.log('✅ [REALTIME] addMessage() chamado para mensagem:', newMessage.id);
+          // ✅ Verificar se existe mensagem otimista com mesmo external_id e substituir
+          setMessages(prev => {
+            // Buscar mensagem otimista pelo external_id
+            const optimisticIndex = newMessage.external_id 
+              ? prev.findIndex(m => m.external_id === newMessage.external_id && m.id !== newMessage.id)
+              : -1;
+            
+            if (optimisticIndex !== -1) {
+              // ✅ Substituir mensagem otimista pela real
+              console.log('🔄 [REALTIME] Substituindo mensagem otimista pela real:', {
+                optimisticId: prev[optimisticIndex].id,
+                realId: newMessage.id,
+                external_id: newMessage.external_id
+              });
+              
+              const newMessages = [...prev];
+              newMessages[optimisticIndex] = newMessage;
+              
+              // Ordenar por data
+              newMessages.sort((a, b) => 
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
+              
+              return newMessages;
+            }
+            
+            // ✅ Verificar se já existe mensagem com mesmo ID ou external_id
+            const existsById = prev.some(m => m.id === newMessage.id);
+            const existsByExternalId = newMessage.external_id && prev.some(m => m.external_id === newMessage.external_id);
+            
+            if (existsById || existsByExternalId) {
+              console.log('⚠️ [REALTIME] Mensagem duplicada ignorada:', {
+                id: newMessage.id,
+                external_id: newMessage.external_id,
+                existsById,
+                existsByExternalId
+              });
+              return prev;
+            }
+            
+            // ✅ Se não existe, adicionar normalmente
+            const updatedMessages = [...prev, newMessage];
+            updatedMessages.sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+            return updatedMessages;
+          });
+          
+          // Invalidar cache
+          const workspaceId = selectedWorkspace?.workspace_id;
+          const convId = currentConversationId;
+          if (workspaceId && convId) {
+            const cacheKey = `${workspaceId}:${convId}`;
+            cacheRef.current.delete(cacheKey);
+          }
+          
+          console.log('✅ [REALTIME] Mensagem processada:', newMessage.id);
         }
       )
       .on(

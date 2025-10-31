@@ -471,8 +471,12 @@ export function WhatsAppChat({
     sendingRef.current.add(messageKey);
     
     try {
+      // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
+      const clientMessageId = crypto.randomUUID();
+      
       const optimisticMessage = {
-        id: `temp-quick-${Date.now()}`,
+        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
+        external_id: clientMessageId, // ✅ Incluir external_id para correspondência
         conversation_id: selectedConversation.id,
         content: content,
         message_type: type as any,
@@ -493,7 +497,7 @@ export function WhatsAppChat({
           message_type: type,
           sender_id: user?.id,
           sender_type: 'agent',
-          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2: clientMessageId
+          clientMessageId: clientMessageId // ✅ Usar o mesmo clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -504,13 +508,7 @@ export function WhatsAppChat({
       if (error || !sendResult?.success) {
         throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
       }
-      if (sendResult.message?.id) {
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-      }
+      // ✅ Não remover mensagem otimista - a subscription realtime vai substituí-la
     } catch (error) {
       console.error('Erro ao enviar mensagem rápida:', error);
     } finally {
@@ -532,8 +530,12 @@ export function WhatsAppChat({
     sendingRef.current.add(messageKey);
     
     try {
+      // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
+      const clientMessageId = crypto.randomUUID();
+      
       const optimisticMessage = {
-        id: `temp-quick-audio-${Date.now()}`,
+        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
+        external_id: clientMessageId, // ✅ Incluir external_id para correspondência
         conversation_id: selectedConversation.id,
         content: content || '[ÁUDIO]',
         message_type: 'audio' as const,
@@ -558,7 +560,7 @@ export function WhatsAppChat({
           sender_type: 'agent',
           file_url: file.url,
           file_name: file.name,
-          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
+          clientMessageId: clientMessageId // ✅ Usar o mesmo clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -569,13 +571,7 @@ export function WhatsAppChat({
       if (error || !sendResult?.success) {
         throw new Error(sendResult?.error || 'Erro ao enviar áudio');
       }
-      if (sendResult.message?.id) {
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-      }
+      // ✅ Não remover mensagem otimista - a subscription realtime vai substituí-la
     } catch (error) {
       console.error('Erro ao enviar áudio rápido:', error);
     } finally {
@@ -597,8 +593,12 @@ export function WhatsAppChat({
     sendingRef.current.add(messageKey);
     
     try {
+      // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
+      const clientMessageId = crypto.randomUUID();
+      
       const optimisticMessage = {
-        id: `temp-quick-media-${Date.now()}`,
+        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
+        external_id: clientMessageId, // ✅ Incluir external_id para correspondência
         conversation_id: selectedConversation.id,
         content: content || `[${type.toUpperCase()}]`,
         message_type: type as any,
@@ -623,7 +623,7 @@ export function WhatsAppChat({
           sender_type: 'agent',
           file_url: file.url,
           file_name: file.name,
-          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
+          clientMessageId: clientMessageId // ✅ Usar o mesmo clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -634,13 +634,7 @@ export function WhatsAppChat({
       if (error || !sendResult?.success) {
         throw new Error(sendResult?.error || 'Erro ao enviar mídia');
       }
-      if (sendResult.message?.id) {
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-      }
+      // ✅ Não remover mensagem otimista - a subscription realtime vai substituí-la
     } catch (error) {
       console.error('Erro ao enviar mídia rápida:', error);
     } finally {
@@ -662,8 +656,12 @@ export function WhatsAppChat({
     sendingRef.current.add(messageKey);
     
     try {
+      // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
+      const clientMessageId = crypto.randomUUID();
+      
       const optimisticMessage = {
-        id: `temp-quick-doc-${Date.now()}`,
+        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
+        external_id: clientMessageId, // ✅ Incluir external_id para correspondência
         conversation_id: selectedConversation.id,
         content: content || '[DOCUMENTO]',
         message_type: 'document' as any,
@@ -688,7 +686,7 @@ export function WhatsAppChat({
           sender_type: 'agent',
           file_url: file.url,
           file_name: file.name,
-          clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
+          clientMessageId: clientMessageId // ✅ Usar o mesmo clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
@@ -699,13 +697,7 @@ export function WhatsAppChat({
       if (error || !sendResult?.success) {
         throw new Error(sendResult?.error || 'Erro ao enviar documento');
       }
-      if (sendResult.message?.id) {
-        updateMessage(optimisticMessage.id, {
-          id: sendResult.message.id,
-          status: 'sent',
-          created_at: sendResult.message.created_at
-        });
-      }
+      // ✅ Não remover mensagem otimista - a subscription realtime vai substituí-la
     } catch (error) {
       console.error('Erro ao enviar documento rápido:', error);
     } finally {

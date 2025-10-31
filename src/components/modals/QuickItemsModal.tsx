@@ -168,35 +168,163 @@ export function QuickItemsModal({
   const handleSendFunnel = async (funnel: Funnel) => {
     // Enviar cada etapa do funil de forma sequencial
     const orderedSteps = [...(funnel.steps || [])].sort((a, b) => a.order - b.order);
+    
+    console.log('🚀 [handleSendFunnel] Iniciando envio do funil:', {
+      funnelId: funnel.id,
+      funnelTitle: funnel.title,
+      totalSteps: orderedSteps.length,
+      steps: orderedSteps.map(s => ({ type: s.type, item_id: s.item_id, order: s.order }))
+    });
+
     for (const step of orderedSteps) {
-      if (step.type === 'message' && onSendMessage) {
-        const msg = messages?.find((m: any) => m.id === step.item_id);
-        if (msg) {
-          await onSendMessage(msg.content, 'text');
+      const typeLower = (step.type || '').toLowerCase();
+      
+      // Normalizar tipos: aceitar tanto português (plural) quanto inglês (singular)
+      // 'mensagens' -> 'message', 'audios' -> 'audio', 'midias' -> 'media', 'documentos' -> 'document'
+      const normalizeType = (type: string): string => {
+        const normalized = type.toLowerCase();
+        if (normalized === 'mensagens') return 'message';
+        if (normalized === 'audios') return 'audio';
+        if (normalized === 'midias') return 'media';
+        if (normalized === 'documentos') return 'document';
+        return normalized;
+      };
+      
+      const normalizedType = normalizeType(typeLower);
+      
+      try {
+        let stepSent = false;
+
+        // Texto/Mensagem
+        if ((normalizedType === 'message' || normalizedType === 'text') && onSendMessage) {
+          const msg = messages?.find((m: any) => m.id === step.item_id);
+          if (msg) {
+            console.log('📝 [handleSendFunnel] Enviando mensagem de texto:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              content: msg.content?.substring(0, 50) + '...'
+            });
+            await onSendMessage(msg.content, 'text');
+            stepSent = true;
+          } else {
+            console.warn('⚠️ [handleSendFunnel] Mensagem não encontrada:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              availableMessages: messages?.map(m => m.id) || []
+            });
+          }
         }
-      } else if (step.type === 'audio' && onSendAudio) {
-        const audio = audios?.find((a: any) => a.id === step.item_id);
-        if (audio) {
-          await onSendAudio({ name: audio.file_name, url: audio.file_url }, audio.title);
+
+        // Áudio
+        else if ((normalizedType === 'audio' || normalizedType === 'voice') && onSendAudio) {
+          const audio = audios?.find((a: any) => a.id === step.item_id);
+          if (audio) {
+            console.log('🎵 [handleSendFunnel] Enviando áudio:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              fileName: audio.file_name,
+              title: audio.title
+            });
+            await onSendAudio({ name: audio.file_name, url: audio.file_url }, audio.title);
+            stepSent = true;
+          } else {
+            console.warn('⚠️ [handleSendFunnel] Áudio não encontrado:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              availableAudios: audios?.map(a => a.id) || []
+            });
+          }
         }
-      } else if (step.type === 'media' && onSendMedia) {
-        const mediaItem = media?.find((m: any) => m.id === step.item_id);
-        if (mediaItem) {
-          const type = mediaItem.file_type?.startsWith('image/') ? 'image' : 'video';
-          await onSendMedia({ name: mediaItem.file_name, url: mediaItem.file_url }, mediaItem.title, type);
+
+        // Imagem/Vídeo (mídia)
+        else if ((normalizedType === 'media' || normalizedType === 'image' || normalizedType === 'video') && onSendMedia) {
+          const mediaItem = media?.find((m: any) => m.id === step.item_id);
+          if (mediaItem) {
+            const type = mediaItem.file_type?.startsWith('image/') ? 'image' : 'video';
+            console.log('🖼️ [handleSendFunnel] Enviando mídia:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              type: type,
+              fileName: mediaItem.file_name,
+              title: mediaItem.title
+            });
+            await onSendMedia({ name: mediaItem.file_name, url: mediaItem.file_url }, mediaItem.title, type);
+            stepSent = true;
+          } else {
+            console.warn('⚠️ [handleSendFunnel] Mídia não encontrada:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              availableMedia: media?.map(m => m.id) || []
+            });
+          }
         }
-      } else if (step.type === 'document' && onSendDocument) {
-        const doc = documents?.find((d: any) => d.id === step.item_id);
-        if (doc) {
-          await onSendDocument({ name: doc.file_name, url: doc.file_url }, doc.title);
+
+        // Documento (PDF ou outros)
+        else if ((normalizedType === 'document' || normalizedType === 'pdf' || normalizedType === 'doc') && onSendDocument) {
+          const doc = documents?.find((d: any) => d.id === step.item_id);
+          if (doc) {
+            console.log('📄 [handleSendFunnel] Enviando documento:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              fileName: doc.file_name,
+              title: doc.title
+            });
+            await onSendDocument({ name: doc.file_name, url: doc.file_url }, doc.title);
+            stepSent = true;
+          } else {
+            console.warn('⚠️ [handleSendFunnel] Documento não encontrado:', {
+              stepOrder: step.order,
+              itemId: step.item_id,
+              availableDocuments: documents?.map(d => d.id) || []
+            });
+          }
+        } else {
+          console.warn('⚠️ [handleSendFunnel] Tipo de step não reconhecido ou handler não disponível:', {
+            stepOrder: step.order,
+            type: step.type,
+            typeLower: typeLower,
+            normalizedType: normalizedType,
+            hasOnSendMessage: !!onSendMessage,
+            hasOnSendAudio: !!onSendAudio,
+            hasOnSendMedia: !!onSendMedia,
+            hasOnSendDocument: !!onSendDocument
+          });
         }
-      }
-      // Delay opcional entre etapas
-      if (step.delay_seconds && step.delay_seconds > 0) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
+
+        if (stepSent) {
+          console.log('✅ [handleSendFunnel] Step enviado com sucesso:', {
+            stepOrder: step.order,
+            type: step.type
+          });
+        } else {
+          console.error('❌ [handleSendFunnel] Step não foi enviado:', {
+            stepOrder: step.order,
+            type: step.type,
+            itemId: step.item_id
+          });
+        }
+
+        // Delay opcional entre etapas
+        if (step.delay_seconds && step.delay_seconds > 0) {
+          console.log('⏳ [handleSendFunnel] Aguardando delay:', {
+            stepOrder: step.order,
+            delaySeconds: step.delay_seconds
+          });
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
+        }
+      } catch (error) {
+        console.error('❌ [handleSendFunnel] Erro ao enviar step:', {
+          stepOrder: step.order,
+          type: step.type,
+          itemId: step.item_id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        // Continuar com o próximo step mesmo se este falhar
       }
     }
+    
+    console.log('✅ [handleSendFunnel] Funil processado completamente');
     onOpenChange(false);
   };
 
