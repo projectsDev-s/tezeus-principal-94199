@@ -261,6 +261,27 @@ export type Database = {
           },
         ]
       }
+      base_de_conhecimento: {
+        Row: {
+          contexto: string | null
+          created_at: string
+          id: string
+          id_agent: string | null
+        }
+        Insert: {
+          contexto?: string | null
+          created_at?: string
+          id?: string
+          id_agent?: string | null
+        }
+        Update: {
+          contexto?: string | null
+          created_at?: string
+          id?: string
+          id_agent?: string | null
+        }
+        Relationships: []
+      }
       cargos: {
         Row: {
           created_at: string
@@ -930,6 +951,128 @@ export type Database = {
           },
         ]
       }
+      crm_column_automation_actions: {
+        Row: {
+          action_config: Json
+          action_order: number
+          action_type: string
+          automation_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          action_config?: Json
+          action_order?: number
+          action_type: string
+          automation_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          action_config?: Json
+          action_order?: number
+          action_type?: string
+          automation_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_column_automation_actions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_column_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_column_automation_triggers: {
+        Row: {
+          automation_id: string
+          created_at: string
+          id: string
+          trigger_config: Json | null
+          trigger_type: string
+        }
+        Insert: {
+          automation_id: string
+          created_at?: string
+          id?: string
+          trigger_config?: Json | null
+          trigger_type: string
+        }
+        Update: {
+          automation_id?: string
+          created_at?: string
+          id?: string
+          trigger_config?: Json | null
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_column_automation_triggers_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_column_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_column_automations: {
+        Row: {
+          column_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          column_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_column_automations_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_column_automations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_column_automations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
       dashboard_cards: {
         Row: {
           action_url: string | null
@@ -972,6 +1115,30 @@ export type Database = {
           type?: string
           updated_at?: string
           workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      documents_base: {
+        Row: {
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          text: string
+        }
+        Insert: {
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          text: string
+        }
+        Update: {
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          text?: string
         }
         Relationships: []
       }
@@ -1833,6 +2000,33 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_funnels: {
+        Row: {
+          created_at: string
+          id: string
+          steps: Json
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          steps?: Json
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          steps?: Json
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       quick_media: {
         Row: {
           created_at: string
@@ -2444,6 +2638,14 @@ export type Database = {
     }
     Functions: {
       block_system_user: { Args: { user_email: string }; Returns: undefined }
+      check_automation_permission: {
+        Args: { p_automation_id: string; p_operation: string }
+        Returns: boolean
+      }
+      check_column_permission: {
+        Args: { p_column_id: string; p_operation: string }
+        Returns: boolean
+      }
       clear_all_conversations: { Args: never; Returns: undefined }
       create_connection_anon: {
         Args: {
