@@ -27,7 +27,7 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       
       const { data, error } = await supabase
         .from('conversations')
-        .select('agente_ativo')
+        .select('agente_ativo, agent_active_id')
         .eq('id', conversationId)
         .single();
       
@@ -39,9 +39,11 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
 
   // Atualizar selectedAgentId quando carregar a conversa
   useEffect(() => {
-    // Por enquanto, sem agent_id na tabela, usar agente padrão do workspace
-    if (conversation?.agente_ativo) {
-      // Quando tiver agent_id, usar aqui
+    if (conversation?.agent_active_id) {
+      // Usar o ID do agente ativo
+      setSelectedAgentId(conversation.agent_active_id);
+    } else if (conversation?.agente_ativo) {
+      // Se agente_ativo está true mas não tem agent_active_id, manter comportamento atual
       setSelectedAgentId('default');
     } else {
       setSelectedAgentId('none');
@@ -68,10 +70,15 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
 
   const activateAgentMutation = useMutation({
     mutationFn: async () => {
+      if (!selectedAgentId || selectedAgentId === 'none') {
+        throw new Error('Nenhum agente selecionado');
+      }
+      
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agente_ativo: true
+          agente_ativo: true,
+          agent_active_id: selectedAgentId  // ✅ SALVAR ID DO AGENTE
         })
         .eq('id', conversationId);
       
@@ -87,7 +94,8 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       // Atualização otimista
       queryClient.setQueryData(['conversation', conversationId], (old: any) => ({
         ...old,
-        agente_ativo: true
+        agente_ativo: true,
+        agent_active_id: selectedAgentId
       }));
       
       return { previousConversation };
@@ -120,7 +128,8 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agente_ativo: false
+          agente_ativo: false,
+          agent_active_id: null  // ✅ LIMPAR ID DO AGENTE
         })
         .eq('id', conversationId);
       
@@ -136,7 +145,8 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       // Atualização otimista
       queryClient.setQueryData(['conversation', conversationId], (old: any) => ({
         ...old,
-        agente_ativo: false
+        agente_ativo: false,
+        agent_active_id: null
       }));
       
       return { previousConversation };
@@ -224,7 +234,9 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
                 <div className="flex items-center gap-2">
                   <Bot className="w-4 h-4 text-purple-600" />
                   <span className="text-sm font-medium text-purple-900">
-                    {agents?.[0]?.name || 'Agente IA'}
+                    {conversation?.agent_active_id 
+                      ? agents?.find(a => a.id === conversation.agent_active_id)?.name || 'Agente IA'
+                      : 'Agente IA'}
                   </span>
                 </div>
               </div>

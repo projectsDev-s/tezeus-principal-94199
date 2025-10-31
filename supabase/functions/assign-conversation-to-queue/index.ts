@@ -163,7 +163,8 @@ serve(async (req) => {
           .from('conversations')
           .update({
             queue_id: targetQueueId,
-            agente_ativo: queue.ai_agent_id ? true : false  // ✅ ATIVAR AGENTE SE EXISTIR
+            agente_ativo: queue.ai_agent_id ? true : false,  // ✅ ATIVAR AGENTE SE EXISTIR
+            agent_active_id: queue.ai_agent_id || null  // ✅ SALVAR ID DO AGENTE
           })
           .eq('id', conversation_id);
 
@@ -205,7 +206,8 @@ serve(async (req) => {
         assigned_user_id: selectedUserId,
         assigned_at: new Date().toISOString(),
         queue_id: targetQueueId,
-        agente_ativo: queue.ai_agent_id ? true : false  // ✅ ATIVAR AGENTE SE EXISTIR
+        agente_ativo: queue.ai_agent_id ? true : false,  // ✅ ATIVAR AGENTE SE EXISTIR
+        agent_active_id: queue.ai_agent_id || null  // ✅ SALVAR ID DO AGENTE
       })
       .eq('id', conversation_id);
 

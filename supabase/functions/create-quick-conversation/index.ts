@@ -278,7 +278,8 @@ serve(async (req) => {
                     assigned_at: new Date().toISOString(),
                     queue_id: defaultQueueId,
                     status: 'open',
-                    agente_ativo: queue.ai_agent_id ? true : false
+                    agente_ativo: queue.ai_agent_id ? true : false,
+                    agent_active_id: queue.ai_agent_id || null  // ✅ SALVAR ID DO AGENTE
                   })
                   .eq('id', conversationId);
 

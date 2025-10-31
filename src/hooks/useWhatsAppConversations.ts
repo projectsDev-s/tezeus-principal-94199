@@ -28,6 +28,7 @@ export interface WhatsAppConversation {
     profile_image_url?: string;
   };
   agente_ativo: boolean;
+  agent_active_id?: string | null;
   status: 'open' | 'closed' | 'pending' | 'em_atendimento';
   unread_count: number;
   last_activity_at: string;
@@ -125,6 +126,7 @@ export const useWhatsAppConversations = () => {
                   profile_image_url: item.contacts.profile_image_url
                 },
                 agente_ativo: item.agente_ativo,
+                agent_active_id: item.agent_active_id || null,
                 status: item.status,
                 unread_count: item.unread_count,
                 last_activity_at: item.last_activity_at,
@@ -158,6 +160,7 @@ export const useWhatsAppConversations = () => {
             profile_image_url: item.contacts.profile_image_url
           },
           agente_ativo: item.agente_ativo,
+          agent_active_id: item.agent_active_id || null,
           status: item.status,
           unread_count: item.unread_count,
           last_activity_at: item.last_activity_at,
@@ -375,14 +378,17 @@ export const useWhatsAppConversations = () => {
       
       const { error } = await supabase
         .from('conversations')
-        .update({ agente_ativo: false })
+        .update({ 
+          agente_ativo: false,
+          agent_active_id: null  // ✅ LIMPAR ID DO AGENTE
+        })
         .eq('id', conversationId);
 
       if (error) throw error;
 
       setConversations(prev => prev.map(conv => 
         conv.id === conversationId 
-          ? { ...conv, agente_ativo: false, _updated_at: Date.now() }
+          ? { ...conv, agente_ativo: false, agent_active_id: null, _updated_at: Date.now() }
           : conv
       ));
 
@@ -407,16 +413,39 @@ export const useWhatsAppConversations = () => {
     try {
       console.log('🤖 Ativando IA para conversa:', conversationId);
       
+      // Buscar conversa para obter agent_active_id ou queue_id
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('agent_active_id, queue_id')
+        .eq('id', conversationId)
+        .single();
+      
+      let agentIdToActivate = conversation?.agent_active_id || null;
+      
+      // Se não tem agent_active_id mas tem queue_id, buscar da fila
+      if (!agentIdToActivate && conversation?.queue_id) {
+        const { data: queue } = await supabase
+          .from('queues')
+          .select('ai_agent_id')
+          .eq('id', conversation.queue_id)
+          .single();
+        
+        agentIdToActivate = queue?.ai_agent_id || null;
+      }
+      
       const { error } = await supabase
         .from('conversations')
-        .update({ agente_ativo: true })
+        .update({ 
+          agente_ativo: true,
+          agent_active_id: agentIdToActivate  // ✅ RESTAURAR ID DO AGENTE
+        })
         .eq('id', conversationId);
 
       if (error) throw error;
 
       setConversations(prev => prev.map(conv => 
         conv.id === conversationId 
-          ? { ...conv, agente_ativo: true, _updated_at: Date.now() }
+          ? { ...conv, agente_ativo: true, agent_active_id: agentIdToActivate, _updated_at: Date.now() }
           : conv
       ));
 
@@ -585,6 +614,7 @@ export const useWhatsAppConversations = () => {
             .select(`
               id,
               agente_ativo,
+              agent_active_id,
               status,
               unread_count,
               last_activity_at,
@@ -625,6 +655,7 @@ export const useWhatsAppConversations = () => {
                 profile_image_url: contact.profile_image_url,
               },
               agente_ativo: conversationData.agente_ativo,
+              agent_active_id: (conversationData as any).agent_active_id ?? null,
               status: conversationData.status as 'open' | 'closed' | 'pending',
               unread_count: conversationData.unread_count || 0,
               last_activity_at: conversationData.last_activity_at,

@@ -67,6 +67,7 @@ serve(async (req) => {
       .select(`
         id,
         agente_ativo,
+        agent_active_id,
         status,
         unread_count,
         last_activity_at,

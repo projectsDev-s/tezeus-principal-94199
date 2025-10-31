@@ -107,11 +107,14 @@ async function getOrCreateConversation(
         
         await supabase
           .from('conversations')
-          .update({ agente_ativo: true })
+          .update({ 
+            agente_ativo: true,
+            agent_active_id: queue.ai_agent_id  // ✅ SALVAR ID DO AGENTE
+          })
           .eq('id', existing.id);
         
         existing.agente_ativo = true;
-        console.log(`✅ [${instanceName}] Agente IA ativado automaticamente`);
+        console.log(`✅ [${instanceName}] Agente IA ativado automaticamente (ID: ${queue.ai_agent_id})`);
       }
     }
     
