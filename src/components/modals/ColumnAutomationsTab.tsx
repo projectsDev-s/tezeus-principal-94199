@@ -60,12 +60,8 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
       
       // ✅ OTIMIZADO: Buscar apenas as automações (sem triggers/actions)
       // Triggers e actions só serão carregados quando o usuário editar
-      const { data: automationsData, error: automationsError } = await supabase
-        .from('crm_column_automations')
-        .select('*')
-        .eq('column_id', columnId)
-        .eq('workspace_id', selectedWorkspace.workspace_id)
-        .order('created_at', { ascending: false });
+    const { data: automationsData, error: automationsError } = await supabase
+      .rpc('get_column_automations', { p_column_id: columnId });
 
       if (automationsError) {
         // Se erro 404 ou "relation does not exist", a tabela não foi criada
@@ -131,10 +127,8 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
     try {
       const headers = getHeaders();
       
-      const { error } = await supabase
-        .from('crm_column_automations')
-        .update({ is_active: !automation.is_active })
-        .eq('id', automation.id);
+    const { data: newStatus, error } = await supabase
+      .rpc('toggle_column_automation', { p_automation_id: automation.id });
 
       if (error) throw error;
 
@@ -161,10 +155,8 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
     try {
       const headers = getHeaders();
       
-      const { error } = await supabase
-        .from('crm_column_automations')
-        .delete()
-        .eq('id', automationId);
+    const { error } = await supabase
+      .rpc('delete_column_automation', { p_automation_id: automationId });
 
       if (error) throw error;
 
@@ -193,23 +185,26 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
   const handleEditAutomation = async (automation: ColumnAutomation) => {
     // ✅ OTIMIZADO: Carregar triggers e actions apenas quando for editar
     try {
-      const { data: triggers } = await supabase
-        .from('crm_column_automation_triggers')
-        .select('*')
-        .eq('automation_id', automation.id)
-        .order('created_at', { ascending: true });
+    const { data: automationDetails, error: detailsError } = await supabase
+      .rpc('get_automation_details', { p_automation_id: automation.id });
 
-      const { data: actions } = await supabase
-        .from('crm_column_automation_actions')
-        .select('*')
-        .eq('automation_id', automation.id)
-        .order('action_order', { ascending: true });
-
-      setEditingAutomation({
-        ...automation,
-        triggers: triggers || [],
-        actions: actions || []
+    if (detailsError) {
+      console.error('Erro ao buscar detalhes:', detailsError);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar detalhes da automação",
+        variant: "destructive"
       });
+      return;
+    }
+
+    const details = automationDetails as any;
+
+    setEditingAutomation({
+      ...automation,
+      triggers: details?.triggers || [],
+      actions: details?.actions || []
+    });
       setAutomationModalOpen(true);
     } catch (error: any) {
       console.error('Erro ao carregar detalhes da automação:', error);

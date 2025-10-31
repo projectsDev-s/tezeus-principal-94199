@@ -408,96 +408,52 @@ export function AutomationModal({
       const headers = getHeaders();
 
       if (automation?.id) {
-        // Atualizar automação existente
-        const { error: updateError } = await supabase
-          .from('crm_column_automations')
-          .update({
-            name: name.trim(),
-            description: description.trim() || null,
-          })
-          .eq('id', automation.id);
+        // Atualizar automação existente usando função SQL
+        const triggersJson = triggers.map(t => ({
+          trigger_type: t.trigger_type,
+          trigger_config: t.trigger_config || {}
+        }));
+
+        const actionsJson = actions.map(a => ({
+          action_type: a.action_type,
+          action_config: a.action_config || {}
+        }));
+
+        const { error: updateError } = await supabase.rpc('update_column_automation', {
+          p_automation_id: automation.id,
+          p_name: name.trim(),
+          p_description: description.trim() || null,
+          p_triggers: triggersJson as any,
+          p_actions: actionsJson as any
+        });
 
         if (updateError) throw updateError;
-
-        // Remover triggers e actions antigos
-        await supabase
-          .from('crm_column_automation_triggers')
-          .delete()
-          .eq('automation_id', automation.id);
-
-        await supabase
-          .from('crm_column_automation_actions')
-          .delete()
-          .eq('automation_id', automation.id);
-
-        // Criar novos triggers e actions
-        for (const trigger of triggers) {
-          const triggerData: any = {
-            automation_id: automation.id,
-            trigger_type: trigger.trigger_type,
-            trigger_config: trigger.trigger_config || {}
-          };
-          
-          await supabase
-            .from('crm_column_automation_triggers')
-            .insert(triggerData);
-        }
-
-        for (let i = 0; i < actions.length; i++) {
-          const actionData: any = {
-            automation_id: automation.id,
-            action_type: actions[i].action_type,
-            action_config: actions[i].action_config || {},
-            action_order: i
-          };
-          
-          const { error: actionError } = await supabase
-            .from('crm_column_automation_actions')
-            .insert(actionData);
-          
-          if (actionError) throw actionError;
-        }
       } else {
-        // Criar nova automação
+        // Criar nova automação usando função SQL
         if (!selectedWorkspace?.workspace_id) {
           throw new Error('Workspace não selecionado');
         }
 
-        const { data: newAutomation, error: createError } = await supabase
-          .from('crm_column_automations')
-          .insert({
-            column_id: columnId,
-            workspace_id: selectedWorkspace.workspace_id,
-            name: name.trim(),
-            description: description.trim() || null,
-            is_active: true,
-          })
-          .select()
-          .single();
+        const triggersJson = triggers.map(t => ({
+          trigger_type: t.trigger_type,
+          trigger_config: t.trigger_config || {}
+        }));
+
+        const actionsJson = actions.map(a => ({
+          action_type: a.action_type,
+          action_config: a.action_config || {}
+        }));
+
+        const { data: automationId, error: createError } = await supabase.rpc('create_column_automation', {
+          p_column_id: columnId,
+          p_workspace_id: selectedWorkspace.workspace_id,
+          p_name: name.trim(),
+          p_description: description.trim() || null,
+          p_triggers: triggersJson as any,
+          p_actions: actionsJson as any
+        });
 
         if (createError) throw createError;
-
-        // Criar triggers e actions
-        for (const trigger of triggers) {
-          await supabase
-            .from('crm_column_automation_triggers')
-            .insert({
-              automation_id: newAutomation.id,
-              trigger_type: trigger.trigger_type,
-              trigger_config: trigger.trigger_config || {}
-            });
-        }
-
-        for (let i = 0; i < actions.length; i++) {
-          await supabase
-            .from('crm_column_automation_actions')
-            .insert({
-              automation_id: newAutomation.id,
-              action_type: actions[i].action_type,
-              action_config: actions[i].action_config || {},
-              action_order: i
-            });
-        }
       }
 
       toast({
