@@ -296,7 +296,15 @@ serve(async (req) => {
     }, null, 2));
     
     // ✅ DEDUP: Verificar se já processamos esse evento recentemente
-    const dedupKey = `${EVENT}:${payload.data?.keyId || payload.data?.messageId || payload.data?.key?.id || Date.now()}`;
+    // Para CONNECTION_UPDATE, usar instance+state como chave para evitar spam
+    let dedupKey: string;
+    if (EVENT === 'CONNECTION_UPDATE') {
+      const state = payload.data?.state || 'unknown';
+      dedupKey = `${EVENT}:${instanceName}:${state}`;
+    } else {
+      dedupKey = `${EVENT}:${payload.data?.keyId || payload.data?.messageId || payload.data?.key?.id || Date.now()}`;
+    }
+    
     if (checkDedup(dedupKey)) {
       console.log(`⏭️ [${requestId}] Event duplicado ignorado: ${dedupKey}`);
       return new Response(JSON.stringify({
