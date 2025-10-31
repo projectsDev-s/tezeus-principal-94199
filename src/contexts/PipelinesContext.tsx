@@ -165,22 +165,51 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [getHeaders, toast]);
 
-  const fetchCards = useCallback(async (pipelineId: string) => {
+  const fetchCards = useCallback(async (pipelineId: string, retryCount = 0) => {
     if (!getHeaders || !pipelineId) return;
 
     try {
+      console.log(`🔍 [fetchCards] Buscando cards para pipeline: ${pipelineId} (tentativa ${retryCount + 1})`);
+      
       const { data, error } = await supabase.functions.invoke(`pipeline-management/cards?pipeline_id=${pipelineId}`, {
         method: 'GET',
         headers: getHeaders
       });
 
       if (error) throw error;
-      setCards(data || []);
+      
+      const cardsData = data || [];
+      console.log(`✅ [fetchCards] ${cardsData.length} cards carregados`);
+      
+      // ✅ VERIFICAR SE CARDS TÊM RELACIONAMENTOS COMPLETOS
+      const cardsWithFullData = cardsData.filter(c => c.contact || c.conversation);
+      const cardsWithoutData = cardsData.filter(c => !c.contact && !c.conversation && (c.contact_id || c.conversation_id));
+      
+      if (cardsWithoutData.length > 0) {
+        console.warn(`⚠️ [fetchCards] ${cardsWithoutData.length} cards sem relacionamentos detectados`);
+        
+        // Se for primeira tentativa e houver cards incompletos, tentar novamente após 2s
+        if (retryCount === 0) {
+          console.log('🔄 [fetchCards] Tentando novamente em 2 segundos...');
+          setTimeout(() => fetchCards(pipelineId, 1), 2000);
+          return; // Não atualizar ainda, aguardar retry
+        }
+      }
+      
+      setCards(cardsData);
     } catch (error) {
-      console.error('Error fetching cards:', error);
+      console.error('❌ [fetchCards] Erro ao buscar cards:', error);
+      
+      // Retry em caso de erro (máximo 2 tentativas)
+      if (retryCount < 2) {
+        console.log(`🔄 [fetchCards] Tentando novamente (${retryCount + 1}/2)...`);
+        setTimeout(() => fetchCards(pipelineId, retryCount + 1), 2000);
+        return;
+      }
+      
       toast({
         title: "Erro",
-        description: "Erro ao carregar cards",
+        description: "Erro ao carregar cards. Tente recarregar a página.",
         variant: "destructive",
       });
     }
@@ -567,7 +596,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   }, [cards, userRole, selectedPipeline]);
 
   // Handlers para eventos realtime
-  const handleCardInsert = useCallback((newCard: PipelineCard) => {
+  const handleCardInsert = useCallback(async (newCard: PipelineCard) => {
     console.log('✨ [Realtime Handler] Novo card recebido:', newCard);
     
     // Verificar se o card já existe (evitar duplicatas)
@@ -577,32 +606,119 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         console.log('⚠️ [Realtime] Card já existe, ignorando INSERT');
         return prev;
       }
+      return prev; // Retornar prev temporariamente enquanto busca dados completos
+    });
+
+    // ✅ BUSCAR DADOS COMPLETOS do card (contact, conversation) se não vierem no realtime
+    // O realtime do Supabase não envia relacionamentos por padrão
+    const hasFullData = newCard.contact && newCard.conversation;
+    
+    if (!hasFullData && selectedPipeline?.id && getHeaders) {
+      console.log('🔄 [Realtime] Card sem relacionamentos, buscando dados completos...');
       
-      // Adicionar novo card ao início da lista
+      try {
+        const { data: fullCard, error } = await supabase.functions.invoke(
+          `pipeline-management/cards?id=${newCard.id}`,
+          {
+            method: 'GET',
+            headers: getHeaders()
+          }
+        );
+
+        if (error) throw error;
+
+        if (fullCard) {
+          console.log('✅ [Realtime] Dados completos recebidos:', fullCard);
+          
+          setCards(prev => {
+            const exists = prev.some(c => c.id === fullCard.id);
+            if (exists) {
+              // Atualizar card existente com dados completos
+              return prev.map(c => c.id === fullCard.id ? fullCard : c);
+            }
+            // Adicionar novo card ao início da lista com dados completos
+            return [fullCard, ...prev];
+          });
+          
+          return;
+        }
+      } catch (error) {
+        console.error('❌ [Realtime] Erro ao buscar dados completos do card:', error);
+        // Fallback: adicionar card mesmo sem relacionamentos
+      }
+    }
+
+    // Adicionar card mesmo sem relacionamentos (fallback)
+    setCards(prev => {
+      const exists = prev.some(c => c.id === newCard.id);
+      if (exists) return prev;
+      
+      console.log('📦 [Realtime] Adicionando card sem relacionamentos (será atualizado no próximo fetch)');
       return [newCard, ...prev];
     });
-  }, []);
+  }, [selectedPipeline?.id, getHeaders]);
 
-  const handleCardUpdate = useCallback((updatedCard: PipelineCard) => {
+  const handleCardUpdate = useCallback(async (updatedCard: PipelineCard) => {
     console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
     
+    // Se o card atualizado não tem relacionamentos e o card local tinha, preservar
     setCards(prev => {
       const index = prev.findIndex(c => c.id === updatedCard.id);
       
       if (index === -1) {
-        console.log('ℹ️ [Realtime] Card não encontrado localmente, adicionando');
-        return [updatedCard, ...prev];
+        console.log('ℹ️ [Realtime] Card não encontrado localmente, buscando dados completos...');
+        
+        // Buscar dados completos do card ausente
+        if (selectedPipeline?.id && getHeaders) {
+          (async () => {
+            try {
+              const { data: fullCard, error } = await supabase.functions.invoke(
+                `pipeline-management/cards?id=${updatedCard.id}`,
+                {
+                  method: 'GET',
+                  headers: getHeaders()
+                }
+              );
+
+              if (!error && fullCard) {
+                setCards(p => {
+                  const exists = p.some(c => c.id === fullCard.id);
+                  if (exists) return p;
+                  return [fullCard, ...p];
+                });
+              } else {
+                // Fallback: adicionar card mesmo sem relacionamentos
+                setCards(p => [updatedCard, ...p]);
+              }
+            } catch (err) {
+              console.error('❌ [Realtime] Erro ao buscar card completo:', err);
+              setCards(p => [updatedCard, ...p]);
+            }
+          })();
+        }
+        
+        return prev; // Retornar prev enquanto busca
       }
+      
+      // ✅ PRESERVAR relacionamentos existentes se o update não trouxer
+      const existingCard = prev[index];
+      const mergedCard = {
+        ...updatedCard,
+        // Preservar contact se não vier no update
+        contact: updatedCard.contact || existingCard.contact,
+        // Preservar conversation se não vier no update
+        conversation: updatedCard.conversation || existingCard.conversation,
+      };
       
       // ✅ SEMPRE APLICAR ATUALIZAÇÃO REALTIME (fonte autoritativa do servidor)
       console.log('🔄 [Realtime] Aplicando atualização do servidor');
       
       const newCards = [...prev];
-      newCards[index] = { ...newCards[index], ...updatedCard };
+      newCards[index] = mergedCard;
       
       return newCards;
     });
-  }, []);
+  }, [selectedPipeline?.id, getHeaders]);
 
   const handleCardDelete = useCallback((cardId: string) => {
     console.log('🗑️ [Realtime Handler] Card deletado:', cardId);
@@ -734,6 +850,53 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       setCards([]);
     }
   }, [selectedPipeline?.id, fetchColumns, fetchCards]);
+
+  // ✅ REFETCH INTELIGENTE: Garantir que cards apareçam mesmo se realtime falhar
+  useEffect(() => {
+    if (!selectedPipeline?.id) return;
+
+    let lastFetchTime = Date.now();
+    let consecutiveEmptyFetches = 0;
+
+    // Refetch apenas quando necessário:
+    // 1. Cards incompletos (sem contact/conversation)
+    // 2. Pipeline selecionado há mais de 30s sem atualização
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastFetch = now - lastFetchTime;
+      
+      // Verificar cards incompletos
+      const hasIncompleteCards = cards.some(c => 
+        (c.contact_id && !c.contact) || 
+        (c.conversation_id && !c.conversation)
+      );
+      
+      // Se há cards incompletos, refetch imediatamente
+      if (hasIncompleteCards) {
+        console.log('🔄 [Refetch] Cards incompletos detectados, refazendo fetch...');
+        fetchCards(selectedPipeline.id);
+        lastFetchTime = now;
+        consecutiveEmptyFetches = 0;
+        return;
+      }
+      
+      // Se passou muito tempo desde último fetch e não há cards (pode ter sido criado)
+      if (timeSinceLastFetch > 30000 && cards.length === 0 && consecutiveEmptyFetches < 3) {
+        console.log('🔄 [Refetch] Pipeline sem cards há muito tempo, verificando novos cards...');
+        fetchCards(selectedPipeline.id);
+        lastFetchTime = now;
+        consecutiveEmptyFetches++;
+        return;
+      }
+      
+      // Reset contador se houver cards
+      if (cards.length > 0) {
+        consecutiveEmptyFetches = 0;
+      }
+    }, 5000); // Verificar a cada 5 segundos
+
+    return () => clearInterval(interval);
+  }, [selectedPipeline?.id, cards, fetchCards]);
 
   const value = useMemo(() => ({
     pipelines,
