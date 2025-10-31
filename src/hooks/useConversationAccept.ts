@@ -11,6 +11,8 @@ export const useConversationAccept = () => {
     try {
       setIsAccepting(conversationId);
       
+      console.log('🔵 Accepting conversation:', { conversationId, agentId });
+      
       const headers = getHeaders();
       
       const { data: response, error } = await supabase.functions.invoke('accept-conversation', {
@@ -20,6 +22,8 @@ export const useConversationAccept = () => {
         },
         headers
       });
+
+      console.log('📥 Accept response:', { response, error });
 
       if (error) {
         throw error;

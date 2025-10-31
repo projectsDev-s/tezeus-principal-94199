@@ -58,6 +58,8 @@ serve(async (req) => {
 
     const { conversation_id, agent_id } = await req.json();
     
+    console.log('📝 Request body:', { conversation_id, agent_id });
+    
     if (!conversation_id) {
       return new Response(JSON.stringify({ 
         success: false,
@@ -98,12 +100,16 @@ serve(async (req) => {
 
     // Se agent_id foi fornecido, incluir nos dados de atualização
     if (agent_id) {
+      console.log('✅ Agent ID provided:', agent_id);
       updateData.agent_active_id = agent_id;
       updateData.agente_ativo = true;
     } else {
+      console.log('⚠️ No agent ID provided, setting to null');
       updateData.agent_active_id = null;
       updateData.agente_ativo = false;
     }
+
+    console.log('📤 Update data:', updateData);
 
     // Update atômico com condição para evitar corrida
     const { data: updateResult, error: updateError } = await supabase
