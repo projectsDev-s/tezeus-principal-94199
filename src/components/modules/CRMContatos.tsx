@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -97,14 +97,18 @@ export function CRMContatos() {
   );
 
   // Fetch contacts directly from contacts table
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       setIsLoading(true);
-      if (!selectedWorkspace) {
-        console.warn("No workspace selected in CRM Contatos");
+      
+      if (!selectedWorkspace?.workspace_id) {
+        console.warn("⚠️ [CRMContatos] No workspace selected");
         setContacts([]);
+        setIsLoading(false);
         return;
       }
+
+      console.log("🔄 [CRMContatos] Fetching contacts for workspace:", selectedWorkspace.workspace_id);
 
       // Get all contacts from the workspace
       const { data: contactsData, error: contactsError } = await supabase
@@ -114,38 +118,65 @@ export function CRMContatos() {
         .order("created_at", {
           ascending: false,
         });
-      if (contactsError) throw contactsError;
-      if (!contactsData || contactsData.length === 0) {
+
+      if (contactsError) {
+        console.error("❌ [CRMContatos] Error fetching contacts:", contactsError);
+        toast({
+          title: "Erro ao carregar contatos",
+          description: contactsError.message || "Não foi possível carregar os contatos. Tente novamente.",
+          variant: "destructive",
+        });
         setContacts([]);
+        setIsLoading(false);
         return;
       }
+
+      if (!contactsData || contactsData.length === 0) {
+        console.log("ℹ️ [CRMContatos] No contacts found");
+        setContacts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log(`✅ [CRMContatos] Found ${contactsData.length} contacts`);
+
       const contactIds = contactsData.map((c) => c.id);
 
-      // Get contact tags
-      const { data: contactTagsData, error: tagsError } = await supabase
-        .from("contact_tags")
-        .select(
-          `
-          contact_id,
-          tags:tag_id (
-            id,
-            name,
-            color
+      // Get contact tags - only if we have contacts
+      let contactTagsData: any[] = [];
+      if (contactIds.length > 0) {
+        const { data: tagsData, error: tagsError } = await supabase
+          .from("contact_tags")
+          .select(
+            `
+            contact_id,
+            tags:tag_id (
+              id,
+              name,
+              color
+            )
+          `,
           )
-        `,
-        )
-        .in("contact_id", contactIds);
-      if (tagsError) throw tagsError;
+          .in("contact_id", contactIds);
+
+        if (tagsError) {
+          console.warn("⚠️ [CRMContatos] Error fetching tags (non-critical):", tagsError);
+          // Continue without tags instead of failing completely
+        } else {
+          contactTagsData = tagsData || [];
+        }
+      }
 
       // Map tags to contacts
-      const contactsWithTags = (contactsData || []).map((contact) => {
+      const contactsWithTags = contactsData.map((contact) => {
         const contactTags =
           contactTagsData
-            ?.filter((ct) => ct.contact_id === contact.id)
-            ?.map((ct) => ({
+            .filter((ct) => ct.contact_id === contact.id)
+            .map((ct) => ({
               name: ct.tags?.name || "",
               color: ct.tags?.color || "#808080",
             })) || [];
+        
         return {
           id: contact.id,
           name: contact.name,
@@ -157,22 +188,34 @@ export function CRMContatos() {
           extra_info: (contact.extra_info as Record<string, any>) || {},
         };
       });
+
+      console.log(`✅ [CRMContatos] Successfully loaded ${contactsWithTags.length} contacts`);
       setContacts(contactsWithTags);
-    } catch (error) {
-      console.error("Error fetching contacts:", error);
+    } catch (error: any) {
+      console.error("❌ [CRMContatos] Unexpected error fetching contacts:", error);
+      toast({
+        title: "Erro ao carregar contatos",
+        description: error?.message || "Ocorreu um erro inesperado. Tente recarregar a página.",
+        variant: "destructive",
+      });
+      setContacts([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedWorkspace, toast]);
+
   useEffect(() => {
     fetchContacts();
-  }, [selectedWorkspace]);
+  }, [fetchContacts]);
 
   // Real-time subscription for contacts changes
   useEffect(() => {
-    if (!selectedWorkspace) return;
+    if (!selectedWorkspace?.workspace_id) return;
+
+    console.log("📡 [CRMContatos] Setting up realtime subscription for workspace:", selectedWorkspace.workspace_id);
+
     const channel = supabase
-      .channel("contacts-changes")
+      .channel(`contacts-changes-${selectedWorkspace.workspace_id}`)
       .on(
         "postgres_changes",
         {
@@ -182,6 +225,7 @@ export function CRMContatos() {
           filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`,
         },
         async (payload) => {
+          console.log("🆕 [CRMContatos] New contact inserted:", payload.new.id);
           const newContactData = payload.new;
           const newContact: Contact = {
             id: newContactData.id,
@@ -193,7 +237,13 @@ export function CRMContatos() {
             profile_image_url: newContactData.profile_image_url,
             extra_info: (newContactData.extra_info as Record<string, any>) || {},
           };
-          setContacts((prev) => [newContact, ...prev]);
+          setContacts((prev) => {
+            // Avoid duplicates
+            if (prev.some(c => c.id === newContact.id)) {
+              return prev;
+            }
+            return [newContact, ...prev];
+          });
         },
       )
       .on(
@@ -204,8 +254,9 @@ export function CRMContatos() {
           table: "contacts",
           filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`,
         },
-        () => {
-          // Refetch all contacts when any contact is updated
+        (payload) => {
+          console.log("🔄 [CRMContatos] Contact updated:", payload.new.id);
+          // Refetch all contacts when any contact is updated to ensure tags are up to date
           fetchContacts();
         },
       )
@@ -218,15 +269,24 @@ export function CRMContatos() {
           filter: `workspace_id=eq.${selectedWorkspace.workspace_id}`,
         },
         (payload) => {
+          console.log("🗑️ [CRMContatos] Contact deleted:", payload.old.id);
           const deletedId = payload.old.id;
           setContacts((prev) => prev.filter((c) => c.id !== deletedId));
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("✅ [CRMContatos] Realtime subscription active");
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("❌ [CRMContatos] Realtime subscription error");
+        }
+      });
+
     return () => {
+      console.log("🔌 [CRMContatos] Cleaning up realtime subscription");
       supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace]);
+  }, [selectedWorkspace?.workspace_id, fetchContacts]);
 
   // Filter contacts based on search and tag filter
   const filteredContacts = contacts.filter((contact) => {
@@ -886,15 +946,54 @@ export function CRMContatos() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  Carregando contatos...
-                </TableCell>
-              </TableRow>
+              <>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-24 bg-muted animate-pulse rounded mx-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-32 bg-muted animate-pulse rounded mx-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-4 w-28 bg-muted animate-pulse rounded mx-auto" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-8 w-16 bg-muted animate-pulse rounded mx-auto" />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="h-4 w-4 bg-muted animate-pulse rounded mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </>
             ) : filteredContacts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
-                  Nenhum contato encontrado
+                  <div className="flex flex-col items-center gap-2">
+                    <User className="h-12 w-12 text-muted-foreground" />
+                    <p className="text-muted-foreground">
+                      {searchTerm || selectedTagIds.length > 0
+                        ? "Nenhum contato encontrado com os filtros aplicados"
+                        : "Nenhum contato cadastrado ainda"}
+                    </p>
+                    {!searchTerm && selectedTagIds.length === 0 && (
+                      <Button
+                        size="sm"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black mt-2"
+                        onClick={handleAddContact}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar primeiro contato
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
