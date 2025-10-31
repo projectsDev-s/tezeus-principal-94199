@@ -2647,6 +2647,17 @@ export type Database = {
         Returns: boolean
       }
       clear_all_conversations: { Args: never; Returns: undefined }
+      create_column_automation: {
+        Args: {
+          p_actions: Json
+          p_column_id: string
+          p_description: string
+          p_name: string
+          p_triggers: Json
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       create_connection_anon: {
         Args: {
           p_history_recovery: string
@@ -2660,6 +2671,10 @@ export type Database = {
       debug_user_permissions: {
         Args: { p_workspace_id: string }
         Returns: Json
+      }
+      delete_column_automation: {
+        Args: { p_automation_id: string }
+        Returns: undefined
       }
       delete_connection_anon: {
         Args: { p_connection_id: string }
@@ -2677,6 +2692,25 @@ export type Database = {
           contact_id: string
           new_phone: string
           old_phone: string
+          workspace_id: string
+        }[]
+      }
+      get_automation_details: {
+        Args: { p_automation_id: string }
+        Returns: Json
+      }
+      get_column_automations: {
+        Args: { p_column_id: string }
+        Returns: {
+          actions_count: number
+          column_id: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          name: string
+          triggers_count: number
+          updated_at: string
           workspace_id: string
         }[]
       }
@@ -2741,6 +2775,20 @@ export type Database = {
       }
       slugify: { Args: { txt: string }; Returns: string }
       sync_user_roles: { Args: never; Returns: undefined }
+      toggle_column_automation: {
+        Args: { p_automation_id: string }
+        Returns: boolean
+      }
+      update_column_automation: {
+        Args: {
+          p_actions: Json
+          p_automation_id: string
+          p_description: string
+          p_name: string
+          p_triggers: Json
+        }
+        Returns: undefined
+      }
       update_connection_status_anon: {
         Args: {
           p_connection_id: string
