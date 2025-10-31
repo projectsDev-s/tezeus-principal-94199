@@ -2639,11 +2639,11 @@ export type Database = {
     Functions: {
       block_system_user: { Args: { user_email: string }; Returns: undefined }
       check_automation_permission: {
-        Args: { p_automation_id: string; p_operation: string }
+        Args: { p_automation_id: string; p_permission: string }
         Returns: boolean
       }
       check_column_permission: {
-        Args: { p_column_id: string; p_operation: string }
+        Args: { p_column_id: string; p_permission: string }
         Returns: boolean
       }
       clear_all_conversations: { Args: never; Returns: undefined }
