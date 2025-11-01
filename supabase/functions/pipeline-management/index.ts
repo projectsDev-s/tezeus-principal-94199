@@ -173,14 +173,47 @@ async function executeAutomationAction(
         
         console.log(`📦 Payload sendo enviado:`, JSON.stringify(payload, null, 2));
         
-        // Usar supabase.functions.invoke ao invés de fetch direto
-        const { data: sendResult, error: invokeError } = await supabaseClient.functions.invoke('test-send-msg', {
-          body: payload
+        // Usar fetch direto com as credenciais corretas (sem JWT)
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const sendMessageUrl = `${supabaseUrl}/functions/v1/test-send-msg`;
+        
+        const sendResponse = await fetch(sendMessageUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // NÃO passar Authorization header já que test-send-msg tem verify_jwt = false
+          },
+          body: JSON.stringify(payload)
         });
         
-        if (invokeError) {
-          console.error(`❌ Erro ao invocar test-send-msg:`, invokeError);
-          throw new Error(invokeError.message || 'Erro ao enviar mensagem via automação');
+        if (!sendResponse.ok) {
+          const errorText = await sendResponse.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText };
+          }
+          
+          console.error(`❌ Erro HTTP ao enviar mensagem via automação:`, {
+            status: sendResponse.status,
+            statusText: sendResponse.statusText,
+            error: errorData
+          });
+          
+          throw new Error(errorData.error || errorData.details || `Erro HTTP ${sendResponse.status}: ${sendResponse.statusText}`);
+        }
+        
+        let sendResult: any;
+        try {
+          sendResult = await sendResponse.json();
+        } catch (parseError) {
+          // Se não for JSON, assumir sucesso se status for 200
+          if (sendResponse.ok) {
+            sendResult = { success: true, message: 'Message sent (empty response)' };
+          } else {
+            throw new Error(`Erro ao parsear resposta: ${parseError}`);
+          }
         }
         
         // Verificar sucesso - a função test-send-msg retorna success: true quando bem-sucedido
