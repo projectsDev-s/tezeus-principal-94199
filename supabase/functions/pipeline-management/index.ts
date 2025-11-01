@@ -161,16 +161,6 @@ async function executeAutomationAction(
         console.log(`📤 Connection ID: ${conversation.connection_id}`);
         console.log(`📤 Conteúdo da mensagem (${messageContent.length} caracteres):`, messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : ''));
         
-        // Usar fetch direto para chamar a função test-send-msg (que já faz tudo)
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-        
-        if (!supabaseUrl || !serviceRoleKey) {
-          throw new Error('Variáveis de ambiente SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas');
-        }
-        
-        const sendMessageUrl = `${supabaseUrl}/functions/v1/test-send-msg`;
-        
         // Preparar payload seguindo exatamente o padrão do envio manual
         const payload = {
           conversation_id: conversationId,
@@ -183,49 +173,14 @@ async function executeAutomationAction(
         
         console.log(`📦 Payload sendo enviado:`, JSON.stringify(payload, null, 2));
         
-        const sendResponse = await fetch(sendMessageUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceRoleKey}`,
-            'apikey': serviceRoleKey
-          },
-          body: JSON.stringify(payload)
+        // Usar supabase.functions.invoke ao invés de fetch direto
+        const { data: sendResult, error: invokeError } = await supabaseClient.functions.invoke('test-send-msg', {
+          body: payload
         });
         
-        if (!sendResponse.ok) {
-          const errorText = await sendResponse.text();
-          let errorData;
-          try {
-            errorData = JSON.parse(errorText);
-          } catch {
-            errorData = { error: errorText };
-          }
-          
-          console.error(`❌ Erro HTTP ao enviar mensagem via automação:`, {
-            status: sendResponse.status,
-            statusText: sendResponse.statusText,
-            error: errorData
-          });
-          
-          // Verificar erros específicos
-          if (sendResponse.status === 424) {
-            console.error(`❌ Webhook N8N ou Evolution API não configurado para este workspace`);
-          }
-          
-          throw new Error(errorData.error || errorData.details || `Erro HTTP ${sendResponse.status}: ${sendResponse.statusText}`);
-        }
-        
-        let sendResult: any;
-        try {
-          sendResult = await sendResponse.json();
-        } catch (parseError) {
-          // Se não for JSON, assumir sucesso se status for 200
-          if (sendResponse.ok) {
-            sendResult = { success: true, message: 'Message sent (empty response)' };
-          } else {
-            throw new Error(`Erro ao parsear resposta: ${parseError}`);
-          }
+        if (invokeError) {
+          console.error(`❌ Erro ao invocar test-send-msg:`, invokeError);
+          throw new Error(invokeError.message || 'Erro ao enviar mensagem via automação');
         }
         
         // Verificar sucesso - a função test-send-msg retorna success: true quando bem-sucedido
