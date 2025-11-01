@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -41,11 +41,19 @@ interface AutomationAction {
 interface ColumnAutomationsTabProps {
   columnId: string;
   onAutomationChange?: () => void;
+  isActive?: boolean; // ✅ NOVO: Indica se a aba está ativa
+  isModalOpen?: boolean; // ✅ NOVO: Indica se o modal está aberto
 }
 
-export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAutomationsTabProps) {
+export function ColumnAutomationsTab({ 
+  columnId, 
+  onAutomationChange,
+  isActive = false,
+  isModalOpen = false
+}: ColumnAutomationsTabProps) {
   const [automations, setAutomations] = useState<ColumnAutomation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // ✅ ALTERADO: Inicia como false
+  const [hasLoaded, setHasLoaded] = useState(false); // ✅ NOVO: Controla se já foi carregado
   const [automationModalOpen, setAutomationModalOpen] = useState(false);
   const [editingAutomation, setEditingAutomation] = useState<ColumnAutomation | null>(null);
   const { toast } = useToast();
@@ -53,32 +61,71 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
   const { selectedWorkspace } = useWorkspace();
 
   const fetchAutomations = async () => {
-    if (!columnId || !selectedWorkspace?.workspace_id) return;
+    if (!columnId || !selectedWorkspace?.workspace_id) {
+      setAutomations([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       
       // ✅ OTIMIZADO: Buscar apenas as automações (sem triggers/actions)
       // Triggers e actions só serão carregados quando o usuário editar
-    const { data: automationsData, error: automationsError } = await supabase
-      .rpc('get_column_automations', { p_column_id: columnId });
+      const { data: automationsData, error: automationsError } = await supabase
+        .rpc('get_column_automations', { p_column_id: columnId });
 
       if (automationsError) {
-        // Se erro 404 ou "relation does not exist", a tabela não foi criada
-        if (automationsError.code === '42P01' || automationsError.message?.includes('does not exist')) {
-          console.error('❌ Tabela crm_column_automations não existe. A migration precisa ser aplicada.');
-          toast({
-            title: "Erro",
-            description: "As tabelas de automações ainda não foram criadas. Por favor, aplique a migration primeiro.",
-            variant: "destructive",
+        // Verificar se é erro de tabela/função não existente
+        const errorMessage = automationsError.message || String(automationsError);
+        const errorCode = automationsError.code || '';
+        
+        if (
+          errorCode === '42P01' || // undefined_table
+          errorCode === '42883' || // undefined_function
+          errorMessage.toLowerCase().includes('does not exist') ||
+          errorMessage.toLowerCase().includes('não existe') ||
+          errorMessage.toLowerCase().includes('relation') ||
+          errorMessage.toLowerCase().includes('function') ||
+          errorMessage.toLowerCase().includes('permission denied')
+        ) {
+          console.error('❌ Erro ao acessar automações:', {
+            code: errorCode,
+            message: errorMessage,
+            error: automationsError
           });
+          
+          // Mensagem mais específica baseada no tipo de erro
+          let errorDescription = "As tabelas de automações ainda não foram criadas. Por favor, aplique as migrations primeiro.";
+          
+          if (errorMessage.toLowerCase().includes('function')) {
+            errorDescription = "A função de automações não foi criada. Por favor, aplique as migrations do banco de dados.";
+          } else if (errorMessage.toLowerCase().includes('permission')) {
+            errorDescription = "Você não tem permissão para acessar as automações desta coluna.";
+          }
+          
+          toast({
+            title: "Erro ao carregar automações",
+            description: errorDescription,
+            variant: "destructive",
+            duration: 5000,
+          });
+          
+          setAutomations([]);
+          setLoading(false);
+          setHasLoaded(true); // Marcar como carregado para evitar tentativas repetidas
+          return;
         }
+        
+        // Outros erros
+        console.error('❌ Erro ao buscar automações:', automationsError);
         throw automationsError;
       }
 
       if (!automationsData || automationsData.length === 0) {
         setAutomations([]);
         setLoading(false);
+        setHasLoaded(true);
         return;
       }
 
@@ -105,6 +152,7 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
       );
 
       setAutomations(automationsWithCounts as any);
+      setHasLoaded(true);
     } catch (error: any) {
       console.error('Erro ao buscar automações:', error);
       toast({
@@ -112,16 +160,60 @@ export function ColumnAutomationsTab({ columnId, onAutomationChange }: ColumnAut
         description: "Erro ao buscar automações",
         variant: "destructive",
       });
+      setAutomations([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ OTIMIZADO: Carregar apenas quando a aba estiver ativa, modal aberto e não tiver carregado ainda
   useEffect(() => {
-    if (columnId && selectedWorkspace?.workspace_id) {
+    // Só carrega se todas as condições forem verdadeiras:
+    // 1. A aba está ativa (isActive === true)
+    // 2. O modal está aberto (isModalOpen === true)
+    // 3. Tem columnId e workspace válidos
+    // 4. Ainda não foi carregado (hasLoaded === false)
+    const shouldLoad = isActive && isModalOpen && columnId && selectedWorkspace?.workspace_id && !hasLoaded;
+    
+    if (shouldLoad) {
       fetchAutomations();
     }
-  }, [columnId, selectedWorkspace?.workspace_id]);
+  }, [isActive, isModalOpen, columnId, selectedWorkspace?.workspace_id]);
+
+  // ✅ NOVO: Resetar quando fechar o modal ou quando a aba ficar inativa
+  useEffect(() => {
+    if (!isModalOpen || !isActive) {
+      setHasLoaded(false);
+      setAutomations([]);
+      setLoading(false);
+    }
+  }, [isModalOpen, isActive]);
+
+  // ✅ NOVO: Recarregar quando mudar o columnId (apenas se a aba estiver ativa e modal aberto)
+  const prevColumnId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    // Se columnId mudou (e não é o primeiro carregamento), recarregar apenas se a aba estiver ativa
+    const columnIdChanged = prevColumnId.current !== undefined && prevColumnId.current !== columnId;
+    
+    if (columnIdChanged && columnId && selectedWorkspace?.workspace_id && isActive && isModalOpen) {
+      setHasLoaded(false);
+      // Pequeno delay para evitar múltiplos carregamentos simultâneos
+      const timeoutId = setTimeout(() => {
+        // Verificar novamente se ainda está ativo antes de carregar
+        if (isActive && isModalOpen && columnId && selectedWorkspace?.workspace_id) {
+          fetchAutomations();
+        }
+      }, 100);
+      
+      prevColumnId.current = columnId;
+      return () => clearTimeout(timeoutId);
+    }
+    
+    // Atualizar o ref sempre para rastrear mudanças
+    if (prevColumnId.current !== columnId) {
+      prevColumnId.current = columnId;
+    }
+  }, [columnId, isActive, isModalOpen, selectedWorkspace?.workspace_id]);
 
   const handleToggleActive = async (automation: ColumnAutomation) => {
     try {

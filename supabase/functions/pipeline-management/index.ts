@@ -84,6 +84,240 @@ interface Database {
   };
 }
 
+// ✅ Função para executar ações de automação
+async function executeAutomationAction(
+  action: any,
+  card: any,
+  supabaseClient: any
+): Promise<void> {
+  console.log(`🎬 Executando ação: ${action.action_type}`, action.action_config);
+  
+  switch (action.action_type) {
+    case 'send_message': {
+      // Buscar conversa do card
+      let conversationId = card.conversation?.id || card.conversation_id;
+      let conversation = card.conversation;
+      
+      // Se não tem conversa, tentar buscar por contact_id
+      if (!conversationId && card.contact_id) {
+        const workspaceId = card.pipelines?.workspace_id || card.conversation?.workspace_id;
+        
+        if (workspaceId) {
+          // Buscar conversa existente para o contato com connection_id válido
+          const { data: existingConversation } = await supabaseClient
+            .from('conversations')
+            .select('id, connection_id, workspace_id')
+            .eq('contact_id', card.contact_id)
+            .eq('workspace_id', workspaceId)
+            .not('connection_id', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (existingConversation) {
+            conversationId = existingConversation.id;
+            conversation = existingConversation;
+          }
+        }
+      }
+      
+      if (!conversationId) {
+        console.warn(`⚠️ Card não tem conversa associada. Não é possível enviar mensagem. Card ID: ${card.id}, Contact ID: ${card.contact_id}`);
+        return;
+      }
+      
+      // Se não tem conversation object completo, buscar
+      if (!conversation || !conversation.connection_id) {
+        const { data: conversationData } = await supabaseClient
+          .from('conversations')
+          .select('id, connection_id, workspace_id')
+          .eq('id', conversationId)
+          .single();
+        
+        if (!conversationData || !conversationData.connection_id) {
+          console.warn(`⚠️ Conversa ${conversationId} não tem connection_id. Não é possível enviar mensagem.`);
+          return;
+        }
+        
+        conversation = conversationData;
+      }
+      
+      // Obter conteúdo da mensagem do action_config
+      const messageContent = action.action_config?.message || action.action_config?.content || '';
+      
+      if (!messageContent) {
+        console.warn(`⚠️ Ação send_message não tem conteúdo configurado.`);
+        return;
+      }
+      
+      // Chamar função test-send-msg que já busca automaticamente:
+      // 1. Webhook URL do N8N (workspace_webhook_settings ou workspace_webhook_secrets)
+      // 2. Credenciais Evolution API do _master_config (evolution_url + token)
+      // 3. Dispara o webhook do N8N com todos os dados necessários
+      try {
+        console.log(`📤 ========== ENVIANDO MENSAGEM VIA AUTOMAÇÃO ==========`);
+        console.log(`📤 Conversa ID: ${conversationId}`);
+        console.log(`📤 Workspace ID: ${conversation.workspace_id}`);
+        console.log(`📤 Connection ID: ${conversation.connection_id}`);
+        console.log(`📤 Conteúdo da mensagem (${messageContent.length} caracteres):`, messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : ''));
+        
+        // Usar fetch direto para chamar a função test-send-msg (que já faz tudo)
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+        
+        if (!supabaseUrl || !serviceRoleKey) {
+          throw new Error('Variáveis de ambiente SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas');
+        }
+        
+        const sendMessageUrl = `${supabaseUrl}/functions/v1/test-send-msg`;
+        
+        // Preparar payload seguindo exatamente o padrão do envio manual
+        const payload = {
+          conversation_id: conversationId,
+          content: messageContent,
+          message_type: 'text',
+          sender_type: 'system', // Sistema (automação)
+          sender_id: null, // Sistema não tem sender_id
+          clientMessageId: `automation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` // ID único para deduplicação
+        };
+        
+        console.log(`📦 Payload sendo enviado:`, JSON.stringify(payload, null, 2));
+        
+        const sendResponse = await fetch(sendMessageUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'apikey': serviceRoleKey
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!sendResponse.ok) {
+          const errorText = await sendResponse.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText };
+          }
+          
+          console.error(`❌ Erro HTTP ao enviar mensagem via automação:`, {
+            status: sendResponse.status,
+            statusText: sendResponse.statusText,
+            error: errorData
+          });
+          
+          // Verificar erros específicos
+          if (sendResponse.status === 424) {
+            console.error(`❌ Webhook N8N ou Evolution API não configurado para este workspace`);
+          }
+          
+          throw new Error(errorData.error || errorData.details || `Erro HTTP ${sendResponse.status}: ${sendResponse.statusText}`);
+        }
+        
+        let sendResult: any;
+        try {
+          sendResult = await sendResponse.json();
+        } catch (parseError) {
+          // Se não for JSON, assumir sucesso se status for 200
+          if (sendResponse.ok) {
+            sendResult = { success: true, message: 'Message sent (empty response)' };
+          } else {
+            throw new Error(`Erro ao parsear resposta: ${parseError}`);
+          }
+        }
+        
+        // Verificar sucesso - a função test-send-msg retorna success: true quando bem-sucedido
+        if (!sendResult || (sendResult.error && !sendResult.success)) {
+          const errorMsg = sendResult?.error || sendResult?.details || 'Erro desconhecido ao enviar mensagem';
+          console.error(`❌ Falha ao enviar mensagem:`, errorMsg);
+          throw new Error(errorMsg);
+        }
+        
+        console.log(`✅ ========== MENSAGEM ENVIADA COM SUCESSO ==========`);
+        console.log(`✅ Resultado:`, {
+          success: sendResult?.success !== false,
+          message_id: sendResult?.message_id || sendResult?.message?.id,
+          status: sendResult?.status,
+          conversation_id: sendResult?.conversation_id,
+          phone_number: sendResult?.phone_number
+        });
+        
+        // Log adicional sobre o que aconteceu
+        if (sendResult?.status === 'duplicate') {
+          console.log(`ℹ️ Mensagem duplicada detectada (já foi enviada anteriormente)`);
+        }
+        
+      } catch (sendError) {
+        console.error(`❌ ========== ERRO AO ENVIAR MENSAGEM ==========`);
+        console.error(`❌ Erro:`, {
+          message: sendError instanceof Error ? sendError.message : String(sendError),
+          stack: sendError instanceof Error ? sendError.stack : undefined
+        });
+        
+        // Não lançar erro para não quebrar o processo de atualização do card
+        // A automação pode continuar com outras ações mesmo se uma falhar
+        console.warn(`⚠️ Continuando com outras ações da automação apesar do erro no envio de mensagem`);
+      }
+      break;
+    }
+    
+    case 'move_to_column': {
+      const targetColumnId = action.action_config?.column_id;
+      if (!targetColumnId) {
+        console.warn(`⚠️ Ação move_to_column não tem column_id configurado.`);
+        return;
+      }
+      
+      // Atualizar card para nova coluna
+      await supabaseClient
+        .from('pipeline_cards')
+        .update({ column_id: targetColumnId })
+        .eq('id', card.id);
+      
+      console.log(`✅ Card movido para coluna ${targetColumnId}`);
+      break;
+    }
+    
+    case 'add_tag': {
+      const tagId = action.action_config?.tag_id;
+      if (!tagId || !card.contact_id) {
+        console.warn(`⚠️ Ação add_tag não tem tag_id ou card não tem contact_id.`);
+        return;
+      }
+      
+      // Adicionar tag ao contato (se ainda não tiver)
+      await supabaseClient
+        .from('contact_tags')
+        .upsert({
+          contact_id: card.contact_id,
+          tag_id: tagId
+        }, {
+          onConflict: 'contact_id,tag_id'
+        });
+      
+      console.log(`✅ Tag ${tagId} adicionada ao contato`);
+      break;
+    }
+    
+    case 'add_agent': {
+      // Lógica para adicionar agente de IA será implementada se necessário
+      console.log(`ℹ️ Ação add_agent ainda não implementada`);
+      break;
+    }
+    
+    case 'remove_agent': {
+      // Lógica para remover agente de IA será implementada se necessário
+      console.log(`ℹ️ Ação remove_agent ainda não implementada`);
+      break;
+    }
+    
+    default:
+      console.warn(`⚠️ Tipo de ação desconhecido: ${action.action_type}`);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -614,11 +848,28 @@ serve(async (req) => {
 
             console.log('🔄 Update data prepared:', updateData);
 
+            // ✅ Buscar card atual antes da atualização para verificar mudança de coluna
+            let previousColumnId: string | null = null;
+            if (body.column_id !== undefined) {
+              const { data: currentCard } = await supabaseClient
+                .from('pipeline_cards')
+                .select('column_id, conversation_id, contact_id')
+                .eq('id', cardId)
+                .single();
+              
+              previousColumnId = currentCard?.column_id || null;
+            }
+
             const { data: card, error } = await supabaseClient
               .from('pipeline_cards')
               .update(updateData)
               .eq('id', cardId)
-              .select()
+              .select(`
+                *,
+                conversation:conversations(id, contact_id, connection_id, workspace_id),
+                contact:contacts(id, phone, name),
+                pipelines:pipelines!pipeline_cards_pipeline_id_fkey(id, workspace_id, name)
+              `)
               .single();
 
             if (error) {
@@ -627,6 +878,167 @@ serve(async (req) => {
             }
             
             console.log('✅ Card updated successfully:', card);
+
+          // ✅ EXECUTAR AUTOMAÇÕES quando card entra em nova coluna
+          if (body.column_id !== undefined && previousColumnId && previousColumnId !== body.column_id) {
+            console.log(`🤖 ========== AUTOMAÇÃO TRIGGERED ==========`);
+            console.log(`🤖 Card entrou em nova coluna: ${previousColumnId} -> ${body.column_id}`);
+            console.log(`📦 Dados do card:`, JSON.stringify({
+              id: card.id,
+              conversation_id: card.conversation_id,
+              contact_id: card.contact_id,
+              title: card.title,
+              pipeline_id: card.pipeline_id || body.pipeline_id
+            }, null, 2));
+
+            try {
+              // Buscar automações ativas com trigger "enter_column" para a nova coluna
+              console.log(`🔍 Buscando automações para coluna ${body.column_id}...`);
+              
+              const { data: automations, error: automationsError } = await supabaseClient
+                .rpc('get_column_automations', { p_column_id: body.column_id });
+              
+              if (automationsError) {
+                console.error('❌ Erro ao buscar automações:', {
+                  error: automationsError,
+                  message: automationsError.message,
+                  code: automationsError.code,
+                  details: automationsError.details
+                });
+              } else {
+                console.log(`📋 Total de automações encontradas: ${automations?.length || 0}`);
+                
+                if (!automations || automations.length === 0) {
+                  console.log(`ℹ️ Nenhuma automação encontrada para coluna ${body.column_id}`);
+                } else {
+                  // Filtrar apenas automações ativas
+                  const activeAutomations = automations.filter((a: any) => a.is_active === true);
+                  
+                  console.log(`📋 Automações ativas: ${activeAutomations.length} de ${automations.length}`);
+                  
+                  if (activeAutomations.length === 0) {
+                    console.log(`ℹ️ Nenhuma automação ativa encontrada para coluna ${body.column_id}`);
+                  } else {
+                    // Processar cada automação
+                    for (const automation of activeAutomations) {
+                      try {
+                        console.log(`\n🔍 ========== PROCESSANDO AUTOMAÇÃO ==========`);
+                        console.log(`🔍 Nome: "${automation.name}"`);
+                        console.log(`🔍 ID: ${automation.id}`);
+                        console.log(`🔍 Coluna: ${automation.column_id}`);
+                        console.log(`🔍 Ativa: ${automation.is_active}`);
+                        
+                        // Buscar triggers e actions da automação
+                        console.log(`📥 Buscando detalhes da automação...`);
+                        const { data: automationDetails, error: detailsError } = await supabaseClient
+                          .rpc('get_automation_details', { p_automation_id: automation.id });
+                        
+                        if (detailsError) {
+                          console.error(`❌ Erro ao buscar detalhes da automação ${automation.id}:`, {
+                            error: detailsError,
+                            message: detailsError.message,
+                            code: detailsError.code,
+                            details: detailsError.details
+                          });
+                          continue;
+                        }
+                        
+                        if (!automationDetails) {
+                          console.warn(`⚠️ Detalhes da automação ${automation.id} não encontrados (null/undefined)`);
+                          continue;
+                        }
+                        
+                        // Parsear JSONB se necessário
+                        let parsedDetails = automationDetails;
+                        if (typeof automationDetails === 'string') {
+                          try {
+                            parsedDetails = JSON.parse(automationDetails);
+                          } catch (parseError) {
+                            console.error(`❌ Erro ao parsear detalhes da automação:`, parseError);
+                            continue;
+                          }
+                        }
+                        
+                        const triggers = parsedDetails.triggers || [];
+                        const actions = parsedDetails.actions || [];
+                        
+                        console.log(`📋 Automação tem ${triggers.length} trigger(s) e ${actions.length} ação(ões)`);
+                        console.log(`📋 Triggers:`, JSON.stringify(triggers, null, 2));
+                        console.log(`📋 Actions:`, JSON.stringify(actions.map((a: any) => ({
+                          type: a.action_type,
+                          order: a.action_order,
+                          config: a.action_config
+                        })), null, 2));
+                        
+                        // Verificar se tem trigger "enter_column"
+                        const hasEnterColumnTrigger = triggers.some((t: any) => {
+                          const triggerType = t.trigger_type || t?.trigger_type;
+                          const result = triggerType === 'enter_column';
+                          console.log(`🔍 Verificando trigger: ${triggerType} === 'enter_column' ? ${result}`);
+                          return result;
+                        });
+                        
+                        if (!hasEnterColumnTrigger) {
+                          console.log(`⏭️ Automação ${automation.id} não tem trigger enter_column, pulando`);
+                          continue;
+                        }
+                        
+                        console.log(`🚀 ========== EXECUTANDO AUTOMAÇÃO ==========`);
+                        console.log(`🚀 Nome: "${automation.name}" (${automation.id})`);
+                        console.log(`🚀 Trigger: enter_column`);
+                        
+                        // Executar ações em ordem
+                        const sortedActions = [...actions].sort((a: any, b: any) => (a.action_order || 0) - (b.action_order || 0));
+                        
+                        console.log(`🎬 Ações ordenadas:`, sortedActions.map((a: any) => ({
+                          type: a.action_type,
+                          order: a.action_order
+                        })));
+                        
+                        for (const action of sortedActions) {
+                          try {
+                            console.log(`\n🎬 ========== EXECUTANDO AÇÃO ==========`);
+                            console.log(`🎬 Tipo: ${action.action_type}`);
+                            console.log(`🎬 Ordem: ${action.action_order || 0}`);
+                            console.log(`🎬 Config:`, JSON.stringify(action.action_config, null, 2));
+                            
+                            await executeAutomationAction(action, card, supabaseClient);
+                            
+                            console.log(`✅ Ação ${action.action_type} executada com sucesso`);
+                          } catch (actionError) {
+                            console.error(`❌ Erro ao executar ação ${action.action_type}:`, {
+                              error: actionError,
+                              message: actionError instanceof Error ? actionError.message : String(actionError),
+                              stack: actionError instanceof Error ? actionError.stack : undefined
+                            });
+                            // Continua para próxima ação mesmo se uma falhar
+                          }
+                        }
+                        
+                        console.log(`✅ Automação "${automation.name}" executada com sucesso\n`);
+                      } catch (automationError) {
+                        console.error(`❌ Erro ao processar automação ${automation.id}:`, {
+                          error: automationError,
+                          message: automationError instanceof Error ? automationError.message : String(automationError),
+                          stack: automationError instanceof Error ? automationError.stack : undefined
+                        });
+                        // Continua para próxima automação mesmo se uma falhar
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (automationError) {
+              console.error('❌ Erro geral ao executar automações:', {
+                error: automationError,
+                message: automationError instanceof Error ? automationError.message : String(automationError),
+                stack: automationError instanceof Error ? automationError.stack : undefined
+              });
+              // Não falha a atualização do card se as automações falharem
+            }
+            
+            console.log(`🤖 ========== FIM DA EXECUÇÃO DE AUTOMAÇÕES ==========\n`);
+          }
             
             // ✅ Se o responsável foi atualizado E o card tem conversa associada, sincronizar
             if (body.responsible_user_id !== undefined && card.conversation_id) {

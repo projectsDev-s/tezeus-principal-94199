@@ -151,6 +151,8 @@ export function EditarColunaModal({
                 <ColumnAutomationsTab 
                   columnId={columnId} 
                   onAutomationChange={onUpdate}
+                  isActive={activeTab === 'automations'}
+                  isModalOpen={open}
                 />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
