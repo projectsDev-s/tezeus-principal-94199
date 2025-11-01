@@ -256,9 +256,11 @@ async function executeAutomationAction(
           stack: sendError instanceof Error ? sendError.stack : undefined
         });
         
-        // Não lançar erro para não quebrar o processo de atualização do card
+        // NÃO lançar erro aqui - apenas logar e retornar
         // A automação pode continuar com outras ações mesmo se uma falhar
+        // Isso evita que o erro cause "shutdown" da função
         console.warn(`⚠️ Continuando com outras ações da automação apesar do erro no envio de mensagem`);
+        return; // Retornar silenciosamente sem lançar erro
       }
       break;
     }
@@ -811,7 +813,12 @@ serve(async (req) => {
               );
             }
 
-            console.log('📝 Updating card:', cardId, 'with data:', body);
+            console.log('📝 ========== ATUALIZANDO CARD ==========');
+            console.log('📝 Card ID:', cardId);
+            console.log('📝 Dados recebidos:', JSON.stringify(body, null, 2));
+            console.log('📝 Body keys:', Object.keys(body));
+            console.log('📝 column_id no body:', body.column_id);
+            console.log('📝 column_id type:', typeof body.column_id);
 
             // Validate that column belongs to the target pipeline if both are being updated
             if (body.column_id && body.pipeline_id) {
@@ -847,19 +854,49 @@ serve(async (req) => {
             if (body.responsible_user_id !== undefined) updateData.responsible_user_id = body.responsible_user_id;
 
             console.log('🔄 Update data prepared:', updateData);
+            console.log('🔍 ========== VERIFICANDO MUDANÇA DE COLUNA ==========');
+            console.log('🔍 body.column_id:', body.column_id);
+            console.log('🔍 body.column_id !== undefined:', body.column_id !== undefined);
+            console.log('🔍 typeof body.column_id:', typeof body.column_id);
 
-            // ✅ Buscar card atual antes da atualização para verificar mudança de coluna
+            // ✅ Buscar card atual ANTES da atualização para verificar mudança de coluna
             let previousColumnId: string | null = null;
+            
             if (body.column_id !== undefined) {
-              const { data: currentCard } = await supabaseClient
-                .from('pipeline_cards')
-                .select('column_id, conversation_id, contact_id')
-                .eq('id', cardId)
-                .single();
+              console.log(`📋 ========== BUSCANDO COLUNA ATUAL DO CARD ==========`);
+              console.log(`📋 Card ID: ${cardId}`);
               
-              previousColumnId = currentCard?.column_id || null;
+              try {
+                const { data: currentCard, error: fetchError } = await supabaseClient
+                  .from('pipeline_cards')
+                  .select('column_id, conversation_id, contact_id')
+                  .eq('id', cardId)
+                  .single();
+                
+                if (fetchError) {
+                  console.error(`❌ Erro ao buscar card atual:`, {
+                    error: fetchError,
+                    message: fetchError.message,
+                    code: fetchError.code
+                  });
+                  previousColumnId = null;
+                } else if (currentCard) {
+                  previousColumnId = currentCard?.column_id || null;
+                  console.log(`📋 ✅ Coluna anterior do card: ${previousColumnId}`);
+                  console.log(`📋 ✅ Nova coluna sendo definida: ${body.column_id}`);
+                } else {
+                  console.warn(`⚠️ Card atual não encontrado`);
+                  previousColumnId = null;
+                }
+              } catch (fetchErr) {
+                console.error(`❌ Exception ao buscar card atual:`, fetchErr);
+                previousColumnId = null;
+              }
+            } else {
+              console.log(`ℹ️ column_id não está sendo atualizado (undefined), pulando verificação de mudança`);
             }
 
+            console.log('📋 ========== ATUALIZANDO CARD NO BANCO ==========');
             const { data: card, error } = await supabaseClient
               .from('pipeline_cards')
               .update(updateData)
@@ -877,10 +914,37 @@ serve(async (req) => {
               throw error;
             }
             
-            console.log('✅ Card updated successfully:', card);
+            console.log('✅ Card updated successfully:', {
+              id: card.id,
+              column_id: card.column_id,
+              pipeline_id: card.pipeline_id,
+              conversation_id: card.conversation_id,
+              contact_id: card.contact_id
+            });
 
           // ✅ EXECUTAR AUTOMAÇÕES quando card entra em nova coluna
-          if (body.column_id !== undefined && previousColumnId && previousColumnId !== body.column_id) {
+          console.log('🔍 ========== VERIFICANDO SE DEVE ACIONAR AUTOMAÇÕES ==========');
+          console.log('🔍 Condições:');
+          console.log('  - body.column_id !== undefined:', body.column_id !== undefined);
+          console.log('  - previousColumnId:', previousColumnId);
+          console.log('  - previousColumnId === null:', previousColumnId === null);
+          console.log('  - previousColumnId !== body.column_id:', previousColumnId !== body.column_id);
+          
+          // Verificar: column_id foi atualizado E (houve mudança OU é a primeira vez que entra na coluna)
+          const columnChanged = body.column_id !== undefined && 
+                                (previousColumnId === null || previousColumnId !== body.column_id);
+          
+          console.log(`🔍 Resultado da verificação:`, {
+            column_id_provided: body.column_id !== undefined,
+            previousColumnId: previousColumnId,
+            newColumnId: body.column_id,
+            columnChanged: columnChanged,
+            isFirstTime: previousColumnId === null,
+            isDifferentColumn: previousColumnId !== null && previousColumnId !== body.column_id
+          });
+
+          if (columnChanged) {
+            console.log(`🤖 ✅ COLUNA MUDOU - ACIONANDO AUTOMAÇÕES!`);
             console.log(`🤖 ========== AUTOMAÇÃO TRIGGERED ==========`);
             console.log(`🤖 Card entrou em nova coluna: ${previousColumnId} -> ${body.column_id}`);
             console.log(`📦 Dados do card:`, JSON.stringify({
@@ -995,7 +1059,9 @@ serve(async (req) => {
                           order: a.action_order
                         })));
                         
-                        for (const action of sortedActions) {
+                        // Executar ações em background (não bloqueante)
+                        // Usar Promise.allSettled para garantir que todos executem mesmo se alguns falharem
+                        const actionPromises = sortedActions.map(async (action: any) => {
                           try {
                             console.log(`\n🎬 ========== EXECUTANDO AÇÃO ==========`);
                             console.log(`🎬 Tipo: ${action.action_type}`);
@@ -1005,17 +1071,24 @@ serve(async (req) => {
                             await executeAutomationAction(action, card, supabaseClient);
                             
                             console.log(`✅ Ação ${action.action_type} executada com sucesso`);
+                            return { success: true, action: action.action_type };
                           } catch (actionError) {
                             console.error(`❌ Erro ao executar ação ${action.action_type}:`, {
                               error: actionError,
                               message: actionError instanceof Error ? actionError.message : String(actionError),
                               stack: actionError instanceof Error ? actionError.stack : undefined
                             });
-                            // Continua para próxima ação mesmo se uma falhar
+                            return { success: false, action: action.action_type, error: actionError };
                           }
-                        }
+                        });
                         
-                        console.log(`✅ Automação "${automation.name}" executada com sucesso\n`);
+                        // Aguardar todas as ações (mas não bloquear se alguma falhar)
+                        const actionResults = await Promise.allSettled(actionPromises);
+                        
+                        const successful = actionResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+                        const failed = actionResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value?.success)).length;
+                        
+                        console.log(`✅ Automação "${automation.name}" executada: ${successful} sucesso(s), ${failed} falha(s)\n`);
                       } catch (automationError) {
                         console.error(`❌ Erro ao processar automação ${automation.id}:`, {
                           error: automationError,
@@ -1035,9 +1108,9 @@ serve(async (req) => {
                 stack: automationError instanceof Error ? automationError.stack : undefined
               });
               // Não falha a atualização do card se as automações falharem
+            } finally {
+              console.log(`🤖 ========== FIM DA EXECUÇÃO DE AUTOMAÇÕES ==========\n`);
             }
-            
-            console.log(`🤖 ========== FIM DA EXECUÇÃO DE AUTOMAÇÕES ==========\n`);
           }
             
             // ✅ Se o responsável foi atualizado E o card tem conversa associada, sincronizar
