@@ -301,8 +301,11 @@ serve(async (req) => {
     console.log(`💾 [${requestId}] Saving message to database BEFORE calling Evolution`);
     
     try {
+      // ✅ CORREÇÃO: Gerar UUID válido para o campo id, manter external_id para tracking
+      const message_id = crypto.randomUUID();
+      
       const messageData = {
-        id: external_id,
+        id: message_id,
         conversation_id: conversation_id,
         workspace_id: conversation.workspace_id,
         content: effectiveContent || '',
