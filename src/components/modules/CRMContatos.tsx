@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -110,6 +110,24 @@ export function CRMContatos() {
 
       console.log("🔄 [CRMContatos] Fetching contacts for workspace:", selectedWorkspace.workspace_id);
 
+      // ✅ Verificar workspace_id antes de fazer query
+      if (!selectedWorkspace.workspace_id) {
+        console.error("❌ [CRMContatos] workspace_id is missing!");
+        toast({
+          title: "Erro",
+          description: "Workspace não selecionado. Selecione um workspace primeiro.",
+          variant: "destructive",
+        });
+        setContacts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("🔍 [CRMContatos] Query params:", {
+        workspace_id: selectedWorkspace.workspace_id,
+        table: "contacts"
+      });
+
       // Get all contacts from the workspace
       const { data: contactsData, error: contactsError } = await supabase
         .from("contacts")
@@ -119,26 +137,51 @@ export function CRMContatos() {
           ascending: false,
         });
 
+      // ✅ Log detalhado do resultado
+      console.log("📊 [CRMContatos] Query result:", {
+        hasError: !!contactsError,
+        errorCode: contactsError?.code,
+        errorMessage: contactsError?.message,
+        dataLength: contactsData?.length || 0,
+        dataPreview: contactsData?.slice(0, 2) // Primeiros 2 contatos para debug
+      });
+
       if (contactsError) {
-        console.error("❌ [CRMContatos] Error fetching contacts:", contactsError);
-        toast({
-          title: "Erro ao carregar contatos",
-          description: contactsError.message || "Não foi possível carregar os contatos. Tente novamente.",
-          variant: "destructive",
+        console.error("❌ [CRMContatos] Error fetching contacts:", {
+          code: contactsError.code,
+          message: contactsError.message,
+          details: contactsError.details,
+          hint: contactsError.hint
         });
+        
+        // ✅ Verificar se é erro de RLS
+        if (contactsError.code === '42501' || contactsError.message?.includes('permission denied') || contactsError.message?.includes('row-level security')) {
+          toast({
+            title: "Erro de permissão",
+            description: "Você não tem permissão para visualizar contatos deste workspace. Verifique suas permissões.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro ao carregar contatos",
+            description: contactsError.message || "Não foi possível carregar os contatos. Tente novamente.",
+            variant: "destructive",
+          });
+        }
+        
         setContacts([]);
         setIsLoading(false);
         return;
       }
 
       if (!contactsData || contactsData.length === 0) {
-        console.log("ℹ️ [CRMContatos] No contacts found");
+        console.log("ℹ️ [CRMContatos] No contacts found for workspace:", selectedWorkspace.workspace_id);
         setContacts([]);
         setIsLoading(false);
         return;
       }
 
-      console.log(`✅ [CRMContatos] Found ${contactsData.length} contacts`);
+      console.log(`✅ [CRMContatos] Found ${contactsData.length} contacts for workspace ${selectedWorkspace.workspace_id}`);
 
       const contactIds = contactsData.map((c) => c.id);
 
@@ -202,11 +245,109 @@ export function CRMContatos() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedWorkspace, toast]);
+  }, [selectedWorkspace?.workspace_id, toast]);
 
+  // ✅ CARREGAR CONTATOS AUTOMATICAMENTE quando workspace mudar
   useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
+    console.log("🎯 [CRMContatos] useEffect triggered - workspace:", selectedWorkspace?.workspace_id);
+    
+    if (!selectedWorkspace?.workspace_id) {
+      console.warn("⚠️ [CRMContatos] No workspace selected, clearing contacts");
+      setContacts([]);
+      setIsLoading(false);
+      return;
+    }
+
+    // ✅ FETCH DIRETO SEM DEPENDÊNCIA CIRCULAR
+    const loadContacts = async () => {
+      try {
+        setIsLoading(true);
+        
+        console.log("🔄 [CRMContatos] Fetching contacts for workspace:", selectedWorkspace.workspace_id);
+
+        // Get all contacts from the workspace - QUERY SIMPLES
+        const { data: contactsData, error: contactsError } = await supabase
+          .from("contacts")
+          .select("*")
+          .eq("workspace_id", selectedWorkspace.workspace_id)
+          .order("created_at", {
+            ascending: false,
+          });
+
+        if (contactsError) {
+          console.error("❌ [CRMContatos] Error:", contactsError);
+          toast({
+            title: "Erro ao carregar contatos",
+            description: contactsError.message || "Não foi possível carregar os contatos.",
+            variant: "destructive",
+          });
+          setContacts([]);
+          return;
+        }
+
+        if (!contactsData || contactsData.length === 0) {
+          console.log("ℹ️ [CRMContatos] No contacts found");
+          setContacts([]);
+          return;
+        }
+
+        console.log(`✅ [CRMContatos] Loaded ${contactsData.length} contacts`);
+
+        // Buscar tags opcionalmente (não bloquear se falhar)
+        const contactIds = contactsData.map((c) => c.id);
+        let contactTagsData: any[] = [];
+        
+        if (contactIds.length > 0) {
+          try {
+            const { data: tagsData } = await supabase
+              .from("contact_tags")
+              .select("contact_id, tags:tag_id (id, name, color)")
+              .in("contact_id", contactIds);
+            
+            contactTagsData = tagsData || [];
+          } catch (tagsError) {
+            console.warn("⚠️ [CRMContatos] Tags error (non-critical):", tagsError);
+          }
+        }
+
+        // Mapear contatos com tags
+        const contactsWithTags = contactsData.map((contact) => {
+          const contactTags =
+            contactTagsData
+              .filter((ct) => ct.contact_id === contact.id)
+              .map((ct) => ({
+                name: ct.tags?.name || "",
+                color: ct.tags?.color || "#808080",
+              })) || [];
+          
+          return {
+            id: contact.id,
+            name: contact.name,
+            phone: contact.phone || "",
+            email: contact.email || "",
+            createdAt: format(new Date(contact.created_at), "dd/MM/yyyy HH:mm:ss"),
+            tags: contactTags,
+            profile_image_url: contact.profile_image_url,
+            extra_info: (contact.extra_info as Record<string, any>) || {},
+          };
+        });
+
+        setContacts(contactsWithTags);
+      } catch (error: any) {
+        console.error("❌ [CRMContatos] Unexpected error:", error);
+        toast({
+          title: "Erro ao carregar contatos",
+          description: error?.message || "Ocorreu um erro inesperado.",
+          variant: "destructive",
+        });
+        setContacts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContacts();
+  }, [selectedWorkspace?.workspace_id, toast]); // ✅ workspace_id e toast como dependências
 
   // Real-time subscription for contacts changes
   useEffect(() => {
@@ -256,8 +397,22 @@ export function CRMContatos() {
         },
         (payload) => {
           console.log("🔄 [CRMContatos] Contact updated:", payload.new.id);
-          // Refetch all contacts when any contact is updated to ensure tags are up to date
-          fetchContacts();
+          // ✅ Atualizar apenas o contato específico (mais eficiente)
+          const updatedContact = payload.new;
+          setContacts((prev) =>
+            prev.map((contact) =>
+              contact.id === updatedContact.id
+                ? {
+                    ...contact,
+                    name: updatedContact.name,
+                    phone: updatedContact.phone || "",
+                    email: updatedContact.email || "",
+                    profile_image_url: updatedContact.profile_image_url,
+                    extra_info: (updatedContact.extra_info as Record<string, any>) || {},
+                  }
+                : contact
+            )
+          );
         },
       )
       .on(
@@ -973,7 +1128,7 @@ export function CRMContatos() {
                   </TableRow>
                 ))}
               </>
-            ) : filteredContacts.length === 0 ? (
+            ) : filteredContacts.length === 0 && !isLoading ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <div className="flex flex-col items-center gap-2">
@@ -984,14 +1139,32 @@ export function CRMContatos() {
                         : "Nenhum contato cadastrado ainda"}
                     </p>
                     {!searchTerm && selectedTagIds.length === 0 && (
-                      <Button
-                        size="sm"
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black mt-2"
-                        onClick={handleAddContact}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar primeiro contato
-                      </Button>
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          Workspace: {selectedWorkspace?.workspace_id || "Não selecionado"} | 
+                          Total: {contacts.length} contatos
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                            onClick={handleAddContact}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar primeiro contato
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              console.log("🔄 [CRMContatos] Refetch manual - contacts:", contacts.length, "filtered:", filteredContacts.length);
+                              fetchContacts();
+                            }}
+                          >
+                            Atualizar
+                          </Button>
+                        </div>
+                      </>
                     )}
                   </div>
                 </TableCell>

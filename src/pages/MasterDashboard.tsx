@@ -234,7 +234,7 @@ export default function MasterDashboard() {
           }`}
         >
           <BrainCircuit className="h-5 w-5 shrink-0" />
-          <span className="text-sm font-medium">Agente de IA</span>
+          <span className="text-sm font-medium">Agentes de IA</span>
         </button>
         
         <button
