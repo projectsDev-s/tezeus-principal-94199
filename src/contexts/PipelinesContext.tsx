@@ -621,7 +621,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
           `pipeline-management/cards?id=${newCard.id}`,
           {
             method: 'GET',
-            headers: getHeaders()
+            headers: getHeaders
           }
         );
 
@@ -676,7 +676,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
                 `pipeline-management/cards?id=${updatedCard.id}`,
                 {
                   method: 'GET',
-                  headers: getHeaders()
+                  headers: getHeaders
                 }
               );
 

@@ -295,15 +295,21 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     }, null, 2));
     
-    // ✅ DEDUP: Verificar se já processamos esse evento recentemente
-    // Para CONNECTION_UPDATE, usar instance+state como chave para evitar spam
-    let dedupKey: string;
+    // ✅ IGNORAR CONNECTION_UPDATE: Não processar eventos de conexão para evitar spam
     if (EVENT === 'CONNECTION_UPDATE') {
-      const state = payload.data?.state || 'unknown';
-      dedupKey = `${EVENT}:${instanceName}:${state}`;
-    } else {
-      dedupKey = `${EVENT}:${payload.data?.keyId || payload.data?.messageId || payload.data?.key?.id || Date.now()}`;
+      console.log(`⏭️ [${requestId}] CONNECTION_UPDATE ignorado (evento desabilitado)`);
+      return new Response(JSON.stringify({
+        code: 'EVENT_IGNORED',
+        message: 'CONNECTION_UPDATE events are disabled',
+        requestId
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
+    
+    // ✅ DEDUP: Verificar se já processamos esse evento recentemente
+    const dedupKey = `${EVENT}:${payload.data?.keyId || payload.data?.messageId || payload.data?.key?.id || Date.now()}`;
     
     if (checkDedup(dedupKey)) {
       console.log(`⏭️ [${requestId}] Event duplicado ignorado: ${dedupKey}`);
