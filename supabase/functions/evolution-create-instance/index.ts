@@ -173,6 +173,8 @@ serve(async (req) => {
       workspaceId,
       autoCreateCrmCard,
       defaultPipelineId,
+      defaultColumnId,
+      defaultColumnName,
       historyRecovery,
       historyDays,
       phoneNumber: phoneNumber || 'not provided',
@@ -274,22 +276,43 @@ serve(async (req) => {
     }
 
     // Create connection record first
+    // Ensure column values are properly saved - only set null if truly empty/undefined
+    const connectionDataToInsert: any = {
+      instance_name: instanceName,
+      workspace_id: workspaceId,
+      status: "creating",
+      history_recovery: historyRecovery,
+      history_days: historyDays,
+      phone_number: phoneNumber || null,
+      auto_create_crm_card: autoCreateCrmCard || false,
+      queue_id: queueId || null,
+      metadata: metadata || null,
+    };
+
+    // Handle pipeline and column fields - ensure they're saved when provided
+    if (defaultPipelineId && typeof defaultPipelineId === 'string' && defaultPipelineId.trim() !== '') {
+      connectionDataToInsert.default_pipeline_id = defaultPipelineId;
+    } else {
+      connectionDataToInsert.default_pipeline_id = null;
+    }
+
+    if (defaultColumnId && typeof defaultColumnId === 'string' && defaultColumnId.trim() !== '') {
+      connectionDataToInsert.default_column_id = defaultColumnId;
+    } else {
+      connectionDataToInsert.default_column_id = null;
+    }
+
+    if (defaultColumnName && typeof defaultColumnName === 'string' && defaultColumnName.trim() !== '') {
+      connectionDataToInsert.default_column_name = defaultColumnName;
+    } else {
+      connectionDataToInsert.default_column_name = null;
+    }
+
+    console.log("💾 Inserting connection data:", JSON.stringify(connectionDataToInsert, null, 2));
+
     const { data: connectionData, error: insertError } = await supabase
       .from("connections")
-      .insert({
-        instance_name: instanceName,
-        workspace_id: workspaceId,
-        status: "creating",
-        history_recovery: historyRecovery,
-        history_days: historyDays,
-        phone_number: phoneNumber || null,
-        auto_create_crm_card: autoCreateCrmCard || false,
-        default_pipeline_id: defaultPipelineId || null,
-        default_column_id: defaultColumnId || null,
-        default_column_name: defaultColumnName || null,
-        queue_id: queueId || null,
-        metadata: metadata || null,
-      })
+      .insert(connectionDataToInsert)
       .select()
       .single();
 

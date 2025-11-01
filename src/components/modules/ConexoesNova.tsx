@@ -316,7 +316,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       // Buscar nome da coluna selecionada
       const selectedColumnData = pipelineColumns.find(col => col.id === selectedColumn);
       
-      const connection = await evolutionProvider.createConnection({
+      const connectionData = {
         instanceName: instanceName.trim(),
         historyRecovery: historyRecovery as 'none' | 'week' | 'month' | 'quarter',
         workspaceId,
@@ -329,7 +329,17 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         metadata: {
           border_color: connectionColor
         }
+      };
+
+      console.log('📤 Creating connection with data:', {
+        ...connectionData,
+        selectedColumn,
+        selectedPipeline,
+        selectedColumnData,
+        pipelineColumnsCount: pipelineColumns.length
       });
+      
+      const connection = await evolutionProvider.createConnection(connectionData);
 
       // Connection created
 

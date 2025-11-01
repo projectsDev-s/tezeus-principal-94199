@@ -28,6 +28,47 @@ BEGIN
   DELETE FROM public.conversations WHERE workspace_id = p_workspace_id;
   
   -- 3. Delete contact-related data
+  -- Primeiro, deletar n8n_chat_histories usando os números de telefone dos contatos
+  DELETE FROM public.n8n_chat_histories 
+  WHERE session_id IN (
+    SELECT DISTINCT phone 
+    FROM public.contacts 
+    WHERE workspace_id = p_workspace_id 
+    AND phone IS NOT NULL
+    AND phone != ''
+  )
+  OR session_id IN (
+    SELECT DISTINCT regexp_replace(phone, '[^0-9]', '', 'g')
+    FROM public.contacts 
+    WHERE workspace_id = p_workspace_id 
+    AND phone IS NOT NULL
+    AND phone != ''
+  )
+  OR session_id IN (
+    SELECT DISTINCT '55' || regexp_replace(phone, '[^0-9]', '', 'g')
+    FROM public.contacts 
+    WHERE workspace_id = p_workspace_id 
+    AND phone IS NOT NULL
+    AND phone != ''
+    AND regexp_replace(phone, '[^0-9]', '', 'g') !~ '^55'
+  )
+  OR session_id IN (
+    SELECT DISTINCT '+55' || regexp_replace(phone, '[^0-9]', '', 'g')
+    FROM public.contacts 
+    WHERE workspace_id = p_workspace_id 
+    AND phone IS NOT NULL
+    AND phone != ''
+    AND regexp_replace(phone, '[^0-9]', '', 'g') !~ '^55'
+  )
+  OR session_id IN (
+    SELECT DISTINCT substring(regexp_replace(phone, '[^0-9]', '', 'g') FROM 3)
+    FROM public.contacts 
+    WHERE workspace_id = p_workspace_id 
+    AND phone IS NOT NULL
+    AND phone != ''
+    AND regexp_replace(phone, '[^0-9]', '', 'g') ~ '^55'
+  );
+  
   DELETE FROM public.contact_tags WHERE contact_id IN (
     SELECT id FROM public.contacts WHERE workspace_id = p_workspace_id
   );

@@ -48,15 +48,30 @@ serve(async (req) => {
     }
 
     if (default_pipeline_id !== undefined) {
-      updateData.default_pipeline_id = default_pipeline_id;
+      // Ensure proper handling of empty strings - convert to null
+      if (typeof default_pipeline_id === 'string' && default_pipeline_id.trim() !== '') {
+        updateData.default_pipeline_id = default_pipeline_id;
+      } else {
+        updateData.default_pipeline_id = null;
+      }
     }
 
     if (default_column_id !== undefined) {
-      updateData.default_column_id = default_column_id;
+      // Ensure proper handling of empty strings - convert to null
+      if (typeof default_column_id === 'string' && default_column_id.trim() !== '') {
+        updateData.default_column_id = default_column_id;
+      } else {
+        updateData.default_column_id = null;
+      }
     }
 
     if (default_column_name !== undefined) {
-      updateData.default_column_name = default_column_name;
+      // Ensure proper handling of empty strings - convert to null
+      if (typeof default_column_name === 'string' && default_column_name.trim() !== '') {
+        updateData.default_column_name = default_column_name;
+      } else {
+        updateData.default_column_name = null;
+      }
     }
 
     if (queue_id !== undefined) {
