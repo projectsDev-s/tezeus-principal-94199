@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { usePipelinesContext } from '@/contexts/PipelinesContext';
 import { toast } from '@/hooks/use-toast';
 import { Bot } from 'lucide-react';
 
@@ -16,6 +17,7 @@ interface SelectAgentModalProps {
 
 export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectAgentModalProps) => {
   const { selectedWorkspace } = useWorkspace();
+  const { updateConversationAgentStatus } = usePipelinesContext();
   const [selectedAgentId, setSelectedAgentId] = useState<string>('none');
   const queryClient = useQueryClient();
 
@@ -91,12 +93,15 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       // Snapshot do valor anterior
       const previousConversation = queryClient.getQueryData(['conversation', conversationId]);
       
-      // Atualização otimista
+      // Atualização otimista no Query Client
       queryClient.setQueryData(['conversation', conversationId], (old: any) => ({
         ...old,
         agente_ativo: true,
         agent_active_id: selectedAgentId
       }));
+      
+      // 🔥 UPDATE OTIMISTA NO PIPELINES CONTEXT (para cards CRM)
+      updateConversationAgentStatus(conversationId, true, selectedAgentId);
       
       return { previousConversation };
     },
@@ -142,12 +147,15 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       // Snapshot do valor anterior
       const previousConversation = queryClient.getQueryData(['conversation', conversationId]);
       
-      // Atualização otimista
+      // Atualização otimista no Query Client
       queryClient.setQueryData(['conversation', conversationId], (old: any) => ({
         ...old,
         agente_ativo: false,
         agent_active_id: null
       }));
+      
+      // 🔥 UPDATE OTIMISTA NO PIPELINES CONTEXT (para cards CRM)
+      updateConversationAgentStatus(conversationId, false, null);
       
       return { previousConversation };
     },

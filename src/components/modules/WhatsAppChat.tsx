@@ -18,6 +18,7 @@ import { useProfileImages } from "@/hooks/useProfileImages";
 import { useInstanceAssignments } from "@/hooks/useInstanceAssignments";
 import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { useQueues } from "@/hooks/useQueues";
 import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
 import { supabase } from "@/integrations/supabase/client";
@@ -118,6 +119,9 @@ export function WhatsAppChat({
   const {
     selectedWorkspace
   } = useWorkspace();
+  const {
+    updateConversationAgentStatus
+  } = usePipelinesContext();
   const {
     user
   } = useAuth();
@@ -891,11 +895,15 @@ export function WhatsAppChat({
       if (selectedConversation.agente_ativo) {
         const newAgenteAtivoState = false;
         
+        // 🔥 UPDATE OTIMISTA: Atualizar estado local imediatamente
         setSelectedConversation(prev => prev ? {
           ...prev,
           agente_ativo: newAgenteAtivoState,
           _updated_at: Date.now()
         } : null);
+        
+        // 🔥 UPDATE OTIMISTA NO PIPELINES CONTEXT (para cards CRM)
+        updateConversationAgentStatus(selectedConversation.id, false, null);
         
         await assumirAtendimento(selectedConversation.id);
       } else {

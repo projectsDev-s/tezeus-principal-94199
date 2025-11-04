@@ -66,6 +66,7 @@ interface PipelinesContextType {
   moveCardOptimistic: (cardId: string, newColumnId: string) => Promise<void>;
   getCardsByColumn: (columnId: string) => PipelineCard[];
   reorderColumns: (newColumns: PipelineColumn[]) => Promise<void>;
+  updateConversationAgentStatus: (conversationId: string, agente_ativo: boolean, agent_active_id?: string | null) => void;
 }
 
 const PipelinesContext = createContext<PipelinesContextType | undefined>(undefined);
@@ -1068,6 +1069,31 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [selectedPipeline?.id, cards, fetchCards]);
 
+  // Função para atualizar otimisticamente o status do agente de uma conversa
+  const updateConversationAgentStatus = useCallback((
+    conversationId: string, 
+    agente_ativo: boolean, 
+    agent_active_id?: string | null
+  ) => {
+    console.log('🤖 [Context] Update otimista agente:', { conversationId, agente_ativo, agent_active_id });
+    
+    setCards(current => 
+      current.map(card => {
+        if (card.conversation_id === conversationId && card.conversation) {
+          return {
+            ...card,
+            conversation: {
+              ...card.conversation,
+              agente_ativo,
+              agent_active_id: agent_active_id !== undefined ? agent_active_id : card.conversation.agent_active_id
+            }
+          };
+        }
+        return card;
+      })
+    );
+  }, []);
+
   const value = useMemo(() => ({
     pipelines,
     selectedPipeline,
@@ -1087,6 +1113,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     moveCardOptimistic,
     getCardsByColumn,
     reorderColumns,
+    updateConversationAgentStatus,
   }), [
     pipelines,
     selectedPipeline,
@@ -1106,6 +1133,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     moveCardOptimistic,
     getCardsByColumn,
     reorderColumns,
+    updateConversationAgentStatus,
   ]);
 
   return (
