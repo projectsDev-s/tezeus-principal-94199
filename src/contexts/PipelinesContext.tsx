@@ -893,6 +893,26 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     setCards(prev => prev.filter(c => c.column_id !== columnId));
   }, []);
 
+  // 🤖 Handler para atualização de conversation via realtime
+  const handleConversationUpdate = useCallback((conversationId: string, updates: any) => {
+    console.log('🤖 [Context] Atualizando conversation via realtime:', { conversationId, updates });
+    
+    setCards(current => 
+      current.map(card => {
+        if (card.conversation_id === conversationId && card.conversation) {
+          return {
+            ...card,
+            conversation: {
+              ...card.conversation,
+              ...updates
+            }
+          };
+        }
+        return card;
+      })
+    );
+  }, []);
+
   // Ativar realtime quando um pipeline é selecionado
   usePipelineRealtime({
     pipelineId: selectedPipeline?.id || null,
@@ -902,6 +922,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     onColumnInsert: handleColumnInsert,
     onColumnUpdate: handleColumnUpdate,
     onColumnDelete: handleColumnDelete,
+    onConversationUpdate: handleConversationUpdate,
   });
 
   // Função reorderColumns como useCallback para evitar problemas com dependências

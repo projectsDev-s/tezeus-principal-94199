@@ -11,6 +11,7 @@ interface UsePipelineRealtimeProps {
   onColumnInsert?: (column: PipelineColumn) => void;
   onColumnUpdate?: (column: PipelineColumn) => void;
   onColumnDelete?: (columnId: string) => void;
+  onConversationUpdate?: (conversationId: string, updates: any) => void;
 }
 
 export function usePipelineRealtime({
@@ -21,6 +22,7 @@ export function usePipelineRealtime({
   onColumnInsert,
   onColumnUpdate,
   onColumnDelete,
+  onConversationUpdate,
 }: UsePipelineRealtimeProps) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -199,6 +201,29 @@ export function usePipelineRealtime({
           onColumnDelete?.(payload.old.id);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          console.log('🤖 [Realtime] Conversation atualizada:', {
+            id: updated.id,
+            agente_ativo: updated.agente_ativo,
+            agent_active_id: updated.agent_active_id
+          });
+          
+          if (onConversationUpdate) {
+            onConversationUpdate(updated.id, {
+              agente_ativo: updated.agente_ativo,
+              agent_active_id: updated.agent_active_id,
+            });
+          }
+        }
+      )
       .subscribe((status, err) => {
         console.log(`📡 [Realtime] Status do canal ${channelName}:`, status);
         console.log(`📡 [Realtime] Erro (se houver):`, err);
@@ -281,6 +306,7 @@ export function usePipelineRealtime({
     onCardDelete,
     onColumnInsert,
     onColumnUpdate,
-    onColumnDelete
+    onColumnDelete,
+    onConversationUpdate
   ]);
 }
