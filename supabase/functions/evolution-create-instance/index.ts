@@ -348,14 +348,11 @@ serve(async (req) => {
         url: webhookUrl,
         byEvents: true,
         base64: true,
-        headers: {
-          "apikey": evolutionConfig.apiKey,
-          "Content-Type": "application/json"
-        },
         events: [
           "QRCODE_UPDATED",
           "MESSAGES_UPSERT",
-          "MESSAGES_UPDATE"
+          "MESSAGES_UPDATE",
+          "CONNECTION_UPDATE"
         ]
       }
     };
