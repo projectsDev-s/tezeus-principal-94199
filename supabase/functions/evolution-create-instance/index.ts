@@ -362,29 +362,14 @@ serve(async (req) => {
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
 
-    // ✅ PAYLOAD CORRIGIDO conforme documentação Evolution API
-    const evolutionPayload = {
+    // Simplified payload - only essential fields
+    const evolutionPayload: any = {
       instanceName: instanceName,
-      integration: "WHATSAPP-BAILEYS",
       qrcode: true,
-      number: phoneNumber || undefined,
-
-      settings: {
-        rejectCall: false,
-        groupsIgnore: false,
-        alwaysOnline: false,
-        readMessages: false,
-        readStatus: false
-      },
-
       webhook: {
         url: webhookUrl,
-        byEvents: false,  // ✅ Dentro do webhook (snake_case)
-        base64: true,     // ✅ Habilita recebimento de mídia em base64
-        headers: {
-          apikey: token,
-          "Content-Type": "application/json",
-        },
+        webhook_by_events: false,
+        webhook_base64: false,
         events: [
           "MESSAGES_UPDATE",
           "MESSAGES_UPSERT",
@@ -392,20 +377,20 @@ serve(async (req) => {
         ]
       }
     };
-    
-    console.log('📦 Evolution payload configuration:', {
-      instanceName,
-      number: phoneNumber || 'not provided',
-      webhookByEvents: evolutionPayload.webhookByEvents,
-      webhookBase64: evolutionPayload.webhookBase64,
-      historyRecovery,
-      historyDays,
-      webhookEvents: evolutionPayload.webhook.events
-    });
-    
-    console.log('📤 Full payload being sent to Evolution API:', JSON.stringify(evolutionPayload, null, 2));
 
-    // Primeiro fetch descartado, usando só o evolutionPayload abaixo
+    // Only add number if provided
+    if (phoneNumber) {
+      evolutionPayload.number = phoneNumber;
+    }
+
+    // Add webhook headers separately
+    if (!evolutionPayload.webhook.headers) {
+      evolutionPayload.webhook.headers = {};
+    }
+    evolutionPayload.webhook.headers['apikey'] = token;
+    evolutionPayload.webhook.headers['Content-Type'] = 'application/json';
+    
+    console.log('📤 Payload being sent to Evolution API:', JSON.stringify(evolutionPayload, null, 2));
 
     // Normalize URL to avoid double slashes
     const baseUrl = evolutionConfig.url.endsWith("/") ? evolutionConfig.url.slice(0, -1) : evolutionConfig.url;
