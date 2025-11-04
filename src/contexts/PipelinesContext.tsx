@@ -790,6 +790,40 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
           toColumn: updatedCard.column_id,
           timestamp: new Date().toISOString()
         });
+        
+        // 🔥 BUSCAR CONVERSATION ATUALIZADA quando houver mudança de coluna
+        // (pode ter sido atualizado o agente_ativo por automação)
+        if (existingCard.conversation_id && getHeaders) {
+          console.log('🔍 [Realtime] Buscando conversation atualizada:', existingCard.conversation_id);
+          supabase
+            .from('conversations')
+            .select('id, agente_ativo, agent_active_id, queue(id, name, ai_agent(id, name))')
+            .eq('id', existingCard.conversation_id)
+            .single()
+            .then(({ data: conversation, error }) => {
+              if (error) {
+                console.error('❌ Erro ao buscar conversation:', error);
+                return;
+              }
+              
+              if (conversation) {
+                console.log('✅ [Realtime] Conversation atualizada:', {
+                  id: conversation.id,
+                  agente_ativo: conversation.agente_ativo,
+                  agent_active_id: conversation.agent_active_id
+                });
+                
+                // Atualizar o card com a conversation fresh
+                setCards(current => 
+                  current.map(c => 
+                    c.id === updatedCard.id 
+                      ? { ...c, conversation } 
+                      : c
+                  )
+                );
+              }
+            });
+        }
       } else {
         console.log('ℹ️ [Realtime] Sem mudança de coluna (mesma coluna)');
       }
