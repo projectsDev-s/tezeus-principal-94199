@@ -338,30 +338,28 @@ serve(async (req) => {
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
 
-    // Payload seguindo formato Evolution API v2.3+
+    // Payload seguindo formato Evolution API v2 (camelCase)
     const evolutionPayload: any = {
       instanceName: instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
+      rejectCall: false,
+      msgCall: "",
+      groupsIgnore: true,
+      alwaysOnline: false,
+      readMessages: false,
+      readStatus: false,
+      syncFullHistory: false,
       webhook: {
         url: webhookUrl,
-        webhook_by_events: true,
-        webhook_base64: true,
+        byEvents: true,
+        base64: true,
         events: [
           "QRCODE_UPDATED",
           "MESSAGES_UPSERT",
           "MESSAGES_UPDATE",
           "CONNECTION_UPDATE"
         ]
-      },
-      settings: {
-        reject_call: false,
-        msg_call: "",
-        groups_ignore: true,
-        always_online: false,
-        read_messages: false,
-        read_status: false,
-        sync_full_history: false
       }
     };
 
