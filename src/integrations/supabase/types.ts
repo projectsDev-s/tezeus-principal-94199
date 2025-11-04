@@ -1295,6 +1295,87 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          archived_at: string | null
+          converted_at: string | null
+          converted_deal_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          name: string | null
+          owner_user_id: string | null
+          source: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          converted_at?: string | null
+          converted_deal_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          owner_user_id?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          converted_at?: string | null
+          converted_deal_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          owner_user_id?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_converted_deal_id_fkey"
+            columns: ["converted_deal_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "system_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "system_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -1658,6 +1739,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "system_users_view"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipeline_cards_products: {
+        Row: {
+          created_at: string
+          id: string
+          is_recurring: boolean
+          pipeline_card_id: string
+          product_id: string | null
+          quantity: number
+          recurring_interval: string | null
+          recurring_value: number | null
+          total_value: number
+          unit_value: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_recurring?: boolean
+          pipeline_card_id: string
+          product_id?: string | null
+          quantity?: number
+          recurring_interval?: string | null
+          recurring_value?: number | null
+          total_value?: number
+          unit_value?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_recurring?: boolean
+          pipeline_card_id?: string
+          product_id?: string | null
+          quantity?: number
+          recurring_interval?: string | null
+          recurring_value?: number | null
+          total_value?: number
+          unit_value?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_cards_products_pipeline_card_id_fkey"
+            columns: ["pipeline_card_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_cards_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_cards_products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_cards_products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
           },
         ]
       }
@@ -2096,6 +2251,252 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: []
+      }
+      report_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          dashboard_id: string | null
+          filters: Json | null
+          id: string
+          report_id: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          dashboard_id?: string | null
+          filters?: Json | null
+          id?: string
+          report_id?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          dashboard_id?: string | null
+          filters?: Json | null
+          id?: string
+          report_id?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "system_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "system_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_audit_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_audit_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
+      report_dashboard_cards: {
+        Row: {
+          created_at: string
+          dashboard_id: string
+          id: string
+          layout: Json
+          overrides: Json
+          report_definition_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_id: string
+          id?: string
+          layout?: Json
+          overrides?: Json
+          report_definition_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_id?: string
+          id?: string
+          layout?: Json
+          overrides?: Json
+          report_definition_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_dashboard_cards_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "report_dashboards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_dashboard_cards_report_definition_id_fkey"
+            columns: ["report_definition_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_dashboards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filters: Json
+          id: string
+          layout: Json
+          name: string
+          sharing: Json
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          layout?: Json
+          name: string
+          sharing?: Json
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          layout?: Json
+          name?: string
+          sharing?: Json
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_dashboards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "system_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_dashboards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "system_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_dashboards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_dashboards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
+      report_definitions: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_template: boolean
+          name: string
+          tags: string[] | null
+          type: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          name: string
+          tags?: string[] | null
+          type: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          name?: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "system_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "system_users_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
       }
       system_customization: {
         Row: {
@@ -2617,6 +3018,65 @@ export type Database = {
       }
     }
     Views: {
+      fact_activities_monthly_view: {
+        Row: {
+          activity_type: string | null
+          completed_activities: number | null
+          last_activity_at: string | null
+          owner_user_id: string | null
+          pending_activities: number | null
+          period_start: string | null
+          total_activities: number | null
+          workspace_id: string | null
+        }
+        Relationships: []
+      }
+      fact_deals_monthly_view: {
+        Row: {
+          column_id: string | null
+          deals_count: number | null
+          deals_value: number | null
+          last_activity_at: string | null
+          lost_value: number | null
+          open_value: number | null
+          owner_user_id: string | null
+          period_start: string | null
+          pipeline_id: string | null
+          status: string | null
+          won_value: number | null
+          workspace_id: string | null
+        }
+        Relationships: []
+      }
+      fact_leads_monthly_view: {
+        Row: {
+          archived_leads: number | null
+          converted_leads: number | null
+          last_activity_at: string | null
+          owner_user_id: string | null
+          period_start: string | null
+          qualified_leads: number | null
+          related_deals: number | null
+          source: string | null
+          status: string | null
+          total_leads: number | null
+          workspace_id: string | null
+        }
+        Relationships: []
+      }
+      fact_products_monthly_view: {
+        Row: {
+          items_count: number | null
+          last_item_at: string | null
+          period_start: string | null
+          product_id: string | null
+          recurring_value: number | null
+          total_quantity: number | null
+          total_value: number | null
+          workspace_id: string | null
+        }
+        Relationships: []
+      }
       system_users_view: {
         Row: {
           avatar: string | null
