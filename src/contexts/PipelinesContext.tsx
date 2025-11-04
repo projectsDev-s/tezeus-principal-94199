@@ -542,17 +542,13 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
           } else {
             console.log('📡 [Broadcast] Canal inexistente, criando e assinando para enviar...');
             const tempChannel = supabase.channel(channelName, { config: { broadcast: { self: false } } });
-            const status = await tempChannel.subscribe();
-            if (status === 'SUBSCRIBED') {
-              const ok = await tempChannel.send({
-                type: 'broadcast',
-                event: 'pipeline-card-moved',
-                payload: { cardId, newColumnId }
-              });
-              console.log('📡 [Broadcast] Enviado via canal temporário:', ok);
-            } else {
-              console.warn('⚠️ [Broadcast] Não foi possível assinar canal temporário para enviar broadcast:', status);
-            }
+            await tempChannel.subscribe();
+            const ok = await tempChannel.send({
+              type: 'broadcast',
+              event: 'pipeline-card-moved',
+              payload: { cardId, newColumnId }
+            });
+            console.log('📡 [Broadcast] Enviado via canal temporário:', ok);
             // Remover canal temporário após tentativa
             supabase.removeChannel(tempChannel);
           }
