@@ -369,7 +369,7 @@ serve(async (req) => {
       integration: "WHATSAPP-BAILEYS",
       webhookUrl: webhookUrl,
       webhookByEvents: false,
-      webhookBase64: false,
+      webhookBase64: true,  // ✅ Habilitado para receber base64
       webhookEvents: [
         "QRCODE_UPDATED",
         "MESSAGES_UPSERT",
