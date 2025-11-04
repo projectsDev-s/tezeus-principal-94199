@@ -729,15 +729,39 @@ export function WhatsAppChat({
     setShouldAutoScroll(true);
     setIsAtBottom(true);
 
-    // ✅ SEMPRE carregar mensagens ao clicar na conversa
+    // ✅ Carregar mensagens ao clicar na conversa (evitar limpar/carregar repetidamente)
     console.log('📥 [handleSelectConversation] Atualizando mensagens:', conversation.id);
-    clearMessages(); // Limpar mensagens da conversa anterior
+    clearMessages(); // Limpar mensagens da conversa anterior (somente na troca)
     await loadMessages(conversation.id);
     
-    // Marcar notificações como lidas SEMPRE ao abrir conversa
+    // Marcar notificações e conversa como lidas SEMPRE ao abrir conversa
     console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
-    markContactAsRead(conversation.id);
+    markContactAsRead(conversation.id); // atualiza sino/notificações
+    try { await markAsRead(conversation.id); } catch (e) { console.warn('⚠️ markAsRead falhou (continua):', e); }
   };
+
+  // ✅ Evitar loop: abrir automaticamente a conversa selecionada apenas quando mudar o ID
+  const lastAutoOpenedIdRef = useRef<string | null>(null);
+  const isAutoOpeningRef = useRef(false);
+
+  useEffect(() => {
+    if (!selectedConversationId) return;
+    // Se já abrimos esta conversa automaticamente, não repetir
+    if (lastAutoOpenedIdRef.current === selectedConversationId) return;
+
+    const conv = conversations.find(c => c.id === selectedConversationId);
+    if (!conv) return;
+
+    (async () => {
+      try {
+        isAutoOpeningRef.current = true;
+        await handleSelectConversation(conv);
+        lastAutoOpenedIdRef.current = selectedConversationId;
+      } finally {
+        isAutoOpeningRef.current = false;
+      }
+    })();
+  }, [selectedConversationId, conversations]);
 
   // Funções de seleção e encaminhamento
   const handleMessageForward = (messageId: string) => {
@@ -1273,14 +1297,10 @@ export function WhatsAppChat({
     });
   }, []);
 
-  // Efeito para selecionar conversa via notificação
+  // Evitar segundo disparo de seleção automática por outros caminhos
   useEffect(() => {
-    if (selectedConversationId && conversations.length > 0) {
-      const conversation = conversations.find(conv => conv.id === selectedConversationId);
-      if (conversation) {
-        handleSelectConversation(conversation);
-      }
-    }
+    if (!selectedConversationId || conversations.length === 0) return;
+    if (lastAutoOpenedIdRef.current === selectedConversationId) return; // já tratamos acima
   }, [selectedConversationId, conversations]);
 
   // ✅ Scroll inteligente para última mensagem

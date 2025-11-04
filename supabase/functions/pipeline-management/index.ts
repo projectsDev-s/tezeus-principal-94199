@@ -92,7 +92,97 @@ async function executeAutomationAction(
 ): Promise<void> {
   console.log(`🎬 Executando ação: ${action.action_type}`, action.action_config);
   
+  // ✅ Normalizar action_config para objeto sempre
+  if (!action.action_config) {
+    action.action_config = {};
+  } else if (typeof action.action_config === 'string') {
+    try {
+      action.action_config = JSON.parse(action.action_config);
+    } catch (parseError) {
+      console.warn('⚠️ action_config veio como string mas não pôde ser parseado:', action.action_config, parseError);
+      action.action_config = {};
+    }
+  }
+
   switch (action.action_type) {
+    case 'add_agent': {
+      // Ativar agente de IA na conversa associada ao card
+      console.log(`🔍 [add_agent] Iniciando at cenário:`, {
+        cardId: card?.id,
+        conversation_id: card?.conversation_id,
+        action_config: action?.action_config
+      });
+
+      // Obter conversation_id
+      let conversationId = card?.conversation_id || card?.conversation?.id;
+      if (!conversationId && card?.id) {
+        const { data: cardData } = await supabaseClient
+          .from('pipeline_cards')
+          .select('conversation_id')
+          .eq('id', card.id)
+          .single();
+        conversationId = cardData?.conversation_id || null;
+      }
+
+      if (!conversationId) {
+        console.warn(`⚠️ [add_agent] Card ${card?.id} não possui conversation_id. Ação ignorada.`);
+        return;
+      }
+
+      // Determinar agent_id a ativar
+      let agentIdToActivate = action?.action_config?.agent_id || null;
+
+      if (!agentIdToActivate) {
+        // Se não foi especificado na automação, tentar descobrir pela fila da conversa
+        const { data: conv } = await supabaseClient
+          .from('conversations')
+          .select('agent_active_id, queue_id, agente_ativo')
+          .eq('id', conversationId)
+          .single();
+
+        if (conv?.agent_active_id) {
+          agentIdToActivate = conv.agent_active_id; // reaproveitar último agente ativo
+        } else if (conv?.queue_id) {
+          const { data: queue } = await supabaseClient
+            .from('queues')
+            .select('ai_agent_id')
+            .eq('id', conv.queue_id)
+            .single();
+          agentIdToActivate = queue?.ai_agent_id || null;
+        }
+      }
+
+      if (!agentIdToActivate) {
+        console.warn(`⚠️ [add_agent] Nenhum agent_id definido ou detectado para a conversa ${conversationId}. Ação ignorada.`);
+        return;
+      }
+
+      console.log(`🤖 [add_agent] Ativando agente ${agentIdToActivate} para conversa ${conversationId}`);
+
+      const { error: activateError } = await supabaseClient
+        .from('conversations')
+        .update({
+          agente_ativo: true,
+          agent_active_id: agentIdToActivate,
+          status: 'open'
+        })
+        .eq('id', conversationId);
+
+      if (activateError) {
+        console.error('❌ [add_agent] Erro ao ativar agente na conversa:', activateError);
+        throw activateError;
+      }
+
+      // Verificação
+      const { data: convAfter } = await supabaseClient
+        .from('conversations')
+        .select('agente_ativo, agent_active_id')
+        .eq('id', conversationId)
+        .single();
+
+      console.log(`✅ [add_agent] Estado após ativação:`, convAfter);
+      break;
+    }
     case 'send_message': {
       // Buscar conversa do card
       let conversationId = card.conversation?.id || card.conversation_id;
@@ -298,8 +388,197 @@ async function executeAutomationAction(
     }
     
     case 'remove_agent': {
-      // Lógica para remover agente de IA será implementada se necessário
-      console.log(`ℹ️ Ação remove_agent ainda não implementada`);
+      // Remover agente de IA da conversa associada ao card
+      console.log(`🔍 [remove_agent] Verificando conversation_id do card:`, {
+        cardId: card.id,
+        conversation_id: card.conversation_id,
+        conversation_object: card.conversation,
+        hasConversationId: !!card.conversation_id,
+        hasConversationObject: !!card.conversation
+      });
+
+      // Tentar obter conversation_id de diferentes fontes
+      let conversationId = card.conversation_id || card.conversation?.id;
+      
+      // Se ainda não tem, buscar do banco
+      if (!conversationId && card.id) {
+        console.log(`🔄 [remove_agent] conversation_id não encontrado no card, buscando do banco...`);
+        const { data: cardData, error: cardError } = await supabaseClient
+          .from('pipeline_cards')
+          .select('conversation_id')
+          .eq('id', card.id)
+          .single();
+        
+        if (cardError) {
+          console.error(`❌ [remove_agent] Erro ao buscar conversation_id do card:`, cardError);
+        } else if (cardData?.conversation_id) {
+          conversationId = cardData.conversation_id;
+          console.log(`✅ [remove_agent] conversation_id encontrado no banco: ${conversationId}`);
+        }
+      }
+
+      if (!conversationId) {
+        console.warn(`⚠️ Ação remove_agent não pode ser executada: card não tem conversation_id`);
+        console.warn(`⚠️ Dados do card:`, JSON.stringify({
+          id: card.id,
+          conversation_id: card.conversation_id,
+          conversation: card.conversation
+        }, null, 2));
+        return;
+      }
+
+      console.log(`✅ [remove_agent] conversation_id válido: ${conversationId}`);
+
+      // ✅ DEBUG: Verificar configuração da ação
+      console.log(`🔍 [remove_agent] DEBUG - action_config completo:`, JSON.stringify(action.action_config, null, 2));
+      console.log(`🔍 [remove_agent] DEBUG - typeof action.action_config:`, typeof action.action_config);
+      console.log(`🔍 [remove_agent] DEBUG - action.action_config?.remove_current:`, action.action_config?.remove_current);
+      console.log(`🔍 [remove_agent] DEBUG - action.action_config?.remove_current === true:`, action.action_config?.remove_current === true);
+      console.log(`🔍 [remove_agent] DEBUG - action.action_config?.agent_id:`, action.action_config?.agent_id);
+
+      // ✅ NORMALIZAR: Garantir que remove_current seja booleano
+      const removeCurrent = action.action_config?.remove_current === true || 
+                            action.action_config?.remove_current === 'true' ||
+                            (action.action_config?.remove_current !== false && 
+                             action.action_config?.remove_current !== 'false' && 
+                             !action.action_config?.agent_id);
+      const agentIdToRemove = action.action_config?.agent_id;
+
+      console.log(`🔍 [remove_agent] Configuração da ação (após normalização):`, {
+        removeCurrent,
+        agentIdToRemove,
+        action_config: action.action_config
+      });
+
+      if (removeCurrent) {
+        // Remover agente atual (qualquer que esteja ativo)
+        console.log(`🚫 [remove_agent] Removendo agente atual da conversa ${conversationId}`);
+        
+        // Primeiro verificar estado atual
+        const { data: currentConversation, error: fetchError } = await supabaseClient
+          .from('conversations')
+          .select('agente_ativo, agent_active_id')
+          .eq('id', conversationId)
+          .single();
+
+        if (fetchError) {
+          console.error(`❌ [remove_agent] Erro ao buscar estado atual da conversa:`, fetchError);
+          throw fetchError;
+        }
+
+        console.log(`📊 [remove_agent] Estado atual da conversa:`, {
+          agente_ativo: currentConversation?.agente_ativo,
+          agent_active_id: currentConversation?.agent_active_id
+        });
+
+        if (!currentConversation?.agente_ativo) {
+          console.log(`ℹ️ [remove_agent] Conversa ${conversationId} já não tem agente ativo, nada a fazer`);
+          return;
+        }
+
+        const { error: removeError } = await supabaseClient
+          .from('conversations')
+          .update({ 
+            agente_ativo: false,
+            agent_active_id: null
+          })
+          .eq('id', conversationId);
+
+        if (removeError) {
+          console.error(`❌ Erro ao remover agente atual da conversa ${conversationId}:`, removeError);
+          throw removeError;
+        }
+
+        // Verificar se a atualização foi aplicada
+        const { data: updatedConversation, error: verifyError } = await supabaseClient
+          .from('conversations')
+          .select('agente_ativo, agent_active_id')
+          .eq('id', conversationId)
+          .single();
+
+        if (verifyError) {
+          console.error(`❌ [remove_agent] Erro ao verificar atualização:`, verifyError);
+        } else {
+          console.log(`✅ [remove_agent] Agente atual removido da conversa ${conversationId}`);
+          console.log(`📊 [remove_agent] Estado após remoção:`, {
+            agente_ativo: updatedConversation?.agente_ativo,
+            agent_active_id: updatedConversation?.agent_active_id
+          });
+          
+          // ✅ VERIFICAÇÃO FINAL: Se ainda está ativo, tentar novamente
+          if (updatedConversation?.agente_ativo) {
+            console.warn(`⚠️ [remove_agent] Agente ainda está ativo após atualização! Tentando novamente...`);
+            const { error: retryError } = await supabaseClient
+              .from('conversations')
+              .update({ 
+                agente_ativo: false,
+                agent_active_id: null
+              })
+              .eq('id', conversationId);
+            
+            if (retryError) {
+              console.error(`❌ [remove_agent] Erro no retry:`, retryError);
+              throw retryError;
+            }
+            
+            // Verificar novamente
+            const { data: finalCheck } = await supabaseClient
+              .from('conversations')
+              .select('agente_ativo, agent_active_id')
+              .eq('id', conversationId)
+              .single();
+            
+            console.log(`📊 [remove_agent] Estado após retry:`, {
+              agente_ativo: finalCheck?.agente_ativo,
+              agent_active_id: finalCheck?.agent_active_id
+            });
+          }
+        }
+      } else if (agentIdToRemove) {
+        // Remover agente específico (só remove se for o agente ativo)
+        console.log(`🚫 [remove_agent] Removendo agente específico ${agentIdToRemove} da conversa ${conversationId}`);
+        
+        const { data: conversation } = await supabaseClient
+          .from('conversations')
+          .select('agent_active_id, agente_ativo')
+          .eq('id', conversationId)
+          .single();
+
+        if (!conversation) {
+          console.error(`❌ [remove_agent] Conversa ${conversationId} não encontrada`);
+          throw new Error(`Conversa não encontrada: ${conversationId}`);
+        }
+
+        console.log(`📊 [remove_agent] Estado da conversa:`, {
+          agent_active_id: conversation.agent_active_id,
+          agente_ativo: conversation.agente_ativo,
+          agentIdToRemove,
+          matches: conversation.agent_active_id === agentIdToRemove && conversation.agente_ativo
+        });
+
+        if (conversation.agent_active_id === agentIdToRemove && conversation.agente_ativo) {
+          const { error: removeError } = await supabaseClient
+            .from('conversations')
+            .update({ 
+              agente_ativo: false,
+              agent_active_id: null
+            })
+            .eq('id', conversationId)
+            .eq('agent_active_id', agentIdToRemove);
+
+          if (removeError) {
+            console.error(`❌ Erro ao remover agente ${agentIdToRemove} da conversa ${conversationId}:`, removeError);
+            throw removeError;
+          }
+
+          console.log(`✅ Agente ${agentIdToRemove} removido da conversa ${conversationId}`);
+        } else {
+          console.log(`ℹ️ Agente ${agentIdToRemove} não está ativo na conversa ${conversationId}, nada a fazer`);
+        }
+      } else {
+        console.warn(`⚠️ Ação remove_agent não tem configuração válida (remove_current ou agent_id)`);
+        console.warn(`⚠️ action_config recebido:`, JSON.stringify(action.action_config, null, 2));
+      }
       break;
     }
     
@@ -307,6 +586,14 @@ async function executeAutomationAction(
       console.warn(`⚠️ Tipo de ação desconhecido: ${action.action_type}`);
   }
 }
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const realtimeClient = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -885,6 +1172,24 @@ serve(async (req) => {
             }
 
             console.log('📋 ========== ATUALIZANDO CARD NO BANCO ==========');
+            
+            // ✅ Buscar conversation_id ANTES da atualização para garantir que temos
+            let conversationIdFromCard: string | null = null;
+            if (body.column_id !== undefined) {
+              const { data: cardBeforeUpdate } = await supabaseClient
+                .from('pipeline_cards')
+                .select('conversation_id')
+                .eq('id', cardId)
+                .single();
+              
+              if (cardBeforeUpdate?.conversation_id) {
+                conversationIdFromCard = cardBeforeUpdate.conversation_id;
+                console.log(`✅ [Pre-Update] conversation_id encontrado: ${conversationIdFromCard}`);
+              } else {
+                console.warn(`⚠️ [Pre-Update] Card não tem conversation_id`);
+              }
+            }
+            
             const { data: card, error } = await supabaseClient
               .from('pipeline_cards')
               .update(updateData)
@@ -902,13 +1207,45 @@ serve(async (req) => {
               throw error;
             }
             
+            // ✅ Garantir que conversation_id está presente (pode não vir no select se for null)
+            if (!card.conversation_id && conversationIdFromCard) {
+              card.conversation_id = conversationIdFromCard;
+              console.log(`✅ [Post-Update] conversation_id restaurado: ${card.conversation_id}`);
+            }
+            
             console.log('✅ Card updated successfully:', {
               id: card.id,
               column_id: card.column_id,
               pipeline_id: card.pipeline_id,
               conversation_id: card.conversation_id,
+              conversation_object: card.conversation ? { id: card.conversation.id } : null,
               contact_id: card.contact_id
             });
+
+            // 📡 Enviar broadcast de movimento para canal do pipeline
+            try {
+              if (realtimeClient && card?.pipeline_id && card?.id && card?.column_id) {
+                const channelName = `pipeline-${card.pipeline_id}`;
+                const channel = realtimeClient.channel(channelName, { config: { broadcast: { self: false } } });
+                const status = await channel.subscribe();
+                if (status === 'SUBSCRIBED') {
+                  const ok = await channel.send({
+                    type: 'broadcast',
+                    event: 'pipeline-card-moved',
+                    payload: { cardId: card.id, newColumnId: card.column_id }
+                  });
+                  console.log('📡 [EF pipeline-management] Broadcast pipeline-card-moved enviado:', ok);
+                } else {
+                  console.warn('⚠️ [EF pipeline-management] Falha ao assinar canal para broadcast:', status);
+                }
+                // Limpar canal para evitar vazamento
+                await realtimeClient.removeChannel(channel);
+              } else {
+                console.warn('⚠️ [EF pipeline-management] Realtime client indisponível ou dados incompletos');
+              }
+            } catch (bfErr) {
+              console.error('❌ [EF pipeline-management] Erro ao enviar broadcast:', bfErr);
+            }
 
           // ✅ EXECUTAR AUTOMAÇÕES quando card entra em nova coluna
           console.log('🔍 ========== VERIFICANDO SE DEVE ACIONAR AUTOMAÇÕES ==========');
@@ -1047,6 +1384,30 @@ serve(async (req) => {
                           order: a.action_order
                         })));
                         
+                        // Verificar dados do card antes de executar ações
+                        console.log(`📦 Dados do card que serão passados para as ações:`, {
+                          id: card.id,
+                          conversation_id: card.conversation_id,
+                          conversation_object: card.conversation ? {
+                            id: card.conversation.id,
+                            contact_id: card.conversation.contact_id
+                          } : null,
+                          contact_id: card.contact_id,
+                          title: card.title,
+                          column_id: card.column_id,
+                          pipeline_id: card.pipeline_id
+                        });
+                        
+                        // ✅ CRÍTICO: Garantir que card tem conversation_id antes de executar remove_agent
+                        const hasRemoveAgentAction = sortedActions.some((a: any) => a.action_type === 'remove_agent');
+                        if (hasRemoveAgentAction && !card.conversation_id && !card.conversation?.id) {
+                          console.error(`❌ ERRO CRÍTICO: Card não tem conversation_id mas há ação remove_agent!`);
+                          console.error(`❌ Card completo:`, JSON.stringify(card, null, 2));
+                          console.error(`❌ Ações que requerem conversation_id:`, sortedActions
+                            .filter((a: any) => a.action_type === 'remove_agent')
+                            .map((a: any) => ({ type: a.action_type, config: a.action_config })));
+                        }
+                        
                         // Executar ações em background (não bloqueante)
                         // Usar Promise.allSettled para garantir que todos executem mesmo se alguns falharem
                         const actionPromises = sortedActions.map(async (action: any) => {
@@ -1055,6 +1416,22 @@ serve(async (req) => {
                             console.log(`🎬 Tipo: ${action.action_type}`);
                             console.log(`🎬 Ordem: ${action.action_order || 0}`);
                             console.log(`🎬 Config:`, JSON.stringify(action.action_config, null, 2));
+                            console.log(`🎬 Card ID: ${card.id}, Conversation ID: ${card.conversation_id || card.conversation?.id || 'NÃO ENCONTRADO'}`);
+                            
+                            // ✅ CRÍTICO: Para remove_agent, garantir que temos conversation_id
+                            if (action.action_type === 'remove_agent') {
+                              const finalConversationId = card.conversation_id || card.conversation?.id;
+                              if (!finalConversationId) {
+                                console.error(`❌ ERRO: Ação remove_agent requer conversation_id mas card não tem!`);
+                                console.error(`❌ Card:`, JSON.stringify({
+                                  id: card.id,
+                                  conversation_id: card.conversation_id,
+                                  conversation: card.conversation
+                                }, null, 2));
+                                throw new Error(`Card ${card.id} não tem conversation_id. Ação remove_agent não pode ser executada.`);
+                              }
+                              console.log(`✅ [remove_agent] conversation_id confirmado: ${finalConversationId}`);
+                            }
                             
                             await executeAutomationAction(action, card, supabaseClient);
                             

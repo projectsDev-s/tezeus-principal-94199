@@ -235,7 +235,13 @@ export function AutomationModal({
         setActions(automation.actions?.map(a => ({
           id: a.id,
           action_type: a.action_type as any,
-          action_config: a.action_config || {},
+          action_config: {
+            ...a.action_config || {},
+            // ✅ Garantir que remove_current seja booleano se for remove_agent
+            ...(a.action_type === 'remove_agent' && !a.action_config?.remove_current && !a.action_config?.agent_id 
+              ? { remove_current: true } 
+              : {})
+          },
           action_order: a.action_order || 0
         })) || []);
         
@@ -333,12 +339,18 @@ export function AutomationModal({
   const updateActionConfig = async (id: string, configKey: string, value: any) => {
     setActions(actions.map(a => {
       if (a.id === id) {
+        const updatedConfig = { ...a.action_config };
+        
+        // Se o valor for null, remover o campo ao invés de definir como null
+        if (value === null || value === undefined) {
+          delete updatedConfig[configKey];
+        } else {
+          updatedConfig[configKey] = value;
+        }
+        
         const updated = {
           ...a,
-          action_config: {
-            ...a.action_config,
-            [configKey]: value
-          }
+          action_config: updatedConfig
         };
         
         // ✅ Carregar conexões quando selecionar "conexão específica"
@@ -419,6 +431,12 @@ export function AutomationModal({
           action_config: a.action_config || {}
         }));
 
+        // ✅ Log para debug da ação remove_agent
+        const removeAgentActions = actionsJson.filter(a => a.action_type === 'remove_agent');
+        if (removeAgentActions.length > 0) {
+          console.log('🔍 [AutomationModal] Salvando ações remove_agent (UPDATE):', JSON.stringify(removeAgentActions, null, 2));
+        }
+
         const { error: updateError } = await supabase.rpc('update_column_automation', {
           p_automation_id: automation.id,
           p_name: name.trim(),
@@ -443,6 +461,12 @@ export function AutomationModal({
           action_type: a.action_type,
           action_config: a.action_config || {}
         }));
+
+        // ✅ Log para debug da ação remove_agent
+        const removeAgentActions = actionsJson.filter(a => a.action_type === 'remove_agent');
+        if (removeAgentActions.length > 0) {
+          console.log('🔍 [AutomationModal] Salvando ações remove_agent:', JSON.stringify(removeAgentActions, null, 2));
+        }
 
         const { data: automationId, error: createError } = await supabase.rpc('create_column_automation', {
           p_column_id: columnId,
@@ -747,12 +771,14 @@ export function AutomationModal({
           <div className="space-y-2">
             <Label>Remover agente</Label>
             <Select
-              value={action.action_config?.agent_id || 'current'}
+              value={action.action_config?.remove_current === true ? 'current' : (action.action_config?.agent_id || 'current')}
               onValueChange={(value) => {
                 if (value === 'current') {
+                  // Remover agente atual - não precisa de agent_id específico
                   updateActionConfig(action.id, 'remove_current', true);
                   updateActionConfig(action.id, 'agent_id', null);
                 } else {
+                  // Remover agente específico
                   updateActionConfig(action.id, 'remove_current', false);
                   updateActionConfig(action.id, 'agent_id', value);
                 }
@@ -764,7 +790,7 @@ export function AutomationModal({
               }}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="current">Remover agente atual</SelectItem>
@@ -785,6 +811,16 @@ export function AutomationModal({
                 )}
               </SelectContent>
             </Select>
+            {action.action_config?.remove_current === true && (
+              <p className="text-xs text-muted-foreground">
+                Removerá qualquer agente que esteja ativo na conversa
+              </p>
+            )}
+            {action.action_config?.remove_current === false && action.action_config?.agent_id && (
+              <p className="text-xs text-muted-foreground">
+                Removerá apenas o agente específico selecionado, se estiver ativo
+              </p>
+            )}
           </div>
         );
 

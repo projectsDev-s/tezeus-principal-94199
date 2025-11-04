@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { PipelineCard, PipelineColumn } from '@/contexts/PipelinesContext';
@@ -22,17 +22,70 @@ export function usePipelineRealtime({
   onColumnUpdate,
   onColumnDelete,
 }: UsePipelineRealtimeProps) {
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+
   useEffect(() => {
-    if (!pipelineId) return;
+    if (!pipelineId) {
+      console.log('⏭️ [Realtime] Pipeline ID não fornecido, pulando conexão');
+      return;
+    }
 
     console.log('🔌 [Realtime] Conectando ao pipeline:', pipelineId);
 
+    // Limpar conexão anterior se existir
+    if (channelRef.current) {
+      console.log('🧹 [Realtime] Removendo canal anterior...');
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // Limpar timeout de reconexão se existir
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
     // Canal único e estável para este pipeline
     const channelName = `pipeline-${pipelineId}`;
+    
+    console.log('📡 [Realtime] Criando canal:', channelName);
+    console.log('🔐 [Realtime] Verificando autenticação...');
+    
+    // Verificar se há sessão ativa
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔐 [Realtime] Sessão:', session ? 'Ativa' : 'Inativa');
+      if (session) {
+        console.log('🔐 [Realtime] User ID:', session.user?.id);
+        console.log('🔐 [Realtime] JWT metadata:', session.user?.user_metadata);
+      }
+    });
 
-    // Canal único para este pipeline
+    // Criar canal com configurações otimizadas
     const channel: RealtimeChannel = supabase
-      .channel(channelName)
+      .channel(channelName, {
+        config: {
+          broadcast: { self: false }, // Não receber próprios eventos
+          presence: { key: '' },
+        },
+      })
+      // Broadcasts personalizados para contornar casos onde eventos do DB não chegam por RLS
+      .on('broadcast', { event: 'pipeline-card-moved' }, (payload: any) => {
+        try {
+          const { cardId, newColumnId } = payload?.payload || {};
+          console.log('📡 [Realtime][Broadcast] pipeline-card-moved:', { cardId, newColumnId });
+          if (!cardId || !newColumnId) return;
+
+          if (onCardUpdate) {
+            // Enviar um objeto mínimo; o handler no contexto mescla com dados existentes
+            const minimalUpdate: any = { id: cardId, column_id: newColumnId };
+            onCardUpdate(minimalUpdate as PipelineCard);
+          }
+        } catch (err) {
+          console.error('❌ [Realtime][Broadcast] Erro ao processar pipeline-card-moved:', err);
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -67,7 +120,8 @@ export function usePipelineRealtime({
             columnChanged,
             oldColumnId: oldCard?.column_id || 'N/A',
             newColumnId: cardUpdate.column_id,
-            hasOldData: !!oldCard
+            hasOldData: !!oldCard,
+            payloadKeys: Object.keys(payload)
           });
           
           if (columnChanged) {
@@ -82,8 +136,12 @@ export function usePipelineRealtime({
           
           if (onCardUpdate) {
             console.log('🔄 [Realtime] Chamando onCardUpdate...');
-            onCardUpdate(cardUpdate);
-            console.log('✅ [Realtime] onCardUpdate executado');
+            try {
+              onCardUpdate(cardUpdate);
+              console.log('✅ [Realtime] onCardUpdate executado com sucesso');
+            } catch (error) {
+              console.error('❌ [Realtime] Erro ao executar onCardUpdate:', error);
+            }
           } else {
             console.warn('⚠️ [Realtime] onCardUpdate é undefined!');
           }
@@ -141,18 +199,80 @@ export function usePipelineRealtime({
           onColumnDelete?.(payload.old.id);
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
+        console.log(`📡 [Realtime] Status do canal ${channelName}:`, status);
+        console.log(`📡 [Realtime] Erro (se houver):`, err);
+        
         if (status === 'SUBSCRIBED') {
-          console.log('✅ [Realtime] Canal subscrito:', channelName);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn(`⚠️ [Realtime] Status: ${status} - Canal: ${channelName}`);
+          console.log('✅ [Realtime] Canal subscrito com sucesso:', channelName);
+          console.log('✅ [Realtime] PRONTO PARA RECEBER EVENTOS!');
+          reconnectAttemptsRef.current = 0; // Reset contador de tentativas
+          channelRef.current = channel;
+          
+          // Teste: Verificar se podemos ver eventos
+          console.log('🔍 [Realtime] Testando conexão...');
+          setTimeout(() => {
+            console.log('🔍 [Realtime] Conexão ativa há 5 segundos. Se não vir eventos, verifique:');
+            console.log('   1. Se a migração foi aplicada (20250115000000_fix_pipeline_realtime_rls.sql)');
+            console.log('   2. Se as tabelas estão na publicação realtime');
+            console.log('   3. Se o usuário tem permissão SELECT nas linhas');
+          }, 5000);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ [Realtime] Erro no canal:', err);
+          console.error('❌ [Realtime] Detalhes do erro:', JSON.stringify(err, null, 2));
+          
+          // Tentar reconectar após 3 segundos
+          reconnectAttemptsRef.current += 1;
+          const delay = Math.min(3000 * reconnectAttemptsRef.current, 30000); // Max 30s
+          
+          console.log(`🔄 [Realtime] Tentando reconectar em ${delay}ms (tentativa ${reconnectAttemptsRef.current})...`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log('🔄 [Realtime] Reconectando...');
+            // Forçar recriação do efeito removendo o canal
+            if (channelRef.current) {
+              supabase.removeChannel(channelRef.current);
+              channelRef.current = null;
+            }
+            // O useEffect será executado novamente
+          }, delay);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏰ [Realtime] Timeout no canal:', channelName);
+          
+          // Tentar reconectar
+          reconnectAttemptsRef.current += 1;
+          const delay = Math.min(3000 * reconnectAttemptsRef.current, 30000);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (channelRef.current) {
+              supabase.removeChannel(channelRef.current);
+              channelRef.current = null;
+            }
+          }, delay);
+        } else if (status === 'CLOSED') {
+          console.warn('🔌 [Realtime] Canal fechado:', channelName);
+        } else {
+          console.log(`ℹ️ [Realtime] Status desconhecido: ${status}`);
         }
       });
 
+    // Armazenar referência do canal
+    channelRef.current = channel;
+
     // Cleanup: desconectar ao desmontar
     return () => {
-      console.log('🔌 [Realtime] Desconectando do pipeline:', pipelineId);
-      supabase.removeChannel(channel);
+      console.log('🧹 [Realtime] Limpando conexão do pipeline:', pipelineId);
+      
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      if (channelRef.current) {
+        console.log('🔌 [Realtime] Removendo canal...');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [
     pipelineId,

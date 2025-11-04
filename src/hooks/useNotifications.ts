@@ -144,6 +144,11 @@ export function useNotifications() {
     if (!user?.id) return;
 
     try {
+      // Atualização otimista imediata para refletir no sino e nos cards
+      setNotifications(prev => prev.filter(n => n.conversationId !== conversationId));
+      // Disparar evento global opcional (para outros componentes ouvirem, se necessário)
+      try { window.dispatchEvent(new CustomEvent('conversation-read', { detail: { conversationId } })); } catch {}
+
       const { error } = await supabase
         .from('notifications')
         .update({ 
@@ -157,7 +162,8 @@ export function useNotifications() {
       if (error) throw error;
       
       console.log('✅ [useNotifications] Notificações marcadas como lidas:', conversationId);
-      await fetchNotifications();
+      // Refetch para sincronizar com o backend (em background)
+      fetchNotifications();
     } catch (err) {
       console.error('❌ [useNotifications] Erro ao marcar como lida:', err);
     }

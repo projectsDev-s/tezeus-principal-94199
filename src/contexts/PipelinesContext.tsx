@@ -449,6 +449,25 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         card.id === cardId ? { ...card, ...data } : card
       ));
 
+      // Se a atualização mudou a coluna, emitir broadcast como fallback
+      if (updates.column_id && selectedPipeline?.id) {
+        try {
+          const channelName = `pipeline-${selectedPipeline.id}`;
+          const existing = (supabase.getChannels?.() || []).find((c: any) => c?.topic === channelName);
+          if (existing) {
+            console.log('📡 [Broadcast] updateCard: enviando pipeline-card-moved via canal existente');
+            const ok = await existing.send({
+              type: 'broadcast',
+              event: 'pipeline-card-moved',
+              payload: { cardId, newColumnId: updates.column_id }
+            });
+            console.log('📡 [Broadcast] updateCard enviado:', ok);
+          }
+        } catch (err) {
+          console.warn('⚠️ [Broadcast] updateCard: falha ao enviar broadcast', err);
+        }
+      }
+
       return data;
     } catch (error) {
       console.error('Error updating card:', error);
@@ -505,6 +524,42 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ [Optimistic] Backend confirmou mudança');
       console.log('⏳ [Optimistic] Aguardando evento realtime...');
+
+      // Enviar broadcast manual para garantir atualização cross-aba mesmo se o evento do DB não chegar
+      try {
+        if (selectedPipeline?.id) {
+          const channelName = `pipeline-${selectedPipeline.id}`;
+          // Tentar reutilizar canal existente (criado pelo hook usePipelineRealtime)
+          const existing = (supabase.getChannels?.() || []).find((c: any) => c?.topic === channelName);
+          if (existing) {
+            console.log('📡 [Broadcast] Usando canal existente para enviar pipeline-card-moved');
+            const ok = await existing.send({
+              type: 'broadcast',
+              event: 'pipeline-card-moved',
+              payload: { cardId, newColumnId }
+            });
+            console.log('📡 [Broadcast] Enviado via canal existente:', ok);
+          } else {
+            console.log('📡 [Broadcast] Canal inexistente, criando e assinando para enviar...');
+            const tempChannel = supabase.channel(channelName, { config: { broadcast: { self: false } } });
+            const status = await tempChannel.subscribe();
+            if (status === 'SUBSCRIBED') {
+              const ok = await tempChannel.send({
+                type: 'broadcast',
+                event: 'pipeline-card-moved',
+                payload: { cardId, newColumnId }
+              });
+              console.log('📡 [Broadcast] Enviado via canal temporário:', ok);
+            } else {
+              console.warn('⚠️ [Broadcast] Não foi possível assinar canal temporário para enviar broadcast:', status);
+            }
+            // Remover canal temporário após tentativa
+            supabase.removeChannel(tempChannel);
+          }
+        }
+      } catch (broadcastErr) {
+        console.error('❌ [Broadcast] Falha ao enviar broadcast de movimento de card:', broadcastErr);
+      }
 
       // O evento realtime vai atualizar o estado com o timestamp correto do banco
       // Não fazemos nada aqui para evitar duplicação
@@ -660,10 +715,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
   const handleCardUpdate = useCallback(async (updatedCard: PipelineCard) => {
     console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
+    console.log('📊 [Realtime] Estado atual dos cards ANTES da atualização:', cards.length, 'cards');
     
     // Se o card atualizado não tem relacionamentos e o card local tinha, preservar
     setCards(prev => {
+      console.log('🔄 [Realtime] setCards callback executado');
+      console.log('📊 [Realtime] Cards no estado anterior:', prev.length);
+      
       const index = prev.findIndex(c => c.id === updatedCard.id);
+      console.log('🔍 [Realtime] Índice do card:', index === -1 ? 'NÃO ENCONTRADO' : index);
       
       if (index === -1) {
         console.log('ℹ️ [Realtime] Card não encontrado localmente, buscando dados completos...');
@@ -681,6 +741,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
               );
 
               if (!error && fullCard) {
+                console.log('✅ [Realtime] Card completo recebido:', fullCard);
                 setCards(p => {
                   const exists = p.some(c => c.id === fullCard.id);
                   if (exists) {
@@ -694,12 +755,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
                     };
                     const newCards = [...p];
                     newCards[existingIndex] = mergedCard;
+                    console.log('✅ [Realtime] Card atualizado após busca completa');
                     return newCards;
                   }
+                  console.log('✅ [Realtime] Card adicionado após busca completa');
                   return [fullCard, ...p];
                 });
               } else {
                 // Fallback: adicionar card mesmo sem relacionamentos
+                console.log('⚠️ [Realtime] Adicionando card sem relacionamentos (fallback)');
                 setCards(p => [updatedCard, ...p]);
               }
             } catch (err) {
@@ -714,17 +778,24 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       
       // ✅ PRESERVAR relacionamentos existentes se o update não trouxer
       const existingCard = prev[index];
+      console.log('📋 [Realtime] Card existente encontrado:', {
+        id: existingCard.id,
+        column_id: existingCard.column_id,
+        title: existingCard.title
+      });
       
       // ✅ DETECTAR MUDANÇA DE COLUNA para logs claros
       const columnChanged = existingCard.column_id !== updatedCard.column_id;
       if (columnChanged) {
-        console.log('🔄 [Realtime] ⚠️ MUDANÇA DE COLUNA DETECTADA:', {
+        console.log('🔄 [Realtime] ⚠️⚠️⚠️ MUDANÇA DE COLUNA DETECTADA ⚠️⚠️⚠️:', {
           cardId: updatedCard.id,
           cardTitle: updatedCard.title || existingCard.title,
           fromColumn: existingCard.column_id,
           toColumn: updatedCard.column_id,
           timestamp: new Date().toISOString()
         });
+      } else {
+        console.log('ℹ️ [Realtime] Sem mudança de coluna (mesma coluna)');
       }
       
       const mergedCard = {
@@ -739,15 +810,22 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 [Realtime] Aplicando atualização do servidor', {
         cardId: mergedCard.id,
         columnChanged,
-        newColumnId: mergedCard.column_id
+        newColumnId: mergedCard.column_id,
+        oldColumnId: existingCard.column_id
       });
       
       const newCards = [...prev];
       newCards[index] = mergedCard;
       
+      console.log('✅ [Realtime] Novo estado criado:', {
+        totalCards: newCards.length,
+        cardAtualizado: newCards[index].column_id,
+        cardAnterior: existingCard.column_id
+      });
+      
       return newCards;
     });
-  }, [selectedPipeline?.id, getHeaders]);
+  }, [selectedPipeline?.id, getHeaders, cards.length]);
 
   const handleCardDelete = useCallback((cardId: string) => {
     console.log('🗑️ [Realtime Handler] Card deletado:', cardId);
@@ -849,6 +927,18 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [getHeaders, selectedPipeline, fetchColumns, fetchCards, toast]);
+
+  // ✅ DEBUG: Monitorar mudanças nos cards para verificar se realtime está funcionando
+  useEffect(() => {
+    console.log('📊 [Cards State] Cards atualizados:', cards.length, 'total');
+    if (selectedPipeline?.id) {
+      const cardsByColumn = columns.reduce((acc, col) => {
+        acc[col.id] = cards.filter(c => c.column_id === col.id).length;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('📊 [Cards State] Distribuição por coluna:', cardsByColumn);
+    }
+  }, [cards, columns, selectedPipeline?.id]);
 
   // Buscar pipelines quando o workspace mudar
   useEffect(() => {
