@@ -35,36 +35,12 @@ async function getEvolutionConfig(workspaceId: string, supabase: any) {
       urlFromDb: configData?.evolution_url,
     });
 
-    // If no config found, try to create one with default values
+    // If no config found, return error - user must configure Evolution API first
     if (!configData) {
-      console.log("🔧 No config found, creating default configuration...");
-
-      // Get default values from environment or another workspace
-      const defaultUrl = Deno.env.get("EVOLUTION_URL") || "https://evolution-evolution.upvzfg.easypanel.host";
-      const defaultApiKey = Deno.env.get("EVOLUTION_API_KEY");
-
-      if (!defaultApiKey) {
-        console.error("❌ No default Evolution API key available");
-        throw new Error(
-          "Evolution API não está configurado para este workspace. Configure URL e API key nas configurações da Evolution.",
-        );
-      }
-
-      // Create default configuration
-      const { error: insertError } = await supabase.from("evolution_instance_tokens").insert({
-        workspace_id: workspaceId,
-        instance_name: "_master_config",
-        evolution_url: defaultUrl,
-        token: defaultApiKey,
-      });
-
-      if (insertError) {
-        console.error("❌ Failed to create default config:", insertError);
-        throw new Error("Falha ao criar configuração padrão da Evolution API.");
-      }
-
-      console.log("✅ Created default configuration for workspace");
-      return { url: defaultUrl, apiKey: defaultApiKey };
+      console.error("❌ No Evolution API configuration found for workspace");
+      throw new Error(
+        "⚠️ Evolution API não está configurada para este workspace. Por favor, configure a URL e API Key da Evolution nas Configurações Master antes de criar uma instância.",
+      );
     }
 
     let url = null;
