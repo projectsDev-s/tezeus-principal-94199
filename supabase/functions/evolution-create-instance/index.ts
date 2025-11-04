@@ -368,8 +368,8 @@ serve(async (req) => {
       qrcode: true,
       webhook: {
         url: webhookUrl,
-        webhook_by_events: false,
-        webhook_base64: false,
+        byEvents: false,  // ✅ camelCase conforme documentação
+        base64: false,     // ✅ camelCase conforme documentação
         events: [
           "MESSAGES_UPDATE",
           "MESSAGES_UPSERT",
