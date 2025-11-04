@@ -362,33 +362,25 @@ serve(async (req) => {
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
 
-    // Simplified payload - only essential fields
+    // Payload seguindo formato que funciona no Postman
     const evolutionPayload: any = {
       instanceName: instanceName,
       qrcode: true,
-      webhook: {
-        url: webhookUrl,
-        byEvents: false,  // ✅ camelCase conforme documentação
-        base64: false,     // ✅ camelCase conforme documentação
-        events: [
-          "MESSAGES_UPDATE",
-          "MESSAGES_UPSERT",
-          "QRCODE_UPDATED",
-        ]
-      }
+      integration: "WHATSAPP-BAILEYS",
+      webhookUrl: webhookUrl,
+      webhookByEvents: false,
+      webhookBase64: false,
+      webhookEvents: [
+        "QRCODE_UPDATED",
+        "MESSAGES_UPSERT",
+        "MESSAGES_UPDATE",
+      ]
     };
 
     // Only add number if provided
     if (phoneNumber) {
       evolutionPayload.number = phoneNumber;
     }
-
-    // Add webhook headers separately
-    if (!evolutionPayload.webhook.headers) {
-      evolutionPayload.webhook.headers = {};
-    }
-    evolutionPayload.webhook.headers['apikey'] = token;
-    evolutionPayload.webhook.headers['Content-Type'] = 'application/json';
     
     console.log('📤 Payload being sent to Evolution API:', JSON.stringify(evolutionPayload, null, 2));
 
