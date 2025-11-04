@@ -405,7 +405,7 @@ export type Database = {
         Insert: {
           connection_id: string
           created_at?: string | null
-          evolution_url?: string
+          evolution_url: string
           id?: string
           token: string
           updated_at?: string | null
