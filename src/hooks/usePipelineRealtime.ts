@@ -55,12 +55,34 @@ export function usePipelineRealtime({
           filter: `pipeline_id=eq.${pipelineId}`,
         },
         (payload) => {
-          console.log('🔄 [Realtime] Card atualizado (RAW):', payload);
-          console.log('🔄 [Realtime] payload.new:', payload.new);
-          console.log('🔄 [Realtime] Chamando onCardUpdate...');
+          const cardUpdate = payload.new as PipelineCard;
+          const oldCard = payload.old as Partial<PipelineCard> | null;
+          
+          // Detectar mudança de coluna especificamente (payload.old pode não estar sempre disponível)
+          const columnChanged = oldCard?.column_id && oldCard.column_id !== cardUpdate.column_id;
+          
+          console.log('🔄 [Realtime] Card atualizado (RAW):', {
+            cardId: cardUpdate.id,
+            cardTitle: cardUpdate.title,
+            columnChanged,
+            oldColumnId: oldCard?.column_id || 'N/A',
+            newColumnId: cardUpdate.column_id,
+            hasOldData: !!oldCard
+          });
+          
+          if (columnChanged) {
+            console.log('🎯 [Realtime] ⚠️ MUDANÇA DE COLUNA DETECTADA NO EVENTO:', {
+              cardId: cardUpdate.id,
+              cardTitle: cardUpdate.title,
+              from: oldCard.column_id,
+              to: cardUpdate.column_id,
+              timestamp: new Date().toISOString()
+            });
+          }
           
           if (onCardUpdate) {
-            onCardUpdate(payload.new as PipelineCard);
+            console.log('🔄 [Realtime] Chamando onCardUpdate...');
+            onCardUpdate(cardUpdate);
             console.log('✅ [Realtime] onCardUpdate executado');
           } else {
             console.warn('⚠️ [Realtime] onCardUpdate é undefined!');

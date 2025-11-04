@@ -683,7 +683,19 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
               if (!error && fullCard) {
                 setCards(p => {
                   const exists = p.some(c => c.id === fullCard.id);
-                  if (exists) return p;
+                  if (exists) {
+                    // Atualizar card existente preservando relacionamentos
+                    const existingIndex = p.findIndex(c => c.id === fullCard.id);
+                    const existingCard = p[existingIndex];
+                    const mergedCard = {
+                      ...fullCard,
+                      contact: fullCard.contact || existingCard.contact,
+                      conversation: fullCard.conversation || existingCard.conversation,
+                    };
+                    const newCards = [...p];
+                    newCards[existingIndex] = mergedCard;
+                    return newCards;
+                  }
                   return [fullCard, ...p];
                 });
               } else {
@@ -702,6 +714,19 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       
       // ✅ PRESERVAR relacionamentos existentes se o update não trouxer
       const existingCard = prev[index];
+      
+      // ✅ DETECTAR MUDANÇA DE COLUNA para logs claros
+      const columnChanged = existingCard.column_id !== updatedCard.column_id;
+      if (columnChanged) {
+        console.log('🔄 [Realtime] ⚠️ MUDANÇA DE COLUNA DETECTADA:', {
+          cardId: updatedCard.id,
+          cardTitle: updatedCard.title || existingCard.title,
+          fromColumn: existingCard.column_id,
+          toColumn: updatedCard.column_id,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       const mergedCard = {
         ...updatedCard,
         // Preservar contact se não vier no update
@@ -711,7 +736,11 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       };
       
       // ✅ SEMPRE APLICAR ATUALIZAÇÃO REALTIME (fonte autoritativa do servidor)
-      console.log('🔄 [Realtime] Aplicando atualização do servidor');
+      console.log('🔄 [Realtime] Aplicando atualização do servidor', {
+        cardId: mergedCard.id,
+        columnChanged,
+        newColumnId: mergedCard.column_id
+      });
       
       const newCards = [...prev];
       newCards[index] = mergedCard;
