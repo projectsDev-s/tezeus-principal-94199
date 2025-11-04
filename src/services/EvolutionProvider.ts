@@ -160,6 +160,16 @@ class EvolutionProvider {
           console.error(`❌ Error from evolution-create-instance function (attempt ${attempt}):`, error);
           console.error('❌ Error details:', JSON.stringify(error, null, 2));
           
+          // Try to extract detailed error from data even when there's an error
+          let detailedError = error.message || 'Erro ao criar instância';
+          
+          if (data && typeof data === 'object') {
+            console.log('📦 Error response data:', data);
+            if (data.error) {
+              detailedError = data.error;
+            }
+          }
+          
           // Se for erro CORS/rede e ainda temos tentativas, retry
           if (attempt < retryCount && (
             error.message?.includes('Failed to fetch') || 
@@ -179,7 +189,7 @@ class EvolutionProvider {
             throw new Error('Erro de conexão com o servidor. Verificando disponibilidade...');
           }
           
-          throw new Error(error.message || 'Erro ao criar instância');
+          throw new Error(detailedError);
         }
 
         if (!data?.success) {
