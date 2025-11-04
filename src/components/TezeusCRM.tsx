@@ -5,6 +5,7 @@ import { useSessionManager } from "@/hooks/useSessionManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceStatusCheck } from "@/hooks/useWorkspaceStatusCheck";
+import { PipelinesProvider } from "@/contexts/PipelinesContext";
 
 import { Dashboard } from "./Dashboard";
 import { Conversas } from "./modules/Conversas";
@@ -206,36 +207,38 @@ export function TezeusCRM() {
   };
 
   return (
-    <div className="min-h-screen flex w-full gap-2 bg-gradient-to-br from-background via-background to-muted">
-      <Sidebar 
-        activeModule={activeModule}
-        onModuleChange={(module) => {
-          if (module === 'editar-agente') {
-            // Handle editar-agente navigation differently since it needs agentId
-            return;
-          }
-          navigate(getRoutePath(`/${module === 'dashboard' ? 'dashboard' : module}`));
-        }}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        isCollapsed={isCollapsed}
-        onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
-        onNavigateToConversation={(conversationId) => {
-          console.log('🚀 TezeusCRM: Navegando para conversa:', conversationId);
-          setSelectedConversationId(conversationId);
-          
-          // ✅ Usar rota correta baseada no role
-          navigate(getRoutePath('/conversas'), { 
-            state: { selectedConversationId: conversationId },
-            replace: true 
-          });
-        }}
-      />
-      <div className={`flex-1 flex flex-col max-h-screen ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'p-4' : ''}`}>
-        <main className={`flex-1 overflow-y-auto ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'bg-card text-card-foreground shadow-lg rounded-lg border p-5' : ''}`}>
-          {renderModule()}
-        </main>
+    <PipelinesProvider>
+      <div className="min-h-screen flex w-full gap-2 bg-gradient-to-br from-background via-background to-muted">
+        <Sidebar 
+          activeModule={activeModule}
+          onModuleChange={(module) => {
+            if (module === 'editar-agente') {
+              // Handle editar-agente navigation differently since it needs agentId
+              return;
+            }
+            navigate(getRoutePath(`/${module === 'dashboard' ? 'dashboard' : module}`));
+          }}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+          onNavigateToConversation={(conversationId) => {
+            console.log('🚀 TezeusCRM: Navegando para conversa:', conversationId);
+            setSelectedConversationId(conversationId);
+            
+            // ✅ Usar rota correta baseada no role
+            navigate(getRoutePath('/conversas'), { 
+              state: { selectedConversationId: conversationId },
+              replace: true 
+            });
+          }}
+        />
+        <div className={`flex-1 flex flex-col max-h-screen ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'p-4' : ''}`}>
+          <main className={`flex-1 overflow-y-auto ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'bg-card text-card-foreground shadow-lg rounded-lg border p-5' : ''}`}>
+            {renderModule()}
+          </main>
+        </div>
       </div>
-    </div>
+    </PipelinesProvider>
   );
 }
