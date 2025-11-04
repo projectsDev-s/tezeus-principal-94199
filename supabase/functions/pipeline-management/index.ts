@@ -181,6 +181,28 @@ async function executeAutomationAction(
         .single();
 
       console.log(`✅ [add_agent] Estado após ativação:`, convAfter);
+
+      // 📡 Enviar broadcast manual para atualização instantânea no frontend
+      if (realtimeClient && card.pipeline_id) {
+        try {
+          const channelName = `pipeline-${card.pipeline_id}`;
+          const channel = realtimeClient.channel(channelName);
+          await channel.subscribe();
+          await channel.send({
+            type: 'broadcast',
+            event: 'conversation-agent-updated',
+            payload: { 
+              conversationId, 
+              agente_ativo: true, 
+              agent_active_id: agentIdToActivate 
+            }
+          });
+          console.log(`📡 [add_agent] Broadcast enviado para canal ${channelName}`);
+          await realtimeClient.removeChannel(channel);
+        } catch (broadcastErr) {
+          console.error('❌ [add_agent] Erro ao enviar broadcast:', broadcastErr);
+        }
+      }
       break;
     }
     case 'send_message': {
@@ -534,6 +556,28 @@ async function executeAutomationAction(
             });
           }
         }
+
+        // 📡 Enviar broadcast manual para atualização instantânea no frontend
+        if (realtimeClient && card.pipeline_id) {
+          try {
+            const channelName = `pipeline-${card.pipeline_id}`;
+            const channel = realtimeClient.channel(channelName);
+            await channel.subscribe();
+            await channel.send({
+              type: 'broadcast',
+              event: 'conversation-agent-updated',
+              payload: { 
+                conversationId, 
+                agente_ativo: false, 
+                agent_active_id: null 
+              }
+            });
+            console.log(`📡 [remove_agent] Broadcast enviado para canal ${channelName}`);
+            await realtimeClient.removeChannel(channel);
+          } catch (broadcastErr) {
+            console.error('❌ [remove_agent] Erro ao enviar broadcast:', broadcastErr);
+          }
+        }
       } else if (agentIdToRemove) {
         // Remover agente específico (só remove se for o agente ativo)
         console.log(`🚫 [remove_agent] Removendo agente específico ${agentIdToRemove} da conversa ${conversationId}`);
@@ -572,6 +616,28 @@ async function executeAutomationAction(
           }
 
           console.log(`✅ Agente ${agentIdToRemove} removido da conversa ${conversationId}`);
+
+          // 📡 Enviar broadcast manual para atualização instantânea no frontend
+          if (realtimeClient && card.pipeline_id) {
+            try {
+              const channelName = `pipeline-${card.pipeline_id}`;
+              const channel = realtimeClient.channel(channelName);
+              await channel.subscribe();
+              await channel.send({
+                type: 'broadcast',
+                event: 'conversation-agent-updated',
+                payload: { 
+                  conversationId, 
+                  agente_ativo: false, 
+                  agent_active_id: null 
+                }
+              });
+              console.log(`📡 [remove_agent] Broadcast enviado para canal ${channelName}`);
+              await realtimeClient.removeChannel(channel);
+            } catch (broadcastErr) {
+              console.error('❌ [remove_agent] Erro ao enviar broadcast:', broadcastErr);
+            }
+          }
         } else {
           console.log(`ℹ️ Agente ${agentIdToRemove} não está ativo na conversa ${conversationId}, nada a fazer`);
         }

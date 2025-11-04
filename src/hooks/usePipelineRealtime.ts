@@ -88,6 +88,27 @@ export function usePipelineRealtime({
           console.error('❌ [Realtime][Broadcast] Erro ao processar pipeline-card-moved:', err);
         }
       })
+      .on('broadcast', { event: 'conversation-agent-updated' }, (payload: any) => {
+        try {
+          const { conversationId, agente_ativo, agent_active_id } = payload?.payload || {};
+          console.log('📡 [Realtime][Broadcast] conversation-agent-updated:', { 
+            conversationId, 
+            agente_ativo, 
+            agent_active_id 
+          });
+          
+          if (!conversationId) return;
+
+          if (onConversationUpdate) {
+            onConversationUpdate(conversationId, {
+              agente_ativo,
+              agent_active_id,
+            });
+          }
+        } catch (err) {
+          console.error('❌ [Realtime][Broadcast] Erro ao processar conversation-agent-updated:', err);
+        }
+      })
       .on(
         'postgres_changes',
         {
