@@ -465,6 +465,33 @@ serve(async (req) => {
         payload: evolutionPayload,
       });
 
+      // Parse error message for better user feedback
+      let userFriendlyError = `Erro na Evolution API (${evolutionResponse.status})`;
+      
+      if (errorData?.response?.message) {
+        const messages = Array.isArray(errorData.response.message) 
+          ? errorData.response.message 
+          : [errorData.response.message];
+        
+        // Check for specific error types
+        const errorText = messages.join(' ');
+        
+        if (errorText.includes("Can't reach database server")) {
+          userFriendlyError = '⚠️ O servidor Evolution API está com problemas de conexão ao banco de dados. Verifique se o PostgreSQL do Evolution está rodando e acessível.';
+        } else if (errorText.includes('PrismaClientKnownRequestError')) {
+          userFriendlyError = '⚠️ Erro interno no servidor Evolution API (Prisma Database). Verifique os logs do servidor Evolution.';
+        } else if (errorText.includes('ECONNREFUSED')) {
+          userFriendlyError = '⚠️ Não foi possível conectar ao servidor Evolution API. Verifique se o servidor está rodando.';
+        } else if (errorText.includes('ETIMEDOUT')) {
+          userFriendlyError = '⚠️ Timeout ao conectar com o servidor Evolution API. Verifique a conectividade de rede.';
+        } else {
+          // Use first message if available, truncate to reasonable length
+          userFriendlyError = messages[0].substring(0, 300);
+        }
+      } else if (errorData?.message) {
+        userFriendlyError = errorData.message.substring(0, 300);
+      }
+
       // Clean up database records
       await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
       await supabase.from("connections").delete().eq("id", connectionData.id);
@@ -472,8 +499,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Evolution API error (${evolutionResponse.status}): ${errorData.message || JSON.stringify(errorData)}`,
+          error: userFriendlyError,
           details: errorData,
+          technicalInfo: `Status: ${evolutionResponse.status}`
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

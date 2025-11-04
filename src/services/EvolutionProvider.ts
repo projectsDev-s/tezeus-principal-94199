@@ -184,7 +184,9 @@ class EvolutionProvider {
 
         if (!data?.success) {
           console.error('❌ Function returned unsuccessful response:', data);
-          throw new Error(data?.error || 'Falha ao criar instância');
+          // Use the detailed error message from the edge function
+          const errorMessage = data?.error || 'Falha ao criar instância';
+          throw new Error(errorMessage);
         }
 
         console.log('✅ Connection created successfully:', data);
