@@ -13,7 +13,17 @@ const ALLOWED_FORMATS = {
   image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   video: ['video/mp4', 'video/quicktime'], // .mp4 e .mov
   audio: ['audio/mpeg', 'audio/wav', 'audio/webm'],
-  document: ['application/pdf', 'application/octet-stream']
+  document: [
+    'application/pdf',
+    'application/vnd.ms-excel', // .xls
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/msword', // .doc
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+    'application/vnd.ms-powerpoint', // .ppt
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+    'text/plain', // .txt
+    'application/octet-stream' // fallback
+  ]
 };
 
 // Limites de tamanho por tipo (em bytes)
@@ -35,7 +45,14 @@ const FORMAT_NAMES: Record<string, string> = {
   'audio/mpeg': 'MP3',
   'audio/wav': 'WAV',
   'audio/webm': 'WebM (áudio)',
-  'application/pdf': 'PDF'
+  'application/pdf': 'PDF',
+  'application/vnd.ms-excel': 'Excel (.xls)',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel (.xlsx)',
+  'application/msword': 'Word (.doc)',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word (.docx)',
+  'application/vnd.ms-powerpoint': 'PowerPoint (.ppt)',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint (.pptx)',
+  'text/plain': 'Texto (.txt)'
 };
 
 interface MediaUploadProps {
@@ -232,7 +249,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({ onFileSelect, disabled
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,audio/mpeg,audio/wav,audio/webm,.pdf"
+        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,audio/mpeg,audio/wav,audio/webm,.pdf,.xls,.xlsx,.doc,.docx,.ppt,.pptx,.txt"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
