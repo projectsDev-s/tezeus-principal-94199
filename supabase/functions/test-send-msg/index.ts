@@ -33,7 +33,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log(`📨 [${requestId}] Received body:`, JSON.stringify(body, null, 2));
     
-    const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name, clientMessageId, reply_to_message_id, quoted_message } = body;
+    const { conversation_id, content, message_type = 'text', sender_id, sender_type, file_url, file_name, mime_type, clientMessageId, reply_to_message_id, quoted_message } = body;
 
     // Para mensagens de mídia, ignorar placeholders como [IMAGE], [VIDEO], etc
     const isMediaMessage = message_type && message_type !== 'text';
@@ -314,6 +314,7 @@ serve(async (req) => {
         sender_id: sender_id,
         file_url: file_url || null,
         file_name: file_name || null,
+        mime_type: mime_type || null,
         status: 'sending',
         origem_resposta: 'manual',
         external_id: external_id, // ✅ Salvar clientMessageId como external_id
@@ -414,7 +415,7 @@ serve(async (req) => {
         content: effectiveContent,
         file_url: file_url || null,
         file_name: file_name || null,
-        mime_type: body.mime_type || null,
+        mime_type: mime_type || null,
         workspace_id: conversation.workspace_id,
         connection_id: conversation.connection_id,
         conversation_id: conversation_id,

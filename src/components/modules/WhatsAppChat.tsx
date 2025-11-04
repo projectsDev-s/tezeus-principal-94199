@@ -2124,6 +2124,7 @@ export function WhatsAppChat({
                 sender_id: user?.id,
                 file_url: fileUrl,
                 file_name: file.name,
+                mime_type: file.type,
                 created_at: new Date().toISOString(),
                 status: 'sending' as const,
                 workspace_id: selectedWorkspace?.workspace_id || ''
@@ -2145,6 +2146,7 @@ export function WhatsAppChat({
                     sender_type: 'agent',
                     file_url: fileUrl,
                     file_name: file.name,
+                    mime_type: file.type,
                     clientMessageId: clientMessageId
                   },
                   headers: {
