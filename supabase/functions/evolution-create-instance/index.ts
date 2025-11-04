@@ -343,17 +343,25 @@ serve(async (req) => {
       instanceName: instanceName,
       qrcode: true,
       integration: "WHATSAPP-BAILEYS",
-      groupsIgnore: true,
       webhook: {
         url: webhookUrl,
-        byEvents: true,
-        base64: true,
+        webhook_by_events: true,
+        webhook_base64: true,
         events: [
           "QRCODE_UPDATED",
           "MESSAGES_UPSERT",
           "MESSAGES_UPDATE",
           "CONNECTION_UPDATE"
         ]
+      },
+      settings: {
+        reject_call: false,
+        msg_call: "",
+        groups_ignore: true,
+        always_online: false,
+        read_messages: false,
+        read_status: false,
+        sync_full_history: false
       }
     };
 
