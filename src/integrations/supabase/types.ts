@@ -1164,7 +1164,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          evolution_url?: string
+          evolution_url: string
           id?: string
           instance_name: string
           token: string
