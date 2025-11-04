@@ -265,7 +265,9 @@ export function CRMContatos() {
         
         console.log("🔄 [CRMContatos] Fetching contacts for workspace:", selectedWorkspace.workspace_id);
 
-        // Get all contacts from the workspace - QUERY SIMPLES
+      // Get all contacts from the workspace - QUERY SIMPLES
+        console.log("🔍 [CRMContatos] Fazendo query com workspace_id:", selectedWorkspace.workspace_id);
+        
         const { data: contactsData, error: contactsError } = await supabase
           .from("contacts")
           .select("*")
@@ -273,6 +275,13 @@ export function CRMContatos() {
           .order("created_at", {
             ascending: false,
           });
+
+        console.log("📦 [CRMContatos] Resposta da query:", {
+          success: !contactsError,
+          count: contactsData?.length || 0,
+          error: contactsError,
+          sampleData: contactsData?.slice(0, 2)
+        });
 
         if (contactsError) {
           console.error("❌ [CRMContatos] Error:", contactsError);
