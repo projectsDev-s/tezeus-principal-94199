@@ -363,12 +363,10 @@ serve(async (req) => {
 
       console.log('📤 Payload being sent to Z-API:', JSON.stringify(zapiPayload, null, 2));
 
-      // Normalizar URL Z-API
-      const baseUrl = activeProvider.zapi_url!.endsWith("/") 
-        ? activeProvider.zapi_url!.slice(0, -1) 
-        : activeProvider.zapi_url!;
-      const fullUrl = `${baseUrl}/instances`;
-
+      // ✅ CRITICAL FIX: Usar endpoint correto da Z-API para criação de instâncias
+      // Documentação: https://developer.z-api.io/partner/create-instance
+      const fullUrl = 'https://api.z-api.io/instances/integrator/on-demand';
+      
       console.log("🔗 Z-API URL:", fullUrl);
 
       // Chamar Z-API com timeout
@@ -381,7 +379,8 @@ serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Client-Token": activeProvider.zapi_token!,
+            // ✅ CRITICAL FIX: Z-API usa "Authorization: Bearer TOKEN" não "Client-Token"
+            "Authorization": `Bearer ${activeProvider.zapi_token!}`,
           },
           body: JSON.stringify(zapiPayload),
           signal: controller.signal,
