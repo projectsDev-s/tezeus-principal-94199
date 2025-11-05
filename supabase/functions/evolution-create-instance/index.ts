@@ -322,19 +322,43 @@ serve(async (req) => {
 
     // ✅ VERIFICAR SE PROVIDER SUPORTA CRIAÇÃO AUTOMÁTICA
     if (activeProvider.provider === 'zapi') {
-      console.error("❌ Z-API não suporta criação automática de instância");
-      await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
-      await supabase.from("connections").delete().eq("id", connectionData.id);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Z-API não suporta criação automática de instâncias. Por favor, crie a instância manualmente no painel Z-API." 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("📋 Z-API provider selected - creating connection record for manual setup");
+      
+      // Para Z-API, criar registro com status "disconnected" aguardando configuração manual
+      const { error: updateError } = await supabase
+        .from("connections")
+        .update({
+          status: "disconnected",
+          metadata: {
+            provider: "zapi",
+            manual_setup_required: true,
+            setup_instructions: "Configure a instância manualmente no painel Z-API e conecte usando o QR Code ou token"
+          }
+        })
+        .eq("id", connectionData.id);
+
+      if (updateError) {
+        console.error("Error updating connection for Z-API:", updateError);
+      }
+
+      console.log("✅ Z-API connection created successfully - manual setup required");
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          requiresManualSetup: true,
+          message: "Conexão Z-API criada. Configure a instância manualmente no painel Z-API.",
+          connection: {
+            ...connectionData,
+            status: "disconnected",
+            provider: "zapi"
+          }
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log("✅ Using Evolution provider, proceeding with instance creation");
+    console.log("✅ Using Evolution provider, proceeding with automatic instance creation");
 
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
