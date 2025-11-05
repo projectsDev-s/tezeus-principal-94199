@@ -447,6 +447,7 @@ export type Database = {
           last_activity_at: string | null
           metadata: Json | null
           phone_number: string | null
+          provider_id: string | null
           qr_code: string | null
           queue_id: string | null
           status: string
@@ -472,6 +473,7 @@ export type Database = {
           last_activity_at?: string | null
           metadata?: Json | null
           phone_number?: string | null
+          provider_id?: string | null
           qr_code?: string | null
           queue_id?: string | null
           status?: string
@@ -497,6 +499,7 @@ export type Database = {
           last_activity_at?: string | null
           metadata?: Json | null
           phone_number?: string | null
+          provider_id?: string | null
           qr_code?: string | null
           queue_id?: string | null
           status?: string
@@ -517,6 +520,13 @@ export type Database = {
             columns: ["default_pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_providers"
             referencedColumns: ["id"]
           },
           {
@@ -2719,6 +2729,66 @@ export type Database = {
           },
           {
             foreignKeyName: "webhook_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
+      whatsapp_providers: {
+        Row: {
+          created_at: string
+          enable_fallback: boolean
+          evolution_token: string | null
+          evolution_url: string | null
+          id: string
+          is_active: boolean
+          n8n_webhook_url: string | null
+          provider: string
+          updated_at: string
+          workspace_id: string
+          zapi_token: string | null
+          zapi_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          enable_fallback?: boolean
+          evolution_token?: string | null
+          evolution_url?: string | null
+          id?: string
+          is_active?: boolean
+          n8n_webhook_url?: string | null
+          provider: string
+          updated_at?: string
+          workspace_id: string
+          zapi_token?: string | null
+          zapi_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          enable_fallback?: boolean
+          evolution_token?: string | null
+          evolution_url?: string | null
+          id?: string
+          is_active?: boolean
+          n8n_webhook_url?: string | null
+          provider?: string
+          updated_at?: string
+          workspace_id?: string
+          zapi_token?: string | null
+          zapi_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_providers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_providers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces_view"
