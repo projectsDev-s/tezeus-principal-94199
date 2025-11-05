@@ -9,10 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useProviderLogs } from '@/hooks/useProviderLogs';
-import { Loader2, Filter, Trash2, Eye, Download, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Filter, Trash2, Eye, Download, RefreshCw, AlertCircle, CheckCircle2, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface ProviderLogsViewerProps {
   workspaceId: string;
@@ -26,7 +27,7 @@ export function ProviderLogsViewer({ workspaceId }: ProviderLogsViewerProps) {
   const [action, setAction] = useState('');
   const [selectedLog, setSelectedLog] = useState<any>(null);
 
-  const { logs, isLoading, totalCount, fetchLogs, clearLogs } = useProviderLogs({
+  const { logs, isLoading, totalCount, metrics, fetchLogs, clearLogs } = useProviderLogs({
     workspaceId,
     startDate,
     endDate,
@@ -101,6 +102,24 @@ export function ProviderLogsViewer({ workspaceId }: ProviderLogsViewerProps) {
     );
   };
 
+  const providerDistributionData = [
+    { name: 'Evolution', value: metrics.evolutionCount, color: 'hsl(var(--chart-1))' },
+    { name: 'Z-API', value: metrics.zapiCount, color: 'hsl(var(--chart-2))' }
+  ].filter(item => item.value > 0);
+
+  const providerComparisonData = [
+    {
+      name: 'Evolution',
+      sucesso: metrics.evolutionCount > 0 ? metrics.evolutionSuccessRate : 0,
+      erro: metrics.evolutionCount > 0 ? (100 - metrics.evolutionSuccessRate) : 0,
+    },
+    {
+      name: 'Z-API',
+      sucesso: metrics.zapiCount > 0 ? metrics.zapiSuccessRate : 0,
+      erro: metrics.zapiCount > 0 ? (100 - metrics.zapiSuccessRate) : 0,
+    }
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -109,6 +128,121 @@ export function ProviderLogsViewer({ workspaceId }: ProviderLogsViewerProps) {
           Histórico completo de envios e tentativas via provedores
         </p>
       </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Envios</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Últimos 100 registros
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.successRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">
+              {logs.filter(log => log.result === 'success').length} sucessos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taxa de Erro</CardTitle>
+            <AlertCircle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.errorRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">
+              {logs.filter(log => log.result === 'error').length} erros
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Provider Principal</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {metrics.evolutionCount >= metrics.zapiCount ? 'Evolution' : 'Z-API'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {Math.max(metrics.evolutionCount, metrics.zapiCount)} envios
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      {logs.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição por Provider</CardTitle>
+              <CardDescription>
+                Proporção de envios por provedor
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={providerDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {providerDistributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Comparação de Performance</CardTitle>
+              <CardDescription>
+                Taxa de sucesso por provider
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={providerComparisonData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="sucesso" fill="hsl(var(--chart-1))" name="Sucesso %" />
+                  <Bar dataKey="erro" fill="hsl(var(--chart-2))" name="Erro %" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filtros */}
       <Card>

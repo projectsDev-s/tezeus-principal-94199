@@ -109,10 +109,31 @@ export function useProviderLogs({
     }
   };
 
+  // Calculate metrics
+  const metrics = {
+    successRate: logs.length > 0 
+      ? (logs.filter(log => log.result === 'success').length / logs.length) * 100 
+      : 0,
+    errorRate: logs.length > 0 
+      ? (logs.filter(log => log.result === 'error').length / logs.length) * 100 
+      : 0,
+    evolutionCount: logs.filter(log => log.provider === 'evolution').length,
+    zapiCount: logs.filter(log => log.provider === 'zapi').length,
+    evolutionSuccessRate: logs.filter(log => log.provider === 'evolution').length > 0
+      ? (logs.filter(log => log.provider === 'evolution' && log.result === 'success').length / 
+         logs.filter(log => log.provider === 'evolution').length) * 100
+      : 0,
+    zapiSuccessRate: logs.filter(log => log.provider === 'zapi').length > 0
+      ? (logs.filter(log => log.provider === 'zapi' && log.result === 'success').length / 
+         logs.filter(log => log.provider === 'zapi').length) * 100
+      : 0,
+  };
+
   return {
     logs,
     isLoading,
     totalCount,
+    metrics,
     fetchLogs,
     clearLogs
   };
