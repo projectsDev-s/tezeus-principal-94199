@@ -113,7 +113,7 @@ serve(async (req) => {
 
     // Registrar log
     try {
-      await supabase.from('provider_logs').insert({
+      await supabase.from('whatsapp_provider_logs').insert({
         workspace_id: workspaceId,
         provider: providerConfig.provider,
         action: 'test_connection',

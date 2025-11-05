@@ -423,7 +423,7 @@ export async function logProviderAction(
   payload: any
 ) {
   try {
-    await supabase.from('provider_logs').insert({
+    await supabase.from('whatsapp_provider_logs').insert({
       workspace_id: workspaceId,
       provider,
       action,
