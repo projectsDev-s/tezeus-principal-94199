@@ -635,6 +635,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       setIsConnecting(true);
       setSelectedConnection(connection);
       
+      // Verificar qual provider está sendo usado
+      const isZAPI = connection.provider?.provider === 'zapi';
+      console.log('🔌 Conectando instância:', { 
+        instanceName: connection.instance_name, 
+        provider: connection.provider?.provider || 'evolution',
+        isZAPI 
+      });
+      
       // Check if connection already has QR code
       if (connection.qr_code) {
         console.log('Using existing QR code:', connection.qr_code);
@@ -659,7 +667,32 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         return;
       }
       
-      // If no QR code, try to get one from API
+      // Se for Z-API, buscar QR code do Z-API
+      if (isZAPI) {
+        console.log('📱 Buscando QR Code do Z-API');
+        
+        const { data, error } = await supabase.functions.invoke('refresh-zapi-qr', {
+          body: { connectionId: connection.id }
+        });
+
+        if (error) throw error;
+        if (!data?.success) {
+          throw new Error(data?.error || 'Erro ao obter QR Code do Z-API');
+        }
+
+        if (data.qr_code) {
+          setSelectedConnection(prev => prev ? { ...prev, qr_code: data.qr_code, status: 'qr' } : null);
+          setIsQRModalOpen(true);
+          startPolling(connection.id);
+          loadConnections();
+        } else {
+          throw new Error('QR Code não encontrado na resposta do Z-API');
+        }
+        
+        return;
+      }
+      
+      // Evolution API (comportamento original)
       const response = await evolutionProvider.getQRCode(connection.id);
       
       if (response.qr_code) {
@@ -695,6 +728,12 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     
     console.log(`🔄 Starting polling for connection ${connectionId}`);
     
+    // Buscar a conexão para verificar o provider
+    const connection = connections.find(c => c.id === connectionId);
+    const isZAPI = connection?.provider?.provider === 'zapi';
+    
+    console.log(`🔌 Polling para provider: ${isZAPI ? 'Z-API' : 'Evolution'}`);
+    
     // Rastrear último status notificado para evitar loops
     let lastNotifiedStatus: string | null = null;
     let isInitialCheck = true; // Flag para primeira verificação
@@ -702,8 +741,32 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     // Verificação de status
     const checkStatus = async () => {
       try {
-        const connectionStatus = await evolutionProvider.getConnectionStatus(connectionId);
-        console.log(`📊 Status recebido:`, connectionStatus);
+        let connectionStatus;
+        
+        // Se for Z-API, usar endpoint específico
+        if (isZAPI) {
+          const { data, error } = await supabase.functions.invoke('check-zapi-status', {
+            body: { connectionId }
+          });
+          
+          if (error) throw error;
+          if (!data?.success) {
+            throw new Error(data?.error || 'Erro ao verificar status Z-API');
+          }
+          
+          // Adaptar resposta Z-API para formato esperado
+          connectionStatus = {
+            id: connectionId,
+            instance_name: connection?.instance_name || '',
+            status: data.status || 'disconnected',
+            phone_number: data.zapiStatus?.phone || undefined,
+          };
+        } else {
+          // Evolution API (comportamento original)
+          connectionStatus = await evolutionProvider.getConnectionStatus(connectionId);
+        }
+        
+        console.log(`📊 Status recebido (${isZAPI ? 'Z-API' : 'Evolution'}):`, connectionStatus);
         
         // Atualizar selectedConnection com o status atual
         if (selectedConnection) {
