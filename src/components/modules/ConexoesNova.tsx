@@ -821,24 +821,47 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     try {
       setIsDisconnecting(true);
       
-      // Use the new dedicated disconnect function
-      const result = await evolutionProvider.pauseInstance(connection.id);
+      // Detectar provider e usar a edge function correta
+      const isZapi = connection.provider?.provider === 'zapi';
+      
+      if (isZapi) {
+        console.log('🔌 Desconectando instância Z-API:', connection.instance_name);
+        
+        const { data, error } = await supabase.functions.invoke('disconnect-zapi', {
+          body: { connectionId: connection.id }
+        });
 
-      // The function always returns success, but let's verify
-      toast({
-        title: 'Sucesso',
-        description: 'Instância desconectada com sucesso!',
-      });
+        if (error) throw error;
+
+        if (!data.success) {
+          throw new Error(data.error || 'Erro ao desconectar Z-API');
+        }
+
+        toast({
+          title: 'Sucesso',
+          description: data.message || 'Instância Z-API desconectada com sucesso!',
+        });
+      } else {
+        console.log('🔌 Desconectando instância Evolution:', connection.instance_name);
+        
+        // Use the dedicated disconnect function for Evolution
+        await evolutionProvider.pauseInstance(connection.id);
+
+        toast({
+          title: 'Sucesso',
+          description: 'Instância Evolution desconectada com sucesso!',
+        });
+      }
       
       // Reload connections to show updated status
       loadConnections();
 
     } catch (error) {
       console.error('Error disconnecting instance:', error);
-      // Even on error, show success since the function handles it
       toast({
-        title: 'Desconectado',
-        description: 'Instância marcada como desconectada.',
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao desconectar instância',
+        variant: 'destructive',
       });
       loadConnections();
     } finally {
