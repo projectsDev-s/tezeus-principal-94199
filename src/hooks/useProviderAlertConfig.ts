@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -12,79 +12,55 @@ export interface ProviderAlertConfig {
   toast_notifications_enabled: boolean;
   notification_emails: string[];
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
-interface UseProviderAlertConfigParams {
-  workspaceId: string;
-}
-
-export function useProviderAlertConfig({ workspaceId }: UseProviderAlertConfigParams) {
+export function useProviderAlertConfig(workspaceId: string) {
   const [configs, setConfigs] = useState<ProviderAlertConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchConfigs = async () => {
     if (!workspaceId) return;
 
-    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('whatsapp_provider_alert_config')
         .select('*')
         .eq('workspace_id', workspaceId)
-        .order('provider', { ascending: true });
+        .order('provider');
 
-      if (error) {
-        console.error('Error fetching alert configs:', error);
-        toast.error('Erro ao buscar configurações de alerta');
-        return;
-      }
-
-      setConfigs((data as ProviderAlertConfig[]) || []);
+      if (error) throw error;
+      setConfigs((data as any) || []);
     } catch (error) {
-      console.error('Exception fetching configs:', error);
-      toast.error('Erro ao buscar configurações de alerta');
+      console.error('Error fetching alert configs:', error);
+      toast.error('Erro ao carregar configurações de alerta');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchConfigs();
-  }, [workspaceId]);
-
-  const upsertConfig = async (configData: Partial<ProviderAlertConfig> & { provider: 'evolution' | 'zapi' | 'all' }) => {
+  const saveConfig = async (config: Partial<ProviderAlertConfig>) => {
     try {
-      const dataToUpsert: any = {
-        provider: configData.provider,
-        error_threshold_percent: configData.error_threshold_percent,
-        time_window_minutes: configData.time_window_minutes,
-        email_notifications_enabled: configData.email_notifications_enabled,
-        toast_notifications_enabled: configData.toast_notifications_enabled,
-        notification_emails: configData.notification_emails,
-        is_active: configData.is_active,
-        workspace_id: workspaceId,
-      };
+      if (config.id) {
+        const { error } = await supabase
+          .from('whatsapp_provider_alert_config')
+          .update(config)
+          .eq('id', config.id);
 
-      const { error } = await supabase
-        .from('whatsapp_provider_alert_config')
-        .upsert([dataToUpsert], {
-          onConflict: 'workspace_id,provider'
-        });
+        if (error) throw error;
+        toast.success('Configuração atualizada');
+      } else {
+        const { error } = await supabase
+          .from('whatsapp_provider_alert_config')
+          .insert([{ ...config, workspace_id: workspaceId }] as any);
 
-      if (error) {
-        toast.error('Erro ao salvar configuração');
-        return false;
+        if (error) throw error;
+        toast.success('Configuração criada');
       }
 
-      toast.success('Configuração salva com sucesso');
-      fetchConfigs();
-      return true;
+      await fetchConfigs();
     } catch (error) {
-      console.error('Error upserting config:', error);
+      console.error('Error saving config:', error);
       toast.error('Erro ao salvar configuração');
-      return false;
     }
   };
 
@@ -95,26 +71,18 @@ export function useProviderAlertConfig({ workspaceId }: UseProviderAlertConfigPa
         .delete()
         .eq('id', id);
 
-      if (error) {
-        toast.error('Erro ao deletar configuração');
-        return false;
-      }
-
-      toast.success('Configuração deletada com sucesso');
-      fetchConfigs();
-      return true;
+      if (error) throw error;
+      toast.success('Configuração removida');
+      await fetchConfigs();
     } catch (error) {
       console.error('Error deleting config:', error);
-      toast.error('Erro ao deletar configuração');
-      return false;
+      toast.error('Erro ao remover configuração');
     }
   };
 
-  return {
-    configs,
-    isLoading,
-    fetchConfigs,
-    upsertConfig,
-    deleteConfig,
-  };
+  useEffect(() => {
+    fetchConfigs();
+  }, [workspaceId]);
+
+  return { configs, isLoading, saveConfig, deleteConfig, fetchConfigs };
 }
