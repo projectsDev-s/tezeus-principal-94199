@@ -9,74 +9,36 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-// Get Evolution API configuration from workspace settings
-async function getEvolutionConfig(workspaceId: string, supabase: any) {
+// Get active WhatsApp provider for workspace
+async function getActiveProvider(workspaceId: string, supabase: any) {
   try {
-    console.log("🔧 Getting Evolution config for workspace:", workspaceId);
+    console.log("🔧 Getting active provider for workspace:", workspaceId);
 
-    // Try to get workspace-specific configuration first
-    const { data: configData, error: configError } = await supabase
-      .from("evolution_instance_tokens")
-      .select("evolution_url, token")
+    const { data: provider, error } = await supabase
+      .from("whatsapp_providers")
+      .select("*")
       .eq("workspace_id", workspaceId)
-      .eq("instance_name", "_master_config")
-      .maybeSingle();
+      .eq("is_active", true)
+      .single();
 
-    if (configError) {
-      console.log("⚠️ Error querying evolution_instance_tokens:", configError);
+    if (error || !provider) {
+      console.error("❌ No active provider found:", error);
+      throw new Error(
+        "⚠️ Nenhum provedor WhatsApp ativo configurado. Configure um provedor (Evolution ou Z-API) antes de criar uma instância.",
+      );
     }
 
-    console.log("📋 Config data from database:", {
-      found: !!configData,
-      hasUrl: !!configData?.evolution_url,
-      hasToken: !!configData?.token,
-      tokenType: configData?.token === "config_only" ? "config_only" : "actual_token",
-      tokenLength: configData?.token ? configData.token.length : 0,
-      urlFromDb: configData?.evolution_url,
+    console.log("✅ Active provider found:", {
+      provider: provider.provider,
+      hasEvolutionUrl: !!provider.evolution_url,
+      hasEvolutionToken: !!provider.evolution_token,
+      hasZapiUrl: !!provider.zapi_url,
+      hasZapiToken: !!provider.zapi_token,
     });
 
-    // If no config found, return error - user must configure Evolution API first
-    if (!configData) {
-      console.error("❌ No Evolution API configuration found for workspace");
-      throw new Error(
-        "⚠️ Evolution API não está configurada para este workspace. Por favor, configure a URL e API Key da Evolution nas Configurações Master antes de criar uma instância.",
-      );
-    }
-
-    let url = null;
-    let apiKey = null;
-
-    if (configData?.evolution_url) {
-      url = configData.evolution_url;
-      console.log("✅ Using workspace-specific URL:", url);
-    } else {
-      console.error("❌ No workspace Evolution URL found in configuration");
-      throw new Error(
-        "Evolution URL não configurado para este workspace. Configure a URL nas configurações da Evolution.",
-      );
-    }
-
-    if (configData?.token && configData.token !== "config_only") {
-      apiKey = configData.token; // Use workspace-specific API Key
-      console.log("✅ Using workspace-specific API key");
-    } else {
-      console.error("❌ No valid workspace API key found in configuration");
-      throw new Error(
-        "Evolution API key não configurado para este workspace. Configure a chave da API nas configurações da Evolution.",
-      );
-    }
-
-    console.log("🔧 Final config:", {
-      url,
-      hasApiKey: !!apiKey,
-      source: "workspace",
-    });
-
-    console.log("✅ API key and URL validation passed");
-
-    return { url, apiKey };
+    return provider;
   } catch (error) {
-    console.error("❌ Error getting workspace config:", error);
+    console.error("❌ Error getting active provider:", error);
     throw error;
   }
 }
@@ -183,10 +145,9 @@ serve(async (req) => {
     console.log("Supabase URL:", supabaseUrl ? "Present" : "Missing");
     console.log("Supabase Service Key:", supabaseServiceKey ? "Present" : "Missing");
 
-    const evolutionConfig = await getEvolutionConfig(workspaceId, supabase);
-    console.log("Evolution URL:", evolutionConfig.url);
-    console.log("Evolution API Key exists:", !!evolutionConfig.apiKey);
-
+    // Get active provider configuration
+    const activeProvider = await getActiveProvider(workspaceId, supabase);
+    console.log("Active Provider:", activeProvider.provider);
     console.log("Creating instance for workspace:", workspaceId, "instance:", instanceName);
 
     // Check workspace connection limit
@@ -256,6 +217,7 @@ serve(async (req) => {
     const connectionDataToInsert: any = {
       instance_name: instanceName,
       workspace_id: workspaceId,
+      provider_id: activeProvider.id,  // ✅ NOVO: Vincular ao provider usado
       status: "creating",
       history_recovery: historyRecovery,
       history_days: historyDays,
@@ -305,10 +267,14 @@ serve(async (req) => {
     // Generate unique token and store connection secrets
     const token = crypto.randomUUID();
 
+    const providerUrl = activeProvider.provider === 'evolution' 
+      ? activeProvider.evolution_url 
+      : activeProvider.zapi_url;
+
     const { error: secretError } = await supabase.from("connection_secrets").insert({
       connection_id: connectionData.id,
       token: token,
-      evolution_url: evolutionConfig.url,
+      evolution_url: providerUrl,
     });
 
     if (secretError) {
@@ -323,17 +289,21 @@ serve(async (req) => {
 
     console.log("Connection secrets stored");
 
-    // Validate API key exists
-    if (!evolutionConfig.apiKey) {
-      console.error("❌ Missing Evolution API key");
+    // ✅ VERIFICAR SE PROVIDER SUPORTA CRIAÇÃO AUTOMÁTICA
+    if (activeProvider.provider === 'zapi') {
+      console.error("❌ Z-API não suporta criação automática de instância");
+      await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
       await supabase.from("connections").delete().eq("id", connectionData.id);
-      return new Response(JSON.stringify({ success: false, error: "Missing Evolution API key configuration" }), {
-        status: 500,
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Z-API não suporta criação automática de instâncias. Por favor, crie a instância manualmente no painel Z-API." 
+      }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("✅ API key found, proceeding with instance creation");
+    console.log("✅ Using Evolution provider, proceeding with instance creation");
 
     // Prepare Evolution API request
     const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook-v2`;
@@ -371,7 +341,9 @@ serve(async (req) => {
     console.log('📤 Payload being sent to Evolution API:', JSON.stringify(evolutionPayload, null, 2));
 
     // Normalize URL to avoid double slashes
-    const baseUrl = evolutionConfig.url.endsWith("/") ? evolutionConfig.url.slice(0, -1) : evolutionConfig.url;
+    const baseUrl = activeProvider.evolution_url!.endsWith("/") 
+      ? activeProvider.evolution_url!.slice(0, -1) 
+      : activeProvider.evolution_url!;
     const fullUrl = `${baseUrl}/instance/create`;
 
     console.log("🔗 URL:", fullUrl);
@@ -391,7 +363,7 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: evolutionConfig.apiKey,
+          apikey: activeProvider.evolution_token!,
         },
         body: JSON.stringify(evolutionPayload),
         signal: controller.signal,

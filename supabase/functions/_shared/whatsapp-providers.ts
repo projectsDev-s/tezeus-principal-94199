@@ -34,11 +34,35 @@ export interface TestResult {
   message?: string;
 }
 
+export interface CreateInstanceParams {
+  instanceName: string;
+  webhookUrl: string;
+  phoneNumber?: string;
+  queueId?: string;
+  autoCreateCrmCard?: boolean;
+  defaultPipelineId?: string;
+  defaultColumnId?: string;
+  defaultColumnName?: string;
+  historyRecovery?: string;
+  historyDays?: number;
+  metadata?: any;
+}
+
+export interface CreateInstanceResult {
+  ok: boolean;
+  qrCode?: string;
+  token?: string;
+  sessionId?: string;
+  error?: string;
+  details?: any;
+}
+
 export interface WhatsAppProvider {
   name: 'evolution' | 'zapi';
   testConnection(): Promise<TestResult>;
   sendText(params: SendTextParams): Promise<SendResult>;
   sendMedia(params: SendMediaParams): Promise<SendResult>;
+  createInstance(params: CreateInstanceParams): Promise<CreateInstanceResult>;
 }
 
 export interface ProviderConfig {
@@ -177,6 +201,72 @@ export class EvolutionAdapter implements WhatsAppProvider {
       return { ok: false, error };
     }
   }
+
+  async createInstance(params: CreateInstanceParams): Promise<CreateInstanceResult> {
+    try {
+      console.log('📤 [Evolution] Criando instância:', params.instanceName);
+      
+      const payload: any = {
+        instanceName: params.instanceName,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+        rejectCall: false,
+        msgCall: '',
+        groupsIgnore: true,
+        alwaysOnline: false,
+        readMessages: false,
+        readStatus: false,
+        syncFullHistory: false,
+        webhook: {
+          url: params.webhookUrl,
+          byEvents: true,
+          base64: true,
+          events: [
+            'QRCODE_UPDATED',
+            'MESSAGES_UPSERT',
+            'MESSAGES_UPDATE',
+            'CONNECTION_UPDATE'
+          ]
+        }
+      };
+
+      if (params.phoneNumber) {
+        payload.number = params.phoneNumber;
+      }
+
+      const response = await fetch(`${this.url}/instance/create`, {
+        method: 'POST',
+        headers: {
+          'apikey': this.token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        console.log('✅ [Evolution] Instância criada:', data);
+        return {
+          ok: true,
+          qrCode: data.qrcode?.base64 || data.qr || null,
+          token: data.hash || null,
+          details: data
+        };
+      } else {
+        console.error('❌ [Evolution] Erro ao criar instância:', JSON.stringify(data));
+        return {
+          ok: false,
+          error: data.response?.message?.[0] || data.message || 'Failed to create instance',
+          details: data
+        };
+      }
+    } catch (e: any) {
+      const error = e?.message ?? 'Erro desconhecido';
+      console.error('❌ [Evolution] Erro na criação de instância:', error);
+      return { ok: false, error };
+    }
+  }
 }
 
 // ===============================
@@ -296,6 +386,19 @@ export class ZapiAdapter implements WhatsAppProvider {
       console.error('❌ [Z-API] Erro no envio de mídia:', error);
       return { ok: false, error };
     }
+  }
+
+  async createInstance(params: CreateInstanceParams): Promise<CreateInstanceResult> {
+    console.log('⚠️ [Z-API] Z-API não suporta criação automática de instância');
+    
+    return {
+      ok: false,
+      error: 'Z-API não suporta criação automática de instâncias. Por favor, crie a instância manualmente no painel Z-API e configure as credenciais.',
+      details: {
+        provider: 'zapi',
+        note: 'Z-API instances must be created manually in the Z-API dashboard'
+      }
+    };
   }
 }
 
