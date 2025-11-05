@@ -93,8 +93,11 @@ serve(async (req) => {
       queueId,
       historyRecovery = 'none',
       phoneNumber,
-      metadata
+      metadata,
+      provider = 'evolution'  // 🆕 Provider escolhido pelo usuário
     } = requestBody;
+    
+    console.log(`🎯 Provider selecionado pelo usuário: ${provider}`);
     
     // Map historyRecovery to days
     const historyDaysMap: Record<string, number> = {
@@ -145,8 +148,36 @@ serve(async (req) => {
     console.log("Supabase URL:", supabaseUrl ? "Present" : "Missing");
     console.log("Supabase Service Key:", supabaseServiceKey ? "Present" : "Missing");
 
-    // Get active provider configuration
-    const activeProvider = await getActiveProvider(workspaceId, supabase);
+    // 🆕 Buscar provider ESPECÍFICO escolhido pelo usuário (não apenas o ativo)
+    console.log(`🔍 Buscando configuração do provider: ${provider}`);
+    
+    const { data: selectedProvider, error: providerError } = await supabase
+      .from("whatsapp_providers")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("provider", provider)
+      .maybeSingle();
+
+    if (providerError || !selectedProvider) {
+      console.error("❌ Provider not found:", providerError);
+      const providerName = provider === 'evolution' ? 'Evolution API' : 'Z-API';
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Provider ${providerName} não está configurado para este workspace. Configure em Configurações > Providers WhatsApp.` 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`✅ Provider ${provider} encontrado:`, {
+      hasEvolutionUrl: !!selectedProvider.evolution_url,
+      hasEvolutionToken: !!selectedProvider.evolution_token,
+      hasZapiUrl: !!selectedProvider.zapi_url,
+      hasZapiToken: !!selectedProvider.zapi_token,
+    });
+    
+    const activeProvider = selectedProvider; // Manter variável activeProvider para compatibilidade com código existente
     console.log("Active Provider:", activeProvider.provider);
     console.log("Creating instance for workspace:", workspaceId, "instance:", instanceName);
 

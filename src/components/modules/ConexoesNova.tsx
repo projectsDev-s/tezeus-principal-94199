@@ -164,6 +164,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [selectedQueueId, setSelectedQueueId] = useState<string>('');
   const [pipelineColumns, setPipelineColumns] = useState<any[]>([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'evolution' | 'zapi'>('evolution');
 
   // Load connections on component mount
   useEffect(() => {
@@ -326,6 +327,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         defaultColumnName: selectedColumnData?.name || null,
         queueId: selectedQueueId || null,
         phoneNumber: phoneNumber?.trim() || null,
+        provider: selectedProvider,
         metadata: {
           border_color: connectionColor
         }
@@ -479,6 +481,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setIsEditMode(false);
     setEditingConnection(null);
     setIsCreateModalOpen(false);
+    setSelectedProvider('evolution');
   };
 
   const openEditModal = (connection: Connection) => {
@@ -1026,6 +1029,36 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         </>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {!isEditMode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="provider" className="text-sm font-medium text-foreground">
+                      Provider WhatsApp *
+                    </Label>
+                    <Select value={selectedProvider} onValueChange={(value: 'evolution' | 'zapi') => setSelectedProvider(value)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Selecione o provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="evolution">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            Evolution API
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="zapi">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                            Z-API
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Escolha qual provider utilizará para esta conexão
+                    </p>
                   </div>
                 )}
 

@@ -11,6 +11,7 @@ interface ConnectionCreateRequest {
   defaultColumnName?: string;
   queueId?: string;
   phoneNumber?: string;
+  provider?: 'evolution' | 'zapi';
   metadata?: Record<string, any>;
 }
 
