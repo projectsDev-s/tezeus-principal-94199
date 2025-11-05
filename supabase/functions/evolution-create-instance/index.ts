@@ -320,39 +320,127 @@ serve(async (req) => {
 
     console.log("Connection secrets stored");
 
-    // ✅ VERIFICAR SE PROVIDER SUPORTA CRIAÇÃO AUTOMÁTICA
+    // ✅ VERIFICAR PROVIDER E CRIAR INSTÂNCIA
     if (activeProvider.provider === 'zapi') {
-      console.log("📋 Z-API provider selected - creating connection record for manual setup");
+      console.log("📋 Z-API provider selected - creating instance via Z-API");
       
-      // Para Z-API, criar registro com status "disconnected" aguardando configuração manual
+      // Preparar payload Z-API
+      const webhookBaseUrl = `${supabaseUrl}/functions/v1`;
+      const zapiPayload = {
+        name: instanceName,
+        sessionName: instanceName,
+        deliveryCallbackUrl: `${webhookBaseUrl}/zapi-webhook`,
+        receivedCallbackUrl: `${webhookBaseUrl}/zapi-webhook`,
+        disconnectedCallbackUrl: `${webhookBaseUrl}/zapi-webhook`,
+        connectedCallbackUrl: `${webhookBaseUrl}/zapi-webhook`,
+        messageStatusCallbackUrl: `${webhookBaseUrl}/zapi-webhook`,
+        isDevice: false,
+        businessDevice: true
+      };
+
+      console.log('📤 Payload being sent to Z-API:', JSON.stringify(zapiPayload, null, 2));
+
+      // Normalizar URL Z-API
+      const baseUrl = activeProvider.zapi_url!.endsWith("/") 
+        ? activeProvider.zapi_url!.slice(0, -1) 
+        : activeProvider.zapi_url!;
+      const fullUrl = `${baseUrl}/instances`;
+
+      console.log("🔗 Z-API URL:", fullUrl);
+
+      // Chamar Z-API com timeout
+      let zapiResponse;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        zapiResponse = await fetch(fullUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Client-Token": activeProvider.zapi_token!,
+          },
+          body: JSON.stringify(zapiPayload),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        console.log("✅ Z-API response status:", zapiResponse.status);
+      } catch (fetchError) {
+        console.error("❌ Z-API request failed:", fetchError);
+        await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
+        await supabase.from("connections").delete().eq("id", connectionData.id);
+
+        const errorMessage =
+          (fetchError as any).name === "AbortError"
+            ? "Request timeout - Z-API não respondeu em 30 segundos"
+            : `Falha na conexão com Z-API: ${(fetchError as Error).message}`;
+
+        return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!zapiResponse.ok) {
+        let errorData;
+        try {
+          errorData = await zapiResponse.json();
+        } catch {
+          errorData = { message: await zapiResponse.text() };
+        }
+
+        console.error("Z-API error:", {
+          status: zapiResponse.status,
+          error: errorData,
+        });
+
+        await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
+        await supabase.from("connections").delete().eq("id", connectionData.id);
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Erro Z-API (${zapiResponse.status}): ${errorData?.message || 'Erro desconhecido'}`,
+            details: errorData,
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const zapiData = await zapiResponse.json();
+      console.log("Z-API response data:", zapiData);
+
+      // Atualizar conexão com dados do Z-API
+      const updateData: any = {
+        status: "disconnected", // Z-API começa desconectado até escanear QR
+        metadata: zapiData,
+      };
+
+      // Se Z-API retornou QR code
+      if (zapiData.qrcode) {
+        updateData.qr_code = zapiData.qrcode;
+        updateData.status = "qr";
+      }
+
       const { error: updateError } = await supabase
         .from("connections")
-        .update({
-          status: "disconnected",
-          metadata: {
-            provider: "zapi",
-            manual_setup_required: true,
-            setup_instructions: "Configure a instância manualmente no painel Z-API e conecte usando o QR Code ou token"
-          }
-        })
+        .update(updateData)
         .eq("id", connectionData.id);
 
       if (updateError) {
         console.error("Error updating connection for Z-API:", updateError);
       }
 
-      console.log("✅ Z-API connection created successfully - manual setup required");
+      console.log("✅ Z-API instance created successfully");
 
       return new Response(
         JSON.stringify({
           success: true,
-          requiresManualSetup: true,
-          message: "Conexão Z-API criada. Configure a instância manualmente no painel Z-API.",
           connection: {
             ...connectionData,
-            status: "disconnected",
-            provider: "zapi"
-          }
+            ...updateData,
+          },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
