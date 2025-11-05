@@ -233,15 +233,29 @@ serve(async (req) => {
     // Check if instance name already exists for this workspace
     const { data: existingInstance } = await supabase
       .from("connections")
-      .select("id")
+      .select("id, status, created_at")
       .eq("workspace_id", workspaceId)
       .eq("instance_name", instanceName)
       .maybeSingle();
 
     if (existingInstance) {
-      console.error("Instance name already exists:", instanceName);
+      console.error("Instance name already exists:", {
+        instanceName,
+        existingId: existingInstance.id,
+        existingStatus: existingInstance.status,
+        createdAt: existingInstance.created_at
+      });
+      
       return new Response(
-        JSON.stringify({ success: false, error: "Instance name already exists for this workspace" }),
+        JSON.stringify({ 
+          success: false, 
+          error: `Já existe uma conexão com o nome "${instanceName}" neste workspace. Por favor, escolha outro nome ou delete a conexão existente primeiro.`,
+          existingConnection: {
+            id: existingInstance.id,
+            status: existingInstance.status,
+            createdAt: existingInstance.created_at
+          }
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
