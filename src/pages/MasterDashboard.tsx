@@ -12,6 +12,7 @@ import { WorkspaceCard } from '@/components/master/WorkspaceCard';
 import { useAuth } from '@/hooks/useAuth';
 import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
 import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
+import { WhatsAppProvidersMaster } from '@/components/modules/master/WhatsAppProvidersMaster';
 import { AdministracaoUsuarios } from '@/components/modules/AdministracaoUsuarios';
 import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoConfiguracoes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,7 +39,7 @@ export default function MasterDashboard() {
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
+  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp'>('workspaces');
   const [usersModalOpen, setUsersModalOpen] = useState(false);
   const [selectedWorkspaceForModal, setSelectedWorkspaceForModal] = useState<Workspace | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
@@ -92,7 +93,7 @@ export default function MasterDashboard() {
     setConfigModalOpen(true);
   };
 
-  const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes') => {
+  const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp') => {
     setActivePage(page);
   };
 
@@ -250,6 +251,18 @@ export default function MasterDashboard() {
         </button>
         
         <button
+          onClick={() => setActivePage('api-whatsapp')}
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+            activePage === 'api-whatsapp' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <Settings className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">API WhatsApp</span>
+        </button>
+        
+        <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mt-auto"
         >
@@ -283,6 +296,7 @@ export default function MasterDashboard() {
                 {activePage === 'usuarios' && 'Usuários - Gestão Master'}
                 {activePage === 'configuracoes' && 'Configurações - Master'}
                 {activePage === 'reports' && 'Relatórios'}
+                {activePage === 'api-whatsapp' && 'API WhatsApp - Configuração Master'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
@@ -291,6 +305,7 @@ export default function MasterDashboard() {
                 {activePage === 'usuarios' && 'Administre todos os usuários do sistema'}
                 {activePage === 'configuracoes' && 'Configurações globais do sistema'}
                 {activePage === 'reports' && 'Visualize métricas e estatísticas de todas as empresas'}
+                {activePage === 'api-whatsapp' && 'Configure provedores WhatsApp (Evolution e Z-API) para todas as empresas'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -371,6 +386,8 @@ export default function MasterDashboard() {
             <WorkspaceRelatorios />
           ) : activePage === 'configuracoes' ? (
             <AdministracaoConfiguracoes />
+          ) : activePage === 'api-whatsapp' ? (
+            <WhatsAppProvidersMaster />
           ) : null}
         </main>
 
