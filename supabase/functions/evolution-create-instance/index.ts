@@ -71,9 +71,12 @@ serve(async (req) => {
   try {
     console.log("🚀 Evolution Create Instance Function Started - Method:", req.method);
 
+    // Parse request body ONCE and store it
     let requestBody;
     try {
-      requestBody = await req.json();
+      const bodyText = await req.text(); // Read as text first
+      console.log("📋 Raw request body:", bodyText);
+      requestBody = JSON.parse(bodyText); // Then parse JSON
     } catch (parseError) {
       console.error("❌ Failed to parse request body:", parseError);
       return new Response(JSON.stringify({ success: false, error: "Invalid JSON in request body" }), {
