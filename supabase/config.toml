@@ -121,7 +121,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-whatsapp-message]
-verify_jwt = true
+verify_jwt = false
 
 [functions.n8n-webhook]
 verify_jwt = false
