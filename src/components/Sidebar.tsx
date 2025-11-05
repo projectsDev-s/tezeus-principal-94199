@@ -177,6 +177,11 @@ export function Sidebar({
     label: "Filas",
     icon: <Users className="w-5 h-5" />,
     group: "administracao"
+  }, {
+    id: "automacoes-api",
+    label: "API WhatsApp",
+    icon: <Zap className="w-5 h-5" />,
+    group: "administracao"
   }];
   const toggleGroup = (group: string) => {
     setExpandedGroups(prev => prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]);
