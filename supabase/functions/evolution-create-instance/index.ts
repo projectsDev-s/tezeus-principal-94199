@@ -406,11 +406,16 @@ serve(async (req) => {
       }
 
       if (!zapiResponse.ok) {
+        // ✅ CRITICAL FIX: Ler o corpo da resposta apenas UMA VEZ
+        const responseText = await zapiResponse.text();
         let errorData;
+        
         try {
-          errorData = await zapiResponse.json();
+          // Tentar parsear como JSON
+          errorData = JSON.parse(responseText);
         } catch {
-          errorData = { message: await zapiResponse.text() };
+          // Se não for JSON válido, usar como texto
+          errorData = { message: responseText };
         }
 
         console.error("Z-API error:", {
