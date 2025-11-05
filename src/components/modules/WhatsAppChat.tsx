@@ -38,6 +38,7 @@ import { MessageContextMenu } from "@/components/chat/MessageContextMenu";
 import { MessageSelectionBar } from "@/components/chat/MessageSelectionBar";
 import { ForwardMessageModal } from "@/components/modals/ForwardMessageModal";
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
+import { ActiveProviderBadge } from "@/components/chat/ActiveProviderBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
@@ -1536,7 +1537,15 @@ export function WhatsAppChat({
       {(!onlyMessages) && (
       <div className="w-full md:w-72 lg:w-72 md:min-w-72 lg:min-w-72 border-r border-border flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-border">
+        <div className="p-4 border-b border-border space-y-3">
+          {/* Indicador de Provedor Ativo */}
+          {selectedWorkspace?.workspace_id && (
+            <ActiveProviderBadge 
+              workspaceId={selectedWorkspace.workspace_id} 
+              className="w-full justify-center"
+            />
+          )}
+          
           {/* Search bar */}
           <div className="flex items-center gap-2">
             <div className="flex items-center flex-1 relative">
