@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2, Activity } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
 import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
 import { WhatsAppProvidersMaster } from '@/components/modules/master/WhatsAppProvidersMaster';
+import { ProviderMetricsDashboard } from '@/components/modules/ProviderMetricsDashboard';
 import { AdministracaoUsuarios } from '@/components/modules/AdministracaoUsuarios';
 import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoConfiguracoes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +40,7 @@ export default function MasterDashboard() {
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp'>('workspaces');
+  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp' | 'provider-metrics'>('workspaces');
   const [usersModalOpen, setUsersModalOpen] = useState(false);
   const [selectedWorkspaceForModal, setSelectedWorkspaceForModal] = useState<Workspace | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
@@ -93,7 +94,7 @@ export default function MasterDashboard() {
     setConfigModalOpen(true);
   };
 
-  const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp') => {
+  const handleNavigateToAdminPage = (page: 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp' | 'provider-metrics') => {
     setActivePage(page);
   };
 
@@ -263,6 +264,18 @@ export default function MasterDashboard() {
         </button>
         
         <button
+          onClick={() => setActivePage('provider-metrics')}
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+            activePage === 'provider-metrics' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <Activity className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Métricas Provedores</span>
+        </button>
+        
+        <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mt-auto"
         >
@@ -297,6 +310,7 @@ export default function MasterDashboard() {
                 {activePage === 'configuracoes' && 'Configurações - Master'}
                 {activePage === 'reports' && 'Relatórios'}
                 {activePage === 'api-whatsapp' && 'API WhatsApp - Configuração Master'}
+                {activePage === 'provider-metrics' && 'Métricas de Performance - Provedores WhatsApp'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
@@ -388,6 +402,8 @@ export default function MasterDashboard() {
             <AdministracaoConfiguracoes />
           ) : activePage === 'api-whatsapp' ? (
             <WhatsAppProvidersMaster />
+          ) : activePage === 'provider-metrics' ? (
+            <ProviderMetricsDashboard />
           ) : null}
         </main>
 

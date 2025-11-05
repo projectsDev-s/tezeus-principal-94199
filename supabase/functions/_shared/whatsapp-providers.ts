@@ -338,12 +338,14 @@ export async function getActiveProviderForWorkspace(
 // FALLBACK LOGIC
 // ===============================
 
+
 export async function sendWithOptionalFallback(
   params: SendTextParams | SendMediaParams,
   type: 'text' | 'media',
   supabase: SupabaseClient
 ): Promise<SendResult> {
   const { workspaceId } = params;
+  const startTime = Date.now();
 
   console.log('📡 [Fallback] Iniciando envio com fallback opcional...');
 
@@ -367,9 +369,26 @@ export async function sendWithOptionalFallback(
 
   // Tentar enviar com provedor primário
   console.log(`📤 [Fallback] Tentando envio via ${primaryAdapter.name}...`);
+  const sendStartTime = Date.now();
   const result1 = type === 'text'
     ? await primaryAdapter.sendText(params as SendTextParams)
     : await primaryAdapter.sendMedia(params as SendMediaParams);
+  const responseTime = Date.now() - sendStartTime;
+
+  // Registrar log do envio primário
+  await logProviderAction(
+    supabase,
+    workspaceId,
+    activeProvider.provider,
+    'send_message',
+    result1.ok ? 'success' : 'error',
+    {
+      type,
+      responseTime,
+      error: result1.error,
+      provider: result1.provider,
+    }
+  );
 
   // Se sucesso ou fallback desabilitado, retornar
   if (result1.ok || !activeProvider.enable_fallback) {
@@ -397,9 +416,27 @@ export async function sendWithOptionalFallback(
     : new ZapiAdapter(altProvider);
 
   console.log(`📤 [Fallback] Tentando envio via ${altAdapter.name}...`);
+  const altStartTime = Date.now();
   const result2 = type === 'text'
     ? await altAdapter.sendText(params as SendTextParams)
     : await altAdapter.sendMedia(params as SendMediaParams);
+  const altResponseTime = Date.now() - altStartTime;
+
+  // Registrar log do fallback
+  await logProviderAction(
+    supabase,
+    workspaceId,
+    altProvider.provider,
+    'send_message',
+    result2.ok ? 'success' : 'error',
+    {
+      type,
+      responseTime: altResponseTime,
+      isFallback: true,
+      error: result2.error,
+      provider: result2.provider,
+    }
+  );
 
   if (result2.ok) {
     console.log('✅ [Fallback] Sucesso via failover!');
@@ -423,13 +460,16 @@ export async function logProviderAction(
   payload: any
 ) {
   try {
+    const { responseTime, ...metadata } = payload;
+    
     await supabase.from('whatsapp_provider_logs').insert({
       workspace_id: workspaceId,
       provider,
       action,
       result,
-      payload,
-      created_at: new Date().toISOString(),
+      response_time_ms: responseTime || null,
+      error_message: payload.error || null,
+      metadata,
     });
   } catch (e) {
     console.error('⚠️ Erro ao registrar log de provider:', e);
