@@ -13,6 +13,7 @@ import { Loader2, Bell, BellOff, Mail, Trash2, Plus, AlertTriangle } from 'lucid
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { CronJobMonitor } from './CronJobMonitor';
 
 interface ProviderAlertConfigProps {
   workspaceId: string;
@@ -89,6 +90,9 @@ export function ProviderAlertConfig({ workspaceId }: ProviderAlertConfigProps) {
           Configure alertas automáticos para monitorar a taxa de erro dos providers
         </p>
       </div>
+
+      {/* Cron Job Monitor */}
+      <CronJobMonitor />
 
       {/* Alertas Recentes */}
       {alerts.length > 0 && (
