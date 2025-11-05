@@ -77,9 +77,12 @@ serve(async (req) => {
     if (messageType === 'text') {
       result = await sendWithOptionalFallback({
         workspaceId,
-        instanceName: evolutionInstance,
-        phoneNumber,
-        message: content
+        to: phoneNumber,
+        text: content,
+        context: {
+          instance: evolutionInstance,
+          evolutionInstance: evolutionInstance
+        }
       }, 'text', supabase);
     } else {
       // Media message
@@ -129,34 +132,36 @@ serve(async (req) => {
 
       result = await sendWithOptionalFallback({
         workspaceId,
-        instanceName: evolutionInstance,
-        phoneNumber,
+        to: phoneNumber,
         mediaUrl: processedFileUrl,
-        mediaType: messageType,
+        mediaType: messageType as 'image' | 'video' | 'audio' | 'document',
         caption: content,
-        fileName: fileName
+        fileName: fileName,
+        context: {
+          instance: evolutionInstance,
+          evolutionInstance: evolutionInstance
+        }
       }, 'media', supabase);
     }
 
-    if (!result.success) {
+    if (!result.ok) {
       console.error(`❌ [${messageId}] Failed to send message:`, result.error);
       return new Response(JSON.stringify({
         success: false,
-        error: result.error,
-        provider: result.provider,
-        details: result.details
+        error: result.error || 'Failed to send message via WhatsApp provider',
+        details: 'Provider send operation failed'
       }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`✅ [${messageId}] Message sent successfully via ${result.provider}:`, {
-      messageId: result.messageId
+    console.log(`✅ [${messageId}] Message sent successfully:`, {
+      providerMsgId: result.providerMsgId
     });
 
     // Save external message ID to database if available
-    if (result.messageId && messageId) {
+    if (result.providerMsgId && messageId) {
       const searchBy = external_id || messageId;
       const searchColumn = external_id ? 'external_id' : 'id';
       
@@ -165,7 +170,7 @@ serve(async (req) => {
       const { error: updateError } = await supabase
         .from('messages')
         .update({ 
-          evolution_key_id: result.messageId,
+          evolution_key_id: result.providerMsgId,
           status: 'sent'
         })
         .eq(searchColumn, searchBy);
@@ -173,15 +178,14 @@ serve(async (req) => {
       if (updateError) {
         console.error(`⚠️ [${messageId}] Failed to save message ID:`, updateError);
       } else {
-        console.log(`💾 [${messageId}] Message ID saved: ${result.messageId}`);
+        console.log(`💾 [${messageId}] Message ID saved: ${result.providerMsgId}`);
       }
     }
 
     return new Response(JSON.stringify({
       success: true,
-      provider: result.provider,
-      messageId: result.messageId,
-      data: result.data
+      providerMsgId: result.providerMsgId,
+      failoverFrom: result.failoverFrom
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
