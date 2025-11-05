@@ -3,6 +3,7 @@ import { InstanceSyncPanel } from '@/components/sync/InstanceSyncPanel';
 import { WebhookDiagnostics } from '@/components/diagnostics/WebhookDiagnostics';
 import { WhatsAppProvidersConfig } from '@/components/modules/WhatsAppProvidersConfig';
 import { ProviderLogsViewer } from '@/components/modules/ProviderLogsViewer';
+import { ProviderAlertConfig } from '@/components/modules/ProviderAlertConfig';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -22,6 +23,7 @@ export function AutomacoesAPI() {
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="sync">Sincronização</TabsTrigger>
           <TabsTrigger value="logs">Logs de Envios</TabsTrigger>
+          <TabsTrigger value="alerts">Alertas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="providers" className="space-y-6">
@@ -45,6 +47,12 @@ export function AutomacoesAPI() {
         <TabsContent value="logs" className="space-y-6">
           {selectedWorkspace && (
             <ProviderLogsViewer workspaceId={selectedWorkspace.workspace_id} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="alerts" className="space-y-6">
+          {selectedWorkspace && (
+            <ProviderAlertConfig workspaceId={selectedWorkspace.workspace_id} />
           )}
         </TabsContent>
       </Tabs>

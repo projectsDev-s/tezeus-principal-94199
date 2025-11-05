@@ -2736,6 +2736,90 @@ export type Database = {
           },
         ]
       }
+      whatsapp_provider_alert_config: {
+        Row: {
+          created_at: string
+          email_notifications_enabled: boolean
+          error_threshold_percent: number
+          id: string
+          is_active: boolean
+          notification_emails: string[] | null
+          provider: string
+          time_window_minutes: number
+          toast_notifications_enabled: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_notifications_enabled?: boolean
+          error_threshold_percent?: number
+          id?: string
+          is_active?: boolean
+          notification_emails?: string[] | null
+          provider: string
+          time_window_minutes?: number
+          toast_notifications_enabled?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email_notifications_enabled?: boolean
+          error_threshold_percent?: number
+          id?: string
+          is_active?: boolean
+          notification_emails?: string[] | null
+          provider?: string
+          time_window_minutes?: number
+          toast_notifications_enabled?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_provider_alerts: {
+        Row: {
+          created_at: string
+          error_count: number
+          error_rate: number
+          id: string
+          notified_via: string[] | null
+          provider: string
+          threshold_percent: number
+          time_window_end: string
+          time_window_start: string
+          total_messages: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_count: number
+          error_rate: number
+          id?: string
+          notified_via?: string[] | null
+          provider: string
+          threshold_percent: number
+          time_window_end: string
+          time_window_start: string
+          total_messages: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          error_count?: number
+          error_rate?: number
+          id?: string
+          notified_via?: string[] | null
+          provider?: string
+          threshold_percent?: number
+          time_window_end?: string
+          time_window_start?: string
+          total_messages?: number
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_provider_logs: {
         Row: {
           action: string
