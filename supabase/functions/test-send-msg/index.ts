@@ -433,7 +433,7 @@ serve(async (req) => {
               client_msg_id: clientMessageId,
               request_id: requestId,
               error: sendResult?.error || 'Unknown error',
-              provider: sendResult?.provider,
+              failover_from: sendResult?.failoverFrom,
               step: 'whatsapp_provider_error'
             }
           })
@@ -441,7 +441,6 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
           error: sendResult?.error || 'Failed to send message',
-          provider: sendResult?.provider,
           details: sendResult?.details
         }), {
           status: 502,
@@ -449,8 +448,8 @@ serve(async (req) => {
         });
       }
 
-      console.log(`✅ [${requestId}] Message sent successfully via ${sendResult.provider}`);
-      console.log(`📋 [${requestId}] Provider message ID: ${sendResult.messageId}`);
+      console.log(`✅ [${requestId}] Message sent successfully`);
+      console.log(`📋 [${requestId}] Provider message ID: ${sendResult.providerMsgId}`);
 
       // A mensagem já foi atualizada pela função send-whatsapp-message com evolution_key_id
       return new Response(JSON.stringify({
@@ -458,10 +457,10 @@ serve(async (req) => {
         message: {
           id: external_id,
           external_id: external_id,
-          evolution_key_id: sendResult.messageId,
+          evolution_key_id: sendResult.providerMsgId,
           created_at: new Date().toISOString(),
           status: 'sent',
-          provider: sendResult.provider
+          failover_from: sendResult.failoverFrom
         },
         conversation_id: conversation_id,
         phone_number: contact.phone
