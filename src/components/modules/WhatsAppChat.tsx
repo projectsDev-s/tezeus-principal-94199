@@ -2099,7 +2099,7 @@ export function WhatsAppChat({
                     </Button>
                   </div>
                 </div> : <div className="flex items-end gap-2">
-                  <MediaUpload onFileSelect={async (file, mediaType, fileUrl) => {
+                  <MediaUpload onFileSelect={async (file, mediaType, fileUrl, caption) => {
               if (!selectedConversation) return;
               
               // MUTEX: Prevenir duplicação baseado na URL do arquivo
@@ -2110,15 +2110,13 @@ export function WhatsAppChat({
               }
               sendingRef.current.add(messageKey);
               
-              const caption = messageText.trim();
-              
               // Usar UUID único para prevenir duplicação
               const clientMessageId = crypto.randomUUID();
               
               const optimisticMessage = {
                 id: clientMessageId,
                 conversation_id: selectedConversation.id,
-                content: caption || `[${mediaType.toUpperCase()}]`,
+                content: caption || '', // Caption do modal ou vazio
                 message_type: mediaType as any,
                 sender_type: 'agent' as const,
                 sender_id: user?.id,
@@ -2131,7 +2129,6 @@ export function WhatsAppChat({
               };
               
               addMessage(optimisticMessage);
-              if (caption) setMessageText('');
               
               try {
                 const {
@@ -2140,7 +2137,7 @@ export function WhatsAppChat({
                 } = await supabase.functions.invoke('test-send-msg', {
                   body: {
                     conversation_id: selectedConversation.id,
-                    content: caption || `[${mediaType.toUpperCase()}]`,
+                    content: caption || '', // Caption do modal
                     message_type: mediaType,
                     sender_id: user?.id,
                     sender_type: 'agent',
