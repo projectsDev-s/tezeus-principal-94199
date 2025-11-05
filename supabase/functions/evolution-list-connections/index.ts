@@ -133,10 +133,18 @@ serve(async (req) => {
     
     const defaultChannelId = userData?.default_channel
 
-    // Get all connections for the workspace
+    // Get all connections for the workspace with provider info
     const { data: connections, error } = await supabase
       .from('connections')
-      .select('*')
+      .select(`
+        *,
+        provider:whatsapp_providers(
+          id,
+          provider,
+          evolution_url,
+          zapi_url
+        )
+      `)
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
 

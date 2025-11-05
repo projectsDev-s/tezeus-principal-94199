@@ -18,6 +18,13 @@ export interface Connection {
   default_column_name?: string;
   queue_id?: string;
   is_default?: boolean;
+  provider_id?: string;
+  provider?: {
+    id: string;
+    provider: 'evolution' | 'zapi';
+    evolution_url?: string;
+    zapi_url?: string;
+  };
   metadata?: {
     remote_id?: string;
     device?: string;

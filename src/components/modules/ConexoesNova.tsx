@@ -251,6 +251,48 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       setIsRefreshing(true);
       console.log(`🔄 Refreshing QR code for connection ${connectionId}`);
       
+      // Buscar conexão para verificar provider
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Conexão não encontrada');
+      }
+
+      // Se for Z-API, usar endpoint específico
+      if (connection.provider?.provider === 'zapi') {
+        console.log('📱 Refreshing Z-API QR code');
+        
+        const { data, error } = await supabase.functions.invoke('refresh-zapi-qr', {
+          body: { connectionId }
+        });
+
+        if (error) throw error;
+
+        if (!data.success) {
+          throw new Error(data.error || 'Erro ao atualizar QR code');
+        }
+
+        // Atualizar conexão local com novo QR
+        if (selectedConnection) {
+          setSelectedConnection(prev => prev ? { 
+            ...prev, 
+            qr_code: data.qrCode, 
+            status: 'qr' 
+          } : null);
+        }
+
+        // Recarregar conexões
+        await loadConnections();
+
+        toast({
+          title: 'QR Code Atualizado',
+          description: 'Escaneie o novo QR code Z-API com seu WhatsApp',
+        });
+
+        return;
+      }
+
+      // Evolution API (comportamento original)
       const response = await evolutionProvider.getQRCode(connectionId);
       
       if (response.qr_code && selectedConnection) {
@@ -1341,7 +1383,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                     </Button>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {connection.status === 'connected' ? (
                       <Button
                         variant="outline"
@@ -1363,25 +1405,52 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         )}
                       </Button>
                     ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => connectInstance(connection)}
-                        disabled={isConnecting}
-                        className="flex items-center gap-2"
-                      >
-                        {isConnecting && selectedConnection?.id === connection.id ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            Conectando...
-                          </>
-                        ) : (
-                          <>
-                            <QrCode className="w-4 h-4" />
-                            Conectar
-                          </>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => connectInstance(connection)}
+                          disabled={isConnecting}
+                          className="flex items-center gap-2"
+                        >
+                          {isConnecting && selectedConnection?.id === connection.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              Conectando...
+                            </>
+                          ) : (
+                            <>
+                              <QrCode className="w-4 h-4" />
+                              Conectar
+                            </>
+                          )}
+                        </Button>
+                        
+                        {/* Botão de refresh QR para Z-API desconectado */}
+                        {connection.provider?.provider === 'zapi' && 
+                         (connection.status === 'disconnected' || connection.status === 'qr') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refreshQRCode(connection.id)}
+                            disabled={isRefreshing}
+                            className="flex items-center gap-2"
+                            title="Atualizar QR Code Z-API"
+                          >
+                            {isRefreshing ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Atualizando...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-4 h-4" />
+                                Atualizar QR
+                              </>
+                            )}
+                          </Button>
                         )}
-                      </Button>
+                      </>
                     )}
                   </div>
                 </div>
