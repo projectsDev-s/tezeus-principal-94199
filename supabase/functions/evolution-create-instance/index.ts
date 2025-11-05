@@ -44,7 +44,7 @@ async function getActiveProvider(workspaceId: string, supabase: any) {
 }
 
 serve(async (req) => {
-  console.log("🔥 EVOLUTION CREATE INSTANCE - BUILD 2025-10-14-16:45 UTC");
+  console.log("🔥 EVOLUTION CREATE INSTANCE - BUILD 2025-11-05-20:50 UTC");
   console.log("🔥 EVOLUTION CREATE INSTANCE STARTED");
   console.log("🔥 Method:", req.method);
   console.log("🔥 URL:", req.url);
@@ -68,23 +68,29 @@ serve(async (req) => {
     );
   }
 
+  // ✅ CRITICAL: Parse request body OUTSIDE of try-catch to avoid "Body already consumed" error
+  let requestBody;
   try {
-    console.log("🚀 Evolution Create Instance Function Started - Method:", req.method);
-
-    // Parse request body ONCE and store it
-    let requestBody;
-    try {
-      const bodyText = await req.text(); // Read as text first
-      console.log("📋 Raw request body:", bodyText);
-      requestBody = JSON.parse(bodyText); // Then parse JSON
-    } catch (parseError) {
-      console.error("❌ Failed to parse request body:", parseError);
-      return new Response(JSON.stringify({ success: false, error: "Invalid JSON in request body" }), {
+    const bodyText = await req.text();
+    console.log("📋 Raw request body:", bodyText);
+    requestBody = JSON.parse(bodyText);
+  } catch (parseError) {
+    console.error("❌ Failed to parse request body:", parseError);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: "Invalid JSON in request body",
+        details: parseError instanceof Error ? parseError.message : String(parseError)
+      }), 
+      {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      }
+    );
+  }
 
+  try {
+    console.log("🚀 Evolution Create Instance Function Started - Method:", req.method);
     console.log("📋 Parsed request body:", requestBody);
     const { 
       instanceName, 
