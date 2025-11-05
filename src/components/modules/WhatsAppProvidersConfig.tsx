@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useWhatsAppProviders } from '@/hooks/useWhatsAppProviders';
-import { Loader2, Zap, CheckCircle2, XCircle, Trash2, Save, TestTube2 } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Zap, CheckCircle2, XCircle, Trash2, Save, TestTube2, Copy, Webhook, Info } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import type { WhatsAppProvider } from '@/types/whatsapp-provider';
 
@@ -190,6 +190,15 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   const evolutionProvider = providers.find(p => p.provider === 'evolution');
   const zapiProvider = providers.find(p => p.provider === 'zapi');
   const activeProvider = providers.find(p => p.is_active);
+
+  // Webhook URLs
+  const SUPABASE_PROJECT_ID = 'zldeaozqxjwvzgrblyrh';
+  const zapiWebhookUrl = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/zapi-webhook`;
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('URL copiada para a área de transferência!');
+  };
 
   if (isLoading && providers.length === 0) {
     return (
@@ -469,6 +478,80 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
                   </>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Z-API Webhook Configuration Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                Configuração do Webhook Z-API
+              </CardTitle>
+              <CardDescription>
+                Configure este webhook no painel da Z-API para receber mensagens
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>URL do Webhook</AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <div className="flex items-center gap-2 mt-2">
+                    <code className="relative rounded bg-muted px-3 py-1 font-mono text-sm flex-1 break-all">
+                      {zapiWebhookUrl}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(zapiWebhookUrl)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-3 rounded-lg border p-4 bg-muted/50">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  Como configurar no Z-API:
+                </h4>
+                <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                  <li>Acesse o painel da sua instância Z-API</li>
+                  <li>Navegue até <strong>Configurações → Webhooks</strong></li>
+                  <li>Cole a URL do webhook acima no campo indicado</li>
+                  <li>Marque os eventos que deseja receber:
+                    <ul className="ml-6 mt-1 space-y-1 list-disc list-inside">
+                      <li><strong>received-message</strong> - Mensagens recebidas</li>
+                      <li><strong>message-status</strong> - Status de mensagens enviadas</li>
+                      <li><strong>connection-status</strong> - Status da conexão</li>
+                    </ul>
+                  </li>
+                  <li>Salve as configurações no painel Z-API</li>
+                  <li>Envie uma mensagem de teste para validar a integração</li>
+                </ol>
+              </div>
+
+              <Alert variant="default">
+                <Zap className="h-4 w-4" />
+                <AlertTitle>Eventos suportados</AlertTitle>
+                <AlertDescription>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    <li><strong>• received-message:</strong> Mensagens de texto, imagem, vídeo, áudio e documentos</li>
+                    <li><strong>• message-status:</strong> Enviado, entregue e lido</li>
+                    <li><strong>• connection-status:</strong> Conectado, desconectado, conectando</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <Alert variant="default">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Importante</AlertTitle>
+                <AlertDescription>
+                  Certifique-se de que a instância Z-API está configurada com o mesmo <strong>instanceId</strong> cadastrado nas conexões deste workspace.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
         </TabsContent>
