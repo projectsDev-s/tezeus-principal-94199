@@ -1,450 +1,372 @@
-// Z-API Webhook Receiver - Handles incoming webhooks from Z-API
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing required environment variables');
-}
-
-const supabase = createClient(supabaseUrl, serviceRoleKey);
-
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Max-Age": "86400",
 };
 
-// Deduplication cache
-const recentEvents = new Set<string>();
-
-function checkDedup(key: string): boolean {
-  if (recentEvents.has(key)) return true;
-  recentEvents.add(key);
-  setTimeout(() => recentEvents.delete(key), 10000);
-  return false;
-}
-
-function generateRequestId(): string {
-  return `zapi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-function sanitizePhoneNumber(phone: string): string {
-  return phone.replace(/\D/g, '');
-}
-
-function extractPhoneFromZapi(phone: string): string {
-  // Z-API typically sends phone numbers with country code
-  // Remove any non-numeric characters
-  const sanitized = sanitizePhoneNumber(phone);
-  console.log(`📱 Z-API phone: ${phone} -> sanitized: ${sanitized}`);
-  return sanitized;
-}
-
-async function getOrCreateConversation(
-  supabase: any,
-  phoneNumber: string,
-  contactId: string,
-  connectionId: string,
-  workspaceId: string,
-  instanceName: string
-) {
-  const { data: existing } = await supabase
-    .from('conversations')
-    .select('id, contact_id, assigned_user_id, connection_id, queue_id, agente_ativo')
-    .eq('contact_id', contactId)
-    .eq('connection_id', connectionId)
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  
-  if (existing) {
-    console.log(`✅ Found conversation ${existing.id} for contact ${contactId}`);
-    
-    // Check and activate AI agent if needed
-    if (existing.queue_id) {
-      const { data: queue } = await supabase
-        .from('queues')
-        .select('agent_id')
-        .eq('id', existing.queue_id)
-        .single();
-      
-      if (queue?.agent_id && !existing.agente_ativo) {
-        await supabase
-          .from('conversations')
-          .update({ agente_ativo: true })
-          .eq('id', existing.id);
-        
-        console.log(`🤖 AI agent activated for conversation ${existing.id}`);
-      }
-    }
-    
-    return existing.id;
-  }
-  
-  console.log(`🆕 Creating new conversation for contact ${contactId}`);
-  const { data: newConv, error } = await supabase
-    .from('conversations')
-    .insert({
-      contact_id: contactId,
-      connection_id: connectionId,
-      workspace_id: workspaceId,
-      status: 'active',
-      instance_name: instanceName
-    })
-    .select('id')
-    .single();
-  
-  if (error) throw error;
-  return newConv.id;
-}
-
-async function getOrCreateContact(
-  supabase: any,
-  phoneNumber: string,
-  name: string | null,
-  workspaceId: string
-) {
-  const { data: existing } = await supabase
-    .from('contacts')
-    .select('id, name')
-    .eq('phone', phoneNumber)
-    .eq('workspace_id', workspaceId)
-    .maybeSingle();
-  
-  if (existing) {
-    // Update name if provided and different
-    if (name && name !== existing.name) {
-      await supabase
-        .from('contacts')
-        .update({ name })
-        .eq('id', existing.id);
-      console.log(`📝 Updated contact ${existing.id} name to: ${name}`);
-    }
-    return existing.id;
-  }
-  
-  console.log(`🆕 Creating new contact: ${phoneNumber}`);
-  const { data: newContact, error } = await supabase
-    .from('contacts')
-    .insert({
-      phone: phoneNumber,
-      name: name || phoneNumber,
-      workspace_id: workspaceId
-    })
-    .select('id')
-    .single();
-  
-  if (error) throw error;
-  return newContact.id;
-}
-
 serve(async (req) => {
-  const requestId = generateRequestId();
-  
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  console.log("🔥 Z-API WEBHOOK - BUILD 2025-11-05");
+  console.log("🔥 Method:", req.method);
+  console.log("🔥 URL:", req.url);
 
-  console.log(`🌐 [${requestId}] Z-API Webhook received`);
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
 
   try {
-    const payload = await req.json();
-    console.log(`📨 [${requestId}] Z-API webhook payload:`, JSON.stringify(payload, null, 2));
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Extract instance identifier - Z-API uses "instanceId" or similar
-    const instanceId = payload.instanceId || payload.instance || payload.phone;
-    
-    if (!instanceId) {
-      console.error(`❌ [${requestId}] No instance identifier in payload`);
-      return new Response(JSON.stringify({
-        code: 'MISSING_INSTANCE',
-        message: 'Instance identifier not found',
-        requestId
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    const webhookData = await req.json();
+    console.log("📦 Z-API Webhook Data:", JSON.stringify(webhookData, null, 2));
 
-    // Get connection data for this Z-API instance
-    const { data: connection } = await supabase
-      .from('connections')
-      .select(`
-        id,
-        workspace_id,
-        instance_name,
-        auto_create_crm_card,
-        default_pipeline_id,
-        default_column_id,
-        queue_id
-      `)
-      .eq('instance_name', instanceId)
-      .single();
-    
-    if (!connection) {
-      console.error(`❌ [${requestId}] Connection not found for instance: ${instanceId}`);
-      return new Response(JSON.stringify({
-        code: 'CONNECTION_NOT_FOUND',
-        message: `Connection not found for instance: ${instanceId}`,
-        requestId
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    // Identificar tipo de evento Z-API
+    const eventType = webhookData.event || webhookData.type;
+    const instanceName = webhookData.instanceName || webhookData.instance;
 
-    console.log(`✅ [${requestId}] Connection found: ${connection.id} for workspace: ${connection.workspace_id}`);
+    console.log(`📍 Event Type: ${eventType}, Instance: ${instanceName}`);
 
-    // Process different Z-API event types
-    const eventType = payload.event || payload.type || 'unknown';
-    console.log(`📊 [${requestId}] Event type: ${eventType}`);
-
-    // Deduplication
-    const messageId = payload.messageId || payload.data?.messageId || payload.id;
-    const dedupKey = `${eventType}:${messageId || Date.now()}`;
-    
-    if (checkDedup(dedupKey)) {
-      console.log(`⏭️ [${requestId}] Duplicate event ignored: ${dedupKey}`);
-      return new Response(JSON.stringify({
-        code: 'DUPLICATE_EVENT',
-        message: 'Event already processed',
-        requestId
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Handle message received events
-    if (eventType === 'received-message' || eventType === 'message-received') {
-      console.log(`📬 [${requestId}] Processing received message from Z-API`);
-      
-      const messageData = payload.data || payload;
-      const senderPhone = extractPhoneFromZapi(messageData.phone || messageData.from);
-      const senderName = messageData.senderName || messageData.pushName || senderPhone;
-      const messageText = messageData.text?.message || messageData.message || '';
-      const messageType = messageData.messageType || messageData.type || 'text';
-      const externalId = messageData.messageId || messageData.id;
-      
-      console.log(`📱 [${requestId}] Message from: ${senderPhone} (${senderName})`);
-
-      // Get or create contact
-      const contactId = await getOrCreateContact(
-        supabase,
-        senderPhone,
-        senderName,
-        connection.workspace_id
+    if (!instanceName) {
+      console.error("❌ No instance name provided");
+      return new Response(
+        JSON.stringify({ success: false, error: "Instance name is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
 
-      // Get or create conversation
-      const conversationId = await getOrCreateConversation(
-        supabase,
-        senderPhone,
-        contactId,
-        connection.id,
-        connection.workspace_id,
-        connection.instance_name
+    // Buscar conexão pelo instance_name
+    const { data: connection, error: connError } = await supabase
+      .from("connections")
+      .select("*")
+      .eq("instance_name", instanceName)
+      .maybeSingle();
+
+    if (connError || !connection) {
+      console.error("❌ Connection not found:", connError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Connection not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
 
-      // Process message content based on type
-      let messageContent = messageText;
-      let mediaUrl = null;
+    console.log(`✅ Connection found: ${connection.id}`);
+
+    // Processar evento de conexão
+    if (eventType === "qrcode.updated" || webhookData.qrcode) {
+      console.log("📱 Processing QR Code update");
+      
+      const qrCode = webhookData.qrcode?.qrcode || webhookData.qrcode;
+      
+      await supabase
+        .from("connections")
+        .update({
+          status: "qr",
+          qr_code: qrCode,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id);
+
+      console.log("✅ QR Code updated");
+      
+      return new Response(
+        JSON.stringify({ success: true, message: "QR code updated" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Evento de conexão estabelecida
+    if (eventType === "connection.update" || eventType === "connected") {
+      console.log("🔗 Processing connection update");
+
+      const phoneNumber = webhookData.phone || webhookData.instance?.phone;
+      
+      await supabase
+        .from("connections")
+        .update({
+          status: "connected",
+          phone_number: phoneNumber || connection.phone_number,
+          qr_code: null,
+          last_activity_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id);
+
+      console.log("✅ Connection status updated to connected");
+      
+      return new Response(
+        JSON.stringify({ success: true, message: "Connection established" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Evento de desconexão
+    if (eventType === "disconnected" || webhookData.status === "DISCONNECTED") {
+      console.log("❌ Processing disconnection");
+
+      await supabase
+        .from("connections")
+        .update({
+          status: "disconnected",
+          qr_code: null,
+          last_activity_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id);
+
+      console.log("✅ Connection status updated to disconnected");
+      
+      return new Response(
+        JSON.stringify({ success: true, message: "Connection disconnected" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Processar mensagem recebida
+    if (eventType === "message" || webhookData.data?.message) {
+      console.log("💬 Processing received message");
+
+      const messageData = webhookData.data?.message || webhookData.message;
+      const remoteJid = messageData.key?.remoteJid || messageData.from;
+      const messageKey = messageData.key?.id || messageData.messageId;
+
+      if (!remoteJid) {
+        console.error("❌ No remoteJid found");
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid message format" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Extrair número de telefone limpo
+      const phoneNumber = remoteJid.replace(/[^0-9]/g, "");
+      
+      console.log(`📞 Processing message from: ${phoneNumber}`);
+
+      // Buscar ou criar contato
+      let { data: contact } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("workspace_id", connection.workspace_id)
+        .eq("phone", phoneNumber)
+        .maybeSingle();
+
+      if (!contact) {
+        console.log("👤 Creating new contact");
+        
+        const contactName = messageData.pushName || phoneNumber;
+        
+        const { data: newContact, error: contactError } = await supabase
+          .from("contacts")
+          .insert({
+            workspace_id: connection.workspace_id,
+            phone: phoneNumber,
+            name: contactName,
+          })
+          .select()
+          .single();
+
+        if (contactError) {
+          console.error("❌ Error creating contact:", contactError);
+          return new Response(
+            JSON.stringify({ success: false, error: "Failed to create contact" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        contact = newContact;
+        console.log(`✅ Contact created: ${contact.id}`);
+      }
+
+      // Buscar ou criar conversa
+      let { data: conversation } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("workspace_id", connection.workspace_id)
+        .eq("contact_id", contact.id)
+        .eq("connection_id", connection.id)
+        .maybeSingle();
+
+      if (!conversation) {
+        console.log("💬 Creating new conversation");
+        
+        const { data: newConversation, error: convError } = await supabase
+          .from("conversations")
+          .insert({
+            workspace_id: connection.workspace_id,
+            contact_id: contact.id,
+            connection_id: connection.id,
+            status: "open",
+            canal: "whatsapp",
+          })
+          .select()
+          .single();
+
+        if (convError) {
+          console.error("❌ Error creating conversation:", convError);
+          return new Response(
+            JSON.stringify({ success: false, error: "Failed to create conversation" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        conversation = newConversation;
+        console.log(`✅ Conversation created: ${conversation.id}`);
+      } else if (conversation.status === "closed") {
+        // Reabrir conversa se estava fechada
+        await supabase
+          .from("conversations")
+          .update({ status: "open" })
+          .eq("id", conversation.id);
+        
+        console.log("✅ Conversation reopened");
+      }
+
+      // Extrair conteúdo da mensagem
+      let content = "";
+      let messageType = "text";
+      let fileUrl = null;
       let fileName = null;
       let mimeType = null;
 
-      if (messageType === 'image' && messageData.image) {
-        mediaUrl = messageData.image.imageUrl || messageData.image.url;
-        fileName = messageData.image.filename || 'image.jpg';
-        mimeType = messageData.image.mimetype || 'image/jpeg';
-        messageContent = messageData.image.caption || '';
-      } else if (messageType === 'video' && messageData.video) {
-        mediaUrl = messageData.video.videoUrl || messageData.video.url;
-        fileName = messageData.video.filename || 'video.mp4';
-        mimeType = messageData.video.mimetype || 'video/mp4';
-        messageContent = messageData.video.caption || '';
-      } else if (messageType === 'audio' && messageData.audio) {
-        mediaUrl = messageData.audio.audioUrl || messageData.audio.url;
-        fileName = messageData.audio.filename || 'audio.ogg';
-        mimeType = messageData.audio.mimetype || 'audio/ogg';
-      } else if (messageType === 'document' && messageData.document) {
-        mediaUrl = messageData.document.documentUrl || messageData.document.url;
-        fileName = messageData.document.filename || 'document';
-        mimeType = messageData.document.mimetype || 'application/octet-stream';
-        messageContent = messageData.document.caption || '';
+      if (messageData.message?.conversation) {
+        content = messageData.message.conversation;
+      } else if (messageData.text) {
+        content = messageData.text;
+      } else if (messageData.message?.imageMessage) {
+        messageType = "image";
+        content = messageData.message.imageMessage.caption || "📷 Imagem";
+        fileUrl = messageData.message.imageMessage.url;
+        mimeType = messageData.message.imageMessage.mimetype;
+      } else if (messageData.message?.videoMessage) {
+        messageType = "video";
+        content = messageData.message.videoMessage.caption || "🎥 Vídeo";
+        fileUrl = messageData.message.videoMessage.url;
+        mimeType = messageData.message.videoMessage.mimetype;
+      } else if (messageData.message?.audioMessage) {
+        messageType = "audio";
+        content = "🎵 Áudio";
+        fileUrl = messageData.message.audioMessage.url;
+        mimeType = messageData.message.audioMessage.mimetype;
+      } else if (messageData.message?.documentMessage) {
+        messageType = "document";
+        content = "📄 Documento";
+        fileUrl = messageData.message.documentMessage.url;
+        fileName = messageData.message.documentMessage.fileName;
+        mimeType = messageData.message.documentMessage.mimetype;
+      } else {
+        content = JSON.stringify(messageData);
       }
 
-      // Insert message into database
-      const { data: newMessage, error: insertError } = await supabase
-        .from('messages')
+      // Verificar se mensagem já existe
+      const { data: existingMessage } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("external_id", messageKey)
+        .maybeSingle();
+
+      if (existingMessage) {
+        console.log("⚠️ Message already exists, skipping");
+        return new Response(
+          JSON.stringify({ success: true, message: "Message already processed" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Criar mensagem
+      const { error: messageError } = await supabase
+        .from("messages")
         .insert({
-          conversation_id: conversationId,
-          content: messageContent,
-          sender_type: 'contact',
-          sender_id: contactId,
-          message_type: messageType === 'text' ? 'text' : messageType,
-          status: 'received',
-          external_id: externalId,
-          file_url: mediaUrl,
+          workspace_id: connection.workspace_id,
+          conversation_id: conversation.id,
+          external_id: messageKey,
+          content: content,
+          message_type: messageType,
+          sender_type: "contact",
+          status: "received",
+          file_url: fileUrl,
           file_name: fileName,
           mime_type: mimeType,
-          workspace_id: connection.workspace_id,
-          origem_resposta: 'webhook_zapi'
-        })
-        .select()
-        .single();
+          metadata: messageData,
+        });
 
-      if (insertError) {
-        console.error(`❌ [${requestId}] Error inserting message:`, insertError);
-        throw insertError;
+      if (messageError) {
+        console.error("❌ Error creating message:", messageError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Failed to create message" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      console.log(`✅ [${requestId}] Message saved: ${newMessage.id}`);
+      console.log("✅ Message created successfully");
 
-      // Trigger AI agent if active
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('agente_ativo, queue_id')
-        .eq('id', conversationId)
-        .single();
-
-      if (conversation?.agente_ativo && conversation.queue_id) {
-        console.log(`🤖 [${requestId}] Triggering AI agent for conversation ${conversationId}`);
-        
-        const { data: queue } = await supabase
-          .from('queues')
-          .select('agent_id')
-          .eq('id', conversation.queue_id)
-          .single();
-
-        if (queue?.agent_id) {
-          try {
-            await supabase.functions.invoke('ai-chat-response', {
-              body: {
-                conversationId,
-                contactId,
-                workspaceId: connection.workspace_id,
-                agentId: queue.agent_id,
-                phoneNumber: senderPhone,
-                instanceName: connection.instance_name
-              }
-            });
-            console.log(`✅ [${requestId}] AI agent triggered`);
-          } catch (aiError) {
-            console.error(`❌ [${requestId}] Error triggering AI:`, aiError);
-          }
-        }
-      }
-
-      return new Response(JSON.stringify({
-        code: 'MESSAGE_PROCESSED',
-        message: 'Message received and processed',
-        requestId,
-        messageId: newMessage.id
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({ success: true, message: "Message processed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Handle message status updates (sent, delivered, read)
-    if (eventType === 'message-status' || eventType === 'status-update') {
-      console.log(`📬 [${requestId}] Processing message status update from Z-API`);
-      
-      const statusData = payload.data || payload;
-      const messageId = statusData.messageId || statusData.id;
-      const status = statusData.status;
-      
-      console.log(`🔄 [${requestId}] Status update for message ${messageId}: ${status}`);
+    // Processar status de mensagem enviada
+    if (eventType === "message.status" || webhookData.status) {
+      console.log("📬 Processing message status update");
 
-      // Map Z-API status to our status
-      const mappedStatus = status === 'READ' ? 'read' :
-                          status === 'DELIVERED' ? 'delivered' :
-                          status === 'SENT' ? 'sent' : null;
+      const messageKey = webhookData.messageId || webhookData.key?.id;
+      const status = webhookData.status?.toLowerCase();
 
-      if (mappedStatus && messageId) {
-        const { error: updateError } = await supabase
-          .from('messages')
-          .update({ status: mappedStatus })
-          .eq('external_id', messageId);
-
-        if (updateError) {
-          console.error(`❌ [${requestId}] Error updating message status:`, updateError);
-        } else {
-          console.log(`✅ [${requestId}] Message status updated to: ${mappedStatus}`);
-        }
+      if (!messageKey) {
+        console.error("❌ No message key found");
+        return new Response(
+          JSON.stringify({ success: false, error: "Message key is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      return new Response(JSON.stringify({
-        code: 'STATUS_UPDATED',
-        message: 'Status update processed',
-        requestId
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Handle connection status updates
-    if (eventType === 'connection' || eventType === 'connection-status') {
-      console.log(`🔌 [${requestId}] Connection status update from Z-API`);
+      const updateData: any = {};
       
-      const statusData = payload.data || payload;
-      const connectionStatus = statusData.status || statusData.state;
-      
-      // Map Z-API connection status to our status
-      const mappedStatus = connectionStatus === 'CONNECTED' || connectionStatus === 'open' ? 'connected' :
-                          connectionStatus === 'DISCONNECTED' || connectionStatus === 'close' ? 'disconnected' :
-                          connectionStatus === 'CONNECTING' ? 'qrcode' : null;
+      if (status === "sent" || status === "delivered") {
+        updateData.status = "delivered";
+        updateData.delivered_at = new Date().toISOString();
+      } else if (status === "read") {
+        updateData.status = "read";
+        updateData.read_at = new Date().toISOString();
+      }
 
-      if (mappedStatus) {
+      if (Object.keys(updateData).length > 0) {
         await supabase
-          .from('connections')
-          .update({ 
-            status: mappedStatus,
-            last_activity_at: new Date().toISOString()
-          })
-          .eq('id', connection.id);
+          .from("messages")
+          .update(updateData)
+          .eq("external_id", messageKey);
 
-        console.log(`✅ [${requestId}] Connection status updated to: ${mappedStatus}`);
+        console.log(`✅ Message status updated to: ${status}`);
       }
 
-      return new Response(JSON.stringify({
-        code: 'CONNECTION_STATUS_UPDATED',
-        message: 'Connection status updated',
-        requestId
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({ success: true, message: "Status updated" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Unknown event type
-    console.log(`⚠️ [${requestId}] Unknown Z-API event type: ${eventType}`);
+    console.log("⚠️ Unknown event type, logging only");
     
-    return new Response(JSON.stringify({
-      code: 'UNKNOWN_EVENT',
-      message: `Unknown event type: ${eventType}`,
-      requestId
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({ success: true, message: "Event logged" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
 
   } catch (error) {
-    console.error(`❌ [${requestId}] Error processing Z-API webhook:`, error);
-    
-    return new Response(JSON.stringify({
-      code: 'INTERNAL_ERROR',
-      message: 'Error processing webhook',
-      error: error.message,
-      requestId
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    console.error("❌ Error processing Z-API webhook:", error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: (error as Error).message 
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
