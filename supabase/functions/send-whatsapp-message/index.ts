@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendWithOptionalFallback } from '../_shared/whatsapp-providers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,123 +13,185 @@ serve(async (req) => {
   }
 
   let requestBody;
-
+  
   try {
     requestBody = await req.json();
-    const { messageId, phoneNumber, content, messageType = 'text' } = requestBody;
-
-    const WHATSAPP_TOKEN = Deno.env.get('WHATSAPP_ACCESS_TOKEN');
-    const PHONE_NUMBER_ID = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID');
-
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
-      throw new Error('WhatsApp credentials not configured');
+    const { 
+      messageId, 
+      phoneNumber, 
+      content, 
+      messageType = 'text', 
+      fileUrl, 
+      fileName, 
+      evolutionInstance, 
+      external_id, 
+      workspaceId 
+    } = requestBody;
+    
+    if (!workspaceId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'workspaceId is required'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Prepare message payload
-    const messagePayload: any = {
-      messaging_product: 'whatsapp',
-      to: phoneNumber,
-      type: messageType
-    };
-
-    if (messageType === 'text') {
-      messagePayload.text = { body: content };
+    if (!phoneNumber) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'phoneNumber is required'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Send message to WhatsApp API
-    const whatsappResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messagePayload),
-      }
-    );
-
-    const responseData = await whatsappResponse.json();
-
-    if (!whatsappResponse.ok) {
-      console.error('WhatsApp API error:', responseData);
-      throw new Error(`WhatsApp API error: ${responseData.error?.message || 'Unknown error'}`);
+    if (!content && !fileUrl) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Either content or fileUrl is required'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Update message status in database
+    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { error: updateError } = await supabase
-      .from('messages')
-      .update({
-        external_id: responseData.messages[0].id,
-        status: 'sent'
-      })
-      .eq('id', messageId);
+    console.log(`📤 [${messageId}] Sending WhatsApp message via provider adapter:`, { 
+      messageType, 
+      phoneNumber: phoneNumber?.substring(0, 8) + '***',
+      hasFile: !!fileUrl,
+      workspaceId
+    });
 
-    if (updateError) {
-      console.error('Error updating message status:', updateError);
+    // Use adapter pattern para enviar a mensagem
+    let result;
+    
+    if (messageType === 'text') {
+      result = await sendWithOptionalFallback({
+        workspaceId,
+        instanceName: evolutionInstance,
+        phoneNumber,
+        message: content
+      }, 'text', supabase);
+    } else {
+      // Media message
+      if (!fileUrl) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'File URL is required for media messages'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Process Supabase Storage URLs if needed
+      let processedFileUrl = fileUrl;
+      
+      if (fileUrl.includes('supabase.co/storage/v1/object/public/')) {
+        console.log(`🔄 [${messageId}] Processing Supabase Storage URL through media processor`);
+        
+        try {
+          const mediaProcessorResponse = await supabase.functions.invoke('n8n-media-processor', {
+            body: {
+              messageId: messageId,
+              fileUrl: fileUrl,
+              fileName: fileName,
+              mimeType: messageType === 'image' ? 'image/jpeg' : 'application/octet-stream',
+              direction: 'outbound'
+            }
+          });
+
+          if (mediaProcessorResponse.error) {
+            console.error(`❌ [${messageId}] Media processor error:`, mediaProcessorResponse.error);
+          } else {
+            const processedUrl = mediaProcessorResponse.data?.fileUrl || 
+                                mediaProcessorResponse.data?.data?.publicUrl;
+            
+            if (processedUrl) {
+              processedFileUrl = processedUrl;
+              console.log(`✅ [${messageId}] Media processed successfully`);
+            }
+          }
+        } catch (processorError) {
+          console.error(`❌ [${messageId}] Error calling media processor:`, processorError);
+          // Continue with original URL as fallback
+        }
+      }
+
+      result = await sendWithOptionalFallback({
+        workspaceId,
+        instanceName: evolutionInstance,
+        phoneNumber,
+        mediaUrl: processedFileUrl,
+        mediaType: messageType,
+        caption: content,
+        fileName: fileName
+      }, 'media', supabase);
     }
 
-    console.log('Message sent successfully:', responseData.messages[0].id);
+    if (!result.success) {
+      console.error(`❌ [${messageId}] Failed to send message:`, result.error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: result.error,
+        provider: result.provider,
+        details: result.details
+      }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`✅ [${messageId}] Message sent successfully via ${result.provider}:`, {
+      messageId: result.messageId
+    });
+
+    // Save external message ID to database if available
+    if (result.messageId && messageId) {
+      const searchBy = external_id || messageId;
+      const searchColumn = external_id ? 'external_id' : 'id';
+      
+      console.log(`🔍 [${messageId}] Updating message ${searchColumn}: ${searchBy}`);
+      
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update({ 
+          evolution_key_id: result.messageId,
+          status: 'sent'
+        })
+        .eq(searchColumn, searchBy);
+
+      if (updateError) {
+        console.error(`⚠️ [${messageId}] Failed to save message ID:`, updateError);
+      } else {
+        console.log(`💾 [${messageId}] Message ID saved: ${result.messageId}`);
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,
-      externalId: responseData.messages[0].id,
-      status: 'sent'
+      provider: result.provider,
+      messageId: result.messageId,
+      data: result.data
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error sending WhatsApp message:', error);
-    
-    // Update message status to failed using requestBody
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // If WhatsApp credentials are not configured, mark as sent locally
-    if (error.message.includes('WhatsApp credentials not configured')) {
-      console.log('WhatsApp not configured, marking message as sent locally');
-      
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ status: 'sent' })
-        .eq('id', requestBody?.messageId);
-        
-      if (updateError) {
-        console.error('Error updating message status to sent:', updateError);
-      }
-      
-      return new Response(JSON.stringify({
-        success: true,
-        status: 'sent',
-        message: 'Message saved locally (WhatsApp not configured)'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // For other errors, mark as failed
-    if (requestBody?.messageId) {
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ status: 'failed' })
-        .eq('id', requestBody.messageId);
-        
-      if (updateError) {
-        console.error('Error updating message status to failed:', updateError);
-      }
-    }
-
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
+    console.error(`❌ Error in send-whatsapp-message:`, error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

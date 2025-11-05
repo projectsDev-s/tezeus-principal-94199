@@ -180,7 +180,7 @@ serve(async (req) => {
       console.log('   Instance:', instanceName);
       
       try {
-        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-evolution-message', {
+        const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-whatsapp-message', {
           body: {
             messageId: newMessage.id,
             phoneNumber: phoneNumber,
@@ -192,15 +192,15 @@ serve(async (req) => {
         });
 
         if (sendError) {
-          console.error('❌ Erro ao enviar via Evolution:', sendError);
+          console.error('❌ Erro ao enviar via WhatsApp:', sendError);
         } else {
-          console.log('✅ Mensagem enviada via Evolution');
+          console.log('✅ Mensagem enviada via WhatsApp provider');
         }
       } catch (sendException) {
-        console.error('❌ Exceção ao enviar via Evolution:', sendException);
+        console.error('❌ Exceção ao enviar via WhatsApp:', sendException);
       }
     } else {
-      console.warn('⚠️ Dados insuficientes para enviar via Evolution:', {
+      console.warn('⚠️ Dados insuficientes para enviar via WhatsApp:', {
         hasPhone: !!phoneNumber,
         hasInstance: !!instanceName,
         hasMessage: !!newMessage
