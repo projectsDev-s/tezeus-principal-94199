@@ -16,6 +16,7 @@ import { WhatsAppProvidersMaster } from '@/components/modules/master/WhatsAppPro
 import { ProviderMetricsDashboard } from '@/components/modules/ProviderMetricsDashboard';
 import { ProviderAlertConfig } from '@/components/modules/ProviderAlertConfig';
 import { ProviderLogsViewer } from '@/components/modules/ProviderLogsViewer';
+import { CronJobMonitor } from '@/components/modules/CronJobMonitor';
 import { AdministracaoUsuarios } from '@/components/modules/AdministracaoUsuarios';
 import { AdministracaoConfiguracoes } from '@/components/modules/AdministracaoConfiguracoes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +43,7 @@ export default function MasterDashboard() {
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp' | 'provider-metrics' | 'alertas-config' | 'alertas-historico'>('workspaces');
+  const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes' | 'api-whatsapp' | 'provider-metrics' | 'alertas-config' | 'alertas-historico' | 'cron-monitor'>('workspaces');
   const [usersModalOpen, setUsersModalOpen] = useState(false);
   const [selectedWorkspaceForModal, setSelectedWorkspaceForModal] = useState<Workspace | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
@@ -302,6 +303,18 @@ export default function MasterDashboard() {
         </button>
         
         <button
+          onClick={() => setActivePage('cron-monitor')}
+          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+            activePage === 'cron-monitor' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <Activity className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">Monitor Cron Job</span>
+        </button>
+        
+        <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mt-auto"
         >
@@ -339,6 +352,7 @@ export default function MasterDashboard() {
                 {activePage === 'provider-metrics' && 'Métricas de Performance - Provedores WhatsApp'}
                 {activePage === 'alertas-config' && 'Configuração de Alertas'}
                 {activePage === 'alertas-historico' && 'Histórico de Alertas'}
+                {activePage === 'cron-monitor' && 'Monitor de Cron Job'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
@@ -436,6 +450,8 @@ export default function MasterDashboard() {
             <ProviderAlertConfig workspaceId="" />
           ) : activePage === 'alertas-historico' ? (
             <ProviderLogsViewer workspaceId="" />
+          ) : activePage === 'cron-monitor' ? (
+            <CronJobMonitor />
           ) : null}
         </main>
 

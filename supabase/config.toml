@@ -239,3 +239,6 @@ verify_jwt = false
 
 [functions.test-send-msg]
 verify_jwt = false
+
+[functions.monitor-provider-alerts]
+verify_jwt = false
