@@ -392,6 +392,18 @@ serve(async (req) => {
       console.log("🔑 Z-API URL:", activeProvider.zapi_url);
       console.log("🔑 Full URL to call:", fullUrl);
 
+      // 📋 LOG COMPLETO DA REQUISIÇÃO (para debug)
+      console.log("\n📤 ===== REQUISIÇÃO Z-API COMPLETA =====");
+      console.log(JSON.stringify({
+        endpoint: `POST ${fullUrl}`,
+        headers: {
+          "Authorization": `Bearer ${cleanToken.substring(0, 15)}...${cleanToken.substring(cleanToken.length - 5)}`,
+          "Content-Type": "application/json"
+        },
+        body: zapiPayload
+      }, null, 2));
+      console.log("======================================\n");
+
       // Chamar Z-API com timeout
       let zapiResponse;
       try {
