@@ -279,23 +279,23 @@ export class ZapiAdapter implements WhatsAppProvider {
   private token: string;
 
   constructor(config: ProviderConfig) {
-    if (!config.zapi_url || !config.zapi_token) {
-      throw new Error('Z-API URL e Token são obrigatórios');
+    if (!config.zapi_token) {
+      throw new Error('Z-API Token é obrigatório');
     }
-    // Remove trailing slash if present
-    this.url = config.zapi_url.replace(/\/$/, '');
+    // Z-API uses a fixed URL for on-demand instance creation
+    this.url = config.zapi_url || 'https://api.z-api.io/instances/integration/on-demand';
     this.token = config.zapi_token;
   }
 
   async testConnection(): Promise<TestResult> {
     try {
-      console.log('🔍 [Z-API] Testando conexão:', this.url);
+      console.log('🔍 [Z-API] Testando conexão com Bearer Token');
       
-      // Z-API usa o endpoint /status para verificar a conexão
-      // A URL já deve vir completa com instance e token, apenas adiciona o endpoint
-      const response = await fetch(`${this.url}/status`, {
+      // Z-API test endpoint - uses Bearer authentication
+      const response = await fetch(`${this.url}/ping`, {
         method: 'GET',
         headers: {
+          'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -305,7 +305,7 @@ export class ZapiAdapter implements WhatsAppProvider {
         console.error('❌ [Z-API] Resposta de erro:', response.status, errorText);
         return { 
           ok: false, 
-          message: `Erro HTTP ${response.status}. Verifique se a URL está no formato: https://api.z-api.io/instances/SEU_INSTANCE_ID/token/SEU_TOKEN` 
+          message: `Erro HTTP ${response.status}. Verifique se o Bearer Token está correto.` 
         };
       }
 
@@ -321,7 +321,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       console.error('❌ [Z-API] Erro na conexão:', message);
       return { 
         ok: false, 
-        message: `Erro: ${message}. Verifique se a URL está correta.` 
+        message: `Erro: ${message}. Verifique o Bearer Token.` 
       };
     }
   }
@@ -333,6 +333,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(`${this.url}/send-text`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -374,7 +375,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Client-Token': this.token,
+          'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -404,16 +405,47 @@ export class ZapiAdapter implements WhatsAppProvider {
   }
 
   async createInstance(params: CreateInstanceParams): Promise<CreateInstanceResult> {
-    console.log('⚠️ [Z-API] Z-API não suporta criação automática de instância');
-    
-    return {
-      ok: false,
-      error: 'Z-API não suporta criação automática de instâncias. Por favor, crie a instância manualmente no painel Z-API e configure as credenciais.',
-      details: {
-        provider: 'zapi',
-        note: 'Z-API instances must be created manually in the Z-API dashboard'
+    try {
+      console.log('📤 [Z-API] Criando instância on-demand:', params.instanceName);
+      
+      const payload = {
+        instanceName: params.instanceName,
+        webhookUrl: params.webhookUrl,
+        phoneNumber: params.phoneNumber,
+      };
+
+      const response = await fetch(this.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        console.log('✅ [Z-API] Instância criada:', data);
+        return {
+          ok: true,
+          qrCode: data.qrcode || data.qr || null,
+          sessionId: data.instanceId || data.id || null,
+          details: data
+        };
+      } else {
+        console.error('❌ [Z-API] Erro ao criar instância:', JSON.stringify(data));
+        return {
+          ok: false,
+          error: data.message || 'Failed to create instance',
+          details: data
+        };
       }
-    };
+    } catch (e: any) {
+      const error = e?.message ?? 'Erro desconhecido';
+      console.error('❌ [Z-API] Erro na criação de instância:', error);
+      return { ok: false, error };
+    }
   }
 }
 

@@ -40,12 +40,14 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   const [evolutionFallback, setEvolutionFallback] = useState(false);
   const [evolutionIsActive, setEvolutionIsActive] = useState(false);
 
-  // Z-API form state
-  const [zapiUrl, setZapiUrl] = useState('');
+  // Z-API form state (only token, URL is fixed)
   const [zapiToken, setZapiToken] = useState('');
   const [zapiWebhook, setZapiWebhook] = useState('');
   const [zapiFallback, setZapiFallback] = useState(false);
   const [zapiIsActive, setZapiIsActive] = useState(false);
+
+  // Z-API fixed URL for on-demand instance creation
+  const ZAPI_BASE_URL = 'https://api.z-api.io/instances/integration/on-demand';
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -67,7 +69,6 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
     }
 
     if (zapiProvider) {
-      setZapiUrl(zapiProvider.zapi_url || '');
       setZapiToken(zapiProvider.zapi_token || '');
       setZapiWebhook(zapiProvider.n8n_webhook_url || '');
       setZapiFallback(zapiProvider.enable_fallback);
@@ -107,8 +108,8 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   };
 
   const handleSaveZapi = async () => {
-    if (!zapiUrl || !zapiToken) {
-      toast.error('Preencha URL e Token do Z-API');
+    if (!zapiToken) {
+      toast.error('Preencha o Token do Z-API');
       return;
     }
 
@@ -118,7 +119,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
       
       const providerData = {
         provider: 'zapi' as const,
-        zapi_url: zapiUrl,
+        zapi_url: ZAPI_BASE_URL, // Fixed URL for Z-API
         zapi_token: zapiToken,
         n8n_webhook_url: zapiWebhook || undefined,
         enable_fallback: zapiFallback,
@@ -180,7 +181,6 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
     }
 
     await deleteProvider(provider.id);
-    setZapiUrl('');
     setZapiToken('');
     setZapiWebhook('');
     setZapiFallback(false);
@@ -376,18 +376,17 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="zapi-url">URL da Z-API *</Label>
-                <Input
-                  id="zapi-url"
-                  placeholder="https://api.z-api.io"
-                  value={zapiUrl}
-                  onChange={(e) => setZapiUrl(e.target.value)}
-                />
-              </div>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Autenticação Z-API</AlertTitle>
+                <AlertDescription>
+                  A Z-API utiliza apenas o <strong>Bearer Token</strong> para autenticação.
+                  A URL base é fixa: <code className="text-xs">{ZAPI_BASE_URL}</code>
+                </AlertDescription>
+              </Alert>
 
               <div className="space-y-2">
-                <Label htmlFor="zapi-token">Client Token *</Label>
+                <Label htmlFor="zapi-token">Bearer Token *</Label>
                 <Input
                   id="zapi-token"
                   type="password"
@@ -395,6 +394,9 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
                   value={zapiToken}
                   onChange={(e) => setZapiToken(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Insira seu token de autenticação da Z-API (Bearer Token)
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -438,7 +440,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
               <div className="flex gap-2 pt-4">
                 <Button
                   onClick={handleSaveZapi}
-                  disabled={isSaving || !zapiUrl || !zapiToken}
+                  disabled={isSaving || !zapiToken}
                   className="flex-1"
                 >
                   {isSaving ? (
