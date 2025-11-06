@@ -165,6 +165,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [pipelineColumns, setPipelineColumns] = useState<any[]>([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'evolution' | 'zapi'>('evolution');
+  const [loadingProvider, setLoadingProvider] = useState(false);
 
   // Load connections on component mount
   useEffect(() => {
@@ -181,12 +182,45 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     };
   }, [workspaceId]);
 
-  // Carregar pipelines quando o modal for aberto (tanto para criar quanto para editar)
+  // Carregar pipelines e provider ativo quando o modal for aberto
   useEffect(() => {
-    if (isCreateModalOpen && workspaceId) {
-      loadWorkspacePipelines();
-    }
-  }, [isCreateModalOpen, workspaceId]);
+    const loadModalData = async () => {
+      if (isCreateModalOpen && workspaceId) {
+        loadWorkspacePipelines();
+        
+        // Buscar provider ativo do workspace
+        if (!isEditMode) {
+          try {
+            setLoadingProvider(true);
+            
+            const { data, error } = await supabase
+              .from('whatsapp_providers')
+              .select('*')
+              .eq('workspace_id', workspaceId)
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (error) {
+              console.error('❌ Erro ao buscar provider ativo:', error);
+            } else if (data && (data.provider === 'evolution' || data.provider === 'zapi')) {
+              console.log('✅ Provider ativo encontrado:', data.provider);
+              setSelectedProvider(data.provider as 'evolution' | 'zapi');
+            } else {
+              console.log('⚠️ Nenhum provider ativo encontrado, usando Evolution como padrão');
+              setSelectedProvider('evolution');
+            }
+          } catch (error) {
+            console.error('❌ Erro ao carregar provider:', error);
+            setSelectedProvider('evolution');
+          } finally {
+            setLoadingProvider(false);
+          }
+        }
+      }
+    };
+    
+    loadModalData();
+  }, [isCreateModalOpen, workspaceId, isEditMode]);
 
   // Carregar colunas quando pipeline for selecionado
   useEffect(() => {
@@ -1161,31 +1195,18 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                 )}
 
                 {!isEditMode && (
-                  <div className="space-y-2">
-                    <Label htmlFor="provider" className="text-sm font-medium text-foreground">
-                      Provider WhatsApp *
-                    </Label>
-                    <Select value={selectedProvider} onValueChange={(value: 'evolution' | 'zapi') => setSelectedProvider(value)}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Selecione o provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="evolution">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                            Evolution API
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="zapi">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                            Z-API
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Escolha qual provider utilizará para esta conexão
+                  <div className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${selectedProvider === 'zapi' ? 'bg-purple-500' : 'bg-blue-500'}`}></div>
+                      <span className="text-sm font-medium text-foreground">
+                        Provider: {selectedProvider === 'zapi' ? 'Z-API' : 'Evolution API'}
+                      </span>
+                      {loadingProvider && (
+                        <span className="text-xs text-muted-foreground">(carregando...)</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Definido nas configurações do workspace
                     </p>
                   </div>
                 )}
