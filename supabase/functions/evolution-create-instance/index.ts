@@ -468,7 +468,8 @@ serve(async (req) => {
         // Log detalhado para troubleshooting
         if (zapiResponse.status === 401) {
           console.error("🔐 ERRO 401 - Bad Credentials:");
-          console.error("  - Verifique se o token Bearer está correto no painel Z-API");
+          console.error("  - ATENÇÃO: Você precisa usar o TOKEN DE INTEGRATOR, não o token de uma instância!");
+          console.error("  - Onde encontrar: Painel Z-API > Integrações > Criar Token de Integrator");
           console.error("  - Token usado (preview):", cleanToken.substring(0, 10) + "..." + cleanToken.substring(cleanToken.length - 5));
           console.error("  - URL chamada:", fullUrl);
           console.error("  - Detalhes do erro:", errorData);
@@ -477,10 +478,17 @@ serve(async (req) => {
         await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
         await supabase.from("connections").delete().eq("id", connectionData.id);
 
+        // Mensagem específica para erro 401
+        let errorMessage = `Erro Z-API (${zapiResponse.status}): ${errorData?.message || errorData?.error || 'Erro desconhecido'}`;
+        
+        if (zapiResponse.status === 401) {
+          errorMessage = '❌ Token Z-API inválido. Você precisa usar o TOKEN DE INTEGRATOR do painel Z-API (Integrações > Criar Token de Integrator), não o token de uma instância específica.';
+        }
+
         return new Response(
           JSON.stringify({
             success: false,
-            error: `Erro Z-API (${zapiResponse.status}): ${errorData?.message || errorData?.error || 'Erro desconhecido'}`,
+            error: errorMessage,
             details: errorData,
           }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
