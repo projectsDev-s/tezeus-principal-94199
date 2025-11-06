@@ -195,6 +195,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           
           console.log('🔍 Buscando provider ativo para workspace:', workspaceId);
           
+          // Primeiro, tentar buscar todos os providers para debug
+          const { data: allProviders, error: debugError } = await supabase
+            .from('whatsapp_providers')
+            .select('*')
+            .eq('workspace_id', workspaceId);
+          
+          console.log('🔍 DEBUG - Todos os providers do workspace:', { allProviders, debugError });
+          
           const { data, error } = await supabase
             .from('whatsapp_providers')
             .select('*')
