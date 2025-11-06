@@ -193,18 +193,29 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           try {
             setLoadingProvider(true);
             
+            console.log('🔍 Buscando provider ativo para workspace:', workspaceId);
+            
             const { data, error } = await supabase
               .from('whatsapp_providers')
               .select('*')
               .eq('workspace_id', workspaceId)
               .eq('is_active', true)
-              .maybeSingle();
+              .limit(1);
+
+            console.log('📊 Resultado da busca:', { data, error });
 
             if (error) {
               console.error('❌ Erro ao buscar provider ativo:', error);
-            } else if (data && (data.provider === 'evolution' || data.provider === 'zapi')) {
-              console.log('✅ Provider ativo encontrado:', data.provider);
-              setSelectedProvider(data.provider as 'evolution' | 'zapi');
+              setSelectedProvider('evolution');
+            } else if (data && data.length > 0) {
+              const activeProvider = data[0];
+              if (activeProvider.provider === 'evolution' || activeProvider.provider === 'zapi') {
+                console.log('✅ Provider ativo encontrado:', activeProvider.provider);
+                setSelectedProvider(activeProvider.provider as 'evolution' | 'zapi');
+              } else {
+                console.log('⚠️ Provider inválido, usando Evolution como padrão');
+                setSelectedProvider('evolution');
+              }
             } else {
               console.log('⚠️ Nenhum provider ativo encontrado, usando Evolution como padrão');
               setSelectedProvider('evolution');
