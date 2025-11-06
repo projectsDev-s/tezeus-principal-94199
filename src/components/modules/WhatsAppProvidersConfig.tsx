@@ -50,6 +50,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   const ZAPI_BASE_URL = 'https://api.z-api.io/instances/integrator/on-demand';
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isTestingZapiToken, setIsTestingZapiToken] = useState(false);
 
   useEffect(() => {
     fetchProviders();
@@ -164,6 +165,49 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
       return;
     }
     await testConnection(provider.id);
+  };
+
+  const handleTestZapiToken = async () => {
+    const cleanedToken = zapiToken?.trim();
+    
+    if (!cleanedToken) {
+      toast.error('Preencha o Token do Z-API');
+      return;
+    }
+
+    if (cleanedToken.length < 10) {
+      toast.error('Token parece inválido (muito curto)');
+      return;
+    }
+
+    setIsTestingZapiToken(true);
+    try {
+      console.log('🧪 Testando token Z-API...');
+      
+      // Fazer uma chamada simples à API do Z-API para validar o token
+      const response = await fetch(`${ZAPI_BASE_URL}/status`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${cleanedToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('📡 Resposta Z-API:', { status: response.status, data });
+
+      if (response.ok) {
+        toast.success('✅ Token válido! Você pode salvar as configurações.');
+      } else {
+        const errorMsg = data?.error || data?.message || 'Credenciais inválidas';
+        toast.error(`❌ Token inválido: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao testar token Z-API:', error);
+      toast.error('Erro ao validar token. Verifique se o token está correto.');
+    } finally {
+      setIsTestingZapiToken(false);
+    }
   };
 
   const handleDeleteEvolution = async () => {
@@ -397,15 +441,36 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
 
               <div className="space-y-2">
                 <Label htmlFor="zapi-token">Bearer Token *</Label>
-                <Input
-                  id="zapi-token"
-                  type="password"
-                  placeholder="••••••••••••••••"
-                  value={zapiToken}
-                  onChange={(e) => setZapiToken(e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="zapi-token"
+                    type="password"
+                    placeholder="••••••••••••••••"
+                    value={zapiToken}
+                    onChange={(e) => setZapiToken(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTestZapiToken}
+                    disabled={isTestingZapiToken || !zapiToken}
+                  >
+                    {isTestingZapiToken ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Testando...
+                      </>
+                    ) : (
+                      <>
+                        <TestTube2 className="mr-2 h-4 w-4" />
+                        Testar
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Insira seu token de autenticação da Z-API (Bearer Token)
+                  Insira seu token de autenticação da Z-API e clique em "Testar" para validar
                 </p>
               </div>
 
