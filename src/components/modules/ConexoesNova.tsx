@@ -197,10 +197,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           
           const { data, error } = await supabase
             .from('whatsapp_providers')
-            .select('provider, is_active')
+            .select('*')
             .eq('workspace_id', workspaceId)
             .eq('is_active', true)
-            .order('created_at', { ascending: false });
+            .maybeSingle();
 
           console.log('📊 Resultado da busca provider:', { data, error, workspaceId });
 
@@ -208,8 +208,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             console.error('❌ Erro ao buscar provider ativo:', error);
             setSelectedProvider('evolution');
             setHasActiveProvider(false);
-          } else if (data && data.length > 0) {
-            const providerType = data[0].provider;
+          } else if (data) {
+            const providerType = data.provider;
             if (providerType === 'evolution' || providerType === 'zapi') {
               console.log('✅ Provider ativo encontrado:', providerType);
               setSelectedProvider(providerType);

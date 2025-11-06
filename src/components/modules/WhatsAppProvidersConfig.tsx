@@ -457,27 +457,13 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
                 </Button>
 
                 {zapiProvider && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={handleTestZapi}
-                      disabled={isTesting}
-                    >
-                      {isTesting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <TestTube2 className="h-4 w-4" />
-                      )}
-                    </Button>
-
-                    <Button
-                      variant="destructive"
-                      onClick={handleDeleteZapi}
-                      disabled={isSaving}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteZapi}
+                    disabled={isSaving}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
             </CardContent>
