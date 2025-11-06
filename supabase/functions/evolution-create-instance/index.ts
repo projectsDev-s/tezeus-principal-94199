@@ -384,7 +384,12 @@ serve(async (req) => {
         );
       }
 
-      console.log("🔑 Z-API Token (primeiros 10 chars):", activeProvider.zapi_token.substring(0, 10) + "...");
+      // Limpar token (remover espaços em branco)
+      const cleanToken = activeProvider.zapi_token.trim();
+      
+      console.log("🔑 Z-API Token length:", cleanToken.length);
+      console.log("🔑 Z-API Token (primeiros 20 chars):", cleanToken.substring(0, 20) + "...");
+      console.log("🔑 Z-API URL:", activeProvider.zapi_url);
 
       // Chamar Z-API com timeout
       let zapiResponse;
@@ -392,13 +397,19 @@ serve(async (req) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+        const headers = {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${cleanToken}`,
+        };
+        
+        console.log("📤 Request headers (sem token completo):", {
+          "Content-Type": headers["Content-Type"],
+          "Authorization": `Bearer ${cleanToken.substring(0, 20)}...`
+        });
+
         zapiResponse = await fetch(fullUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // ✅ CRITICAL FIX: Z-API usa "Authorization: Bearer TOKEN" não "Client-Token"
-            "Authorization": `Bearer ${activeProvider.zapi_token}`,
-          },
+          headers: headers,
           body: JSON.stringify(zapiPayload),
           signal: controller.signal,
         });

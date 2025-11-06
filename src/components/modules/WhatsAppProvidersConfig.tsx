@@ -108,10 +108,20 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   };
 
   const handleSaveZapi = async () => {
-    if (!zapiToken) {
+    // Validar e limpar token
+    const cleanedToken = zapiToken?.trim();
+    
+    if (!cleanedToken) {
       toast.error('Preencha o Token do Z-API');
       return;
     }
+
+    if (cleanedToken.length < 10) {
+      toast.error('Token do Z-API parece inválido (muito curto)');
+      return;
+    }
+
+    console.log('💾 Salvando Z-API token (comprimento):', cleanedToken.length);
 
     setIsSaving(true);
     try {
@@ -119,9 +129,9 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
       
       const providerData = {
         provider: 'zapi' as const,
-        zapi_url: ZAPI_BASE_URL, // Fixed URL for Z-API
-        zapi_token: zapiToken,
-        n8n_webhook_url: zapiWebhook || undefined,
+        zapi_url: ZAPI_BASE_URL,
+        zapi_token: cleanedToken, // Usar token limpo
+        n8n_webhook_url: zapiWebhook?.trim() || undefined,
         enable_fallback: zapiFallback,
         is_active: zapiIsActive,
       };
