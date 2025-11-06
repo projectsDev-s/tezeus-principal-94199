@@ -436,22 +436,30 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Autenticação Z-API</AlertTitle>
-                <AlertDescription>
-                  A Z-API utiliza apenas o <strong>Bearer Token</strong> para autenticação.
-                  A URL base é fixa: <code className="text-xs">{ZAPI_BASE_URL}</code>
+              <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-900 dark:text-amber-100">⚠️ ATENÇÃO: Token de Integrator Necessário</AlertTitle>
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <p className="font-semibold mb-2">Você precisa usar o <strong>TOKEN DE INTEGRATOR</strong>, não o token de uma instância!</p>
+                  <ol className="list-decimal ml-4 space-y-1 text-sm">
+                    <li>Acesse o painel Z-API</li>
+                    <li>Vá em <strong>Integrações</strong> → <strong>Criar Token de Integrator</strong></li>
+                    <li>Copie o token gerado</li>
+                    <li>Cole aqui e clique em "Testar"</li>
+                  </ol>
+                  <p className="text-xs mt-2 italic">URL base fixa: <code className="bg-amber-100 dark:bg-amber-900 px-1 py-0.5 rounded">{ZAPI_BASE_URL}</code></p>
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-2">
-                <Label htmlFor="zapi-token">Bearer Token *</Label>
+                <Label htmlFor="zapi-token" className="text-base font-semibold">
+                  🔑 Bearer Token de Integrator *
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="zapi-token"
                     type="password"
-                    placeholder="••••••••••••••••"
+                    placeholder="Cole aqui o token de INTEGRATOR (não o token de instância)"
                     value={zapiToken}
                     onChange={(e) => setZapiToken(e.target.value)}
                     className="flex-1"
@@ -470,13 +478,13 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
                     ) : (
                       <>
                         <TestTube2 className="mr-2 h-4 w-4" />
-                        Testar
+                        Testar Token
                       </>
                     )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Insira seu token de autenticação da Z-API e clique em "Testar" para validar
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  ⚠️ IMPORTANTE: Teste o token antes de salvar! Se o teste falhar, o token não é válido.
                 </p>
               </div>
 
