@@ -47,7 +47,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   const [zapiIsActive, setZapiIsActive] = useState(false);
 
   // Z-API fixed URL for on-demand instance creation
-  const ZAPI_BASE_URL = 'https://api.z-api.io/instances/integration/on-demand';
+  const ZAPI_BASE_URL = 'https://api.z-api.io/instances/integrator/on-demand';
 
   const [isSaving, setIsSaving] = useState(false);
 

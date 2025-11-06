@@ -369,6 +369,23 @@ serve(async (req) => {
       
       console.log("🔗 Z-API URL:", fullUrl);
 
+      // Validar token antes de enviar
+      if (!activeProvider.zapi_token) {
+        console.error("❌ Z-API token is missing!");
+        await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
+        await supabase.from("connections").delete().eq("id", connectionData.id);
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Token do Z-API não configurado. Configure o token em Automações > WhatsApp Providers",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("🔑 Z-API Token (primeiros 10 chars):", activeProvider.zapi_token.substring(0, 10) + "...");
+
       // Chamar Z-API com timeout
       let zapiResponse;
       try {
@@ -380,7 +397,7 @@ serve(async (req) => {
           headers: {
             "Content-Type": "application/json",
             // ✅ CRITICAL FIX: Z-API usa "Authorization: Bearer TOKEN" não "Client-Token"
-            "Authorization": `Bearer ${activeProvider.zapi_token!}`,
+            "Authorization": `Bearer ${activeProvider.zapi_token}`,
           },
           body: JSON.stringify(zapiPayload),
           signal: controller.signal,
