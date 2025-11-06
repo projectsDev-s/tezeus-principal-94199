@@ -185,47 +185,47 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   // Carregar pipelines e provider ativo quando o modal for aberto
   useEffect(() => {
     const loadModalData = async () => {
-      if (isCreateModalOpen && workspaceId) {
+      if (isCreateModalOpen && workspaceId && !isEditMode) {
         loadWorkspacePipelines();
         
         // Buscar provider ativo do workspace
-        if (!isEditMode) {
-          try {
-            setLoadingProvider(true);
-            
-            console.log('🔍 Buscando provider ativo para workspace:', workspaceId);
-            
-            const { data, error } = await supabase
-              .from('whatsapp_providers')
-              .select('*')
-              .eq('workspace_id', workspaceId)
-              .eq('is_active', true)
-              .limit(1);
+        try {
+          setLoadingProvider(true);
+          
+          console.log('🔍 Buscando provider ativo para workspace:', workspaceId);
+          
+          const { data, error } = await supabase
+            .from('whatsapp_providers')
+            .select('provider, is_active')
+            .eq('workspace_id', workspaceId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-            console.log('📊 Resultado da busca:', { data, error });
+          console.log('📊 Resultado da busca provider:', { data, error, workspaceId });
 
-            if (error) {
-              console.error('❌ Erro ao buscar provider ativo:', error);
-              setSelectedProvider('evolution');
-            } else if (data && data.length > 0) {
-              const activeProvider = data[0];
-              if (activeProvider.provider === 'evolution' || activeProvider.provider === 'zapi') {
-                console.log('✅ Provider ativo encontrado:', activeProvider.provider);
-                setSelectedProvider(activeProvider.provider as 'evolution' | 'zapi');
-              } else {
-                console.log('⚠️ Provider inválido, usando Evolution como padrão');
-                setSelectedProvider('evolution');
-              }
+          if (error) {
+            console.error('❌ Erro ao buscar provider ativo:', error);
+            setSelectedProvider('evolution');
+          } else if (data) {
+            const providerType = data.provider;
+            if (providerType === 'evolution' || providerType === 'zapi') {
+              console.log('✅ Provider ativo encontrado:', providerType);
+              setSelectedProvider(providerType);
             } else {
-              console.log('⚠️ Nenhum provider ativo encontrado, usando Evolution como padrão');
+              console.log('⚠️ Provider inválido:', providerType, '- usando Evolution como padrão');
               setSelectedProvider('evolution');
             }
-          } catch (error) {
-            console.error('❌ Erro ao carregar provider:', error);
+          } else {
+            console.log('⚠️ Nenhum provider ativo encontrado, usando Evolution como padrão');
             setSelectedProvider('evolution');
-          } finally {
-            setLoadingProvider(false);
           }
+        } catch (error) {
+          console.error('❌ Erro ao carregar provider:', error);
+          setSelectedProvider('evolution');
+        } finally {
+          setLoadingProvider(false);
         }
       }
     };
