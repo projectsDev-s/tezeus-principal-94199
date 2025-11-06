@@ -199,17 +199,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             .select('provider, is_active')
             .eq('workspace_id', workspaceId)
             .eq('is_active', true)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .order('created_at', { ascending: false });
 
           console.log('📊 Resultado da busca provider:', { data, error, workspaceId });
 
           if (error) {
             console.error('❌ Erro ao buscar provider ativo:', error);
             setSelectedProvider('evolution');
-          } else if (data) {
-            const providerType = data.provider;
+          } else if (data && data.length > 0) {
+            const providerType = data[0].provider;
             if (providerType === 'evolution' || providerType === 'zapi') {
               console.log('✅ Provider ativo encontrado:', providerType);
               setSelectedProvider(providerType);
