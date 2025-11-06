@@ -117,12 +117,15 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
       return;
     }
 
-    if (cleanedToken.length < 10) {
-      toast.error('Token do Z-API parece inválido (muito curto)');
+    if (cleanedToken.length < 20) {
+      toast.error('Token do Z-API parece inválido. Tokens Z-API geralmente têm pelo menos 30 caracteres.');
       return;
     }
 
-    console.log('💾 Salvando Z-API token (comprimento):', cleanedToken.length);
+    console.log('💾 Salvando Z-API configuração:');
+    console.log('  - Token length:', cleanedToken.length);
+    console.log('  - Token preview:', cleanedToken.substring(0, 10) + '...' + cleanedToken.substring(cleanedToken.length - 5));
+    console.log('  - URL:', ZAPI_BASE_URL);
 
     setIsSaving(true);
     try {
@@ -175,14 +178,16 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
       return;
     }
 
-    if (cleanedToken.length < 10) {
-      toast.error('Token parece inválido (muito curto)');
+    if (cleanedToken.length < 20) {
+      toast.error('Token parece inválido. Tokens Z-API geralmente têm pelo menos 30 caracteres.');
       return;
     }
 
     setIsTestingZapiToken(true);
     try {
       console.log('🧪 Testando token Z-API...');
+      console.log('🔑 Token length:', cleanedToken.length);
+      console.log('🔑 Token preview:', cleanedToken.substring(0, 10) + '...' + cleanedToken.substring(cleanedToken.length - 5));
       
       // Fazer uma chamada simples à API do Z-API para validar o token
       const response = await fetch(`${ZAPI_BASE_URL}/status`, {
@@ -201,6 +206,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
       } else {
         const errorMsg = data?.error || data?.message || 'Credenciais inválidas';
         toast.error(`❌ Token inválido: ${errorMsg}`);
+        console.error('❌ Detalhes do erro:', data);
       }
     } catch (error) {
       console.error('❌ Erro ao testar token Z-API:', error);

@@ -388,8 +388,9 @@ serve(async (req) => {
       const cleanToken = activeProvider.zapi_token.trim();
       
       console.log("🔑 Z-API Token length:", cleanToken.length);
-      console.log("🔑 Z-API Token (primeiros 20 chars):", cleanToken.substring(0, 20) + "...");
+      console.log("🔑 Z-API Token preview:", cleanToken.substring(0, 10) + "..." + cleanToken.substring(cleanToken.length - 5));
       console.log("🔑 Z-API URL:", activeProvider.zapi_url);
+      console.log("🔑 Full URL to call:", fullUrl);
 
       // Chamar Z-API com timeout
       let zapiResponse;
@@ -445,10 +446,21 @@ serve(async (req) => {
           errorData = { message: responseText };
         }
 
-        console.error("Z-API error:", {
+        console.error("❌ Z-API error response:", {
           status: zapiResponse.status,
+          statusText: zapiResponse.statusText,
           error: errorData,
+          headers: Object.fromEntries(zapiResponse.headers.entries()),
         });
+
+        // Log detalhado para troubleshooting
+        if (zapiResponse.status === 401) {
+          console.error("🔐 ERRO 401 - Bad Credentials:");
+          console.error("  - Verifique se o token Bearer está correto no painel Z-API");
+          console.error("  - Token usado (preview):", cleanToken.substring(0, 10) + "..." + cleanToken.substring(cleanToken.length - 5));
+          console.error("  - URL chamada:", fullUrl);
+          console.error("  - Detalhes do erro:", errorData);
+        }
 
         await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
         await supabase.from("connections").delete().eq("id", connectionData.id);
@@ -456,7 +468,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: `Erro Z-API (${zapiResponse.status}): ${errorData?.message || 'Erro desconhecido'}`,
+            error: `Erro Z-API (${zapiResponse.status}): ${errorData?.message || errorData?.error || 'Erro desconhecido'}`,
             details: errorData,
           }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
