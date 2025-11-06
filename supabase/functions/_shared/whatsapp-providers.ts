@@ -282,7 +282,8 @@ export class ZapiAdapter implements WhatsAppProvider {
     if (!config.zapi_url || !config.zapi_token) {
       throw new Error('Z-API URL e Token são obrigatórios');
     }
-    this.url = config.zapi_url;
+    // Remove trailing slash if present
+    this.url = config.zapi_url.replace(/\/$/, '');
     this.token = config.zapi_token;
   }
 
@@ -290,23 +291,38 @@ export class ZapiAdapter implements WhatsAppProvider {
     try {
       console.log('🔍 [Z-API] Testando conexão:', this.url);
       
+      // Z-API usa o endpoint /status para verificar a conexão
+      // A URL já deve vir completa com instance e token, apenas adiciona o endpoint
       const response = await fetch(`${this.url}/status`, {
         method: 'GET',
         headers: {
-          'Client-Token': this.token,
           'Content-Type': 'application/json',
         },
       });
 
-      const ok = response.ok;
-      const message = ok ? 'Conexão estabelecida com sucesso' : `Erro HTTP ${response.status}`;
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.error('❌ [Z-API] Resposta de erro:', response.status, errorText);
+        return { 
+          ok: false, 
+          message: `Erro HTTP ${response.status}. Verifique se a URL está no formato: https://api.z-api.io/instances/SEU_INSTANCE_ID/token/SEU_TOKEN` 
+        };
+      }
+
+      const data = await response.json().catch(() => ({}));
+      console.log('✅ [Z-API] Conexão estabelecida:', data);
       
-      console.log(ok ? '✅' : '❌', `[Z-API] ${message}`);
-      return { ok, message };
+      return { 
+        ok: true, 
+        message: 'Conexão estabelecida com sucesso' 
+      };
     } catch (e: any) {
       const message = e?.message ?? 'Erro desconhecido';
       console.error('❌ [Z-API] Erro na conexão:', message);
-      return { ok: false, message };
+      return { 
+        ok: false, 
+        message: `Erro: ${message}. Verifique se a URL está correta.` 
+      };
     }
   }
 
@@ -317,7 +333,6 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(`${this.url}/send-text`, {
         method: 'POST',
         headers: {
-          'Client-Token': this.token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
