@@ -24,6 +24,7 @@ import { usePipelinesContext } from '@/contexts/PipelinesContext';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
+import { useWhatsAppProviders } from '@/hooks/useWhatsAppProviders';
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -165,8 +166,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [pipelineColumns, setPipelineColumns] = useState<any[]>([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'evolution' | 'zapi'>('evolution');
-  const [loadingProvider, setLoadingProvider] = useState(false);
   const [hasActiveProvider, setHasActiveProvider] = useState(false);
+  
+  // Hook para gerenciar providers
+  const { providers, isLoading: loadingProvider, fetchProviders } = useWhatsAppProviders(workspaceId);
 
   // Load connections on component mount
   useEffect(() => {
@@ -183,67 +186,45 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     };
   }, [workspaceId]);
 
-  // Carregar pipelines e provider ativo quando o modal for aberto
+  // Carregar pipelines e providers quando o modal for aberto
   useEffect(() => {
     const loadModalData = async () => {
       if (isCreateModalOpen && workspaceId && !isEditMode) {
         loadWorkspacePipelines();
         
-        // Buscar provider ativo do workspace
-        try {
-          setLoadingProvider(true);
-          
-          console.log('🔍 Buscando provider ativo para workspace:', workspaceId);
-          
-          // Primeiro, tentar buscar todos os providers para debug
-          const { data: allProviders, error: debugError } = await supabase
-            .from('whatsapp_providers')
-            .select('*')
-            .eq('workspace_id', workspaceId);
-          
-          console.log('🔍 DEBUG - Todos os providers do workspace:', { allProviders, debugError });
-          
-          const { data, error } = await supabase
-            .from('whatsapp_providers')
-            .select('*')
-            .eq('workspace_id', workspaceId)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          console.log('📊 Resultado da busca provider:', { data, error, workspaceId });
-
-          if (error) {
-            console.error('❌ Erro ao buscar provider ativo:', error);
-            setSelectedProvider('evolution');
-            setHasActiveProvider(false);
-          } else if (data) {
-            const providerType = data.provider;
-            if (providerType === 'evolution' || providerType === 'zapi') {
-              console.log('✅ Provider ativo encontrado:', providerType);
-              setSelectedProvider(providerType);
-              setHasActiveProvider(true);
-            } else {
-              console.log('⚠️ Provider inválido:', providerType, '- usando Evolution como padrão');
-              setSelectedProvider('evolution');
-              setHasActiveProvider(false);
-            }
-          } else {
-            console.log('⚠️ Nenhum provider ativo encontrado, usando Evolution como padrão');
-            setSelectedProvider('evolution');
-            setHasActiveProvider(false);
-          }
-        } catch (error) {
-          console.error('❌ Erro ao carregar provider:', error);
-          setSelectedProvider('evolution');
-          setHasActiveProvider(false);
-        } finally {
-          setLoadingProvider(false);
-        }
+        // Buscar providers através do hook
+        console.log('🔍 Carregando providers para workspace:', workspaceId);
+        await fetchProviders();
       }
     };
     
     loadModalData();
   }, [isCreateModalOpen, workspaceId, isEditMode]);
+  
+  // Atualizar provider selecionado quando os providers forem carregados
+  useEffect(() => {
+    if (providers && providers.length > 0) {
+      console.log('📋 Providers carregados:', providers);
+      
+      // Buscar provider ativo
+      const activeProvider = providers.find(p => p.is_active);
+      
+      if (activeProvider) {
+        console.log('✅ Provider ativo encontrado:', activeProvider.provider);
+        setSelectedProvider(activeProvider.provider as 'evolution' | 'zapi');
+        setHasActiveProvider(true);
+      } else {
+        console.log('⚠️ Nenhum provider ativo, usando primeiro disponível ou Evolution');
+        const firstProvider = providers[0];
+        setSelectedProvider((firstProvider?.provider as 'evolution' | 'zapi') || 'evolution');
+        setHasActiveProvider(false);
+      }
+    } else if (providers && providers.length === 0) {
+      console.log('⚠️ Nenhum provider configurado');
+      setSelectedProvider('evolution');
+      setHasActiveProvider(false);
+    }
+  }, [providers]);
 
   // Carregar colunas quando pipeline for selecionado
   useEffect(() => {
