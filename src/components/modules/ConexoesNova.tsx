@@ -166,6 +166,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'evolution' | 'zapi'>('evolution');
   const [loadingProvider, setLoadingProvider] = useState(false);
+  const [hasActiveProvider, setHasActiveProvider] = useState(false);
 
   // Load connections on component mount
   useEffect(() => {
@@ -206,22 +207,27 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           if (error) {
             console.error('❌ Erro ao buscar provider ativo:', error);
             setSelectedProvider('evolution');
+            setHasActiveProvider(false);
           } else if (data && data.length > 0) {
             const providerType = data[0].provider;
             if (providerType === 'evolution' || providerType === 'zapi') {
               console.log('✅ Provider ativo encontrado:', providerType);
               setSelectedProvider(providerType);
+              setHasActiveProvider(true);
             } else {
               console.log('⚠️ Provider inválido:', providerType, '- usando Evolution como padrão');
               setSelectedProvider('evolution');
+              setHasActiveProvider(false);
             }
           } else {
             console.log('⚠️ Nenhum provider ativo encontrado, usando Evolution como padrão');
             setSelectedProvider('evolution');
+            setHasActiveProvider(false);
           }
         } catch (error) {
           console.error('❌ Erro ao carregar provider:', error);
           setSelectedProvider('evolution');
+          setHasActiveProvider(false);
         } finally {
           setLoadingProvider(false);
         }
@@ -1204,19 +1210,36 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                 )}
 
                 {!isEditMode && (
-                  <div className="p-3 bg-muted/50 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${selectedProvider === 'zapi' ? 'bg-purple-500' : 'bg-blue-500'}`}></div>
-                      <span className="text-sm font-medium text-foreground">
-                        Provider: {selectedProvider === 'zapi' ? 'Z-API' : 'Evolution API'}
-                      </span>
-                      {loadingProvider && (
-                        <span className="text-xs text-muted-foreground">(carregando...)</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Definido nas configurações do workspace
-                    </p>
+                  <div className={`p-3 rounded-lg border ${!hasActiveProvider && !loadingProvider ? 'bg-destructive/10 border-destructive' : 'bg-muted/50'}`}>
+                    {loadingProvider ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        <span className="text-sm">Detectando provider...</span>
+                      </div>
+                    ) : hasActiveProvider ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${selectedProvider === 'zapi' ? 'bg-purple-500' : 'bg-blue-500'}`}></div>
+                          <span className="text-sm font-medium text-foreground">
+                            Provider: {selectedProvider === 'zapi' ? 'Z-API' : 'Evolution API'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Definido nas configurações do workspace
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-destructive">
+                            ⚠️ Nenhum provider ativo configurado
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Configure um provider (Evolution ou Z-API) nas Configurações antes de criar instâncias
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1398,12 +1421,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                 onClick={isEditMode ? editConnection : () => createInstance()} 
                 disabled={
                   isCreating || 
-                  (!isEditMode && !usage?.canCreateMore)
+                  loadingProvider ||
+                  (!isEditMode && (!usage?.canCreateMore || !hasActiveProvider))
                 }
                 title={
-                  !isEditMode && !usage?.canCreateMore 
-                    ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` 
-                    : ''
+                  !isEditMode && !hasActiveProvider
+                    ? 'Configure um provider ativo antes de criar instâncias'
+                    : !isEditMode && !usage?.canCreateMore 
+                      ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` 
+                      : ''
                 }
               >
                 {isCreating ? (isEditMode ? 'Salvando...' : 'Criando...') : (isEditMode ? 'Salvar Alterações' : 'Adicionar')}
