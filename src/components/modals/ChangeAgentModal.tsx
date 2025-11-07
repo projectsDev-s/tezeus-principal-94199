@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Check, Loader2, Sparkles } from 'lucide-react';
+import { Bot, Check, Loader2, Sparkles, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChangeAgentModalProps {
@@ -85,6 +85,38 @@ export function ChangeAgentModal({
       toast({
         title: "❌ Erro",
         description: "Não foi possível trocar o agente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  const handleDeactivateAgent = async () => {
+    setIsChanging(true);
+    try {
+      // Desativar o agente da conversa
+      const { error } = await supabase
+        .from('conversations')
+        .update({ 
+          agente_ativo: false
+        })
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Agente desativado",
+        description: "O agente foi desativado com sucesso",
+      });
+
+      onAgentChanged?.();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Erro ao desativar agente:', error);
+      toast({
+        title: "❌ Erro",
+        description: "Não foi possível desativar o agente",
         variant: "destructive",
       });
     } finally {
@@ -179,30 +211,50 @@ export function ChangeAgentModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex justify-between items-center gap-2 mt-4">
           <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
+            variant="destructive"
+            onClick={handleDeactivateAgent}
             disabled={isChanging}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleChangeAgent}
-            disabled={isChanging || !selectedAgentId || selectedAgentId === currentAgentId}
           >
             {isChanging ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Trocando...
+                Desativando...
               </>
             ) : (
               <>
-                <Check className="w-4 h-4 mr-2" />
-                Trocar Agente
+                <Power className="w-4 h-4 mr-2" />
+                Desativar Agente
               </>
             )}
           </Button>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isChanging}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleChangeAgent}
+              disabled={isChanging || !selectedAgentId || selectedAgentId === currentAgentId}
+            >
+              {isChanging ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Trocando...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Trocar Agente
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

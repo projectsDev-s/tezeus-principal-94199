@@ -1890,14 +1890,9 @@ export function WhatsAppChat({
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
                           <Bot className="w-3.5 h-3.5 text-green-600 group-hover:scale-110 transition-transform" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-green-700 leading-none">
-                            {agent.name}
-                          </span>
-                          <span className="text-[10px] text-green-600 leading-none mt-0.5">
-                            Clique para trocar
-                          </span>
-                        </div>
+                        <span className="text-xs font-semibold text-green-700 leading-none">
+                          {agent.name}
+                        </span>
                       </button>
                       <button
                         onClick={() => setAgentHistoryModalOpen(true)}
@@ -1908,54 +1903,6 @@ export function WhatsAppChat({
                       </button>
                     </div>
                   )}
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="relative">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={handleToggleAgent} 
-                            disabled={!hasAgent || agentLoading}
-                            className={cn(
-                              "h-8 w-8 p-0 rounded-full transition-all duration-300",
-                              agentLoading && "opacity-50 cursor-wait",
-                              selectedConversation.agente_ativo 
-                                ? "bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/50" 
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
-                            )}
-                          >
-                            {agentLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Bot className={cn(
-                                "w-4 h-4 transition-all",
-                                selectedConversation.agente_ativo && "animate-pulse"
-                              )} />
-                            )}
-                          </Button>
-                          {selectedConversation.agente_ativo && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse shadow-lg shadow-green-500/50" />
-                          )}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {agentLoading ? (
-                          <p className="text-xs">⏳ Carregando...</p>
-                        ) : hasAgent ? (
-                          <div className="flex flex-col gap-1">
-                            <p className="text-xs font-semibold">{agent?.name || 'Agente IA'}</p>
-                            {agent?.agent_type && (
-                              <p className="text-[10px] text-muted-foreground">Tipo: {agent.agent_type}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-xs">⚠️ Nenhum agente de IA cadastrado</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                   
                   {selectedConversation.connection_id && (
                     <ConnectionBadge 
