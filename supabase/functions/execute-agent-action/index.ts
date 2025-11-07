@@ -53,24 +53,31 @@ serve(async (req) => {
       }
 
       case 'transfer-queue': {
-        // Atualizar conversa para transferir para fila
-        const { error: convError } = await supabase
-          .from('conversations')
-          .update({ 
-            queue_id: params.fila_id,
-            assigned_user_id: null,
-            status: 'open'
-          })
-          .eq('id', params.conversation_id);
+        // Chamar função de atribuição que aplica todas as regras da fila
+        const { data: assignmentResult, error: assignError } = await supabase.functions.invoke(
+          'assign-conversation-to-queue',
+          {
+            body: {
+              conversation_id: params.conversation_id,
+              queue_id: params.fila_id
+            }
+          }
+        );
 
-        if (convError) throw convError;
+        if (assignError) throw assignError;
+        
+        if (!assignmentResult?.success) {
+          throw new Error(assignmentResult?.error || 'Erro ao transferir para fila');
+        }
 
         result = { 
           success: true, 
-          message: `Conversa transferida para fila`,
-          queueId: params.fila_id
+          message: `Conversa transferida para fila com regras aplicadas`,
+          queueId: params.fila_id,
+          assignmentDetails: assignmentResult
         };
-        console.log('✅ Transferido para fila:', params.fila_id);
+        
+        console.log('✅ Transferido para fila com regras aplicadas:', assignmentResult);
         break;
       }
 
