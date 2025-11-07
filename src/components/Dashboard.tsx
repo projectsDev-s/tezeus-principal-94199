@@ -6,6 +6,7 @@ import { AnalyticsKPICard } from "./dashboard/AnalyticsKPICard";
 import { ConversionChart } from "./dashboard/ConversionChart";
 import { TrendsChart } from "./dashboard/TrendsChart";
 import { DealsStatusChart } from "./dashboard/DealsStatusChart";
+import { AgentStatsCard } from "./dashboard/AgentStatsCard";
 import { MessageCircle, Users, TrendingUp, DollarSign, Clock, Target } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -117,6 +118,9 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
         dealTrends={analytics.dealTrends}
         isLoading={isLoading}
       />
+
+      {/* Agent Statistics */}
+      <AgentStatsCard />
     </div>
   );
 }
