@@ -50,40 +50,27 @@ export function DSAgenteMaster() {
         return;
       }
 
-      // Verificar se RLS está bloqueando o JOIN (workspace_id existe mas workspaces é null)
-      const needsManualJoin = data.some((agent: any) => agent.workspace_id && !agent.workspaces);
+      // Sempre fazer fetch manual dos workspaces para garantir que temos os dados
+      const workspaceIds = [...new Set(data.map((a: any) => a.workspace_id).filter(Boolean))];
+      let workspacesMap = new Map();
+      
+      if (workspaceIds.length > 0) {
+        const { data: workspacesData, error: workspacesError } = await supabase
+          .from('workspaces')
+          .select('id, name')
+          .in('id', workspaceIds);
 
-      if (needsManualJoin) {
-        // Fallback: fetch manual dos workspaces
-        const workspaceIds = [...new Set(data.map((a: any) => a.workspace_id).filter(Boolean))];
-        let workspacesMap = new Map();
-        
-        if (workspaceIds.length > 0) {
-          const { data: workspacesData, error: workspacesError } = await supabase
-            .from('workspaces')
-            .select('id, name')
-            .in('id', workspaceIds);
-
-          if (!workspacesError && workspacesData) {
-            workspacesMap = new Map(workspacesData.map(w => [w.id, w]));
-          }
+        if (!workspacesError && workspacesData) {
+          workspacesMap = new Map(workspacesData.map(w => [w.id, w]));
         }
-
-        const agentsWithWorkspace = data.map((agent: any) => ({
-          ...agent,
-          workspace: agent.workspace_id ? workspacesMap.get(agent.workspace_id) : null
-        }));
-
-        setAgents(agentsWithWorkspace);
-      } else {
-        // JOIN automático funcionou, apenas mapear o resultado
-        const agentsWithWorkspace = data.map((agent: any) => ({
-          ...agent,
-          workspace: agent.workspaces
-        }));
-        
-        setAgents(agentsWithWorkspace);
       }
+
+      const agentsWithWorkspace = data.map((agent: any) => ({
+        ...agent,
+        workspace: agent.workspace_id ? workspacesMap.get(agent.workspace_id) : null
+      }));
+
+      setAgents(agentsWithWorkspace);
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);
       toast.error('Erro ao carregar agentes');
