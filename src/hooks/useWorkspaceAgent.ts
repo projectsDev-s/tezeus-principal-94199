@@ -1,54 +1,66 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
 
-export const useWorkspaceAgent = () => {
-  const { selectedWorkspace } = useWorkspace();
+export const useWorkspaceAgent = (conversationId?: string) => {
+  console.log('🤖 useWorkspaceAgent - conversationId:', conversationId);
   
-  console.log('🤖 useWorkspaceAgent - selectedWorkspace:', {
-    workspace_id: selectedWorkspace?.workspace_id,
-    name: selectedWorkspace?.name,
-    enabled: !!selectedWorkspace?.workspace_id
-  });
-  
-  const { data: agents, isLoading, error } = useQuery({
-    queryKey: ['workspace-agents', selectedWorkspace?.workspace_id],
+  const { data: agent, isLoading, error } = useQuery({
+    queryKey: ['conversation-agent', conversationId],
     queryFn: async () => {
-      if (!selectedWorkspace?.workspace_id) {
-        console.log('❌ Workspace ID não disponível');
-        return [];
+      if (!conversationId) {
+        console.log('❌ Conversation ID não disponível');
+        return null;
       }
       
-      console.log('🔍 Buscando agentes para workspace:', selectedWorkspace.workspace_id);
+      console.log('🔍 Buscando agente ativo para conversa:', conversationId);
       
-      const { data, error } = await supabase
+      // Primeiro busca a conversa para pegar o agent_active_id
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('agent_active_id')
+        .eq('id', conversationId)
+        .maybeSingle();
+      
+      if (convError) {
+        console.error('❌ Erro ao buscar conversa:', convError);
+        throw convError;
+      }
+      
+      if (!conversation?.agent_active_id) {
+        console.log('ℹ️ Nenhum agente ativo para esta conversa');
+        return null;
+      }
+      
+      console.log('🔍 Buscando dados do agente:', conversation.agent_active_id);
+      
+      // Agora busca os dados do agente
+      const { data: agentData, error: agentError } = await supabase
         .from('ai_agents')
         .select('id, name, is_active, agent_type')
-        .eq('workspace_id', selectedWorkspace.workspace_id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .eq('id', conversation.agent_active_id)
+        .maybeSingle();
       
-      console.log('📊 Resultado da busca:', { data, error, count: data?.length });
+      if (agentError) {
+        console.error('❌ Erro ao buscar agente:', agentError);
+        throw agentError;
+      }
       
-      if (error) throw error;
-      return data || [];
+      console.log('📊 Agente encontrado:', agentData);
+      return agentData;
     },
-    enabled: !!selectedWorkspace?.workspace_id,
+    enabled: !!conversationId,
   });
   
-  const hasAgent = agents && agents.length > 0;
-  const defaultAgent = agents?.[0] || null;
+  const hasAgent = !!agent;
   
   console.log('✅ Hook result:', { 
     hasAgent, 
     isLoading,
-    agentsCount: agents?.length,
-    defaultAgent: defaultAgent?.name 
+    agent: agent?.name 
   });
   
   return { 
-    agent: defaultAgent,
-    agents: agents || [],
+    agent, 
     hasAgent, 
     isLoading 
   };
