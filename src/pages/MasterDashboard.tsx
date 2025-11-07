@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
 import { MasterAgentStatsCard } from '@/components/dashboard/MasterAgentStatsCard';
 import { AgentPerformanceComparison } from '@/components/dashboard/AgentPerformanceComparison';
+import { AgentPerformanceChart } from "@/components/dashboard/AgentPerformanceChart";
 import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
 import { WhatsAppProvidersMaster } from '@/components/modules/master/WhatsAppProvidersMaster';
 import { ProviderMetricsDashboard } from '@/components/modules/ProviderMetricsDashboard';
@@ -444,6 +445,7 @@ export default function MasterDashboard() {
             <>
               <WorkspaceRelatorios />
               <div className="space-y-6 mt-6">
+                <AgentPerformanceChart />
                 <AgentPerformanceComparison />
                 <MasterAgentStatsCard />
               </div>
