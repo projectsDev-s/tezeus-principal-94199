@@ -74,8 +74,7 @@ export function ChangeAgentModal({
         .from('conversations')
         .update({ 
           agent_active_id: selectedAgentId,
-          agente_ativo: true,
-          _updated_at: Date.now() // Força atualização do timestamp
+          agente_ativo: true
         })
         .eq('id', conversationId);
 
@@ -107,8 +106,7 @@ export function ChangeAgentModal({
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agente_ativo: false,
-          _updated_at: Date.now() // Força atualização do timestamp
+          agente_ativo: false
         })
         .eq('id', conversationId);
 
