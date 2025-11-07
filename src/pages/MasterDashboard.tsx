@@ -11,6 +11,7 @@ import { useWorkspace, Workspace } from '@/contexts/WorkspaceContext';
 import { WorkspaceCard } from '@/components/master/WorkspaceCard';
 import { useAuth } from '@/hooks/useAuth';
 import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
+import { MasterAgentStatsCard } from '@/components/dashboard/MasterAgentStatsCard';
 import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
 import { WhatsAppProvidersMaster } from '@/components/modules/master/WhatsAppProvidersMaster';
 import { ProviderMetricsDashboard } from '@/components/modules/ProviderMetricsDashboard';
@@ -439,7 +440,12 @@ export default function MasterDashboard() {
           ) : activePage === 'usuarios' ? (
             <AdministracaoUsuarios />
           ) : activePage === 'reports' ? (
-            <WorkspaceRelatorios />
+            <>
+              <WorkspaceRelatorios />
+              <div className="mt-6">
+                <MasterAgentStatsCard />
+              </div>
+            </>
           ) : activePage === 'configuracoes' ? (
             <AdministracaoConfiguracoes />
           ) : activePage === 'api-whatsapp' ? (

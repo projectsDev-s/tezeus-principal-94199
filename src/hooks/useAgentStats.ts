@@ -13,13 +13,15 @@ export interface AgentStats {
   lastUsed: string | null;
 }
 
-export const useAgentStats = () => {
+export const useAgentStats = (workspaceId?: string) => {
   const [stats, setStats] = useState<AgentStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
+  
+  const targetWorkspaceId = workspaceId || selectedWorkspace?.workspace_id;
 
   const fetchAgentStats = async () => {
-    if (!selectedWorkspace) {
+    if (!targetWorkspaceId) {
       setIsLoading(false);
       return;
     }
@@ -27,13 +29,13 @@ export const useAgentStats = () => {
     setIsLoading(true);
     
     try {
-      const workspaceId = selectedWorkspace.workspace_id;
+      const currentWorkspaceId = targetWorkspaceId;
 
       // Buscar todos os agentes do workspace
       const { data: agents, error: agentsError } = await supabase
         .from('ai_agents')
-        .select('id, name')
-        .eq('workspace_id', workspaceId);
+        .select('id, name, workspace_id')
+        .eq('workspace_id', currentWorkspaceId);
 
       if (agentsError) {
         console.error('❌ Erro ao buscar agentes:', agentsError);
@@ -71,7 +73,7 @@ export const useAgentStats = () => {
         const { data: activeConversations, error: activeError } = await supabase
           .from('conversations')
           .select('id')
-          .eq('workspace_id', workspaceId)
+          .eq('workspace_id', currentWorkspaceId)
           .eq('agent_active_id', agent.id)
           .eq('status', 'open');
 
@@ -143,7 +145,7 @@ export const useAgentStats = () => {
 
   useEffect(() => {
     fetchAgentStats();
-  }, [selectedWorkspace]);
+  }, [targetWorkspaceId]);
 
   return {
     stats,
