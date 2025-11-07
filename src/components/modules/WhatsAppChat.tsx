@@ -199,15 +199,60 @@ export function WhatsAppChat({
     
     // ✅ SEMPRE atualizar para garantir que temos a versão mais recente
     if (updatedConversation.agente_ativo !== selectedConversation.agente_ativo || 
+        updatedConversation.agent_active_id !== selectedConversation.agent_active_id ||
         updatedConversation._updated_at !== selectedConversation._updated_at) {
       console.log('🔄 Atualizando selectedConversation:', {
         oldAgenteAtivo: selectedConversation.agente_ativo,
         newAgenteAtivo: updatedConversation.agente_ativo,
+        oldAgentId: selectedConversation.agent_active_id,
+        newAgentId: updatedConversation.agent_active_id,
         timestamp: updatedConversation._updated_at
       });
       setSelectedConversation(updatedConversation);
     }
-  }, [conversations]);
+  }, [conversations, selectedConversation]);
+
+  // 🔄 Listener realtime para atualizações de conversas
+  useEffect(() => {
+    if (!selectedConversation?.id) return;
+
+    console.log('👂 Configurando listener realtime para conversa:', selectedConversation.id);
+
+    const channel = supabase
+      .channel(`conversation-${selectedConversation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+          filter: `id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          console.log('🔔 Atualização realtime recebida:', payload);
+          
+          // Atualizar imediatamente o estado local
+          setSelectedConversation(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              agente_ativo: payload.new.agente_ativo,
+              agent_active_id: payload.new.agent_active_id,
+              _updated_at: Date.now()
+            };
+          });
+
+          // Recarregar conversas para sincronizar a lista
+          fetchConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔌 Desconectando listener realtime');
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConversation?.id]);
   const [quickPhoneNumber, setQuickPhoneNumber] = useState("");
   const [isCreatingQuickConversation, setIsCreatingQuickConversation] = useState(false);
   const [showAllQueues, setShowAllQueues] = useState(true);
@@ -2253,9 +2298,10 @@ export function WhatsAppChat({
         onOpenChange={setChangeAgentModalOpen}
         conversationId={selectedConversation?.id || ''}
         currentAgentId={selectedConversation?.agent_active_id}
-        onAgentChanged={() => {
-          // Recarregar conversas para atualizar o agente
-          fetchConversations();
+        onAgentChanged={async () => {
+          console.log('🔄 Agente alterado, atualizando conversa...');
+          // Recarregar conversas para atualizar a lista
+          await fetchConversations();
         }}
       />
 

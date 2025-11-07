@@ -62,12 +62,20 @@ export function ChangeAgentModal({
 
     setIsChanging(true);
     try {
+      // Buscar nome do novo agente
+      const { data: agentData } = await supabase
+        .from('ai_agents')
+        .select('name')
+        .eq('id', selectedAgentId)
+        .single();
+
       // Atualizar o agente ativo da conversa
       const { error } = await supabase
         .from('conversations')
         .update({ 
           agent_active_id: selectedAgentId,
-          agente_ativo: true // Manter agente ativo
+          agente_ativo: true,
+          _updated_at: Date.now() // Força atualização do timestamp
         })
         .eq('id', conversationId);
 
@@ -75,7 +83,7 @@ export function ChangeAgentModal({
 
       toast({
         title: "✅ Agente trocado",
-        description: "O agente ativo foi alterado com sucesso",
+        description: `Agora usando: ${agentData?.name || 'Novo agente'}`,
       });
 
       onAgentChanged?.();
@@ -99,7 +107,8 @@ export function ChangeAgentModal({
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agente_ativo: false
+          agente_ativo: false,
+          _updated_at: Date.now() // Força atualização do timestamp
         })
         .eq('id', conversationId);
 
