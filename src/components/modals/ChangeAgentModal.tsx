@@ -1,0 +1,210 @@
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useToast } from '@/hooks/use-toast';
+import { Bot, Check, Loader2, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface ChangeAgentModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  conversationId: string;
+  currentAgentId?: string | null;
+  onAgentChanged?: () => void;
+}
+
+export function ChangeAgentModal({
+  open,
+  onOpenChange,
+  conversationId,
+  currentAgentId,
+  onAgentChanged
+}: ChangeAgentModalProps) {
+  const { selectedWorkspace } = useWorkspace();
+  const { toast } = useToast();
+  const [isChanging, setIsChanging] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(currentAgentId || null);
+
+  // Buscar agentes ativos do workspace
+  const { data: agents, isLoading } = useQuery({
+    queryKey: ['workspace-agents', selectedWorkspace?.workspace_id],
+    queryFn: async () => {
+      if (!selectedWorkspace?.workspace_id) return [];
+      
+      const { data, error } = await supabase
+        .from('ai_agents')
+        .select('id, name, description, agent_type, is_active')
+        .eq('workspace_id', selectedWorkspace.workspace_id)
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedWorkspace?.workspace_id && open,
+  });
+
+  const handleChangeAgent = async () => {
+    if (!selectedAgentId) {
+      toast({
+        title: "❌ Erro",
+        description: "Selecione um agente para continuar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChanging(true);
+    try {
+      // Atualizar o agente ativo da conversa
+      const { error } = await supabase
+        .from('conversations')
+        .update({ 
+          agent_active_id: selectedAgentId,
+          agente_ativo: true // Manter agente ativo
+        })
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Agente trocado",
+        description: "O agente ativo foi alterado com sucesso",
+      });
+
+      onAgentChanged?.();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Erro ao trocar agente:', error);
+      toast({
+        title: "❌ Erro",
+        description: "Não foi possível trocar o agente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-primary" />
+            Trocar Agente de IA
+          </DialogTitle>
+          <DialogDescription>
+            Selecione um novo agente para esta conversa. O agente permanecerá ativo.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : agents && agents.length > 0 ? (
+          <ScrollArea className="max-h-[400px] pr-4">
+            <div className="space-y-2">
+              {agents.map((agent) => {
+                const isCurrentAgent = agent.id === currentAgentId;
+                const isSelected = agent.id === selectedAgentId;
+
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => setSelectedAgentId(agent.id)}
+                    className={cn(
+                      "w-full p-4 rounded-lg border-2 transition-all text-left",
+                      "hover:border-primary/50 hover:bg-accent/50",
+                      isSelected && "border-primary bg-primary/5",
+                      !isSelected && "border-border"
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className={cn(
+                        "w-10 h-10 transition-all",
+                        isSelected && "ring-2 ring-primary ring-offset-2"
+                      )}>
+                        <AvatarFallback className={cn(
+                          "text-white font-semibold",
+                          isSelected ? "bg-primary" : "bg-muted-foreground"
+                        )}>
+                          <Bot className="w-5 h-5" />
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-sm">{agent.name}</h4>
+                          {isCurrentAgent && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              <Sparkles className="w-2.5 h-2.5 mr-1" />
+                              Atual
+                            </Badge>
+                          )}
+                          {isSelected && !isCurrentAgent && (
+                            <Check className="w-4 h-4 text-primary" />
+                          )}
+                        </div>
+                        {agent.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {agent.description}
+                          </p>
+                        )}
+                        {agent.agent_type && (
+                          <Badge variant="outline" className="mt-2 text-[10px]">
+                            {agent.agent_type}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="text-center py-8">
+            <Bot className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Nenhum agente ativo encontrado
+            </p>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isChanging}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleChangeAgent}
+            disabled={isChanging || !selectedAgentId || selectedAgentId === currentAgentId}
+          >
+            {isChanging ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Trocando...
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Trocar Agente
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

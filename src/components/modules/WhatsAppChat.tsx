@@ -41,6 +41,7 @@ import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { ActiveProviderBadge } from "@/components/chat/ActiveProviderBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
+import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -151,6 +152,7 @@ export function WhatsAppChat({
   const [searchTerm, setSearchTerm] = useState("");
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [changeAgentModalOpen, setChangeAgentModalOpen] = useState(false);
 
   // Verificar se há agente ativo na conversa selecionada
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent(selectedConversation?.id);
@@ -1877,20 +1879,23 @@ export function WhatsAppChat({
                 <div className="flex items-center gap-3 ml-auto">
                   {/* Indicador visual do agente ativo */}
                   {selectedConversation.agente_ativo && agent && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm">
+                    <button
+                      onClick={() => setChangeAgentModalOpen(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 group"
+                    >
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
-                        <Bot className="w-3.5 h-3.5 text-green-600" />
+                        <Bot className="w-3.5 h-3.5 text-green-600 group-hover:scale-110 transition-transform" />
                       </div>
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-green-700 leading-none">
                           {agent.name}
                         </span>
                         <span className="text-[10px] text-green-600 leading-none mt-0.5">
-                          Agente ativo
+                          Clique para trocar
                         </span>
                       </div>
-                    </div>
+                    </button>
                   )}
 
                   <TooltipProvider>
@@ -2283,6 +2288,17 @@ export function WhatsAppChat({
         open={showSelectAgentModal} 
         onOpenChange={setShowSelectAgentModal} 
         conversationId={selectedConversation?.id || ''} 
+      />
+
+      <ChangeAgentModal
+        open={changeAgentModalOpen}
+        onOpenChange={setChangeAgentModalOpen}
+        conversationId={selectedConversation?.id || ''}
+        currentAgentId={selectedConversation?.agent_active_id}
+        onAgentChanged={() => {
+          // Recarregar conversas para atualizar o agente
+          fetchConversations();
+        }}
       />
       </div>
 
