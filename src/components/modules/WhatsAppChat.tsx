@@ -101,8 +101,6 @@ export function WhatsAppChat({
   } = useWhatsAppConversations();
   
 
-  // Verificar se há agente ativo no workspace
-  const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent();
 
   // ✅ Hook específico para mensagens (lazy loading)
   const {
@@ -153,6 +151,9 @@ export function WhatsAppChat({
   const [searchTerm, setSearchTerm] = useState("");
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+
+  // Verificar se há agente ativo na conversa selecionada
+  const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent(selectedConversation?.id);
 
   // Log do estado do agente após selectedConversation estar disponível
   useEffect(() => {
