@@ -1875,6 +1875,24 @@ export function WhatsAppChat({
                 </div>
 
                 <div className="flex items-center gap-3 ml-auto">
+                  {/* Indicador visual do agente ativo */}
+                  {selectedConversation.agente_ativo && agent && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
+                        <Bot className="w-3.5 h-3.5 text-green-600" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-green-700 leading-none">
+                          {agent.name}
+                        </span>
+                        <span className="text-[10px] text-green-600 leading-none mt-0.5">
+                          Agente ativo
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1910,7 +1928,12 @@ export function WhatsAppChat({
                         {agentLoading ? (
                           <p className="text-xs">⏳ Carregando...</p>
                         ) : hasAgent ? (
-                          <p className="text-xs font-semibold">{agent?.name || 'Agente IA'}</p>
+                          <div className="flex flex-col gap-1">
+                            <p className="text-xs font-semibold">{agent?.name || 'Agente IA'}</p>
+                            {agent?.agent_type && (
+                              <p className="text-[10px] text-muted-foreground">Tipo: {agent.agent_type}</p>
+                            )}
+                          </div>
                         ) : (
                           <p className="text-xs">⚠️ Nenhum agente de IA cadastrado</p>
                         )}
