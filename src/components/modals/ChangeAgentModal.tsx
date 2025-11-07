@@ -159,21 +159,23 @@ export function ChangeAgentModal({
                   <button
                     key={agent.id}
                     onClick={() => setSelectedAgentId(agent.id)}
+                    disabled={isCurrentAgent}
                     className={cn(
                       "w-full p-4 rounded-lg border-2 transition-all text-left",
-                      "hover:border-primary/50 hover:bg-accent/50",
-                      isSelected && "border-primary bg-primary/5",
-                      !isSelected && "border-border"
+                      isCurrentAgent && "opacity-60 cursor-not-allowed border-muted bg-muted/20",
+                      !isCurrentAgent && "hover:border-primary/50 hover:bg-accent/50",
+                      !isCurrentAgent && isSelected && "border-primary bg-primary/5",
+                      !isCurrentAgent && !isSelected && "border-border"
                     )}
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className={cn(
                         "w-10 h-10 transition-all",
-                        isSelected && "ring-2 ring-primary ring-offset-2"
+                        isSelected && !isCurrentAgent && "ring-2 ring-primary ring-offset-2"
                       )}>
                         <AvatarFallback className={cn(
                           "text-white font-semibold",
-                          isSelected ? "bg-primary" : "bg-muted-foreground"
+                          isSelected && !isCurrentAgent ? "bg-primary" : "bg-muted-foreground"
                         )}>
                           <Bot className="w-5 h-5" />
                         </AvatarFallback>
@@ -185,7 +187,7 @@ export function ChangeAgentModal({
                           {isCurrentAgent && (
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                               <Sparkles className="w-2.5 h-2.5 mr-1" />
-                              Atual
+                              Agente Ativo
                             </Badge>
                           )}
                           {isSelected && !isCurrentAgent && (
@@ -201,6 +203,11 @@ export function ChangeAgentModal({
                           <Badge variant="outline" className="mt-2 text-[10px]">
                             {agent.agent_type}
                           </Badge>
+                        )}
+                        {isCurrentAgent && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">
+                            Este agente já está ativo nesta conversa
+                          </p>
                         )}
                       </div>
                     </div>
@@ -248,11 +255,19 @@ export function ChangeAgentModal({
             <Button
               onClick={handleChangeAgent}
               disabled={isChanging || !selectedAgentId || selectedAgentId === currentAgentId}
+              className={cn(
+                selectedAgentId === currentAgentId && "opacity-50 cursor-not-allowed"
+              )}
             >
               {isChanging ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Trocando...
+                </>
+              ) : selectedAgentId === currentAgentId ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Agente Atual
                 </>
               ) : (
                 <>
