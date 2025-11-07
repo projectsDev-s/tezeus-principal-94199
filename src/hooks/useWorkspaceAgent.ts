@@ -11,40 +11,45 @@ export const useWorkspaceAgent = () => {
     enabled: !!selectedWorkspace?.workspace_id
   });
   
-  const { data: agent, isLoading, error } = useQuery({
-    queryKey: ['workspace-agent', selectedWorkspace?.workspace_id],
+  const { data: agents, isLoading, error } = useQuery({
+    queryKey: ['workspace-agents', selectedWorkspace?.workspace_id],
     queryFn: async () => {
       if (!selectedWorkspace?.workspace_id) {
         console.log('❌ Workspace ID não disponível');
-        return null;
+        return [];
       }
       
-      console.log('🔍 Buscando agente para workspace:', selectedWorkspace.workspace_id);
+      console.log('🔍 Buscando agentes para workspace:', selectedWorkspace.workspace_id);
       
       const { data, error } = await supabase
         .from('ai_agents')
         .select('id, name, is_active, agent_type')
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .eq('is_active', true)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
       
-      console.log('📊 Resultado da busca:', { data, error });
+      console.log('📊 Resultado da busca:', { data, error, count: data?.length });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!selectedWorkspace?.workspace_id,
   });
   
+  const hasAgent = agents && agents.length > 0;
+  const defaultAgent = agents?.[0] || null;
+  
   console.log('✅ Hook result:', { 
-    hasAgent: !!agent, 
+    hasAgent, 
     isLoading,
-    agent: agent?.name 
+    agentsCount: agents?.length,
+    defaultAgent: defaultAgent?.name 
   });
   
   return { 
-    agent, 
-    hasAgent: !!agent, 
+    agent: defaultAgent,
+    agents: agents || [],
+    hasAgent, 
     isLoading 
   };
 };
