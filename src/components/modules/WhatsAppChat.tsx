@@ -44,7 +44,6 @@ import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { AgentHistoryModal } from "@/components/modals/AgentHistoryModal";
 import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
-import { ChatModal } from "@/components/modals/ChatModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2, Workflow, Clock } from "lucide-react";
@@ -156,7 +155,6 @@ export function WhatsAppChat({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [changeAgentModalOpen, setChangeAgentModalOpen] = useState(false);
   const [agentHistoryModalOpen, setAgentHistoryModalOpen] = useState(false);
-  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
 
   // Verificar se há agente ativo na conversa selecionada
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent(selectedConversation?.id);
@@ -1967,16 +1965,6 @@ export function WhatsAppChat({
                     </button>
                   </div>
                   
-                  {/* Botão de Chat */}
-                  <button
-                    onClick={() => setIsChatModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm"
-                    title="Abrir chat"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="text-xs font-semibold">Chat</span>
-                  </button>
-                  
                   {selectedConversation.connection_id && (
                     <ConnectionBadge 
                       connectionId={selectedConversation.connection_id}
@@ -2338,18 +2326,6 @@ export function WhatsAppChat({
         onOpenChange={setAgentHistoryModalOpen}
         conversationId={selectedConversation?.id || ''}
       />
-
-      {selectedConversation && (
-        <ChatModal
-          isOpen={isChatModalOpen}
-          onClose={() => setIsChatModalOpen(false)}
-          conversationId={selectedConversation.id}
-          contactName={selectedConversation.contact.name}
-          contactPhone={selectedConversation.contact.phone}
-          contactAvatar={selectedConversation.contact.profile_image_url}
-          contactId={selectedConversation.contact.id}
-        />
-      )}
       </div>
 
     </div>;
