@@ -542,7 +542,7 @@ function DraggableDeal({
             <span className="text-[10px] md:text-xs text-muted-foreground">
               {formatTimeAgo(deal.created_at)}
             </span>
-            {deal.priority === 'high' && <div className="flex items-center justify-center w-4 h-4 md:w-5 md:h-5 rounded-full bg-orange-100 text-orange-600">
+            {deal.priority === 'high' && <div className="flex items-center justify-center w-4 h-4 md:w-5 md:h-5 rounded-full bg-destructive/10 text-destructive">
                 <AlertTriangle className="w-2.5 h-2.5" />
               </div>}
           </div>
@@ -1032,7 +1032,7 @@ function CRMNegociosContent({
           <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Settings Button */}
-              {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && <Button size="icon" variant="ghost" className={cn("h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0", isDarkMode ? "text-orange-400 hover:bg-orange-400/10" : "text-orange-500 hover:bg-orange-500/10")} onClick={() => setIsConfigModalOpen(true)} disabled={!selectedPipeline}>
+              {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && <Button size="icon" variant="ghost" className="h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0" onClick={() => setIsConfigModalOpen(true)} disabled={!selectedPipeline}>
                   <Settings className="w-5 h-5" />
                 </Button>}
               
@@ -1078,10 +1078,10 @@ function CRMNegociosContent({
                     <Plus className="w-5 h-5" />
                   </Button>
                 )}
-                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : isDarkMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
+                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
                   <Filter className="w-4 h-4 mr-2" />
                   Filtrar
-                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-white text-orange-500 text-xs px-1 py-0 h-auto">
+                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
                       {(appliedFilters?.tags?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
                     </Badge>}
                 </Button>
