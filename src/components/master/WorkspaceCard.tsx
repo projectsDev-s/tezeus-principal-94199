@@ -130,7 +130,7 @@ export function WorkspaceCard({
       <CardFooter className="flex flex-col gap-2">
         <Button
           onClick={() => onLogin(workspace)}
-          variant="yellow"
+          variant="default"
           className="w-full"
           size="sm"
         >

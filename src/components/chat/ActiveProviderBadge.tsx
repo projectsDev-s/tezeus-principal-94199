@@ -35,7 +35,7 @@ export function ActiveProviderBadge({ workspaceId, className }: ActiveProviderBa
 
   const isEvolution = activeProvider === 'evolution';
   const providerName = isEvolution ? 'Evolution API' : 'Z-API';
-  const providerColor = isEvolution ? 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/20' : 'bg-yellow-500/10 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400 border-yellow-500/20';
+  const providerColor = isEvolution ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary border-primary/20' : 'bg-accent/10 text-accent-foreground dark:bg-accent/20 dark:text-accent-foreground border-accent/20';
 
   return (
     <TooltipProvider>

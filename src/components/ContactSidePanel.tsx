@@ -567,14 +567,14 @@ export function ContactSidePanel({
                               const fieldIndex = customFields.findIndex(f => f.key === field.field_name);
                               
                               return (
-                                <div key={field.id} className="group relative p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                <div key={field.id} className="group relative p-4 bg-warning/10 dark:bg-warning/20 border border-warning/20 dark:border-warning/30 rounded-lg">
                                   <div className="flex items-start gap-3">
-                                    <div className="mt-0.5 text-yellow-700 dark:text-yellow-400">
+                                    <div className="mt-0.5 text-warning dark:text-warning">
                                       <Pin className="h-4 w-4" />
                                     </div>
                                     
                                     <div className="flex-1 space-y-1 min-w-0">
-                                      <p className="text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
+                                      <p className="text-xs font-bold uppercase tracking-wide text-warning dark:text-warning">
                                         {field.field_name} *
                                       </p>
                                       
@@ -600,7 +600,7 @@ export function ContactSidePanel({
                                             }
                                           }}
                                           autoFocus
-                                          className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-yellow-600 pb-0.5"
+                                          className="w-full text-sm font-normal bg-transparent border-none outline-none border-b-2 border-warning pb-0.5"
                                         />
                                       ) : (
                                         <p
@@ -616,7 +616,7 @@ export function ContactSidePanel({
                                               setEditingFieldType('value');
                                             }
                                           }}
-                                          className="text-sm font-normal text-yellow-700 dark:text-yellow-300 cursor-pointer truncate"
+                                          className="text-sm font-normal text-warning dark:text-warning cursor-pointer truncate"
                                           title="Clique duas vezes para editar"
                                         >
                                           {currentValue || 'Clique para adicionar'}

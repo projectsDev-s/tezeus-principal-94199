@@ -53,9 +53,9 @@ export const WebhookDiagnostics = () => {
   };
 
   const getStatusIcon = (hasData: boolean, hasError: boolean) => {
-    if (hasError) return <XCircle className="h-4 w-4 text-red-500" />;
-    if (hasData) return <CheckCircle className="h-4 w-4 text-green-500" />;
-    return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    if (hasError) return <XCircle className="h-4 w-4 text-destructive" />;
+    if (hasData) return <CheckCircle className="h-4 w-4 text-success" />;
+    return <AlertTriangle className="h-4 w-4 text-warning" />;
   };
 
   return (
@@ -113,9 +113,9 @@ export const WebhookDiagnostics = () => {
             </div>
 
             {(!diagnosis.evolution_config.found || !diagnosis.webhook_settings.found) && (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                <h4 className="font-medium text-yellow-800 mb-2">Problemas Identificados:</h4>
-                <ul className="text-sm text-yellow-700 space-y-1">
+              <div className="p-4 bg-warning/10 border border-warning/20 rounded">
+                <h4 className="font-medium text-warning mb-2">Problemas Identificados:</h4>
+                <ul className="text-sm text-warning space-y-1">
                   {!diagnosis.evolution_config.found && (
                     <li>• Configuração da Evolution API não encontrada para este workspace</li>
                   )}

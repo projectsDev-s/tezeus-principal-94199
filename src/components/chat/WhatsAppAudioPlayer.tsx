@@ -128,8 +128,8 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       const barProgress = index / barCount;
       const isPlayed = barProgress < progress;
       
-      // Cor: PRETO se já tocou, CINZA CLARO se não tocou
-      ctx.fillStyle = isPlayed ? '#000000' : '#D1D5DB';
+      // Cor: usa primária se já tocou, muted se não tocou
+      ctx.fillStyle = isPlayed ? 'hsl(var(--primary))' : 'hsl(var(--muted))';
       
       // Desenha a barra (retângulo com cantos arredondados)
       const radius = 1.5;
@@ -152,12 +152,12 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
       const dotX = progress * width;
       const dotY = height / 2;
       
-      // Círculo branco com borda preta
+      // Círculo usando cores do sistema
       ctx.beginPath();
       ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = 'hsl(var(--background))';
       ctx.fill();
-      ctx.strokeStyle = '#000000';
+      ctx.strokeStyle = 'hsl(var(--primary))';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
