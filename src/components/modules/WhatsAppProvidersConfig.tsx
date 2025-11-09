@@ -270,22 +270,6 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Provedores WhatsApp</h2>
-        <p className="text-muted-foreground">
-          Configure os provedores de WhatsApp para {workspaceName || 'este workspace'}
-        </p>
-      </div>
-
-      {activeProvider && (
-        <Alert>
-          <Zap className="h-4 w-4" />
-          <AlertDescription>
-            Provedor ativo: <strong>{activeProvider.provider === 'evolution' ? 'Evolution API' : 'Z-API'}</strong>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'evolution' | 'zapi')}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="evolution" className="flex items-center gap-2">
