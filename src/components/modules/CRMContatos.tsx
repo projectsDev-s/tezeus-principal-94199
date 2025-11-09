@@ -1071,13 +1071,13 @@ export function CRMContatos() {
 
           <Button
             size="sm"
-            className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap text-xs h-8 px-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap text-xs h-8 px-2"
             onClick={handleAddContact}
           >
             Adicionar
           </Button>
 
-          <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap text-xs h-8 px-2">
+          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap text-xs h-8 px-2">
             Importar
           </Button>
 
@@ -1172,7 +1172,7 @@ export function CRMContatos() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             onClick={handleAddContact}
                           >
                             <Plus className="h-4 w-4 mr-2" />
@@ -1288,7 +1288,7 @@ export function CRMContatos() {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name" className="text-yellow-600">
+              <Label htmlFor="name" className="text-primary">
                 Nome
               </Label>
               <Input
@@ -1304,7 +1304,7 @@ export function CRMContatos() {
                       : null,
                   )
                 }
-                className="border-yellow-400"
+                className="border-primary"
               />
             </div>
 
@@ -1362,7 +1362,7 @@ export function CRMContatos() {
             {workspaceFields.length > 0 && (
               <div>
                 <Label className="text-sm font-medium flex items-center gap-2">
-                  <Pin className="h-4 w-4 text-yellow-600" />
+                  <Pin className="h-4 w-4 text-primary" />
                   Campos Padrões
                 </Label>
                 <div className="space-y-3 mt-2">
@@ -1372,9 +1372,9 @@ export function CRMContatos() {
                     return (
                       <div
                         key={field.id}
-                        className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+                        className="p-3 bg-warning/10 dark:bg-warning/20 border border-warning/20 dark:border-warning/30 rounded-lg"
                       >
-                        <Label className="text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
+                        <Label className="text-xs font-bold uppercase text-warning dark:text-warning">
                           {field.field_name}
                         </Label>
                         <Input
@@ -1390,7 +1390,7 @@ export function CRMContatos() {
                             }
                           }}
                           placeholder={`Digite ${field.field_name.toLowerCase()}`}
-                          className="mt-1 border-yellow-400 dark:border-yellow-600"
+                          className="mt-1 border-primary dark:border-primary"
                         />
                       </div>
                     );
@@ -1543,7 +1543,7 @@ export function CRMContatos() {
             </Button>
             <Button
               onClick={handleSaveContact}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={isSaving || !editingContact?.name?.trim()}
             >
               {isSaving ? "Salvando..." : "Salvar"}

@@ -99,7 +99,7 @@ export function AddTagModal({
         // Criar nova tag
         const { data: newTag, error: tagError } = await supabase
           .from('tags')
-          .insert([{ name: tagName, color: '#808080', workspace_id: selectedWorkspace!.workspace_id }])
+          .insert([{ name: tagName, color: 'hsl(var(--muted))', workspace_id: selectedWorkspace!.workspace_id }])
           .select()
           .single();
 
@@ -165,7 +165,7 @@ export function AddTagModal({
       <PopoverContent 
         className={cn(
           "w-96 p-4",
-          isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white"
+          isDarkMode ? "bg-card border-border" : "bg-background"
         )}
         align="start"
         sideOffset={5}
@@ -190,7 +190,7 @@ export function AddTagModal({
                 setTimeout(() => setShowDropdown(false), 200);
               }}
               className={cn(
-                isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
+                isDarkMode ? "bg-card border-border text-foreground" : "bg-background"
               )}
               disabled={isLoading}
             />
@@ -198,7 +198,7 @@ export function AddTagModal({
             {showDropdown && suggestions.length > 0 && (
               <div className={cn(
                 "absolute z-50 w-full border rounded-md p-2 space-y-1 max-h-48 overflow-y-auto shadow-lg",
-                isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-white"
+                isDarkMode ? "border-border bg-card" : "border-border bg-background"
               )}>
                 <p className={cn(
                   "text-xs font-medium",
@@ -270,7 +270,7 @@ export function AddTagModal({
             <Button
               onClick={() => tagInput.trim() && handleAddTag(tagInput.trim())}
               disabled={!tagInput.trim() || isLoading}
-              className="bg-yellow-400 text-black hover:bg-yellow-500"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isLoading ? "Adicionando..." : "Adicionar"}
             </Button>

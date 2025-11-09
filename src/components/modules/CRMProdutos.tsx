@@ -128,7 +128,7 @@ export function CRMProdutos() {
             resetForm();
             setIsCreateModalOpen(true);
           }}
-          className="bg-yellow-500 hover:bg-yellow-600 text-black font-medium"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
         >
           Adicionar Produto
         </Button>
@@ -268,7 +268,7 @@ export function CRMProdutos() {
               </Button>
               <Button 
                 onClick={handleCreateProduct}
-                className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 Salvar
               </Button>
@@ -317,7 +317,7 @@ export function CRMProdutos() {
               </Button>
               <Button 
                 onClick={handleEditProduct}
-                className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 Salvar
               </Button>

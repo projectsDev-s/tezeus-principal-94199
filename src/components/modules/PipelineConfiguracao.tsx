@@ -175,7 +175,7 @@ function SortableColumn({
                />
                <Button
                  size="sm"
-                 className="mt-2 h-6 text-xs bg-yellow-500 hover:bg-yellow-600 text-black"
+                 className="mt-2 h-6 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
                  onClick={handleSaveColumnName}
                >
                  salvar
@@ -886,7 +886,7 @@ export default function PipelineConfiguracao({
       }
     }
   };
-  return <div className={cn("min-h-screen", isDarkMode ? "bg-[#1a1a1a]" : "bg-gray-50")}>
+  return <div className={cn("min-h-screen", isDarkMode ? "bg-background" : "bg-muted/30")}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="geral">Configurações Gerais</TabsTrigger>
@@ -897,7 +897,7 @@ export default function PipelineConfiguracao({
 
         {/* Configurações Gerais Tab */}
         <TabsContent value="geral" className="space-y-4">
-          <Card className={cn("border-gray-200", isDarkMode && "bg-[#2a2a2a] border-gray-700")}>
+          <Card className={cn("border-border", isDarkMode && "bg-card border-border")}>
             <CardHeader>
               <CardTitle className={cn("text-lg", isDarkMode && "text-white")}>
                 Configurações Gerais do Pipeline
@@ -909,7 +909,7 @@ export default function PipelineConfiguracao({
                   Nome do Pipeline
                 </label>
                 <div className="flex gap-2">
-                  <Input value={pipelineName} onChange={e => setPipelineName(e.target.value)} className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""} />
+                  <Input value={pipelineName} onChange={e => setPipelineName(e.target.value)} className={isDarkMode ? "bg-muted border-border text-foreground" : ""} />
                   <Button
                     onClick={async () => {
                       if (!selectedPipeline?.id) return;
@@ -942,7 +942,7 @@ export default function PipelineConfiguracao({
                         });
                       }
                     }}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-black"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Salvar
                   </Button>
@@ -1033,7 +1033,7 @@ export default function PipelineConfiguracao({
 
         {/* Ações Tab */}
         <TabsContent value="acoes" className="space-y-4">
-          <Card className={cn("border-gray-200", isDarkMode && "bg-[#2a2a2a] border-gray-700")}>
+          <Card className={cn("border-border", isDarkMode && "bg-card border-border")}>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className={cn("text-lg", isDarkMode && "text-white")}>
                 Ações do Pipeline
@@ -1082,7 +1082,7 @@ export default function PipelineConfiguracao({
                                 onChange={e => updateAction(action.id, 'actionName', e.target.value)} 
                                 placeholder=" "
                                 id={`action-name-${action.id}`}
-                                className={cn("text-sm peer", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")} 
+                                className={cn("text-sm peer", isDarkMode ? "bg-muted border-border text-foreground" : "")} 
                               />
                               <label 
                                 htmlFor={`action-name-${action.id}`}
@@ -1092,8 +1092,8 @@ export default function PipelineConfiguracao({
                                   "peer-focus:-top-2.5 peer-focus:text-xs peer-focus:px-1",
                                   action.actionName ? "-top-2.5 text-xs px-1" : "top-2.5 text-sm",
                                   isDarkMode 
-                                    ? "text-gray-400 peer-focus:text-gray-300 peer-focus:bg-[#3a3a3a] bg-[#3a3a3a]" 
-                                    : "text-gray-500 peer-focus:text-gray-700 peer-focus:bg-white bg-white"
+                                    ? "text-muted-foreground peer-focus:text-foreground peer-focus:bg-muted bg-muted" 
+                                    : "text-muted-foreground peer-focus:text-foreground peer-focus:bg-background bg-background"
                                 )}
                               >
                                 Nome da Ação
@@ -1103,7 +1103,7 @@ export default function PipelineConfiguracao({
                         </td>
                         <td className="p-2">
                           <Select value={action.nextPipeline} onValueChange={(value) => handlePipelineChange(action.id, value)}>
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-muted border-border text-foreground" : "")}>
                               <SelectValue placeholder="Próxima pipeline" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1121,7 +1121,7 @@ export default function PipelineConfiguracao({
                             onValueChange={(value) => updateAction(action.id, 'targetColumn', value)}
                             disabled={!action.nextPipeline}
                           >
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-muted border-border text-foreground" : "")}>
                               <SelectValue placeholder="Coluna destino" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1135,7 +1135,7 @@ export default function PipelineConfiguracao({
                         </td>
                         <td className="p-2">
                           <Select value={action.dealState} onValueChange={value => updateAction(action.id, 'dealState', value)}>
-                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : "")}>
+                            <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-muted border-border text-foreground" : "")}>
                               <SelectValue placeholder="Estado do negócio" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1172,7 +1172,7 @@ export default function PipelineConfiguracao({
 
         {/* Execuções de Automações Tab */}
         <TabsContent value="execucoes" className="space-y-4">
-          <Card className={cn("border-gray-200", isDarkMode && "bg-[#2a2a2a] border-gray-700")}>
+          <Card className={cn("border-border", isDarkMode && "bg-card border-border")}>
             <CardHeader>
               <CardTitle className={cn("text-lg", isDarkMode && "text-white")}>
                 Execuções de Automações
@@ -1185,7 +1185,7 @@ export default function PipelineConfiguracao({
                     Selecionar Coluna
                   </label>
                   <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                    <SelectTrigger className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""}>
+                    <SelectTrigger className={isDarkMode ? "bg-muted border-border text-foreground" : ""}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1200,7 +1200,7 @@ export default function PipelineConfiguracao({
                     Selecionar Automação
                   </label>
                   <Select value={selectedAutomation} onValueChange={setSelectedAutomation}>
-                    <SelectTrigger className={isDarkMode ? "bg-[#3a3a3a] border-gray-600 text-white" : ""}>
+                    <SelectTrigger className={isDarkMode ? "bg-muted border-border text-foreground" : ""}>
                       <SelectValue placeholder="Selecione uma automação" />
                     </SelectTrigger>
                     <SelectContent>

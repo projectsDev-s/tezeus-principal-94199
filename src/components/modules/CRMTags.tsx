@@ -201,7 +201,7 @@ export function CRMTags() {
             </Button>
             
             <Button 
-              variant="yellow" 
+              variant="default" 
               className="whitespace-nowrap"
               onClick={() => setIsCreateModalOpen(true)}
             >

@@ -21,7 +21,7 @@ export function AddressModal({ open, onOpenChange }: AddressModalProps) {
           <div className="flex items-center justify-center gap-2">
             <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm">1</div>
             <div className="w-8 border-t border-muted-foreground"></div>
-            <div className="w-8 h-8 rounded-full bg-brand-yellow text-black flex items-center justify-center text-sm font-medium">2</div>
+            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">2</div>
             <div className="w-8 border-t border-muted-foreground"></div>
             <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm">3</div>
           </div>
@@ -74,7 +74,7 @@ export function AddressModal({ open, onOpenChange }: AddressModalProps) {
               Cancelar
             </Button>
             <Button 
-              variant="yellow"
+              variant="default"
               className="flex-1"
               onClick={() => onOpenChange(false)}
             >

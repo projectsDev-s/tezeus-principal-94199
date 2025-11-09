@@ -1029,7 +1029,7 @@ function CRMNegociosContent({
         
         {/* CARD DE FILTROS */}
         <div className="sticky top-0 z-10 px-2 py-2">
-          <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white border-gray-200")}>
+          <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Settings Button */}
               {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && <Button size="icon" variant="ghost" className={cn("h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0", isDarkMode ? "text-orange-400 hover:bg-orange-400/10" : "text-orange-500 hover:bg-orange-500/10")} onClick={() => setIsConfigModalOpen(true)} disabled={!selectedPipeline}>
@@ -1072,13 +1072,13 @@ function CRMNegociosContent({
                   <Button 
                     size="sm" 
                     variant="ghost"
-                    className="h-10 w-10 p-0 text-yellow-500 hover:bg-yellow-500/10"
+                    className="h-10 w-10 p-0 text-primary hover:bg-primary/10"
                     onClick={() => setIsCriarPipelineModalOpen(true)}
                   >
                     <Plus className="w-5 h-5" />
                   </Button>
                 )}
-                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-orange-500 text-white hover:bg-orange-600" : isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
+                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : isDarkMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
                   <Filter className="w-4 h-4 mr-2" />
                   Filtrar
                   {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-white text-orange-500 text-xs px-1 py-0 h-auto">
@@ -1131,7 +1131,7 @@ function CRMNegociosContent({
             </div>
             
             {/* + Coluna Button - Only show if pipeline exists and user can manage columns */}
-            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && <Button size="sm" className={cn("bg-warning text-black hover:bg-warning/90 font-medium ml-4 flex-shrink-0", isDarkMode ? "bg-yellow-500 text-black hover:bg-yellow-600" : "bg-yellow-400 text-black hover:bg-yellow-500")} onClick={() => setIsAddColumnModalOpen(true)}>
+            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && <Button size="sm" className={cn("bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-4 flex-shrink-0")} onClick={() => setIsAddColumnModalOpen(true)}>
                 + Coluna
               </Button>}
           </div>
@@ -1229,7 +1229,7 @@ function CRMNegociosContent({
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
                     <div className="w-60 sm:w-72 flex-shrink-0">
-                       <div className={cn("bg-card rounded-lg border border-t-4 h-[600px] max-h-[80vh] flex flex-col border-b-2 border-b-yellow-500", `border-t-[${column.color}]`)} style={{
+                       <div className={cn("bg-card rounded-lg border border-t-4 h-[600px] max-h-[80vh] flex flex-col border-b-2 border-b-primary", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color
                 }}>
                         {/* Cabeçalho da coluna - fundo branco/claro */}

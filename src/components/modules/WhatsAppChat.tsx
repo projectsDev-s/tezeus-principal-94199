@@ -1448,7 +1448,7 @@ export function WhatsAppChat({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button onClick={() => setActiveTab('all')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'all' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                    <Circle className={cn("h-4 w-4", activeTab === 'all' && "fill-yellow-500 text-yellow-500")} />
+                    <Circle className={cn("h-4 w-4", activeTab === 'all' && "fill-primary text-primary")} />
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Todos</span>
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
@@ -1591,7 +1591,7 @@ export function WhatsAppChat({
           <div className="flex items-center gap-2">
             <div className="flex items-center flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-[#d1d1d1]/30" />
+              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-muted/30" />
             </div>
             
             {/* Botão de atualizar */}
@@ -1807,7 +1807,7 @@ export function WhatsAppChat({
                       <Tooltip>
                         <TooltipTrigger asChild>
                             <Avatar className="w-6 h-6 rounded-full">
-                              <AvatarFallback className="bg-gray-200 text-gray-600 text-[10px] font-medium">
+                              <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
                                 {conversation.assigned_user_name ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '?'}
                               </AvatarFallback>
                             </Avatar>
@@ -1979,7 +1979,7 @@ export function WhatsAppChat({
 
                 // Refresh conversations to sync with server and update the list
                 await fetchConversations();
-              }} className="h-8 px-4 bg-yellow-400 hover:bg-yellow-500 text-black font-medium rounded-md" />
+              }} className="h-8 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md" />
                   
                   <EndConversationButton conversation={selectedConversation} onEnd={async (conversationId: string) => {
                 // Update selected conversation status immediately for better UX
