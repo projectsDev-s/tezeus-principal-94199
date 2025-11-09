@@ -1924,47 +1924,46 @@ export function WhatsAppChat({
                 </div>
 
                 <div className="flex items-center gap-3 ml-auto">
-                  {/* Botão do agente - ativo ou desativado */}
-                  {agent && (
-                    <div className="flex items-center gap-2">
-                      {selectedConversation.agente_ativo ? (
-                        <button
-                          onClick={() => setChangeAgentModalOpen(true)}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 group"
-                          title="Agente ativo - clique para trocar"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
-                            <Bot className="w-3.5 h-3.5 text-green-600 group-hover:scale-110 transition-transform" />
-                          </div>
-                          <span className="text-xs font-semibold text-green-700 leading-none">
-                            {agent.name}
-                          </span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleToggleAgent()}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 hover:from-green-50 hover:to-emerald-50 group"
-                          title="Agente desativado - clique para ativar"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full group-hover:bg-green-500 transition-colors" />
-                            <Bot className="w-3.5 h-3.5 text-gray-600 group-hover:text-green-600 group-hover:scale-110 transition-all" />
-                          </div>
-                          <span className="text-xs font-semibold text-gray-700 group-hover:text-green-700 leading-none transition-colors">
-                            {agent.name}
-                          </span>
-                        </button>
-                      )}
+                  {/* Botão do agente */}
+                  <div className="flex items-center gap-2">
+                    {selectedConversation.agente_ativo && agent ? (
                       <button
-                        onClick={() => setAgentHistoryModalOpen(true)}
-                        className="p-2 hover:bg-accent rounded-full transition-colors"
-                        title="Ver histórico de agentes"
+                        onClick={() => setChangeAgentModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 group"
+                        title="Agente ativo - clique para trocar"
                       >
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
+                          <Bot className="w-3.5 h-3.5 text-green-600 group-hover:scale-110 transition-transform" />
+                        </div>
+                        <span className="text-xs font-semibold text-green-700 leading-none">
+                          {agent.name}
+                        </span>
                       </button>
-                    </div>
-                  )}
+                    ) : (
+                      <button
+                        onClick={() => setChangeAgentModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 hover:from-green-50 hover:to-emerald-50 group"
+                        title="Clique para ativar um agente"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full group-hover:bg-green-500 transition-colors" />
+                          <Bot className="w-3.5 h-3.5 text-gray-600 group-hover:text-green-600 group-hover:scale-110 transition-all" />
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700 group-hover:text-green-700 leading-none transition-colors">
+                          Ativar
+                        </span>
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => setAgentHistoryModalOpen(true)}
+                      className="p-2 hover:bg-accent rounded-full transition-colors"
+                      title="Ver histórico de agentes"
+                    >
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
                   
                   {selectedConversation.connection_id && (
                     <ConnectionBadge 
