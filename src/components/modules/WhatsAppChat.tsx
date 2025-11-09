@@ -42,7 +42,6 @@ import { ActiveProviderBadge } from "@/components/chat/ActiveProviderBadge";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
 import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
-import { AgentHistoryModal } from "@/components/modals/AgentHistoryModal";
 import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
 import { AssignmentHistoryModal } from "@/components/modals/AssignmentHistoryModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -155,7 +154,6 @@ export function WhatsAppChat({
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [changeAgentModalOpen, setChangeAgentModalOpen] = useState(false);
-  const [agentHistoryModalOpen, setAgentHistoryModalOpen] = useState(false);
   const [assignmentHistoryModalOpen, setAssignmentHistoryModalOpen] = useState(false);
 
   // Verificar se há agente ativo na conversa selecionada
@@ -1959,19 +1957,11 @@ export function WhatsAppChat({
                     )}
                     
                     <button
-                      onClick={() => setAgentHistoryModalOpen(true)}
-                      className="p-2 hover:bg-accent rounded-full transition-colors"
-                      title="Ver histórico de agentes IA"
-                    >
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                    
-                    <button
                       onClick={() => setAssignmentHistoryModalOpen(true)}
                       className="p-2 hover:bg-accent rounded-full transition-colors"
-                      title="Ver histórico de transferências"
+                      title="Ver histórico de agentes e transferências"
                     >
-                      <UsersRound className="h-4 w-4 text-muted-foreground" />
+                      <Clock className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
                   
@@ -2329,12 +2319,6 @@ export function WhatsAppChat({
           // Recarregar conversas para atualizar a lista
           await fetchConversations();
         }}
-      />
-
-      <AgentHistoryModal
-        isOpen={agentHistoryModalOpen}
-        onOpenChange={setAgentHistoryModalOpen}
-        conversationId={selectedConversation?.id || ''}
       />
 
       <AssignmentHistoryModal

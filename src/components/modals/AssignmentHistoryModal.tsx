@@ -1,10 +1,13 @@
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConversationAssignments } from "@/hooks/useConversationAssignments";
+import { useAgentHistory } from "@/hooks/useAgentHistory";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { UserCircle, ArrowRight, UserPlus } from "lucide-react";
+import { UserCircle, ArrowRight, UserPlus, Clock, Bot, Power, PowerOff, ArrowRightLeft, User } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 interface AssignmentHistoryModalProps {
   isOpen: boolean;
@@ -12,45 +15,82 @@ interface AssignmentHistoryModalProps {
   conversationId: string;
 }
 
+const assignmentActionIcons = {
+  assigned: <UserPlus className="h-4 w-4 text-blue-500" />,
+  transferred: <ArrowRight className="h-4 w-4 text-orange-500" />,
+  reassigned: <ArrowRightLeft className="h-4 w-4 text-purple-500" />,
+};
+
+const assignmentActionLabels = {
+  assigned: 'Atribuído',
+  transferred: 'Transferido',
+  reassigned: 'Reatribuído',
+};
+
+const assignmentActionColors = {
+  assigned: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  transferred: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  reassigned: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
+};
+
+const agentActionIcons = {
+  activated: <Power className="h-4 w-4 text-green-500" />,
+  deactivated: <PowerOff className="h-4 w-4 text-red-500" />,
+  changed: <ArrowRightLeft className="h-4 w-4 text-blue-500" />,
+};
+
+const agentActionLabels = {
+  activated: 'Agente ativado',
+  deactivated: 'Agente desativado',
+  changed: 'Agente alterado',
+};
+
+const agentActionColors = {
+  activated: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  deactivated: 'bg-red-500/10 text-red-700 dark:text-red-400',
+  changed: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+};
+
 export function AssignmentHistoryModal({
   isOpen,
   onOpenChange,
   conversationId,
 }: AssignmentHistoryModalProps) {
-  const { data: assignments, isLoading } = useConversationAssignments(conversationId);
+  const { data: assignments, isLoading: assignmentsLoading } = useConversationAssignments(conversationId);
+  const { data: agentHistory, isLoading: agentLoading } = useAgentHistory(conversationId);
 
-  const getActionText = (action: string) => {
-    switch (action) {
-      case 'assigned':
-        return 'Atribuída';
-      case 'transferred':
-        return 'Transferida';
-      case 'reassigned':
-        return 'Reatribuída';
-      default:
-        return action;
+  // Combinar e ordenar ambos os históricos por data
+  const combinedHistory = React.useMemo(() => {
+    const combined: Array<{ type: 'assignment' | 'agent', data: any, timestamp: string }> = [];
+    
+    if (assignments) {
+      assignments.forEach(a => combined.push({ 
+        type: 'assignment', 
+        data: a, 
+        timestamp: a.changed_at 
+      }));
     }
-  };
+    
+    if (agentHistory) {
+      agentHistory.forEach(h => combined.push({ type: 'agent', data: h, timestamp: h.created_at }));
+    }
+    
+    return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [assignments, agentHistory]);
 
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'assigned':
-        return <UserPlus className="w-4 h-4 text-green-500" />;
-      case 'transferred':
-        return <ArrowRight className="w-4 h-4 text-blue-500" />;
-      default:
-        return <UserCircle className="w-4 h-4 text-muted-foreground" />;
-    }
-  };
+  const isLoading = assignmentsLoading || agentLoading;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Histórico de Transferências</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Histórico de Agentes e Transferências
+          </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[500px] pr-4">
+        <ScrollArea className="max-h-[60vh] pr-4">
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
@@ -63,65 +103,132 @@ export function AssignmentHistoryModal({
                 </div>
               ))}
             </div>
-          ) : assignments && assignments.length > 0 ? (
-            <div className="space-y-3">
-              {assignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="flex items-start gap-3 p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors"
-                >
-                  <div className="mt-1">
-                    {getActionIcon(assignment.action)}
-                  </div>
-                  
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">
-                        {getActionText(assignment.action)}
-                      </span>
+          ) : combinedHistory && combinedHistory.length > 0 ? (
+            <div className="space-y-4">
+              {combinedHistory.map((entry, index) => {
+                if (entry.type === 'assignment') {
+                  const assignment = entry.data;
+                  return (
+                    <div
+                      key={`assignment-${assignment.id}`}
+                      className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                    >
+                      <div className="mt-1">
+                        {assignmentActionIcons[assignment.action as keyof typeof assignmentActionIcons]}
+                      </div>
                       
-                      {assignment.from_user_name && (
-                        <>
-                          <span className="text-muted-foreground text-sm">de</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {assignment.from_user_name}
-                          </span>
-                        </>
-                      )}
-                      
-                      {assignment.to_user_name && (
-                        <>
-                          <span className="text-muted-foreground text-sm">para</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {assignment.to_user_name}
-                          </span>
-                        </>
-                      )}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className={assignmentActionColors[assignment.action as keyof typeof assignmentActionColors]}>
+                            {assignmentActionLabels[assignment.action as keyof typeof assignmentActionLabels]}
+                          </Badge>
+                          
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            {assignment.action === 'assigned' ? (
+                              <>
+                                <User className="h-3 w-3" />
+                                <span>para <span className="font-medium text-foreground">{assignment.to_user_name || 'Usuário desconhecido'}</span></span>
+                              </>
+                            ) : (
+                              <>
+                                <User className="h-3 w-3" />
+                                <span>de <span className="font-medium text-foreground">{assignment.from_user_name || 'Não atribuído'}</span></span>
+                                <ArrowRightLeft className="h-3 w-3 mx-1" />
+                                <span>para <span className="font-medium text-foreground">{assignment.to_user_name || 'Não atribuído'}</span></span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {formatDistanceToNow(new Date(assignment.changed_at), {
+                                addSuffix: true,
+                                locale: ptBR,
+                              })}
+                            </span>
+                          </div>
+
+                          {assignment.changed_by_name && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span>Por {assignment.changed_by_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(assignment.changed_at).toLocaleString('pt-BR')}
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>
-                        {formatDistanceToNow(new Date(assignment.changed_at), {
-                          addSuffix: true,
-                          locale: ptBR,
-                        })}
-                      </span>
+                  );
+                } else {
+                  const agent = entry.data;
+                  return (
+                    <div
+                      key={`agent-${agent.id}`}
+                      className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                    >
+                      <div className="mt-1">
+                        {agentActionIcons[agent.action as keyof typeof agentActionIcons]}
+                      </div>
                       
-                      {assignment.changed_by_name && (
-                        <>
-                          <span>•</span>
-                          <span>por {assignment.changed_by_name}</span>
-                        </>
-                      )}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className={agentActionColors[agent.action as keyof typeof agentActionColors]}>
+                            {agentActionLabels[agent.action as keyof typeof agentActionLabels]}
+                          </Badge>
+                          
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Bot className="h-3 w-3" />
+                            <span className="font-medium text-foreground">{agent.agent_name}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                              {formatDistanceToNow(new Date(agent.created_at), {
+                                addSuffix: true,
+                                locale: ptBR,
+                              })}
+                            </span>
+                          </div>
+
+                          {agent.changed_by && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span>Por usuário</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {agent.metadata && Object.keys(agent.metadata).length > 0 && (
+                          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                            {JSON.stringify(agent.metadata, null, 2)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(agent.created_at).toLocaleString('pt-BR')}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                }
+              })}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <UserCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Nenhuma transferência registrada</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">Nenhum histórico encontrado</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                As mudanças de agentes e transferências serão registradas aqui
+              </p>
             </div>
           )}
         </ScrollArea>
