@@ -681,7 +681,7 @@ export function DSVoice() {
                   className={cn(
                     "flex items-center gap-2 rounded-b-none",
                     activeCategory === category.id
-                      ? "bg-yellow-500 text-black hover:bg-yellow-400"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                   onClick={() => setActiveCategory(category.id)}
@@ -708,7 +708,7 @@ export function DSVoice() {
             />
           </div>
           <Button 
-            className="bg-yellow-500 text-black hover:bg-yellow-400 ml-4"
+            variant="default"
             onClick={() => {
               if (activeCategory === "mensagens") setIsMessageModalOpen(true);
               else if (activeCategory === "audios") setIsAudioModalOpen(true);
