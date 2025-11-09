@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { WebhooksEvolutionConfigMaster } from "./master/WebhooksEvolutionConfigMaster";
-import { EvolutionApiConfigMaster } from "./master/EvolutionApiConfigMaster";
+import { WhatsAppProvidersMaster } from "./master/WhatsAppProvidersMaster";
 import { WorkspaceSelector } from "@/components/WorkspaceSelector";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ColorPickerModal } from "@/components/modals/ColorPickerModal";
@@ -214,7 +213,7 @@ export function AdministracaoConfiguracoes() {
       
       <div className="bg-card rounded-lg shadow-sm border border-border">
         <Tabs defaultValue="personalizacao" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50 rounded-t-lg rounded-b-none h-auto p-0">
+          <TabsList className="grid w-full grid-cols-2 bg-muted/50 rounded-t-lg rounded-b-none h-auto p-0">
             <TabsTrigger 
               value="personalizacao" 
               className="rounded-t-lg rounded-b-none py-4 px-6 text-sm font-medium uppercase tracking-wide data-[state=active]:bg-transparent data-[state=active]:text-brand-yellow data-[state=active]:border-b-2 data-[state=active]:border-brand-yellow data-[state=active]:shadow-none"
@@ -222,16 +221,10 @@ export function AdministracaoConfiguracoes() {
               Personalização
             </TabsTrigger>
             <TabsTrigger 
-              value="webhooks" 
+              value="api-whatsapp" 
               className="rounded-t-lg rounded-b-none py-4 px-6 text-sm font-medium uppercase tracking-wide data-[state=active]:bg-transparent data-[state=active]:text-brand-yellow data-[state=active]:border-b-2 data-[state=active]:border-brand-yellow data-[state=active]:shadow-none"
             >
-              Webhooks (Evolution)
-            </TabsTrigger>
-            <TabsTrigger 
-              value="evolution-api" 
-              className="rounded-t-lg rounded-b-none py-4 px-6 text-sm font-medium uppercase tracking-wide data-[state=active]:bg-transparent data-[state=active]:text-brand-yellow data-[state=active]:border-b-2 data-[state=active]:border-brand-yellow data-[state=active]:shadow-none"
-            >
-              Evolution API
+              API WhatsApp
             </TabsTrigger>
           </TabsList>
           
@@ -429,12 +422,8 @@ export function AdministracaoConfiguracoes() {
             )}
           </TabsContent>
 
-          <TabsContent value="webhooks" className="p-0 mt-0">
-            <WebhooksEvolutionConfigMaster />
-          </TabsContent>
-
-          <TabsContent value="evolution-api" className="p-0 mt-0">
-            <EvolutionApiConfigMaster />
+          <TabsContent value="api-whatsapp" className="p-0 mt-0">
+            <WhatsAppProvidersMaster />
           </TabsContent>
 
         </Tabs>
