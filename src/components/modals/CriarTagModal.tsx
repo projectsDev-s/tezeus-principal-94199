@@ -152,7 +152,7 @@ export function CriarTagModal({ isOpen, onClose, onTagCreated }: CriarTagModalPr
               </Button>
               <Button
                 onClick={handleCreate}
-                className="flex-1 bg-warning hover:bg-yellow-500 text-black"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isLoading}
               >
                 {isLoading ? "Criando..." : "Criar"}

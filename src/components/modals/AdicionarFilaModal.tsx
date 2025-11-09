@@ -224,7 +224,7 @@ export function AdicionarFilaModal({
             <div className="space-y-2">
               <Label>Distribuição automática</Label>
               <Select value={distribuicao} onValueChange={setDistribuicao}>
-                <SelectTrigger className="w-full bg-yellow-50 border-yellow-200">
+                <SelectTrigger className="w-full bg-warning/10 border-warning/20">
                   <SelectValue placeholder="Selecione a distribuição automática" />
                 </SelectTrigger>
                 <SelectContent>

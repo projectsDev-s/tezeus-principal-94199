@@ -62,7 +62,7 @@ export function CriarPipelineModal({ isOpen, onClose, onSave }: CriarPipelineMod
           <Button 
             onClick={handleSave}
             disabled={!nome.trim()}
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
           >
             Criar
           </Button>

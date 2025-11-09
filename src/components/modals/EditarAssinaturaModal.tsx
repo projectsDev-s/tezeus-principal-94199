@@ -17,7 +17,7 @@ export function EditarAssinaturaModal({ isOpen, onClose, assinatura }: EditarAss
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="min-w-[70vw] h-[85vh] max-h-[85vh] overflow-hidden bg-[#f3f0ff] rounded-lg p-0 top-[7.5vh] translate-y-0">
+      <DialogContent className="min-w-[70vw] h-[85vh] max-h-[85vh] overflow-hidden bg-muted/50 rounded-lg p-0 top-[7.5vh] translate-y-0">
         <div className="p-6 h-full flex flex-col">
           {/* Card interno com sombra */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 pt-6 pb-0 flex flex-col">
@@ -63,7 +63,7 @@ export function EditarAssinaturaModal({ isOpen, onClose, assinatura }: EditarAss
           <div className="flex justify-end mt-auto pt-4 border-t border-gray-200">
             <button 
               onClick={onClose}
-              className="text-brand-yellow hover:text-brand-yellow-hover text-sm font-medium uppercase tracking-wide border-0 bg-transparent"
+              className="text-primary hover:text-primary/90 text-sm font-medium uppercase tracking-wide border-0 bg-transparent"
             >
               Fechar
             </button>

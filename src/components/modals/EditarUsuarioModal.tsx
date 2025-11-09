@@ -204,13 +204,13 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
                 onChange={(e) => updateFormData('name', e.target.value)}
                 onFocus={() => updateFocus('name', true)}
                 onBlur={() => updateFocus('name', false)}
-                className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 style={{ backgroundColor: 'white', color: 'black', borderColor: 'rgb(229, 231, 235)' }}
               />
               <label
                 className={`absolute left-3 transition-all duration-200 pointer-events-none ${
                   focusedFields.name || formData.name
-                    ? 'text-xs text-yellow-500 -top-2 bg-white px-1'
+                    ? 'text-xs text-primary -top-2 bg-white px-1'
                     : 'text-sm text-gray-500 top-3'
                 }`}
               >
@@ -227,13 +227,13 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
                   onChange={(e) => updateFormData('email', e.target.value)}
                   onFocus={() => updateFocus('email', true)}
                   onBlur={() => updateFocus('email', false)}
-                  className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   style={{ backgroundColor: 'white', color: 'black', borderColor: 'rgb(229, 231, 235)' }}
                 />
                 <label
                   className={`absolute left-3 transition-all duration-200 pointer-events-none ${
                     focusedFields.email || formData.email
-                      ? 'text-xs text-yellow-500 -top-2 bg-white px-1'
+                      ? 'text-xs text-primary -top-2 bg-white px-1'
                       : 'text-sm text-gray-500 top-3'
                   }`}
                 >
@@ -247,7 +247,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
                   onChange={(e) => updateFormData('profile', e.target.value)}
                   onFocus={() => updateFocus('profile', true)}
                   onBlur={() => updateFocus('profile', false)}
-                  className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   style={{ backgroundColor: 'white', color: 'black', borderColor: 'rgb(229, 231, 235)' }}
                 >
                   <option value="" disabled hidden></option>
@@ -258,7 +258,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
                 <label
                   className={`absolute left-3 transition-all duration-200 pointer-events-none ${
                     focusedFields.profile || formData.profile
-                      ? 'text-xs text-yellow-500 -top-2 bg-white px-1'
+                      ? 'text-xs text-primary -top-2 bg-white px-1'
                       : 'text-sm text-gray-500 top-3'
                   }`}
                 >
@@ -275,7 +275,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
                 onChange={(e) => updateFormData('password', e.target.value)}
                 onFocus={() => updateFocus('password', true)}
                 onBlur={() => updateFocus('password', false)}
-                className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 pr-12"
+                className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary pr-12"
                 style={{ backgroundColor: 'white', color: 'black', borderColor: 'rgb(229, 231, 235)' }}
               />
               <Button
@@ -294,7 +294,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
               <label
                 className={`absolute left-3 transition-all duration-200 pointer-events-none ${
                   focusedFields.password || formData.password
-                    ? 'text-xs text-yellow-500 -top-2 bg-white px-1'
+                    ? 'text-xs text-primary -top-2 bg-white px-1'
                     : 'text-sm text-gray-500 top-3'
                 }`}
               >
@@ -319,8 +319,8 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
                 onFocus={() => updateFocus('queues', true)}
                 onBlur={() => updateFocus('queues', false)}
                 disabled
-                className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 cursor-not-allowed"
-                style={{ backgroundColor: '#f9fafb', color: '#6b7280', borderColor: 'rgb(229, 231, 235)' }}
+                className="w-full h-12 pt-2 pb-2 px-3 border border-input text-sm ring-offset-background appearance-none rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary cursor-not-allowed"
+                style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))', borderColor: 'hsl(var(--border))' }}
               >
                 <option value="" disabled hidden></option>
                 {mockQueues.map((queue) => (
@@ -468,7 +468,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
               type="submit"
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black border-0 rounded-lg disabled:opacity-50"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground border-0 rounded-lg disabled:opacity-50"
             >
               {loading ? "Salvando..." : "Salvar"}
             </Button>
