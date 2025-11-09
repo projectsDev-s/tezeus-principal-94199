@@ -253,18 +253,6 @@ export default function MasterDashboard() {
           <span className="text-sm font-medium">Filas</span>
         </button>
         
-        
-        <button
-          onClick={() => setActivePage('configuracoes')}
-          className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
-            activePage === 'configuracoes' 
-              ? 'bg-primary text-primary-foreground' 
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          }`}
-        >
-          <Settings2 className="h-5 w-5 shrink-0" />
-          <span className="text-sm font-medium">Configurações</span>
-        </button>
 
         <button
           onClick={handleLogout}
