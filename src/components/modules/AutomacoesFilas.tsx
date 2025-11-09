@@ -100,7 +100,7 @@ export function AutomacoesFilas() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Filas</h1>
-        <Button onClick={() => setShowAddModal(true)} className="bg-yellow-500 hover:bg-yellow-600 text-black">
+        <Button onClick={() => setShowAddModal(true)} variant="default">
           <Plus className="w-4 h-4 mr-2" />
           Adicionar fila
         </Button>
