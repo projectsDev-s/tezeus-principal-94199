@@ -44,6 +44,7 @@ import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { AgentHistoryModal } from "@/components/modals/AgentHistoryModal";
 import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
+import { AssignmentHistoryModal } from "@/components/modals/AssignmentHistoryModal";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2, Workflow, Clock } from "lucide-react";
@@ -155,6 +156,7 @@ export function WhatsAppChat({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [changeAgentModalOpen, setChangeAgentModalOpen] = useState(false);
   const [agentHistoryModalOpen, setAgentHistoryModalOpen] = useState(false);
+  const [assignmentHistoryModalOpen, setAssignmentHistoryModalOpen] = useState(false);
 
   // Verificar se há agente ativo na conversa selecionada
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent(selectedConversation?.id);
@@ -1959,9 +1961,17 @@ export function WhatsAppChat({
                     <button
                       onClick={() => setAgentHistoryModalOpen(true)}
                       className="p-2 hover:bg-accent rounded-full transition-colors"
-                      title="Ver histórico de agentes"
+                      title="Ver histórico de agentes IA"
                     >
                       <Clock className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    
+                    <button
+                      onClick={() => setAssignmentHistoryModalOpen(true)}
+                      className="p-2 hover:bg-accent rounded-full transition-colors"
+                      title="Ver histórico de transferências"
+                    >
+                      <UsersRound className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
                   
@@ -2324,6 +2334,12 @@ export function WhatsAppChat({
       <AgentHistoryModal
         isOpen={agentHistoryModalOpen}
         onOpenChange={setAgentHistoryModalOpen}
+        conversationId={selectedConversation?.id || ''}
+      />
+
+      <AssignmentHistoryModal
+        isOpen={assignmentHistoryModalOpen}
+        onOpenChange={setAssignmentHistoryModalOpen}
         conversationId={selectedConversation?.id || ''}
       />
       </div>
