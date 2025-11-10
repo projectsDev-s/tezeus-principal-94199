@@ -24,27 +24,37 @@ serve(async (req) => {
     const { data: customization, error } = await supabase
       .from('system_customization')
       .select('*')
-      .single()
+      .limit(1)
+      .maybeSingle()
 
     if (error) {
       console.error('❌ Error fetching system customization:', error)
-      
-      // If no record exists, return defaults
-      if (error.code === 'PGRST116') {
-        console.log('📋 No customization found, returning defaults')
-        return new Response(
-          JSON.stringify({
-            logo_url: null,
-            background_color: '#f5f5f5',
-            primary_color: '#eab308',
-            header_color: '#ffffff',
-            sidebar_color: '#fafafa'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      throw error
+      // Return defaults on any error
+      return new Response(
+        JSON.stringify({
+          logo_url: null,
+          background_color: '#f5f5f5',
+          primary_color: '#eab308',
+          header_color: '#ffffff',
+          sidebar_color: '#fafafa'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // If no customization exists, return defaults
+    if (!customization) {
+      console.log('📋 No customization found, returning defaults')
+      return new Response(
+        JSON.stringify({
+          logo_url: null,
+          background_color: '#f5f5f5',
+          primary_color: '#eab308',
+          header_color: '#ffffff',
+          sidebar_color: '#fafafa'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     console.log('✅ System customization retrieved successfully')
