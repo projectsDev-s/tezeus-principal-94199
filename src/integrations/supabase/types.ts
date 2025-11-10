@@ -3485,16 +3485,12 @@ export type Database = {
       get_column_automations: {
         Args: { p_column_id: string }
         Returns: {
-          actions_count: number
           column_id: string
           created_at: string
-          description: string
           id: string
           is_active: boolean
           name: string
-          triggers_count: number
           updated_at: string
-          workspace_id: string
         }[]
       }
       get_current_user_profile: { Args: never; Returns: string }
