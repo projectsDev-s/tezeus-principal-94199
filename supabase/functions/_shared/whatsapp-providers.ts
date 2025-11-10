@@ -536,7 +536,7 @@ export async function sendWithOptionalFallback(
       type,
       responseTime,
       error: result1.error,
-      provider: result1.provider,
+      provider: activeProvider.provider,
     }
   );
 
@@ -584,7 +584,7 @@ export async function sendWithOptionalFallback(
       responseTime: altResponseTime,
       isFallback: true,
       error: result2.error,
-      provider: result2.provider,
+      provider: altProvider.provider,
     }
   );
 

@@ -1254,20 +1254,31 @@ serve(async (req) => {
               }
             }
             
-            const { data: card, error } = await supabaseClient
+            // Fazer update sem select para evitar erro de workspace_id
+            const { error: updateError } = await supabaseClient
               .from('pipeline_cards')
               .update(updateData)
-              .eq('id', cardId)
+              .eq('id', cardId);
+
+            if (updateError) {
+              console.error('❌ Database error updating card:', updateError);
+              throw updateError;
+            }
+
+            // Buscar card atualizado separadamente
+            const { data: card, error: selectError } = await supabaseClient
+              .from('pipeline_cards')
               .select(`
                 *,
                 conversation:conversations(id, contact_id, connection_id),
                 contact:contacts(id, phone, name)
               `)
+              .eq('id', cardId)
               .single();
 
-            if (error) {
-              console.error('❌ Database error updating card:', error);
-              throw error;
+            if (selectError) {
+              console.error('❌ Database error selecting updated card:', selectError);
+              throw selectError;
             }
             
             // ✅ Garantir que conversation_id está presente (pode não vir no select se for null)
