@@ -33,10 +33,15 @@ export function DSAgenteMaster() {
 
   const loadAgents = async () => {
     try {
-      // Tentar query com JOIN automático do Supabase
       const { data, error } = await supabase
         .from('ai_agents')
-        .select('*, workspaces(id, name)')
+        .select(`
+          *,
+          workspaces:workspace_id (
+            id,
+            name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -50,26 +55,13 @@ export function DSAgenteMaster() {
         return;
       }
 
-      // Sempre fazer fetch manual dos workspaces para garantir que temos os dados
-      const workspaceIds = [...new Set(data.map((a: any) => a.workspace_id).filter(Boolean))];
-      let workspacesMap = new Map();
-      
-      if (workspaceIds.length > 0) {
-        const { data: workspacesData, error: workspacesError } = await supabase
-          .from('workspaces')
-          .select('id, name')
-          .in('id', workspaceIds);
-
-        if (!workspacesError && workspacesData) {
-          workspacesMap = new Map(workspacesData.map(w => [w.id, w]));
-        }
-      }
-
+      // Transformar os dados para o formato esperado
       const agentsWithWorkspace = data.map((agent: any) => ({
         ...agent,
-        workspace: agent.workspace_id ? workspacesMap.get(agent.workspace_id) : null
+        workspace: agent.workspaces
       }));
 
+      console.log('Agentes carregados:', agentsWithWorkspace);
       setAgents(agentsWithWorkspace);
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);
