@@ -24,6 +24,8 @@ interface SidebarProps {
   onModuleChange: (module: ModuleType) => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  colorPreset: 'dark' | 'dark-blue';
+  onColorPresetChange: (preset: 'dark' | 'dark-blue') => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onNavigateToConversation?: (conversationId: string) => void;
@@ -39,6 +41,8 @@ export function Sidebar({
   onModuleChange,
   isDarkMode,
   onToggleDarkMode,
+  colorPreset,
+  onColorPresetChange,
   isCollapsed,
   onToggleCollapse,
   onNavigateToConversation
@@ -367,6 +371,51 @@ export function Sidebar({
               )}
             </Tooltip>
           </TooltipProvider>
+
+          {/* Seletor de Preset de Cores (apenas quando dark mode ativo) */}
+          {isDarkMode && !isCollapsed && (
+            <div className="flex gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onColorPresetChange('dark')}
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 transition-all",
+                        colorPreset === 'dark' 
+                          ? "border-primary scale-110" 
+                          : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                      )}
+                      style={{ background: 'hsl(240 5.9% 10%)' }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Tema Escuro Padrão</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onColorPresetChange('dark-blue')}
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 transition-all",
+                        colorPreset === 'dark-blue' 
+                          ? "border-primary scale-110" 
+                          : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                      )}
+                      style={{ background: 'hsl(220 25% 12%)' }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Tema Azul Escuro</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
 
           {/* Botão de notificações com tooltip */}
           <TooltipProvider>

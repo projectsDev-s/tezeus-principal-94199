@@ -149,6 +149,73 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  .dark-blue {
+    --background: 220 25% 12%;
+    --foreground: 210 40% 98%;
+
+    /* Brand colors - blue theme */
+    --brand-blue: 210 100% 50%;
+    --brand-blue-light: 210 100% 60%;
+    --brand-yellow: 45 100% 65%;
+    --brand-yellow-hover: 45 100% 55%;
+
+    /* Status colors - blue theme */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 100% 60%;
+    --warning-foreground: 0 0% 0%;
+    --error: 0 65% 65%;
+    --error-foreground: 0 0% 0%;
+
+    /* UI colors - blue theme */
+    --card: 220 20% 18%;
+    --card-foreground: 210 40% 98%;
+    --card-border: 220 20% 25%;
+
+    --sidebar: 220 25% 12%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-active: 210 100% 50%;
+    --sidebar-active-foreground: 0 0% 100%;
+    --sidebar-border: 220 20% 20%;
+
+    --popover: 220 20% 18%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 22%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 20% 22%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 210 100% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 25%;
+    --input: 220 20% 22%;
+    --ring: 210 100% 60%;
+
+    /* Metric card colors - blue theme */
+    --metric-card: 220 20% 18%;
+    --metric-card-foreground: 210 40% 98%;
+
+    /* Interactive states - blue theme */
+    --hover-light: 220 20% 25%;
+    --active-light: 220 25% 30%;
+
+    --sidebar-background: 220 25% 12%;
+    --sidebar-primary: 210 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 210 100% 60%;
+  }
 }
 
 @layer base {

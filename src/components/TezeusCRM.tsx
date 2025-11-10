@@ -74,27 +74,35 @@ export function TezeusCRM() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme');
-      return savedTheme === 'dark';
+      return savedTheme === 'dark' || savedTheme === 'dark-blue';
     }
     return false;
+  });
+  const [colorPreset, setColorPreset] = useState<'dark' | 'dark-blue'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      return savedTheme === 'dark-blue' ? 'dark-blue' : 'dark';
+    }
+    return 'dark';
   });
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  // Handle dark mode changes
+  // Handle dark mode and preset changes
   useEffect(() => {
-    const updateTheme = (isDark: boolean) => {
+    const updateTheme = (isDark: boolean, preset: 'dark' | 'dark-blue') => {
+      document.documentElement.classList.remove('dark', 'dark-blue');
+      
       if (isDark) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
+        document.documentElement.classList.add(preset);
+        localStorage.setItem('theme', preset);
       } else {
-        document.documentElement.classList.remove('dark');
         localStorage.setItem('theme', 'light');
       }
     };
     
-    updateTheme(isDarkMode);
-  }, [isDarkMode]);
+    updateTheme(isDarkMode, colorPreset);
+  }, [isDarkMode, colorPreset]);
 
   // Helper para construir rotas baseado no role
   const getRoutePath = (path: string) => {
@@ -221,6 +229,8 @@ export function TezeusCRM() {
           }}
           isDarkMode={isDarkMode}
           onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+          colorPreset={colorPreset}
+          onColorPresetChange={(preset) => setColorPreset(preset)}
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
           onNavigateToConversation={(conversationId) => {
