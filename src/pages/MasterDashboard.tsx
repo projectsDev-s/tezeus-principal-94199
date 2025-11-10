@@ -285,49 +285,37 @@ export default function MasterDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-card border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground">
-                {activePage === 'workspaces' && 'Workspaces do Usuário Master'}
-                {activePage === 'ds-agent' && 'DS Agent - Configuração Master'}
-                {activePage === 'filas' && 'Filas - Configuração Master'}
-                {activePage === 'usuarios' && 'Usuários - Gestão Master'}
-                {activePage === 'configuracoes' && 'Configurações - Master'}
-                {activePage === 'reports' && 'Relatórios'}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {activePage === 'workspaces' && 'Gerencie todas as empresas do sistema'}
-                {activePage === 'ds-agent' && 'Configure agentes inteligentes de forma global'}
-                {activePage === 'filas' && 'Gerencie filas de atendimento do sistema'}
-                {activePage === 'usuarios' && 'Administre todos os usuários do sistema'}
-                {activePage === 'configuracoes' && 'Configurações globais do sistema'}
-                {activePage === 'reports' && 'Visualize métricas e estatísticas de todas as empresas'}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {activePage === 'workspaces' && (
+        {/* Header - apenas na aba Empresas */}
+        {activePage === 'workspaces' && (
+          <header className="bg-card border-b border-border px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-foreground">
+                  Workspaces do Usuário Master
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Gerencie todas as empresas do sistema
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
                 <Button onClick={() => setCreateWorkspaceModalOpen(true)} className="gap-2">
                   <Plus className="w-4 h-4" />
                   Nova Empresa
                 </Button>
-              )}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Buscar empresa..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64"
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar empresa..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 w-64"
+                  />
+                </div>
               </div>
-              
-              {/* Menu de busca está sempre visível */}
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-auto">
