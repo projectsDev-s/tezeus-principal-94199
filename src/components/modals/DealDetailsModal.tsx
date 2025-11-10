@@ -48,6 +48,17 @@ interface Activity {
     name: string;
   };
 }
+
+interface CardHistoryEvent {
+  id: string;
+  action: string;
+  changed_by: string | null;
+  changed_at: string;
+  metadata: any;
+  users?: {
+    name: string;
+  };
+}
 interface DealDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -263,6 +274,7 @@ export function DealDetailsModal({
   const [workspaceId, setWorkspaceId] = useState<string>("");
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [cardHistory, setCardHistory] = useState<CardHistoryEvent[]>([]);
   const [showAddTagModal, setShowAddTagModal] = useState(false);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   const [confirmLossAction, setConfirmLossAction] = useState<any>(null);
@@ -670,7 +682,8 @@ export function DealDetailsModal({
           // Carregar tags e atividades em paralelo
           await Promise.all([
             fetchContactTags(initialContactData.id),
-            fetchActivities(initialContactData.id)
+            fetchActivities(initialContactData.id),
+            fetchCardHistory(cardId)
           ]);
         }
       } else {
@@ -840,7 +853,8 @@ export function DealDetailsModal({
       // Carregar tags e atividades em paralelo
       await Promise.all([
         fetchContactTags(contact.id),
-        fetchActivities(contact.id)
+        fetchActivities(contact.id),
+        fetchCardHistory(cardId)
       ]);
     }
   };
@@ -944,6 +958,19 @@ export function DealDetailsModal({
       setActivities(data || []);
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
+    }
+  };
+
+  const fetchCardHistory = async (cardId: string) => {
+    // Função preparada para buscar histórico do card
+    // A tabela pipeline_card_history será criada via SQL
+    try {
+      console.log('📋 Preparado para buscar histórico do card:', cardId);
+      // Por enquanto, retorna vazio até a tabela ser criada
+      setCardHistory([]);
+    } catch (error) {
+      console.error('Erro ao buscar histórico do card:', error);
+      setCardHistory([]);
     }
   };
   const handleTagAdded = (tag: Tag) => {
@@ -1679,11 +1706,78 @@ export function DealDetailsModal({
 
           {isInitialLoading ? null : activeTab === "historico" && <div className="space-y-4">
               <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
-                Histórico de Atividades Concluídas
+                Histórico Completo
               </h3>
               
-              {completedActivities.length > 0 ? <div className="space-y-3">
-                  {completedActivities.map(activity => <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+              {/* Histórico de eventos do card */}
+              {cardHistory.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className={cn("text-md font-medium", isDarkMode ? "text-gray-200" : "text-gray-800")}>
+                    Eventos do Ticket
+                  </h4>
+                  {cardHistory.map(event => (
+                    <div key={event.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {event.action === 'agent_enabled' && '🤖 Agente Ativado'}
+                          {event.action === 'agent_disabled' && '🔴 Agente Desativado'}
+                          {event.action === 'agent_changed' && '🔄 Agente Trocado'}
+                          {event.action === 'card_assigned' && '👤 Ticket Atribuído'}
+                          {event.action === 'card_transferred' && '📤 Ticket Transferido'}
+                          {event.action === 'column_changed' && '📋 Coluna Alterada'}
+                          {event.action === 'status_changed' && '🔔 Status Alterado'}
+                        </Badge>
+                        {event.users?.name && (
+                          <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            por {event.users.name}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                        {format(new Date(event.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                      
+                      {/* Detalhes específicos de cada tipo de evento */}
+                      {event.metadata && (
+                        <div className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                          {event.action === 'agent_enabled' && (
+                            <p>Agente <strong>{event.metadata.agent_name}</strong> foi ativado</p>
+                          )}
+                          {event.action === 'agent_disabled' && (
+                            <p>Agente <strong>{event.metadata.agent_name}</strong> foi desativado</p>
+                          )}
+                          {event.action === 'agent_changed' && (
+                            <p>
+                              Agente alterado de <strong>{event.metadata.old_agent_name || 'N/A'}</strong> para <strong>{event.metadata.new_agent_name}</strong>
+                            </p>
+                          )}
+                          {event.action === 'card_assigned' && (
+                            <p>
+                              Ticket atribuído {event.metadata.old_responsible_name ? `de ${event.metadata.old_responsible_name} ` : ''}
+                              para <strong>{event.metadata.new_responsible_name}</strong>
+                            </p>
+                          )}
+                          {event.action === 'column_changed' && (
+                            <p>
+                              Movido de <strong>{event.metadata.old_column_name || 'N/A'}</strong> para <strong>{event.metadata.new_column_name}</strong>
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Histórico de atividades concluídas */}
+              {completedActivities.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className={cn("text-md font-medium mt-6", isDarkMode ? "text-gray-200" : "text-gray-800")}>
+                    Atividades Concluídas
+                  </h4>
+                  {completedActivities.map(activity => (
+                    <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline" className="text-xs">
                           {activity.type}
@@ -1725,10 +1819,17 @@ export function DealDetailsModal({
                           />
                         </div>
                       )}
-                    </div>)}
-                </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-                  <p>Nenhuma atividade concluída encontrada</p>
-                </div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Mensagem quando não há histórico */}
+              {cardHistory.length === 0 && completedActivities.length === 0 && (
+                <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                  <p>Nenhum evento ou atividade concluída encontrada</p>
+                </div>
+              )}
             </div>}
 
           {isInitialLoading ? null : activeTab === "contato" && <div className="space-y-6">
