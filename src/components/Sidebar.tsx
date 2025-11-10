@@ -22,10 +22,6 @@ import { LayoutDashboard, MessageCircle, Users, FolderOpen, Settings, Zap, Link,
 interface SidebarProps {
   activeModule: ModuleType;
   onModuleChange: (module: ModuleType) => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
-  colorPreset: 'dark' | 'dark-blue';
-  onColorPresetChange: (preset: 'dark' | 'dark-blue') => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onNavigateToConversation?: (conversationId: string) => void;
@@ -39,10 +35,6 @@ interface MenuItem {
 export function Sidebar({
   activeModule,
   onModuleChange,
-  isDarkMode,
-  onToggleDarkMode,
-  colorPreset,
-  onColorPresetChange,
   isCollapsed,
   onToggleCollapse,
   onNavigateToConversation
@@ -347,76 +339,6 @@ export function Sidebar({
       {/* Action Icons */}
       <div className={cn("flex-shrink-0", isCollapsed ? "p-3" : "p-4")}>
         <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2" : "gap-2 justify-between")}>
-          {/* Switch de modo noturno */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2">
-                  <Switch 
-                    checked={isDarkMode} 
-                    onCheckedChange={onToggleDarkMode}
-                    className="data-[state=checked]:bg-primary"
-                  />
-                  {!isCollapsed && (
-                    <span className="text-sm text-muted-foreground">
-                      Modo Noturno
-                    </span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  <p>Modo Noturno</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Seletor de Preset de Cores (apenas quando dark mode ativo) */}
-          {isDarkMode && !isCollapsed && (
-            <div className="flex gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onColorPresetChange('dark')}
-                      className={cn(
-                        "w-6 h-6 rounded-full border-2 transition-all",
-                        colorPreset === 'dark' 
-                          ? "border-primary scale-110" 
-                          : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                      )}
-                      style={{ background: 'hsl(240 5.9% 10%)' }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Tema Escuro Padrão</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onColorPresetChange('dark-blue')}
-                      className={cn(
-                        "w-6 h-6 rounded-full border-2 transition-all",
-                        colorPreset === 'dark-blue' 
-                          ? "border-primary scale-110" 
-                          : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                      )}
-                      style={{ background: 'hsl(220 25% 12%)' }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Tema Azul Escuro</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
-
           {/* Botão de notificações com tooltip */}
           <TooltipProvider>
             <Tooltip>

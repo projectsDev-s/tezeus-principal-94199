@@ -71,43 +71,8 @@ export function TezeusCRM() {
   const params = useParams();
   const { userRole } = useAuth();
   const { selectedWorkspace } = useWorkspace();
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme');
-      return savedTheme === 'dark' || savedTheme === 'dark-blue';
-    }
-    return false;
-  });
-  const [colorPreset, setColorPreset] = useState<'dark' | 'dark-blue'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme');
-      return savedTheme === 'dark-blue' ? 'dark-blue' : 'dark';
-    }
-    return 'dark';
-  });
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-
-  // Handle dark mode and preset changes
-  useEffect(() => {
-    const updateTheme = (isDark: boolean, preset: 'dark' | 'dark-blue') => {
-      const root = document.documentElement;
-      
-      // Remove todas as classes de tema
-      root.classList.remove('dark', 'dark-blue');
-      
-      if (isDark) {
-        // Adiciona a classe do preset escolhido
-        root.classList.add(preset);
-        localStorage.setItem('theme', preset);
-      } else {
-        // Modo claro
-        localStorage.setItem('theme', 'light');
-      }
-    };
-    
-    updateTheme(isDarkMode, colorPreset);
-  }, [isDarkMode, colorPreset]);
 
   // Helper para construir rotas baseado no role
   const getRoutePath = (path: string) => {
@@ -168,17 +133,15 @@ export function TezeusCRM() {
   }, [navigate, userRole, selectedWorkspace]);
 
   const renderModule = () => {
-    const moduleProps = { isDarkMode };
-    
     switch (activeModule) {
       case "dashboard":
-        return <Dashboard {...moduleProps} />;
+        return <Dashboard />;
       case "conversas":
-        return <Conversas {...moduleProps} selectedConversationId={selectedConversationId} />;
+        return <Conversas selectedConversationId={selectedConversationId} />;
       case "ds-voice":
         return <DSVoice />;
       case "crm-negocios":
-        return <CRMNegocios {...moduleProps} />;
+        return <CRMNegocios />;
       case "crm-contatos":
         return <CRMContatos />;
       case "crm-tags":
@@ -214,9 +177,9 @@ export function TezeusCRM() {
       case "administracao-dashboard":
         return <AdministracaoDashboard />;
       case "editar-agente":
-        return editingAgentId ? <EditarAgente agentId={editingAgentId} /> : <Dashboard {...moduleProps} />;
+        return editingAgentId ? <EditarAgente agentId={editingAgentId} /> : <Dashboard />;
       default:
-        return <Dashboard {...moduleProps} />;
+        return <Dashboard />;
     }
   };
 
@@ -232,10 +195,6 @@ export function TezeusCRM() {
             }
             navigate(getRoutePath(`/${module === 'dashboard' ? 'dashboard' : module}`));
           }}
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-          colorPreset={colorPreset}
-          onColorPresetChange={(preset) => setColorPreset(preset)}
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
           onNavigateToConversation={(conversationId) => {
