@@ -46,6 +46,30 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
+import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
+
+// Componente de Badge do Agente
+function AgentBadge({ conversationId }: { conversationId: string }) {
+  const { agent, isLoading } = useWorkspaceAgent(conversationId);
+  
+  if (isLoading) return null;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 border border-purple-200">
+            <Bot className="w-2.5 h-2.5" />
+            <span className="text-[9px] font-medium">IA</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{agent?.name || 'Agente IA Ativo'}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 // Interface compatível com o componente existente
 interface Deal {
@@ -293,28 +317,7 @@ function DraggableDeal({
               </h3>
               
               {/* Badge de Agente IA Ativo */}
-              {deal.conversation?.agente_ativo && (() => {
-                console.log('🤖 Debug agente:', {
-                  conversation: deal.conversation,
-                  queue: deal.conversation?.queue,
-                  ai_agent: deal.conversation?.queue?.ai_agent
-                });
-                return (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 border border-purple-200">
-                          <Bot className="w-2.5 h-2.5" />
-                          <span className="text-[9px] font-medium">IA</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{deal.conversation?.queue?.ai_agent?.name || 'Agente IA Ativo'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                );
-              })()}
+              {deal.conversation?.agente_ativo && <AgentBadge conversationId={deal.conversation.id} />}
             </div>
             
             {/* Produto + Valor à direita */}
