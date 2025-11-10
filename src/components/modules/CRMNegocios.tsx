@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot } from "lucide-react";
+import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
@@ -662,6 +662,7 @@ function CRMNegociosContent({
   const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([]);
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [selectedConversationForAgent, setSelectedConversationForAgent] = useState<string | null>(null);
+  const [columnAutomationCounts, setColumnAutomationCounts] = useState<Record<string, number>>({});
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -1016,6 +1017,38 @@ function CRMNegociosContent({
       </div>;
   }
 
+  // 🔥 Buscar contagens de automações por coluna
+  useEffect(() => {
+    const fetchAutomationCounts = async () => {
+      if (!columns || columns.length === 0) {
+        setColumnAutomationCounts({});
+        return;
+      }
+
+      try {
+        const counts: Record<string, number> = {};
+        
+        // Buscar contagem de automações para cada coluna
+        await Promise.all(
+          columns.map(async (column) => {
+            const { count } = await supabase
+              .from('crm_column_automations')
+              .select('*', { count: 'exact', head: true })
+              .eq('column_id', column.id);
+            
+            counts[column.id] = count || 0;
+          })
+        );
+
+        setColumnAutomationCounts(counts);
+      } catch (error) {
+        console.error('Erro ao buscar contagens de automações:', error);
+      }
+    };
+
+    fetchAutomationCounts();
+  }, [columns]);
+
   // Mostrar loading quando estiver carregando pipelines
   if (isLoading) {
     return <div className="p-6">
@@ -1274,8 +1307,29 @@ function CRMNegociosContent({
                                 <div className="font-medium">
                                   Total: {formatCurrency(calculateColumnTotal())}
                                 </div>
-                                <div>
-                                  {columnCards.length} {columnCards.length === 1 ? 'negócio' : 'negócios'}
+                                <div className="flex items-center gap-2">
+                                  <span>
+                                    {columnCards.length} {columnCards.length === 1 ? 'negócio' : 'negócios'}
+                                  </span>
+                                  {columnAutomationCounts[column.id] > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+                                            <Zap className="w-3 h-3" />
+                                            <span className="text-xs font-medium">
+                                              {columnAutomationCounts[column.id]}
+                                            </span>
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>
+                                            {columnAutomationCounts[column.id]} {columnAutomationCounts[column.id] === 1 ? 'automação ativa' : 'automações ativas'}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
                                 </div>
                               </div>
                             </div>
