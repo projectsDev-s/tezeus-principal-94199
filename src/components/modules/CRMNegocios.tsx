@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import { useParams } from 'react-router-dom';
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +46,7 @@ import { useContactTags } from "@/hooks/useContactTags";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
-import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
+import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
 
 // Componente de Badge do Agente
@@ -617,6 +618,7 @@ function CRMNegociosContent({
     isLoading: isLoadingActiveUsers,
     refreshActiveUsers
   } = usePipelineActiveUsers(selectedPipeline?.id);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [selectedChatCard, setSelectedChatCard] = useState<any>(null);
@@ -666,7 +668,35 @@ function CRMNegociosContent({
   const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([]);
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [selectedConversationForAgent, setSelectedConversationForAgent] = useState<string | null>(null);
+  const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [columnAutomationCounts, setColumnAutomationCounts] = useState<Record<string, number>>({});
+
+  // Buscar agent_active_id quando selectedConversationForAgent mudar
+  useEffect(() => {
+    const fetchAgentId = async () => {
+      if (!selectedConversationForAgent) {
+        setCurrentAgentId(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('agent_active_id')
+          .eq('id', selectedConversationForAgent)
+          .single();
+
+        if (error) throw error;
+        setCurrentAgentId(data?.agent_active_id || null);
+      } catch (error) {
+        console.error('Erro ao buscar agent_active_id:', error);
+        setCurrentAgentId(null);
+      }
+    };
+
+    fetchAgentId();
+  }, [selectedConversationForAgent]);
+
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8
@@ -1579,10 +1609,15 @@ function CRMNegociosContent({
       refreshActiveUsers();
     }} />
 
-      <SelectAgentModal 
+      <ChangeAgentModal 
         open={agentModalOpen} 
         onOpenChange={setAgentModalOpen} 
-        conversationId={selectedConversationForAgent || ''} 
+        conversationId={selectedConversationForAgent || ''}
+        currentAgentId={currentAgentId}
+        onAgentChanged={() => {
+          queryClient.invalidateQueries({ queryKey: ['pipeline-cards'] });
+          queryClient.invalidateQueries({ queryKey: ['conversation-agent'] });
+        }}
       />
 
       <DeleteDealModal isOpen={isDeleteDealModalOpen} onClose={() => {
