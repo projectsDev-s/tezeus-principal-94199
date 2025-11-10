@@ -197,10 +197,8 @@ export function DSAgenteMaster() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {agent.workspace ? (
+                      {agent.workspace && (
                         <span className="text-sm">{agent.workspace.name}</span>
-                      ) : (
-                        <Badge variant="secondary">Global</Badge>
                       )}
                     </TableCell>
                     <TableCell>{agent.max_tokens}</TableCell>
