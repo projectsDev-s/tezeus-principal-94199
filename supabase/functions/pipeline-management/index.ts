@@ -1356,191 +1356,210 @@ serve(async (req) => {
             }, null, 2));
 
             try {
-              // Buscar automações ativas com trigger "enter_column" para a nova coluna
-              console.log(`🔍 Buscando automações para coluna ${body.column_id}...`);
+              // ✅ BUSCAR AUTOMAÇÕES DE AMBAS AS COLUNAS
+              const automationsToProcess: Array<{ automation: any, triggerType: 'enter_column' | 'leave_column' }> = [];
               
-              const { data: automations, error: automationsError } = await supabaseClient
+              // 1️⃣ Buscar automações da COLUNA ANTERIOR (leave_column)
+              if (previousColumnId) {
+                console.log(`🚪 Buscando automações LEAVE_COLUMN para coluna anterior ${previousColumnId}...`);
+                
+                const { data: leaveAutomations, error: leaveError } = await supabaseClient
+                  .rpc('get_column_automations', { p_column_id: previousColumnId });
+                
+                if (leaveError) {
+                  console.error('❌ Erro ao buscar automações leave_column:', leaveError);
+                } else if (leaveAutomations && leaveAutomations.length > 0) {
+                  console.log(`📋 ${leaveAutomations.length} automação(ões) encontrada(s) na coluna anterior`);
+                  
+                  for (const auto of leaveAutomations) {
+                    if (auto.is_active) {
+                      automationsToProcess.push({ automation: auto, triggerType: 'leave_column' });
+                    }
+                  }
+                } else {
+                  console.log(`ℹ️ Nenhuma automação encontrada para coluna anterior ${previousColumnId}`);
+                }
+              }
+              
+              // 2️⃣ Buscar automações da NOVA COLUNA (enter_column)
+              console.log(`🚪 Buscando automações ENTER_COLUMN para nova coluna ${body.column_id}...`);
+              
+              const { data: enterAutomations, error: enterError } = await supabaseClient
                 .rpc('get_column_automations', { p_column_id: body.column_id });
               
-              if (automationsError) {
-                console.error('❌ Erro ao buscar automações:', {
-                  error: automationsError,
-                  message: automationsError.message,
-                  code: automationsError.code,
-                  details: automationsError.details
-                });
-              } else {
-                console.log(`📋 Total de automações encontradas: ${automations?.length || 0}`);
+              if (enterError) {
+                console.error('❌ Erro ao buscar automações enter_column:', enterError);
+              } else if (enterAutomations && enterAutomations.length > 0) {
+                console.log(`📋 ${enterAutomations.length} automação(ões) encontrada(s) na nova coluna`);
                 
-                if (!automations || automations.length === 0) {
-                  console.log(`ℹ️ Nenhuma automação encontrada para coluna ${body.column_id}`);
-                } else {
-                  // Filtrar apenas automações ativas
-                  const activeAutomations = automations.filter((a: any) => a.is_active === true);
-                  
-                  console.log(`📋 Automações ativas: ${activeAutomations.length} de ${automations.length}`);
-                  
-                  if (activeAutomations.length === 0) {
-                    console.log(`ℹ️ Nenhuma automação ativa encontrada para coluna ${body.column_id}`);
-                  } else {
-                    // Processar cada automação
-                    for (const automation of activeAutomations) {
+                for (const auto of enterAutomations) {
+                  if (auto.is_active) {
+                    automationsToProcess.push({ automation: auto, triggerType: 'enter_column' });
+                  }
+                }
+              } else {
+                console.log(`ℹ️ Nenhuma automação encontrada para nova coluna ${body.column_id}`);
+              }
+              
+              console.log(`📋 Total de automações a processar: ${automationsToProcess.length}`);
+              
+              if (automationsToProcess.length === 0) {
+                console.log(`ℹ️ Nenhuma automação ativa encontrada para processar`);
+              } else {
+                // 3️⃣ Processar cada automação
+                for (const { automation, triggerType } of automationsToProcess) {
+                  try {
+                    console.log(`\n🔍 ========== PROCESSANDO AUTOMAÇÃO ==========`);
+                    console.log(`🔍 Nome: "${automation.name}"`);
+                    console.log(`🔍 ID: ${automation.id}`);
+                    console.log(`🔍 Coluna: ${automation.column_id}`);
+                    console.log(`🔍 Trigger esperado: ${triggerType}`);
+                    console.log(`🔍 Ativa: ${automation.is_active}`);
+                    
+                    // Buscar triggers e actions da automação
+                    console.log(`📥 Buscando detalhes da automação...`);
+                    const { data: automationDetails, error: detailsError } = await supabaseClient
+                      .rpc('get_automation_details', { p_automation_id: automation.id });
+                    
+                    if (detailsError) {
+                      console.error(`❌ Erro ao buscar detalhes da automação ${automation.id}:`, detailsError);
+                      continue;
+                    }
+                    
+                    if (!automationDetails) {
+                      console.warn(`⚠️ Detalhes da automação ${automation.id} não encontrados`);
+                      continue;
+                    }
+                    
+                    // Parsear JSONB se necessário
+                    let parsedDetails = automationDetails;
+                    if (typeof automationDetails === 'string') {
                       try {
-                        console.log(`\n🔍 ========== PROCESSANDO AUTOMAÇÃO ==========`);
-                        console.log(`🔍 Nome: "${automation.name}"`);
-                        console.log(`🔍 ID: ${automation.id}`);
-                        console.log(`🔍 Coluna: ${automation.column_id}`);
-                        console.log(`🔍 Ativa: ${automation.is_active}`);
-                        
-                        // Buscar triggers e actions da automação
-                        console.log(`📥 Buscando detalhes da automação...`);
-                        const { data: automationDetails, error: detailsError } = await supabaseClient
-                          .rpc('get_automation_details', { p_automation_id: automation.id });
-                        
-                        if (detailsError) {
-                          console.error(`❌ Erro ao buscar detalhes da automação ${automation.id}:`, {
-                            error: detailsError,
-                            message: detailsError.message,
-                            code: detailsError.code,
-                            details: detailsError.details
-                          });
-                          continue;
-                        }
-                        
-                        if (!automationDetails) {
-                          console.warn(`⚠️ Detalhes da automação ${automation.id} não encontrados (null/undefined)`);
-                          continue;
-                        }
-                        
-                        // Parsear JSONB se necessário
-                        let parsedDetails = automationDetails;
-                        if (typeof automationDetails === 'string') {
-                          try {
-                            parsedDetails = JSON.parse(automationDetails);
-                          } catch (parseError) {
-                            console.error(`❌ Erro ao parsear detalhes da automação:`, parseError);
-                            continue;
-                          }
-                        }
-                        
-                        const triggers = parsedDetails.triggers || [];
-                        const actions = parsedDetails.actions || [];
-                        
-                        console.log(`📋 Automação tem ${triggers.length} trigger(s) e ${actions.length} ação(ões)`);
-                        console.log(`📋 Triggers:`, JSON.stringify(triggers, null, 2));
-                        console.log(`📋 Actions:`, JSON.stringify(actions.map((a: any) => ({
-                          type: a.action_type,
-                          order: a.action_order,
-                          config: a.action_config
-                        })), null, 2));
-                        
-                        // Verificar se tem trigger "enter_column"
-                        const hasEnterColumnTrigger = triggers.some((t: any) => {
-                          const triggerType = t.trigger_type || t?.trigger_type;
-                          const result = triggerType === 'enter_column';
-                          console.log(`🔍 Verificando trigger: ${triggerType} === 'enter_column' ? ${result}`);
-                          return result;
-                        });
-                        
-                        if (!hasEnterColumnTrigger) {
-                          console.log(`⏭️ Automação ${automation.id} não tem trigger enter_column, pulando`);
-                          continue;
-                        }
-                        
-                        console.log(`🚀 ========== EXECUTANDO AUTOMAÇÃO ==========`);
-                        console.log(`🚀 Nome: "${automation.name}" (${automation.id})`);
-                        console.log(`🚀 Trigger: enter_column`);
-                        
-                        // Executar ações em ordem
-                        const sortedActions = [...actions].sort((a: any, b: any) => (a.action_order || 0) - (b.action_order || 0));
-                        
-                        console.log(`🎬 Ações ordenadas:`, sortedActions.map((a: any) => ({
-                          type: a.action_type,
-                          order: a.action_order
-                        })));
-                        
-                        // Verificar dados do card antes de executar ações
-                        console.log(`📦 Dados do card que serão passados para as ações:`, {
-                          id: card.id,
-                          conversation_id: card.conversation_id,
-                          conversation_object: card.conversation ? {
-                            id: card.conversation.id,
-                            contact_id: card.conversation.contact_id
-                          } : null,
-                          contact_id: card.contact_id,
-                          title: card.title,
-                          column_id: card.column_id,
-                          pipeline_id: card.pipeline_id
-                        });
-                        
-                        // ✅ CRÍTICO: Garantir que card tem conversation_id antes de executar remove_agent
-                        const hasRemoveAgentAction = sortedActions.some((a: any) => a.action_type === 'remove_agent');
-                        if (hasRemoveAgentAction && !card.conversation_id && !card.conversation?.id) {
-                          console.error(`❌ ERRO CRÍTICO: Card não tem conversation_id mas há ação remove_agent!`);
-                          console.error(`❌ Card completo:`, JSON.stringify(card, null, 2));
-                          console.error(`❌ Ações que requerem conversation_id:`, sortedActions
-                            .filter((a: any) => a.action_type === 'remove_agent')
-                            .map((a: any) => ({ type: a.action_type, config: a.action_config })));
-                        }
-                        
-                        // Executar ações em background (não bloqueante)
-                        // Usar Promise.allSettled para garantir que todos executem mesmo se alguns falharem
-                        const actionPromises = sortedActions.map(async (action: any) => {
-                          try {
-                            console.log(`\n🎬 ========== EXECUTANDO AÇÃO ==========`);
-                            console.log(`🎬 Tipo: ${action.action_type}`);
-                            console.log(`🎬 Ordem: ${action.action_order || 0}`);
-                            console.log(`🎬 Config:`, JSON.stringify(action.action_config, null, 2));
-                            console.log(`🎬 Card ID: ${card.id}, Conversation ID: ${card.conversation_id || card.conversation?.id || 'NÃO ENCONTRADO'}`);
-                            
-                            // ✅ CRÍTICO: Para remove_agent, garantir que temos conversation_id
-                            if (action.action_type === 'remove_agent') {
-                              const finalConversationId = card.conversation_id || card.conversation?.id;
-                              if (!finalConversationId) {
-                                console.error(`❌ ERRO: Ação remove_agent requer conversation_id mas card não tem!`);
-                                console.error(`❌ Card:`, JSON.stringify({
-                                  id: card.id,
-                                  conversation_id: card.conversation_id,
-                                  conversation: card.conversation
-                                }, null, 2));
-                                throw new Error(`Card ${card.id} não tem conversation_id. Ação remove_agent não pode ser executada.`);
-                              }
-                              console.log(`✅ [remove_agent] conversation_id confirmado: ${finalConversationId}`);
-                            }
-                            
-                            await executeAutomationAction(action, card, supabaseClient);
-                            
-                            console.log(`✅ Ação ${action.action_type} executada com sucesso`);
-                            return { success: true, action: action.action_type };
-                          } catch (actionError) {
-                            console.error(`❌ Erro ao executar ação ${action.action_type}:`, {
-                              error: actionError,
-                              message: actionError instanceof Error ? actionError.message : String(actionError),
-                              stack: actionError instanceof Error ? actionError.stack : undefined
-                            });
-                            return { success: false, action: action.action_type, error: actionError };
-                          }
-                        });
-                        
-                        // Aguardar todas as ações (mas não bloquear se alguma falhar)
-                        const actionResults = await Promise.allSettled(actionPromises);
-                        
-                        const successful = actionResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
-                        const failed = actionResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value?.success)).length;
-                        
-                        console.log(`✅ Automação "${automation.name}" executada: ${successful} sucesso(s), ${failed} falha(s)\n`);
-                      } catch (automationError) {
-                        console.error(`❌ Erro ao processar automação ${automation.id}:`, {
-                          error: automationError,
-                          message: automationError instanceof Error ? automationError.message : String(automationError),
-                          stack: automationError instanceof Error ? automationError.stack : undefined
-                        });
-                        // Continua para próxima automação mesmo se uma falhar
+                        parsedDetails = JSON.parse(automationDetails);
+                      } catch (parseError) {
+                        console.error(`❌ Erro ao parsear detalhes da automação:`, parseError);
+                        continue;
                       }
                     }
+                    
+                    const triggers = parsedDetails.triggers || [];
+                    const actions = parsedDetails.actions || [];
+                    
+                    console.log(`📋 Automação tem ${triggers.length} trigger(s) e ${actions.length} ação(ões)`);
+                    console.log(`📋 Triggers:`, JSON.stringify(triggers, null, 2));
+                    console.log(`📋 Actions:`, JSON.stringify(actions.map((a: any) => ({
+                      type: a.action_type,
+                      order: a.action_order,
+                      config: a.action_config
+                    })), null, 2));
+                    
+                    // ✅ Verificar se tem o trigger correto
+                    const hasCorrectTrigger = triggers.some((t: any) => {
+                      const tType = t.trigger_type || t?.trigger_type;
+                      const result = tType === triggerType;
+                      console.log(`🔍 Verificando trigger: ${tType} === '${triggerType}' ? ${result}`);
+                      return result;
+                    });
+                    
+                    if (!hasCorrectTrigger) {
+                      console.log(`⏭️ Automação ${automation.id} não tem trigger ${triggerType}, pulando`);
+                      continue;
+                    }
+                    
+                    console.log(`🚀 ========== EXECUTANDO AUTOMAÇÃO ==========`);
+                    console.log(`🚀 Nome: "${automation.name}" (${automation.id})`);
+                    console.log(`🚀 Trigger: ${triggerType}`);
+                    
+                    // Executar ações em ordem
+                    const sortedActions = [...actions].sort((a: any, b: any) => (a.action_order || 0) - (b.action_order || 0));
+                    
+                    console.log(`🎬 Ações ordenadas:`, sortedActions.map((a: any) => ({
+                      type: a.action_type,
+                      order: a.action_order
+                    })));
+                    
+                    // Verificar dados do card antes de executar ações
+                    console.log(`📦 Dados do card que serão passados para as ações:`, {
+                      id: card.id,
+                      conversation_id: card.conversation_id,
+                      conversation_object: card.conversation ? {
+                        id: card.conversation.id,
+                        contact_id: card.conversation.contact_id
+                      } : null,
+                      contact_id: card.contact_id,
+                      title: card.title,
+                      column_id: card.column_id,
+                      pipeline_id: card.pipeline_id
+                    });
+                    
+                    // ✅ CRÍTICO: Garantir que card tem conversation_id antes de executar remove_agent
+                    const hasRemoveAgentAction = sortedActions.some((a: any) => a.action_type === 'remove_agent');
+                    if (hasRemoveAgentAction && !card.conversation_id && !card.conversation?.id) {
+                      console.error(`❌ ERRO CRÍTICO: Card não tem conversation_id mas há ação remove_agent!`);
+                      console.error(`❌ Card completo:`, JSON.stringify(card, null, 2));
+                      console.error(`❌ Ações que requerem conversation_id:`, sortedActions
+                        .filter((a: any) => a.action_type === 'remove_agent')
+                        .map((a: any) => ({ type: a.action_type, config: a.action_config })));
+                    }
+                    
+                    // Executar ações em background (não bloqueante)
+                    // Usar Promise.allSettled para garantir que todos executem mesmo se alguns falharem
+                    const actionPromises = sortedActions.map(async (action: any) => {
+                      try {
+                        console.log(`\n🎬 ========== EXECUTANDO AÇÃO ==========`);
+                        console.log(`🎬 Tipo: ${action.action_type}`);
+                        console.log(`🎬 Ordem: ${action.action_order || 0}`);
+                        console.log(`🎬 Config:`, JSON.stringify(action.action_config, null, 2));
+                        console.log(`🎬 Card ID: ${card.id}, Conversation ID: ${card.conversation_id || card.conversation?.id || 'NÃO ENCONTRADO'}`);
+                        
+                        // ✅ CRÍTICO: Para remove_agent, garantir que temos conversation_id
+                        if (action.action_type === 'remove_agent') {
+                          const finalConversationId = card.conversation_id || card.conversation?.id;
+                          if (!finalConversationId) {
+                            console.error(`❌ ERRO: Ação remove_agent requer conversation_id mas card não tem!`);
+                            console.error(`❌ Card:`, JSON.stringify({
+                              id: card.id,
+                              conversation_id: card.conversation_id,
+                              conversation: card.conversation
+                            }, null, 2));
+                            throw new Error(`Card ${card.id} não tem conversation_id. Ação remove_agent não pode ser executada.`);
+                          }
+                          console.log(`✅ [remove_agent] conversation_id confirmado: ${finalConversationId}`);
+                        }
+                        
+                        await executeAutomationAction(action, card, supabaseClient);
+                        
+                        console.log(`✅ Ação ${action.action_type} executada com sucesso`);
+                        return { success: true, action: action.action_type };
+                      } catch (actionError) {
+                        console.error(`❌ Erro ao executar ação ${action.action_type}:`, {
+                          error: actionError,
+                          message: actionError instanceof Error ? actionError.message : String(actionError),
+                          stack: actionError instanceof Error ? actionError.stack : undefined
+                        });
+                        return { success: false, action: action.action_type, error: actionError };
+                      }
+                    });
+                    
+                    // Aguardar todas as ações (mas não bloquear se alguma falhar)
+                    const actionResults = await Promise.allSettled(actionPromises);
+                    
+                    const successful = actionResults.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+                    const failed = actionResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value?.success)).length;
+                    
+                    console.log(`✅ Automação "${automation.name}" executada: ${successful} sucesso(s), ${failed} falha(s)\n`);
+                  } catch (automationError) {
+                    console.error(`❌ Erro ao processar automação ${automation.id}:`, {
+                      error: automationError,
+                      message: automationError instanceof Error ? automationError.message : String(automationError),
+                      stack: automationError instanceof Error ? automationError.stack : undefined
+                    });
+                    // Continua para próxima automação mesmo se uma falhar
                   }
                 }
               }
+              
+              console.log(`🤖 ========== FIM DA EXECUÇÃO DE AUTOMAÇÕES ==========\n`);
             } catch (automationError) {
               console.error('❌ Erro geral ao executar automações:', {
                 error: automationError,
