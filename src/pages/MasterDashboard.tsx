@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2, Activity, Bell, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,15 @@ export default function MasterDashboard() {
   const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace, toggleWorkspaceStatus, clearCache } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
+
+  // Debug: ver workspaces no MasterDashboard
+  useEffect(() => {
+    console.log('🔍 [MasterDashboard] workspaces:', {
+      count: workspaces.length,
+      workspaces: workspaces,
+      isLoading
+    });
+  }, [workspaces, isLoading]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
   const [usersModalOpen, setUsersModalOpen] = useState(false);
