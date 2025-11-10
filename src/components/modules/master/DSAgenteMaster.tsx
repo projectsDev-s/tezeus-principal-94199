@@ -33,35 +33,57 @@ export function DSAgenteMaster() {
 
   const loadAgents = async () => {
     try {
-      const { data, error } = await supabase
+      // Buscar agentes
+      const { data: agentsData, error: agentsError } = await supabase
         .from('ai_agents')
-        .select(`
-          *,
-          workspaces:workspace_id (
-            id,
-            name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Erro ao carregar agentes:', error);
+      if (agentsError) {
+        console.error('Erro ao carregar agentes:', agentsError);
         toast.error('Erro ao carregar agentes');
+        setIsLoading(false);
         return;
       }
 
-      if (!data || data.length === 0) {
+      if (!agentsData || agentsData.length === 0) {
         setAgents([]);
+        setIsLoading(false);
         return;
       }
 
-      // Transformar os dados para o formato esperado
-      const agentsWithWorkspace = data.map((agent: any) => ({
+      // Buscar todos os workspaces relacionados
+      const workspaceIds = [...new Set(agentsData.map(a => a.workspace_id).filter(Boolean))];
+      
+      if (workspaceIds.length === 0) {
+        setAgents(agentsData.map(a => ({ ...a, workspace: null })));
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: workspacesData, error: workspacesError } = await supabase
+        .from('workspaces')
+        .select('id, name')
+        .in('id', workspaceIds);
+
+      if (workspacesError) {
+        console.error('Erro ao carregar workspaces:', workspacesError);
+        // Continuar mesmo com erro nos workspaces
+      }
+
+      // Mapear workspaces
+      const workspacesMap = new Map(
+        (workspacesData || []).map(w => [w.id, w])
+      );
+
+      // Combinar dados
+      const agentsWithWorkspace = agentsData.map(agent => ({
         ...agent,
-        workspace: agent.workspaces
+        workspace: agent.workspace_id ? workspacesMap.get(agent.workspace_id) || null : null
       }));
 
-      console.log('Agentes carregados:', agentsWithWorkspace);
+      console.log('📊 Agentes carregados:', agentsWithWorkspace);
+      console.log('📊 Workspaces encontrados:', workspacesData);
       setAgents(agentsWithWorkspace);
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);
