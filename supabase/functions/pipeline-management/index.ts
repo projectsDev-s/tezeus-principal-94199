@@ -1265,13 +1265,14 @@ serve(async (req) => {
               throw updateError;
             }
 
-            // Buscar card atualizado separadamente
+            // Buscar card atualizado separadamente com join de pipeline
             const { data: card, error: selectError } = await supabaseClient
               .from('pipeline_cards')
               .select(`
                 *,
-                conversation:conversations(id, contact_id, connection_id),
-                contact:contacts(id, phone, name)
+                conversation:conversations(id, contact_id, connection_id, workspace_id),
+                contact:contacts(id, phone, name),
+                pipelines:pipelines!inner(id, workspace_id, name)
               `)
               .eq('id', cardId)
               .single();

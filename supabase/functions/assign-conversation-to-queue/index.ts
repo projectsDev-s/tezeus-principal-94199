@@ -268,8 +268,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ [assign-conversation-to-queue] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
     return new Response(
-      JSON.stringify({ error: error.message || 'Erro interno do servidor' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
