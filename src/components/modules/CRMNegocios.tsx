@@ -52,13 +52,15 @@ import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
 function AgentBadge({ conversationId }: { conversationId: string }) {
   const { agent, isLoading } = useWorkspaceAgent(conversationId);
   
+  console.log('🤖 [AgentBadge] Renderizando:', { conversationId, hasAgent: !!agent, isLoading });
+  
   if (isLoading) return null;
   
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-600 border border-purple-200">
+          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-700">
             <Bot className="w-2.5 h-2.5" />
             <span className="text-[9px] font-medium">IA</span>
           </div>
