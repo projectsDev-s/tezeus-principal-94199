@@ -669,6 +669,38 @@ function CRMNegociosContent({
     }
   }));
 
+  // 🔥 Buscar contagens de automações por coluna
+  useEffect(() => {
+    const fetchAutomationCounts = async () => {
+      if (!columns || columns.length === 0) {
+        setColumnAutomationCounts({});
+        return;
+      }
+
+      try {
+        const counts: Record<string, number> = {};
+        
+        // Buscar contagem de automações para cada coluna
+        await Promise.all(
+          columns.map(async (column) => {
+            const { count } = await supabase
+              .from('crm_column_automations')
+              .select('*', { count: 'exact', head: true })
+              .eq('column_id', column.id);
+            
+            counts[column.id] = count || 0;
+          })
+        );
+
+        setColumnAutomationCounts(counts);
+      } catch (error) {
+        console.error('Erro ao buscar contagens de automações:', error);
+      }
+    };
+
+    fetchAutomationCounts();
+  }, [columns]);
+
   // O loading é gerenciado automaticamente pelo PipelinesContext
   // quando o workspace muda, ele limpa os dados e mostra skeleton
   // Atualizado: 2025-10-03 - removido isRefreshing
@@ -1016,38 +1048,6 @@ function CRMNegociosContent({
         <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
       </div>;
   }
-
-  // 🔥 Buscar contagens de automações por coluna
-  useEffect(() => {
-    const fetchAutomationCounts = async () => {
-      if (!columns || columns.length === 0) {
-        setColumnAutomationCounts({});
-        return;
-      }
-
-      try {
-        const counts: Record<string, number> = {};
-        
-        // Buscar contagem de automações para cada coluna
-        await Promise.all(
-          columns.map(async (column) => {
-            const { count } = await supabase
-              .from('crm_column_automations')
-              .select('*', { count: 'exact', head: true })
-              .eq('column_id', column.id);
-            
-            counts[column.id] = count || 0;
-          })
-        );
-
-        setColumnAutomationCounts(counts);
-      } catch (error) {
-        console.error('Erro ao buscar contagens de automações:', error);
-      }
-    };
-
-    fetchAutomationCounts();
-  }, [columns]);
 
   // Mostrar loading quando estiver carregando pipelines
   if (isLoading) {
