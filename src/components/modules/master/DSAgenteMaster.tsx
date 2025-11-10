@@ -33,27 +33,18 @@ export function DSAgenteMaster() {
 
   const loadAgents = async () => {
     try {
-      // Buscar agentes com workspace usando RPC ou service_role
-      const { data: agentsData, error: agentsError } = await supabase
-        .from('ai_agents')
-        .select(`
-          *,
-          workspace:workspace_id (
-            id,
-            name
-          )
-        `)
-        .order('created_at', { ascending: false });
+      // Usar edge function com service_role para contornar RLS
+      const { data, error } = await supabase.functions.invoke('get-agents-with-workspaces')
 
-      if (agentsError) {
-        console.error('Erro ao carregar agentes:', agentsError);
+      if (error) {
+        console.error('Erro ao carregar agentes:', error);
         toast.error('Erro ao carregar agentes');
         setIsLoading(false);
         return;
       }
 
-      console.log('📊 Agentes retornados:', agentsData);
-      setAgents(agentsData || []);
+      console.log('📊 Agentes retornados:', data);
+      setAgents(data || []);
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);
       toast.error('Erro ao carregar agentes');
