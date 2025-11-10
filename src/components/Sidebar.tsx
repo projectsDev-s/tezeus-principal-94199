@@ -347,11 +347,14 @@ export function Sidebar({
                   <PopoverTrigger asChild>
                      <TooltipTrigger asChild>
                        <button className="p-2 hover:bg-accent rounded-md relative transition-all duration-200 hover:scale-110">
-               <Bell className={cn(isCollapsed ? "w-5 h-5" : "w-5 h-5", "text-muted-foreground")} />
+               <Bell className={cn(isCollapsed ? "w-5 h-5" : "w-5 h-5", "text-muted-foreground animate-pulse")} />
                         <Badge 
                           key={`badge-${totalUnread}-${Date.now()}`}
                           variant="destructive" 
-                          className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0 animate-scale-in"
+                          className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground border-0 animate-pulse shadow-lg shadow-destructive/50"
+                          style={{
+                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite, glow 2s ease-in-out infinite'
+                          }}
                         >
                           {totalUnread > 99 ? '99+' : totalUnread}
                         </Badge>

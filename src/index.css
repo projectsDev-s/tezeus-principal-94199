@@ -228,6 +228,16 @@
   }
 }
 
+/* Glow animation for notification badges */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px hsl(var(--destructive)), 0 0 10px hsl(var(--destructive)), 0 0 15px hsl(var(--destructive));
+  }
+  50% {
+    box-shadow: 0 0 10px hsl(var(--destructive)), 0 0 20px hsl(var(--destructive)), 0 0 30px hsl(var(--destructive));
+  }
+}
+
 /* Custom utilities */
 .min-w-80 {
   min-width: 9rem;
