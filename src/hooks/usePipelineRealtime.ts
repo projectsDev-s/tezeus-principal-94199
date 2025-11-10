@@ -245,6 +245,35 @@ export function usePipelineRealtime({
           }
         }
       )
+      // Escutar mudanças em tags de contato
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'contact_tags',
+        },
+        async (payload) => {
+          const newData = payload.new as any;
+          const oldData = payload.old as any;
+          
+          console.log('🏷️ [Realtime] Contact tag mudou:', {
+            event: payload.eventType,
+            contact_id: newData?.contact_id || oldData?.contact_id,
+            tag_id: newData?.tag_id || oldData?.tag_id
+          });
+          
+          // Força refresh dos cards para atualizar tags
+          // Precisamos encontrar cards relacionados a este contato
+          const contactId = newData?.contact_id || oldData?.contact_id;
+          if (contactId && onCardUpdate) {
+            console.log('🔄 [Realtime] Forçando refresh de cards para contato:', contactId);
+            // Enviar um sinal de "refresh" para o card
+            // O card irá buscar as tags atualizadas
+            onCardUpdate({ id: `refresh-contact-${contactId}`, _refresh: true } as any);
+          }
+        }
+      )
       .subscribe((status, err) => {
         console.log(`📡 [Realtime] Status do canal ${channelName}:`, status);
         console.log(`📡 [Realtime] Erro (se houver):`, err);

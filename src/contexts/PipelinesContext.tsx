@@ -714,6 +714,48 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
     console.log('📊 [Realtime] Estado atual dos cards ANTES da atualização:', cards.length, 'cards');
     
+    // Detectar se é um evento de refresh de tags de contato
+    const isContactRefresh = (updatedCard as any)._refresh && (updatedCard.id as string).startsWith('refresh-contact-');
+    
+    if (isContactRefresh) {
+      const contactId = (updatedCard.id as string).replace('refresh-contact-', '');
+      console.log('🏷️ [Realtime] Refresh de tags para contato:', contactId);
+      
+      // Encontrar todos os cards deste contato e fazer refresh
+      const cardsToRefresh = cards.filter(c => c.contact?.id === contactId);
+      console.log(`🔄 [Realtime] ${cardsToRefresh.length} card(s) encontrado(s) para refresh`);
+      
+      if (cardsToRefresh.length > 0 && getHeaders) {
+        // Buscar dados completos de cada card para atualizar as tags
+        for (const cardToRefresh of cardsToRefresh) {
+          try {
+            const { data: fullCard, error } = await supabase.functions.invoke(
+              `pipeline-management/cards?id=${cardToRefresh.id}`,
+              {
+                method: 'GET',
+                headers: getHeaders
+              }
+            );
+
+            if (!error && fullCard) {
+              console.log('✅ [Realtime] Card atualizado com novas tags:', fullCard.id);
+              setCards(p =>
+                p.map(c =>
+                  c.id === fullCard.id
+                    ? { ...c, contact: fullCard.contact }
+                    : c
+                )
+              );
+            }
+          } catch (err) {
+            console.error('❌ [Realtime] Erro ao atualizar card:', err);
+          }
+        }
+      }
+      
+      return; // Não processar como update normal
+    }
+    
     // Se o card atualizado não tem relacionamentos e o card local tinha, preservar
     setCards(prev => {
       console.log('🔄 [Realtime] setCards callback executado');
