@@ -84,8 +84,8 @@
   }
 
   .dark {
-    --background: 240 5.9% 10%;
-    --foreground: 240 4.8% 95.9%;
+    --background: 220 15% 8%;
+    --foreground: 210 40% 98%;
 
     /* Brand colors - adjusted for dark mode */
     --brand-blue: 220 100% 45%;
@@ -102,51 +102,51 @@
     --error-foreground: 0 0% 0%;
 
     /* UI colors - dark mode */
-    --card: 240 3.7% 15.9%;
-    --card-foreground: 240 4.8% 95.9%;
-    --card-border: 240 3.7% 20%;
+    --card: 220 15% 12%;
+    --card-foreground: 210 40% 98%;
+    --card-border: 220 15% 18%;
 
-    --sidebar: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar: 220 15% 10%;
+    --sidebar-foreground: 210 40% 98%;
     --sidebar-active: var(--primary);
     --sidebar-active-foreground: var(--primary-foreground);
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 220 15% 15%;
 
-    --popover: 240 3.7% 15.9%;
-    --popover-foreground: 240 4.8% 95.9%;
+    --popover: 220 15% 12%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 45 100% 65%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 240 4.8% 95.9%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 215 20% 65%;
 
     --accent: var(--primary);
     --accent-foreground: var(--primary-foreground);
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 240 4.8% 95.9%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 240 3.7% 20%;
-    --input: 240 3.7% 15.9%;
+    --border: 220 15% 18%;
+    --input: 220 15% 15%;
     --ring: 45 100% 55%;
 
     /* Metric card colors - dark mode */
-    --metric-card: 240 3.7% 15.9%;
-    --metric-card-foreground: 240 4.8% 95.9%;
+    --metric-card: 220 15% 12%;
+    --metric-card-foreground: 210 40% 98%;
 
     /* Interactive states - dark mode */
-    --hover-light: 240 3.7% 20%;
-    --active-light: 240 3.7% 25%;
+    --hover-light: 220 15% 18%;
+    --active-light: 220 15% 22%;
 
-    --sidebar-background: 240 5.9% 10%;
+    --sidebar-background: 220 15% 10%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
