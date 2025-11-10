@@ -8,7 +8,6 @@ import { CriarAgenteModal } from "../../modals/CriarAgenteModal";
 import { EditarAgenteModal } from "../../modals/EditarAgenteModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
 interface AIAgent {
   id: string;
   name: string;
@@ -23,26 +22,25 @@ interface AIAgent {
     name: string;
   };
 }
-
 export function DSAgenteMaster() {
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-
   const loadAgents = async () => {
     try {
       // Usar edge function com service_role para contornar RLS
-      const { data, error } = await supabase.functions.invoke('get-agents-with-workspaces')
-
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('get-agents-with-workspaces');
       if (error) {
         console.error('Erro ao carregar agentes:', error);
         toast.error('Erro ao carregar agentes');
         setIsLoading(false);
         return;
       }
-
       console.log('📊 Agentes retornados:', data);
       setAgents(data || []);
     } catch (error) {
@@ -52,22 +50,17 @@ export function DSAgenteMaster() {
       setIsLoading(false);
     }
   };
-
   const handleDeleteAgent = async (agentId: string) => {
     if (!confirm('Tem certeza que deseja deletar este agente?')) return;
-
     try {
-      const { error } = await supabase
-        .from('ai_agents')
-        .delete()
-        .eq('id', agentId);
-
+      const {
+        error
+      } = await supabase.from('ai_agents').delete().eq('id', agentId);
       if (error) {
         console.error('Erro ao deletar agente:', error);
         toast.error('Erro ao deletar agente');
         return;
       }
-
       toast.success('Agente deletado com sucesso');
       loadAgents();
     } catch (error) {
@@ -75,44 +68,35 @@ export function DSAgenteMaster() {
       toast.error('Erro ao deletar agente');
     }
   };
-
   const handleAddAgent = () => {
     setShowCreateModal(true);
   };
-
   const handleEditAgent = (agentId: string) => {
     setSelectedAgentId(agentId);
     setShowEditModal(true);
   };
-
   const handleCreateModalClose = () => {
     setShowCreateModal(false);
     loadAgents();
   };
-
   useEffect(() => {
     loadAgents();
   }, []);
-
   if (isLoading) {
-    return (
-      <div className="p-6">
+    return <div className="p-6">
         <Card>
           <CardContent className="p-6">
             <div className="text-center">Carregando agentes...</div>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Bot className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">DS Agente</h1>
+            <h1 className="text-2xl font-bold">Agentes de IA</h1>
             <p className="text-muted-foreground">Configure e gerencie seus agentes de IA</p>
           </div>
         </div>
@@ -127,8 +111,7 @@ export function DSAgenteMaster() {
           <CardTitle>Agentes Cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
-          {agents.length === 0 ? (
-            <div className="text-center py-8">
+          {agents.length === 0 ? <div className="text-center py-8">
               <Bot className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Nenhum agente cadastrado</h3>
               <p className="text-muted-foreground mb-4">
@@ -138,9 +121,7 @@ export function DSAgenteMaster() {
                 <Plus className="w-4 h-4 mr-2" />
                 Criar Primeiro Agente
               </Button>
-            </div>
-          ) : (
-            <Table>
+            </div> : <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
@@ -152,28 +133,22 @@ export function DSAgenteMaster() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {agents.map((agent) => (
-                  <TableRow key={agent.id}>
+                {agents.map(agent => <TableRow key={agent.id}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{agent.name}</div>
-                        {agent.description && (
-                          <div className="text-sm text-muted-foreground">
+                        {agent.description && <div className="text-sm text-muted-foreground">
                             {agent.description}
-                          </div>
-                        )}
+                          </div>}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {agent.agent_type === 'conversational' ? 'Conversacional' : 
-                         agent.agent_type === 'assistant' ? 'Assistente' : agent.agent_type}
+                        {agent.agent_type === 'conversational' ? 'Conversacional' : agent.agent_type === 'assistant' ? 'Assistente' : agent.agent_type}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {agent.workspace && (
-                        <span className="text-sm">{agent.workspace.name}</span>
-                      )}
+                      {agent.workspace && <span className="text-sm">{agent.workspace.name}</span>}
                     </TableCell>
                     <TableCell>{agent.max_tokens}</TableCell>
                     <TableCell>
@@ -183,50 +158,29 @@ export function DSAgenteMaster() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditAgent(agent.id)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleEditAgent(agent.id)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAgent(agent.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteAgent(agent.id)} className="text-destructive hover:text-destructive">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
+                  </TableRow>)}
               </TableBody>
-            </Table>
-          )}
+            </Table>}
         </CardContent>
       </Card>
 
-      <CriarAgenteModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-        onAgentCreated={handleCreateModalClose}
-      />
+      <CriarAgenteModal open={showCreateModal} onOpenChange={setShowCreateModal} onAgentCreated={handleCreateModalClose} />
 
-      <EditarAgenteModal
-        open={showEditModal && !!selectedAgentId}
-        onOpenChange={(open) => {
-          setShowEditModal(open);
-          if (!open) setSelectedAgentId(null);
-        }}
-        agentId={selectedAgentId || ''}
-        onAgentUpdated={() => {
-          setShowEditModal(false);
-          setSelectedAgentId(null);
-          loadAgents();
-        }}
-      />
-    </div>
-  );
+      <EditarAgenteModal open={showEditModal && !!selectedAgentId} onOpenChange={open => {
+      setShowEditModal(open);
+      if (!open) setSelectedAgentId(null);
+    }} agentId={selectedAgentId || ''} onAgentUpdated={() => {
+      setShowEditModal(false);
+      setSelectedAgentId(null);
+      loadAgents();
+    }} />
+    </div>;
 }
