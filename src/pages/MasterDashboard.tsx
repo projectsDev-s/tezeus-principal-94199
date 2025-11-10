@@ -41,15 +41,14 @@ export default function MasterDashboard() {
   const { workspaces, isLoading, fetchWorkspaces, deleteWorkspace, toggleWorkspaceStatus, clearCache } = useWorkspaces();
   const { setSelectedWorkspace } = useWorkspace();
   const { userRole, logout } = useAuth();
-
-  // Debug: ver workspaces no MasterDashboard
-  useEffect(() => {
-    console.log('🔍 [MasterDashboard] workspaces:', {
-      count: workspaces.length,
-      workspaces: workspaces,
-      isLoading
-    });
-  }, [workspaces, isLoading]);
+  
+  // Debug workspaces
+  console.log('🔍 [MasterDashboard] workspaces data:', {
+    count: workspaces.length,
+    workspaces: workspaces,
+    isLoading,
+    firstWorkspace: workspaces[0]
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [activePage, setActivePage] = useState<'home' | 'users' | 'workspaces' | 'reports' | 'settings' | 'ds-agent' | 'filas' | 'usuarios' | 'configuracoes'>('workspaces');
   const [usersModalOpen, setUsersModalOpen] = useState(false);
