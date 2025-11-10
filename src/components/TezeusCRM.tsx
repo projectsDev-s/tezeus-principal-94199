@@ -73,7 +73,8 @@ export function TezeusCRM() {
   const { selectedWorkspace } = useWorkspace();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
+      const savedTheme = localStorage.getItem('theme');
+      return savedTheme === 'dark';
     }
     return false;
   });
