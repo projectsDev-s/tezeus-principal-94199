@@ -1260,9 +1260,8 @@ serve(async (req) => {
               .eq('id', cardId)
               .select(`
                 *,
-                conversation:conversations(id, contact_id, connection_id, workspace_id),
-                contact:contacts(id, phone, name),
-                pipelines:pipelines!pipeline_cards_pipeline_id_fkey(id, workspace_id, name)
+                conversation:conversations(id, contact_id, connection_id),
+                contact:contacts(id, phone, name)
               `)
               .single();
 
