@@ -106,7 +106,8 @@ export function ChangeAgentModal({
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          agente_ativo: false
+          agente_ativo: false,
+          agent_active_id: null
         })
         .eq('id', conversationId);
 
