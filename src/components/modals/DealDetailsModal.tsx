@@ -275,6 +275,8 @@ export function DealDetailsModal({
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [cardHistory, setCardHistory] = useState<CardHistoryEvent[]>([]);
+  const [agentHistory, setAgentHistory] = useState<any[]>([]);
+  const [assignmentHistory, setAssignmentHistory] = useState<any[]>([]);
   const [showAddTagModal, setShowAddTagModal] = useState(false);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   const [confirmLossAction, setConfirmLossAction] = useState<any>(null);
@@ -695,6 +697,11 @@ export function DealDetailsModal({
       // Armazenar conversation_id se disponível
       if (conversationIdFromCard) {
         setConversationId(conversationIdFromCard);
+        // Buscar históricos de agente e atribuições
+        await Promise.all([
+          fetchAgentHistory(conversationIdFromCard),
+          fetchAssignmentHistory(conversationIdFromCard)
+        ]);
       }
       
       // SEMPRE buscar os pipelines do contato (independente do fluxo acima)
@@ -971,6 +978,62 @@ export function DealDetailsModal({
     } catch (error) {
       console.error('Erro ao buscar histórico do card:', error);
       setCardHistory([]);
+    }
+  };
+
+  const fetchAgentHistory = async (conversationId: string) => {
+    try {
+      console.log('🤖 Buscando histórico de agentes para conversa:', conversationId);
+      
+      const { data, error } = await supabase
+        .from('conversation_agent_history')
+        .select(`
+          *,
+          users:changed_by (
+            name
+          )
+        `)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log('✅ Histórico de agentes carregado:', data?.length || 0, 'eventos');
+      setAgentHistory(data || []);
+    } catch (error) {
+      console.error('❌ Erro ao buscar histórico de agentes:', error);
+      setAgentHistory([]);
+    }
+  };
+
+  const fetchAssignmentHistory = async (conversationId: string) => {
+    try {
+      console.log('👤 Buscando histórico de atribuições para conversa:', conversationId);
+      
+      const { data, error } = await supabase
+        .from('conversation_assignments')
+        .select(`
+          *,
+          changed_by_user:changed_by (
+            name
+          ),
+          from_user:from_assigned_user_id (
+            name
+          ),
+          to_user:to_assigned_user_id (
+            name
+          )
+        `)
+        .eq('conversation_id', conversationId)
+        .order('changed_at', { ascending: false });
+
+      if (error) throw error;
+
+      console.log('✅ Histórico de atribuições carregado:', data?.length || 0, 'eventos');
+      setAssignmentHistory(data || []);
+    } catch (error) {
+      console.error('❌ Erro ao buscar histórico de atribuições:', error);
+      setAssignmentHistory([]);
     }
   };
   const handleTagAdded = (tag: Tag) => {
@@ -1824,8 +1887,99 @@ export function DealDetailsModal({
                 </div>
               )}
 
+              {/* Histórico de transferências de agente */}
+              {agentHistory.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className={cn("text-md font-medium mt-6", isDarkMode ? "text-gray-200" : "text-gray-800")}>
+                    Transferências de Agente IA
+                  </h4>
+                  {agentHistory.map(event => (
+                    <div key={event.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {event.action === 'agent_enabled' && '🤖 Agente Ativado'}
+                          {event.action === 'agent_disabled' && '🔴 Agente Desativado'}
+                          {event.action === 'agent_changed' && '🔄 Agente Trocado'}
+                        </Badge>
+                        {event.users?.name && (
+                          <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            por {event.users.name}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                        {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                      
+                      <div className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                        {event.action === 'agent_enabled' && (
+                          <p>Agente <strong>{event.agent_name}</strong> foi ativado na conversa</p>
+                        )}
+                        {event.action === 'agent_disabled' && (
+                          <p>Agente <strong>{event.agent_name}</strong> foi desativado na conversa</p>
+                        )}
+                        {event.action === 'agent_changed' && event.metadata && (
+                          <p>
+                            Agente alterado {event.metadata.old_agent_name ? `de <strong>${event.metadata.old_agent_name}</strong> ` : ''}
+                            para <strong>{event.agent_name}</strong>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Histórico de atribuições de responsável */}
+              {assignmentHistory.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className={cn("text-md font-medium mt-6", isDarkMode ? "text-gray-200" : "text-gray-800")}>
+                    Transferências de Responsável
+                  </h4>
+                  {assignmentHistory.map(event => (
+                    <div key={event.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {event.action === 'assign' && '👤 Atribuído'}
+                          {event.action === 'reassign' && '🔄 Reatribuído'}
+                          {event.action === 'unassign' && '❌ Desatribuído'}
+                        </Badge>
+                        {event.changed_by_user?.name && (
+                          <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            por {event.changed_by_user.name}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                        {format(new Date(event.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                      
+                      <div className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                        {event.action === 'assign' && (
+                          <p>
+                            Conversa atribuída para <strong>{event.to_user?.name || 'Usuário'}</strong>
+                          </p>
+                        )}
+                        {event.action === 'reassign' && (
+                          <p>
+                            Conversa transferida de <strong>{event.from_user?.name || 'N/A'}</strong> para <strong>{event.to_user?.name || 'Usuário'}</strong>
+                          </p>
+                        )}
+                        {event.action === 'unassign' && (
+                          <p>
+                            Conversa desatribuída de <strong>{event.from_user?.name || 'Usuário'}</strong>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Mensagem quando não há histórico */}
-              {cardHistory.length === 0 && completedActivities.length === 0 && (
+              {cardHistory.length === 0 && completedActivities.length === 0 && agentHistory.length === 0 && assignmentHistory.length === 0 && (
                 <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                   <p>Nenhum evento ou atividade concluída encontrada</p>
                 </div>
