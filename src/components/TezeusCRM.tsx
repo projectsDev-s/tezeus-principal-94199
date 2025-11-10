@@ -91,12 +91,17 @@ export function TezeusCRM() {
   // Handle dark mode and preset changes
   useEffect(() => {
     const updateTheme = (isDark: boolean, preset: 'dark' | 'dark-blue') => {
-      document.documentElement.classList.remove('dark', 'dark-blue');
+      const root = document.documentElement;
+      
+      // Remove todas as classes de tema
+      root.classList.remove('dark', 'dark-blue');
       
       if (isDark) {
-        document.documentElement.classList.add(preset);
+        // Adiciona a classe do preset escolhido
+        root.classList.add(preset);
         localStorage.setItem('theme', preset);
       } else {
+        // Modo claro
         localStorage.setItem('theme', 'light');
       }
     };
