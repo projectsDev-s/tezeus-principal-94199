@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { ModuleType } from "./TezeusCRM";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { NotificationTooltip } from "@/components/NotificationTooltip";
 import { useRealtimeNotifications } from "@/components/RealtimeNotificationProvider";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -342,6 +343,31 @@ export function Sidebar({
       {/* Action Icons */}
       <div className={cn("flex-shrink-0", isCollapsed ? "p-3" : "p-4")}>
         <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2" : "gap-2 justify-between")}>
+          {/* Switch de modo noturno */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    checked={isDarkMode} 
+                    onCheckedChange={onToggleDarkMode}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                  {!isCollapsed && (
+                    <span className="text-sm text-muted-foreground">
+                      Modo Noturno
+                    </span>
+                  )}
+                </div>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>Modo Noturno</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+
           {/* Botão de notificações com tooltip */}
           <TooltipProvider>
             <Tooltip>
