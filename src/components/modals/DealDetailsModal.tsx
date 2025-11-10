@@ -1014,13 +1014,13 @@ export function DealDetailsModal({
         .from('conversation_assignments')
         .select(`
           *,
-          changed_by_user:changed_by (
+          changed_by_user:system_users!conversation_assignments_changed_by_fkey (
             name
           ),
-          from_user:from_assigned_user_id (
+          from_user:system_users!conversation_assignments_from_assigned_user_id_fkey (
             name
           ),
-          to_user:to_assigned_user_id (
+          to_user:system_users!conversation_assignments_to_assigned_user_id_fkey (
             name
           )
         `)
