@@ -189,12 +189,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   // Carregar pipelines e providers quando o modal for aberto
   useEffect(() => {
     const loadModalData = async () => {
-      if (isCreateModalOpen && workspaceId && !isEditMode) {
+      if (isCreateModalOpen && workspaceId) {
+        // Sempre carregar pipelines, tanto na criação quanto na edição
         loadWorkspacePipelines();
         
-        // Buscar providers através do hook
-        console.log('🔍 Carregando providers para workspace:', workspaceId);
-        await fetchProviders();
+        // Buscar providers através do hook (apenas na criação)
+        if (!isEditMode) {
+          console.log('🔍 Carregando providers para workspace:', workspaceId);
+          await fetchProviders();
+        }
       }
     };
     
