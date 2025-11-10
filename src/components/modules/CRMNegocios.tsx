@@ -55,24 +55,26 @@ function AgentBadge({ conversationId }: { conversationId: string }) {
   console.log('🤖 [AgentBadge] Renderizando:', { conversationId, hasAgent: !!agent, isLoading });
   
   if (isLoading) return null;
+  if (!agent) return null;
   
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-700">
-            <Bot className="w-2.5 h-2.5" />
-            <span className="text-[9px] font-medium">IA</span>
+            <Bot className="h-3 w-3" />
+            <span className="text-[10px] font-medium">{agent.name}</span>
           </div>
         </TooltipTrigger>
-        <TooltipContent>
-          <p>{agent?.name || 'Agente IA Ativo'}</p>
+        <TooltipContent side="bottom">
+          <p className="text-xs">Agente IA ativo: {agent.name}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
+// Componente Sortable do Card com Drag & Drop e Selection
 // Interface compatível com o componente existente
 interface Deal {
   id: string;
