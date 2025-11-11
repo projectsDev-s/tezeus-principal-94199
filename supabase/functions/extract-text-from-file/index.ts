@@ -44,7 +44,7 @@ serve(async (req) => {
         extractedText = data.text;
       } catch (pdfError) {
         console.error('Error parsing PDF:', pdfError);
-        throw new Error(`Failed to parse PDF: ${pdfError.message}`);
+        throw new Error(`Failed to parse PDF: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
       }
     }
     // Arquivos Office (DOCX, XLSX, PPTX) - são arquivos ZIP, tentar extrair texto básico
@@ -60,7 +60,7 @@ serve(async (req) => {
           extractedText = result.value;
         } catch (docxError) {
           console.error('Error parsing DOCX:', docxError);
-          throw new Error(`Failed to parse DOCX: ${docxError.message}`);
+          throw new Error(`Failed to parse DOCX: ${docxError instanceof Error ? docxError.message : 'Unknown error'}`);
         }
       } else {
         // Para XLSX e PPTX, vamos informar que não são suportados ainda
@@ -97,7 +97,7 @@ serve(async (req) => {
     console.error('Error in extract-text-from-file:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         success: false
       }),
       { 

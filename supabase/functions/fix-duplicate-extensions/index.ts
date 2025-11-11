@@ -65,7 +65,7 @@ serve(async (req) => {
 
           for (const pattern of duplicatePatterns) {
             if (pattern.test(fixedUrl)) {
-              fixedUrl = fixedUrl.replace(pattern, (match) => match.substring(0, match.length / 2))
+              fixedUrl = fixedUrl.replace(pattern, (match: string) => match.substring(0, match.length / 2))
               break
             }
           }
@@ -73,7 +73,7 @@ serve(async (req) => {
           if (fixedName) {
             for (const pattern of duplicatePatterns) {
               if (pattern.test(fixedName)) {
-                fixedName = fixedName.replace(pattern, (match) => match.substring(0, match.length / 2))
+                fixedName = fixedName.replace(pattern, (match: string) => match.substring(0, match.length / 2))
                 break
               }
             }
@@ -116,7 +116,7 @@ serve(async (req) => {
           results.errors++
           results.details.push({
             id: message.id,
-            error: error.message
+            error: error instanceof Error ? error.message : 'Unknown error'
           })
         }
       }
@@ -141,7 +141,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Falha na correção de extensões duplicadas',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
         status: 500, 

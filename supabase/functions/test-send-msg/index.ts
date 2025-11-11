@@ -379,9 +379,9 @@ serve(async (req) => {
     console.log(`📤 [${requestId}] Enviando mensagem via WhatsApp Provider Adapter`);
     console.log(`📋 [${requestId}] Provedor será selecionado automaticamente (Evolution/Z-API)`);
 
-    // Chamar send-whatsapp-message que usa o adapter pattern
+    // Chamar message-sender que usa N8N webhook (com fallback para envio direto)
     try {
-      const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-whatsapp-message', {
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('message-sender', {
         body: {
           messageId: external_id,
           phoneNumber: contact.phone,
@@ -391,7 +391,8 @@ serve(async (req) => {
           fileName: file_name,
           evolutionInstance: instance_name,
           workspaceId: conversation.workspace_id,
-          external_id: external_id
+          external_id: external_id,
+          conversationId: conversation_id
         }
       });
 

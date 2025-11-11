@@ -274,8 +274,7 @@ serve(async (req) => {
           default_pipeline_id: conn.default_pipeline_id,
           default_column_id: conn.default_column_id,
           default_column_name: conn.default_column_name,
-          queue_id: conn.queue_id,
-          connection_status: conn.status
+          queue_id: conn.queue_id
         });
       } else {
         console.warn(`⚠️ [${requestId}] Connection not found for instance: ${instanceName}`);
@@ -375,7 +374,7 @@ serve(async (req) => {
         console.log(`🔍 [${requestId}] Searching message with idempotent OR query`);
         const { data: msg, error } = await supabase
           .from('messages')
-          .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id')
+          .select('id, external_id, evolution_key_id, evolution_short_key_id, status, conversation_id, workspace_id, delivered_at, read_at')
           .or(`evolution_short_key_id.eq.${messageKeyId},evolution_key_id.eq.${messageKeyId},external_id.eq.${messageKeyId}`)
           .limit(1)
           .maybeSingle();
@@ -644,7 +643,7 @@ serve(async (req) => {
         // ✅ FASE 2: Recarregar connectionMeta do banco (não usar connectionUpdate do evento)
         const { data: connectionMeta, error: metaError } = await supabase
           .from('connections')
-          .select('history_days, history_recovery, history_sync_status')
+          .select('history_days, history_recovery, history_sync_status, history_sync_started_at')
           .eq('instance_name', instanceName)
           .eq('workspace_id', workspaceId)
           .single();
@@ -976,13 +975,13 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       action: 'processed_and_forwarded',
-      message_id: processedData?.message_id || crypto.randomUUID(),
-      workspace_id: processedData?.workspace_id || workspaceId,
-      conversation_id: processedData?.conversation_id,
-      contact_id: processedData?.contact_id,
-      connection_id: processedData?.connection_id,
-      instance: processedData?.instance,
-      phone_number: processedData?.phone_number,
+      message_id: (processedData as any)?.message_id || crypto.randomUUID(),
+      workspace_id: (processedData as any)?.workspace_id || workspaceId,
+      conversation_id: (processedData as any)?.conversation_id,
+      contact_id: (processedData as any)?.contact_id,
+      connection_id: (processedData as any)?.connection_id,
+      instance: (processedData as any)?.instance,
+      phone_number: (processedData as any)?.phone_number,
       requestId
     }), {
       status: 200,

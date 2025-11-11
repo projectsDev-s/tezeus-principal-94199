@@ -21,18 +21,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let existingContact: any = null;
+
   try {
     const { phone, contactId, workspaceId } = await req.json();
     
     console.log(`📥 Fetch profile image request:`, { phone, contactId, workspaceId });
     
     // Verificar se o contato existe e pertence ao workspace correto
-    const { data: existingContact } = await supabase
+    const { data: contact } = await supabase
       .from('contacts')
       .select('id, workspace_id, profile_fetch_attempts, profile_fetch_last_attempt')
       .eq('id', contactId)
       .eq('workspace_id', workspaceId)
       .single();
+
+    existingContact = contact;
 
     if (!existingContact) {
       console.log(`❌ Contact not found or doesn't belong to workspace: ${contactId}, ${workspaceId}`);

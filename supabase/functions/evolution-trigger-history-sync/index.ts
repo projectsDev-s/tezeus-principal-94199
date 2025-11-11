@@ -189,16 +189,16 @@ serve(async (req) => {
         })
         .eq('instance_name', instanceName)
         .eq('workspace_id', workspaceId);
-    } catch (updateError) {
-      console.error('Failed to update error status:', updateError);
-    }
-    
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      success: false
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+  } catch (updateError) {
+    console.error('Failed to update error status:', updateError);
   }
+  
+  return new Response(JSON.stringify({ 
+    error: error instanceof Error ? error.message : 'Unknown error',
+    success: false
+  }), {
+    status: 500,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
 });
