@@ -201,20 +201,32 @@ serve(async (req) => {
     }
 
     const workspaceWebhookSecretName = `N8N_WEBHOOK_URL_${finalWorkspaceId}`;
-    
-    const { data: webhookData, error: webhookError } = await supabase
-      .from('workspace_webhook_secrets')
+    let workspaceWebhookUrl: string | null = null;
+
+    const { data: webhookSettings, error: settingsError } = await supabase
+      .from('workspace_webhook_settings')
       .select('webhook_url')
       .eq('workspace_id', finalWorkspaceId)
-      .eq('secret_name', workspaceWebhookSecretName)
       .maybeSingle();
 
-    let workspaceWebhookUrl: string | null = null;
-    
-    if (!webhookError && webhookData?.webhook_url) {
-      workspaceWebhookUrl = webhookData.webhook_url;
-      console.log(`📤 [${messageId}] Found workspace webhook for N8N`);
+    if (!settingsError && webhookSettings?.webhook_url) {
+      workspaceWebhookUrl = webhookSettings.webhook_url;
+      console.log(`📤 [${messageId}] Found workspace webhook in workspace_webhook_settings`);
     } else {
+      const { data: webhookData, error: webhookError } = await supabase
+        .from('workspace_webhook_secrets')
+        .select('webhook_url')
+        .eq('workspace_id', finalWorkspaceId)
+        .eq('secret_name', workspaceWebhookSecretName)
+        .maybeSingle();
+
+      if (!webhookError && webhookData?.webhook_url) {
+        workspaceWebhookUrl = webhookData.webhook_url;
+        console.log(`📤 [${messageId}] Found workspace webhook in workspace_webhook_secrets (fallback)`);
+      }
+    }
+
+    if (!workspaceWebhookUrl) {
       console.log(`⚠️ [${messageId}] No workspace webhook configured - N8N unavailable`);
       return new Response(JSON.stringify({
         success: false,

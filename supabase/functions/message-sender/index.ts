@@ -68,22 +68,37 @@ serve(async (req) => {
 
     // VERIFICAR SE WEBHOOK N8N ESTÁ CONFIGURADO (OBRIGATÓRIO)
     const workspaceWebhookSecretName = `N8N_WEBHOOK_URL_${finalWorkspaceId}`;
-    
-    const { data: webhookData, error: webhookError } = await supabase
-      .from('workspace_webhook_secrets')
+    let workspaceWebhookUrl: string | null = null;
+
+    const { data: webhookSettings, error: settingsError } = await supabase
+      .from('workspace_webhook_settings')
       .select('webhook_url')
       .eq('workspace_id', finalWorkspaceId)
-      .eq('secret_name', workspaceWebhookSecretName)
       .maybeSingle();
 
-    const hasWebhookConfigured = !webhookError && webhookData?.webhook_url;
-    
+    if (!settingsError && webhookSettings?.webhook_url) {
+      workspaceWebhookUrl = webhookSettings.webhook_url;
+      console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_settings: ${workspaceWebhookUrl.substring(0, 50)}...`);
+    } else {
+      const { data: webhookData, error: webhookError } = await supabase
+        .from('workspace_webhook_secrets')
+        .select('webhook_url')
+        .eq('workspace_id', finalWorkspaceId)
+        .eq('secret_name', workspaceWebhookSecretName)
+        .maybeSingle();
+
+      if (!webhookError && webhookData?.webhook_url) {
+        workspaceWebhookUrl = webhookData.webhook_url;
+        console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_secrets (fallback): ${workspaceWebhookUrl.substring(0, 50)}...`);
+      }
+    }
+
     console.log(`🔍 [${requestId}] Webhook check:`, {
-      configured: hasWebhookConfigured,
-      webhookUrl: hasWebhookConfigured ? webhookData.webhook_url.substring(0, 50) + '...' : 'none'
+      configured: !!workspaceWebhookUrl,
+      webhookUrl: workspaceWebhookUrl ? workspaceWebhookUrl.substring(0, 50) + '...' : 'none'
     });
 
-    if (!hasWebhookConfigured) {
+    if (!workspaceWebhookUrl) {
       console.error(`❌ [${requestId}] N8N webhook not configured for workspace ${finalWorkspaceId}`);
       return new Response(JSON.stringify({
         success: false,
