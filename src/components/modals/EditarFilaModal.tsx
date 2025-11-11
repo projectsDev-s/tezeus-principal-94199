@@ -159,7 +159,14 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
     } else {
       resetForm();
     }
-  }, [open, fila, loadQueueUsers]);
+  }, [open, fila]);
+
+  // Carregar usuários sempre que a aba de usuários for aberta
+  useEffect(() => {
+    if (open && activeTab === "usuarios" && fila?.id) {
+      loadQueueUsers();
+    }
+  }, [activeTab, open, fila?.id]);
 
   return (
     <>
