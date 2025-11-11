@@ -212,9 +212,9 @@ serve(async (req) => {
 
     console.log(`✅ [${messageId}] Evolution API configurada: ${evolutionUrl}`);
 
-    // Buscar dados da instância no banco (whatsapp_instances)
+    // Buscar dados da instância no banco (connections)
     const { data: instanceData, error: instanceErr } = await supabase
-      .from('whatsapp_instances')
+      .from('connections')
       .select('*')
       .eq('instance_name', finalEvolutionInstance)
       .eq('workspace_id', finalWorkspaceId)
