@@ -68,7 +68,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: false, 
         error: 'Erro ao testar conexão com Evolution API',
-        details: error.message
+        details: error instanceof Error ? error.message : String(error)
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

@@ -100,10 +100,13 @@ serve(async (req) => {
         .single();
 
       if (convData) {
-        contactPhone = convData.contact?.phone;
-        contactName = convData.contact?.name;
-        contactEmail = convData.contact?.email;
-        evolutionInstance = convData.connection?.instance_name;
+        const contact = Array.isArray(convData.contact) ? convData.contact[0] : convData.contact;
+        const connection = Array.isArray(convData.connection) ? convData.connection[0] : convData.connection;
+        
+        contactPhone = contact?.phone;
+        contactName = contact?.name;
+        contactEmail = contact?.email;
+        evolutionInstance = connection?.instance_name;
         finalWorkspaceId = convData.workspace_id;
       }
     }
@@ -134,6 +137,7 @@ serve(async (req) => {
       .from('evolution_instance_tokens')
       .select('*')
       .eq('instance_name', finalEvolutionInstance)
+      .eq('workspace_id', finalWorkspaceId)
       .maybeSingle();
 
     if (!instanceConfig) {
@@ -369,50 +373,10 @@ serve(async (req) => {
   } catch (error) {
     console.error(`❌ [${receivedMessageId}] Erro no N8N Send Message:`, error);
     
-    // Se N8N falhar, tentar enviar via WhatsApp provider como fallback
-    console.log(`🔄 [${receivedMessageId}] Tentando fallback via WhatsApp provider...`);
-    
-    try {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-
-      const { data: fallbackResult, error: fallbackError } = await supabase.functions.invoke('send-whatsapp-message', {
-        body: {
-          messageId: requestBodyCache?.messageId,
-          phoneNumber: requestBodyCache?.phoneNumber,
-          content: requestBodyCache?.content,
-          messageType: requestBodyCache?.messageType || 'text',
-          fileUrl: requestBodyCache?.fileUrl,
-          fileName: requestBodyCache?.fileName,
-          evolutionInstance: requestBodyCache?.evolutionInstance,
-          workspaceId: requestBodyCache?.workspaceId,
-          external_id: requestBodyCache?.external_id
-        }
-      });
-
-      if (!fallbackError && fallbackResult?.success) {
-        console.log(`✅ [${receivedMessageId}] WhatsApp provider fallback successful via ${fallbackResult.provider}`);
-        return new Response(JSON.stringify({
-          success: true,
-          method: 'whatsapp_provider_fallback',
-          provider: fallbackResult.provider,
-          message: receivedMessageId,
-          n8n_error: error.message,
-          response: fallbackResult
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } catch (fallbackException) {
-      console.error(`❌ [${receivedMessageId}] WhatsApp provider fallback also failed:`, fallbackException);
-    }
-    
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal server error',
-      details: error.message,
+      details: error instanceof Error ? error.message : 'Unknown error',
       message: receivedMessageId
     }), {
       status: 500,

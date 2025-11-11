@@ -203,7 +203,7 @@ serve(async (req) => {
         uint8Array = bytes;
         console.log('Decodificado base64 - Tamanho:', uint8Array.length, 'bytes');
       } catch (e) {
-        throw new Error(`Base64 inválido: ${e.message}`);
+        throw new Error(`Base64 inválido: ${e instanceof Error ? e.message : String(e)}`);
       }
     } else if (mediaUrl) {
       // Baixar mídia com headers adequados
@@ -445,7 +445,7 @@ serve(async (req) => {
     console.error('❌ Erro no processamento:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Erro interno do servidor'
+      error: error instanceof Error ? error.message : 'Erro interno do servidor'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

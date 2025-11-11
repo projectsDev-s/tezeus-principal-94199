@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Resend from 'https://esm.sh/resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -96,34 +95,10 @@ Deno.serve(async (req) => {
           notifiedVia.push('realtime');
         }
 
-        // Email
-        if (config.email_notifications_enabled && config.notification_emails?.length > 0) {
-          try {
-            const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-            
-            await resend.emails.send({
-              from: 'Alertas Tezeus <onboarding@resend.dev>',
-              to: config.notification_emails,
-              subject: `🚨 Alerta: Alta taxa de erro no provider ${config.provider.toUpperCase()}`,
-              html: `
-                <h2>Alerta de Taxa de Erro</h2>
-                <p>A taxa de erro do provider <strong>${config.provider.toUpperCase()}</strong> ultrapassou o limite configurado.</p>
-                <ul>
-                  <li><strong>Taxa de Erro Atual:</strong> ${errorRate.toFixed(1)}%</li>
-                  <li><strong>Limite Configurado:</strong> ${config.error_threshold_percent}%</li>
-                  <li><strong>Total de Mensagens:</strong> ${totalCount}</li>
-                  <li><strong>Mensagens com Erro:</strong> ${errorCount}</li>
-                  <li><strong>Período:</strong> Últimos ${config.time_window_minutes} minutos</li>
-                </ul>
-                <p>Por favor, verifique a configuração do provider e os logs de erro.</p>
-              `,
-            });
-
-            notifiedVia.push('email');
-          } catch (emailError) {
-            console.error('Error sending email alert:', emailError);
-          }
-        }
+        // Email (desabilitado temporariamente - requer Resend configurado)
+        // if (config.email_notifications_enabled && config.notification_emails?.length > 0) {
+        //   notifiedVia.push('email');
+        // }
 
         alertData.notified_via = notifiedVia;
 
@@ -153,7 +128,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in monitor-provider-alerts:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

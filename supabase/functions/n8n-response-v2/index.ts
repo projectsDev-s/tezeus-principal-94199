@@ -93,7 +93,7 @@ serve(async (req) => {
       let workspaceId = null;
       let webhookUrl = null;
       let webhookSecret = null;
-      let processedData = null;
+      let processedData: any = null;
       
       if (instanceName) {
         // Get workspace_id from connections table
@@ -134,7 +134,7 @@ serve(async (req) => {
       if (webhookUrl) {
         console.log(`🚀 [${requestId}] Forwarding to N8N: ${webhookUrl}`);
         
-        const headers = {
+        const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
         
@@ -189,7 +189,7 @@ serve(async (req) => {
     console.log(`🔍 [${requestId}] Headers:`, Object.fromEntries(req.headers.entries()));
     
     // 🎯 STRICT PAYLOAD VALIDATION - N8N must send normalized payload
-    const { 
+    let { 
       direction,           // 'inbound' or 'outbound' 
       external_id,         // Required for message updates
       phone_number,        // Required
@@ -670,6 +670,17 @@ serve(async (req) => {
       });
     }
 
+    if (!newMessage) {
+      console.error(`❌ [${requestId}] Message created but not returned`);
+      return new Response(JSON.stringify({
+        error: 'Failed to create message',
+        requestId
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log(`✅ [${requestId}] Message created successfully: ${newMessage.id}`);
 
     // Update conversation timestamp (triggers will handle unread_count)
@@ -720,7 +731,7 @@ serve(async (req) => {
     console.error(`❌ [${requestId}] Unexpected error:`, error);
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      details: error.message,
+      details: error instanceof Error ? error.message : String(error),
       requestId
     }), {
       status: 500,

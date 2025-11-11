@@ -254,7 +254,7 @@ serve(async (req) => {
     console.error('❌ Erro na distribuição de fila:', error);
     return new Response(JSON.stringify({
       error: 'Erro ao distribuir conversa',
-      details: error.message
+      details: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
