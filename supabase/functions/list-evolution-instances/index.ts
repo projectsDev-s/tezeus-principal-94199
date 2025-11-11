@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+serve(async (req): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -32,6 +32,10 @@ serve(async (req) => {
 
     // Helper function to try both authentication methods
     async function makeAuthenticatedRequest(url: string, options: RequestInit = {}) {
+      if (!evolutionApiKey) {
+        throw new Error('Evolution API key not configured');
+      }
+      
       // First try with apikey header
       let response = await fetch(url, {
         ...options,
@@ -59,6 +63,10 @@ serve(async (req) => {
     }
 
     // Listar todas as instâncias
+    if (!evolutionApiUrl) {
+      throw new Error('Evolution API URL not configured');
+    }
+    
     const instancesResponse = await makeAuthenticatedRequest(`${evolutionApiUrl}/instance/fetchInstances`, {
       method: 'GET',
     });
@@ -116,9 +124,10 @@ serve(async (req) => {
           });
 
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           instancesWithStatus.push({
             ...instance,
-            connectionStatus: `Error: ${error.message}`,
+            connectionStatus: `Error: ${errorMessage}`,
             statusCode: 'N/A'
           });
         }
@@ -136,10 +145,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Erro ao listar instâncias:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

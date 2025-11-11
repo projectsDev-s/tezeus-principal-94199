@@ -35,7 +35,7 @@ function successResponse(data: any) {
   );
 }
 
-serve(async (req) => {
+serve(async (req): Promise<Response> => {
   console.log('🚀 list-user-workspaces function started');
   
   // Handle CORS preflight requests
@@ -206,16 +206,20 @@ serve(async (req) => {
       console.log('🔄 Transforming membership data...');
       
       // Transform the data to match expected format
-      const workspaces = memberships?.map(m => ({
-        workspace_id: m.workspaces.id,
-        name: m.workspaces.name,
-        slug: m.workspaces.slug,
-        cnpj: m.workspaces.cnpj,
-        created_at: m.workspaces.created_at,
-        updated_at: m.workspaces.updated_at,
-        is_active: m.workspaces.is_active,
-        connections_count: 0 // We don't need this for the basic functionality
-      })) || [];
+      const workspaces = memberships?.map(m => {
+        // Handle both array and object format from Supabase join
+        const workspace = Array.isArray(m.workspaces) ? m.workspaces[0] : m.workspaces;
+        return {
+          workspace_id: workspace.id,
+          name: workspace.name,
+          slug: workspace.slug,
+          cnpj: workspace.cnpj,
+          created_at: workspace.created_at,
+          updated_at: workspace.updated_at,
+          is_active: workspace.is_active,
+          connections_count: 0 // We don't need this for the basic functionality
+        };
+      }) || [];
 
       // Get user memberships for role calculation
       const userMemberships = memberships?.map(m => ({
@@ -233,7 +237,8 @@ serve(async (req) => {
     })();
 
     // Race between main operation and timeout
-    return await Promise.race([mainPromise, timeoutPromise]);
+    const result = await Promise.race([mainPromise, timeoutPromise]);
+    return result as Response;
 
   } catch (error) {
     console.error('❌ Critical error in list-user-workspaces function:', error);

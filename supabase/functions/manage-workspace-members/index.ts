@@ -71,7 +71,7 @@ serve(async (req) => {
 
       // Get system_user_id from metadata or fallback to extracting from synthetic email
       systemUserId = user.user_metadata?.system_user_id;
-      userEmail = user.email
+      userEmail = user.email || null;
       
       if (!systemUserId && userEmail) {
         // Extract UUID from synthetic email format: ${uuid}@{domain}
@@ -228,7 +228,10 @@ serve(async (req) => {
               profile: user.profile,
               phone: user.phone,
               status: user.status,
-              cargo_names: cargos.map(c => c.cargos?.nome).filter(Boolean)
+              cargo_names: cargos.map(c => {
+                const cargo = Array.isArray(c.cargos) ? c.cargos[0] : c.cargos;
+                return cargo?.nome;
+              }).filter(Boolean)
             } : null
           }
         })
@@ -371,10 +374,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error managing workspace members:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Internal server error' 
+        error: errorMessage 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

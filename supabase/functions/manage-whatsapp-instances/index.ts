@@ -49,8 +49,9 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     console.error('Error in manage-whatsapp-instances:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -162,8 +163,9 @@ async function handleCreate(supabase: any, evolutionUrl: string, evolutionApiKey
 
   } catch (error) {
     console.error('Error in handleCreate:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -227,8 +229,9 @@ async function handleConnect(supabase: any, evolutionUrl: string, evolutionApiKe
 
   } catch (error) {
     console.error('Error in handleConnect:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -311,8 +314,9 @@ async function handleRemove(supabase: any, evolutionUrl: string, evolutionApiKey
 
   } catch (error) {
     console.error('Error in handleRemove:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -335,7 +339,7 @@ async function handleList(supabase: any, evolutionUrl: string, evolutionApiKey: 
 
     // Check status for each connection by calling Evolution API
     const connectionsWithStatus = await Promise.all(
-      (connections || []).map(async (connection) => {
+      (connections || []).map(async (connection: any) => {
         try {
           // Get token for this instance
           const { data: tokenData } = await supabase
@@ -393,8 +397,9 @@ async function handleList(supabase: any, evolutionUrl: string, evolutionApiKey: 
 
   } catch (error) {
     console.error('Error in handleList:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

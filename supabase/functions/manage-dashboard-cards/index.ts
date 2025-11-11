@@ -19,7 +19,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Safely parse JSON with fallback for empty bodies
-    let requestBody = {};
+    let requestBody: {
+      action?: string;
+      cardData?: any;
+      cardId?: string;
+    } = {};
     try {
       const text = await req.text();
       if (text.trim()) {
@@ -229,7 +233,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in manage-dashboard-cards function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
