@@ -132,25 +132,60 @@ serve(async (req) => {
 
     const finalEvolutionInstance = evolutionInstance;
 
-    // Buscar configurações da instância Evolution
-    const { data: instanceConfig, error: instanceErr } = await supabase
-      .from('evolution_instance_tokens')
+    console.log(`🔍 [${messageId}] Buscando instância Evolution: ${finalEvolutionInstance} no workspace: ${finalWorkspaceId}`);
+
+    // Buscar configurações da Evolution API
+    const { data: evolutionConfig } = await supabase
+      .from('_master_config')
+      .select('evolution_api_url, evolution_api_key')
+      .single();
+
+    if (!evolutionConfig?.evolution_api_url || !evolutionConfig?.evolution_api_key) {
+      console.error(`❌ [${messageId}] Evolution API não configurada no _master_config`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Evolution API não configurada',
+        message: messageId
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const evolutionUrl: string = evolutionConfig.evolution_api_url;
+    const evolutionApiKey: string = evolutionConfig.evolution_api_key;
+
+    console.log(`✅ [${messageId}] Evolution API configurada: ${evolutionUrl}`);
+
+    // Buscar dados da instância no banco (whatsapp_instances)
+    const { data: instanceData, error: instanceErr } = await supabase
+      .from('whatsapp_instances')
       .select('*')
       .eq('instance_name', finalEvolutionInstance)
       .eq('workspace_id', finalWorkspaceId)
       .maybeSingle();
 
-    if (!instanceConfig) {
-      console.error(`❌ [${messageId}] Instância não encontrada:`, finalEvolutionInstance);
+    if (instanceErr || !instanceData) {
+      console.error(`❌ [${messageId}] Instância não encontrada: ${finalEvolutionInstance}`, {
+        error: instanceErr,
+        workspaceId: finalWorkspaceId,
+        instanceName: finalEvolutionInstance
+      });
       return new Response(JSON.stringify({
         success: false,
-        error: `Instância não encontrada: ${finalEvolutionInstance}`,
+        error: `Instância não encontrada: ${finalEvolutionInstance} no workspace ${finalWorkspaceId}`,
         message: messageId
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log(`✅ [${messageId}] Instância encontrada:`, {
+      id: instanceData.id,
+      name: instanceData.instance_name,
+      status: instanceData.status
+    });
 
     // MELHORADO: Verificar se workspace tem webhook N8N configurado antes de tentar
     if (!finalWorkspaceId) {
@@ -281,8 +316,8 @@ serve(async (req) => {
       destination: workspaceWebhookUrl,
       date_time: new Date().toISOString(),
       sender: contactPhone,
-      server_url: instanceConfig.evolution_url,
-      apikey: instanceConfig.token
+      server_url: evolutionUrl,
+      apikey: evolutionApiKey
     };
 
     console.log(`📡 [${messageId}] Enviando para N8N workspace webhook`);
