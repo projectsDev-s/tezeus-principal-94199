@@ -70,7 +70,8 @@ serve(async (req) => {
       console.log(`🔧 [${requestId}] Processing instance: ${connection.instance_name}`);
       
       // Check if we have the necessary credentials
-      if (!connection.connection_secrets?.token || !connection.connection_secrets?.evolution_url) {
+      const secrets = connection.connection_secrets as any;
+      if (!secrets?.token || !secrets?.evolution_url) {
         console.log(`⚠️ [${requestId}] Skipping ${connection.instance_name} - missing credentials`);
         results.push({
           instance: connection.instance_name,
@@ -86,12 +87,12 @@ serve(async (req) => {
         console.log(`🔧 [${requestId}] Setting webhook for ${connection.instance_name} to: ${correctWebhookUrl}`);
         
         const evolutionResponse = await fetch(
-          `${connection.connection_secrets.evolution_url}/webhook/set/${connection.instance_name}`,
+          `${secrets.evolution_url}/webhook/set/${connection.instance_name}`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'apikey': connection.connection_secrets.token
+              'apikey': secrets.token
             },
             body: JSON.stringify({
               url: correctWebhookUrl,
@@ -153,7 +154,7 @@ serve(async (req) => {
           instance: connection.instance_name,
           workspace_id: connection.workspace_id,
           status: 'error',
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
         errorCount++;
       }
@@ -183,9 +184,12 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(`❌ [${requestId}] Error fixing webhook configuration:`, error);
-    return new Response('Internal server error', { 
+    return new Response(JSON.stringify({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }), { 
       status: 500, 
-      headers: corsHeaders 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });

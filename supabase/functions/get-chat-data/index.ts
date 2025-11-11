@@ -63,15 +63,14 @@ serve(async (req) => {
             profile_image_url
           )
         `)
-        .eq('id', conversationId)
-        .single();
+        .eq('id', conversationId);
       
       // Apply workspace filtering if provided
       if (workspaceId) {
         conversationQuery = conversationQuery.eq('workspace_id', workspaceId);
       }
       
-      const { data: conversation, error: conversationError } = await conversationQuery;
+      const { data: conversation, error: conversationError } = await conversationQuery.single();
 
       if (conversationError) {
         console.error('Error fetching conversation:', conversationError);
@@ -182,7 +181,7 @@ serve(async (req) => {
     console.error('❌ Erro ao buscar dados:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
