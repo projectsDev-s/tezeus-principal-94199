@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Centralizador inteligente de envio com fallback automático
+// Envio EXCLUSIVO via N8N - sem fallback
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -66,7 +66,7 @@ serve(async (req) => {
       });
     }
 
-    // ETAPA 1: Verificar se webhook N8N está configurado
+    // VERIFICAR SE WEBHOOK N8N ESTÁ CONFIGURADO (OBRIGATÓRIO)
     const workspaceWebhookSecretName = `N8N_WEBHOOK_URL_${finalWorkspaceId}`;
     
     const { data: webhookData, error: webhookError } = await supabase
@@ -83,64 +83,21 @@ serve(async (req) => {
       webhookUrl: hasWebhookConfigured ? webhookData.webhook_url.substring(0, 50) + '...' : 'none'
     });
 
-    // ETAPA 2: Enviar via WhatsApp Provider Genérico (Evolution ou Z-API)
     if (!hasWebhookConfigured) {
-      console.log(`📱 [${requestId}] No N8N webhook, using WhatsApp provider directly...`);
-      
-      try {
-        const { data: whatsappResult, error: whatsappError } = await supabase.functions.invoke('send-whatsapp-message', {
-          body: {
-            messageId,
-            phoneNumber,
-            content,
-            messageType,
-            fileUrl,
-            fileName,
-            evolutionInstance,
-            workspaceId: finalWorkspaceId,
-            external_id: requestBody.external_id
-          }
-        });
-
-        if (!whatsappError && whatsappResult?.success) {
-          console.log(`✅ [${requestId}] WhatsApp provider send successful via ${whatsappResult.provider}`);
-          return new Response(JSON.stringify({
-            success: true,
-            method: 'whatsapp_provider',
-            provider: whatsappResult.provider,
-            result: whatsappResult,
-            requestId
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        } else {
-          console.error(`❌ [${requestId}] WhatsApp provider send failed:`, { error: whatsappError, result: whatsappResult });
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'WhatsApp provider sending failed',
-            details: { error: whatsappError, result: whatsappResult },
-            requestId
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (whatsappException) {
-        console.error(`❌ [${requestId}] WhatsApp provider send exception:`, whatsappException);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'WhatsApp provider sending exception',
-          details: { exception: whatsappException.message },
-          requestId
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      console.error(`❌ [${requestId}] N8N webhook not configured for workspace ${finalWorkspaceId}`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'N8N webhook not configured',
+        details: 'Configure N8N webhook first to send messages',
+        requestId
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // ETAPA 3: Envio via N8N (se configurado)
-    console.log(`🚀 [${requestId}] Sending via N8N...`);
+    // ENVIO VIA N8N (ÚNICO MÉTODO PERMITIDO)
+    console.log(`🚀 [${requestId}] Sending via N8N (required)...`);
     
     try {
       const { data: n8nResult, error: n8nError } = await supabase.functions.invoke('n8n-send-message', {
@@ -176,44 +133,10 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } else {
-        console.error(`❌ [${requestId}] N8N send failed, trying WhatsApp provider fallback...`);
-        
-        // FALLBACK: Tentar enviar via WhatsApp provider
-        try {
-          const { data: whatsappResult, error: whatsappError } = await supabase.functions.invoke('send-whatsapp-message', {
-            body: {
-              messageId,
-              phoneNumber,
-              content,
-              messageType,
-              fileUrl,
-              fileName,
-              evolutionInstance,
-              workspaceId: finalWorkspaceId,
-              external_id: requestBody.external_id
-            }
-          });
-
-          if (!whatsappError && whatsappResult?.success) {
-            console.log(`✅ [${requestId}] WhatsApp provider fallback successful via ${whatsappResult.provider}`);
-            return new Response(JSON.stringify({
-              success: true,
-              method: 'whatsapp_provider_fallback',
-              provider: whatsappResult.provider,
-              result: whatsappResult,
-              n8n_error: n8nError || n8nResult,
-              requestId
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-        } catch (fallbackException) {
-          console.error(`❌ [${requestId}] WhatsApp provider fallback also failed:`, fallbackException);
-        }
-        
+        console.error(`❌ [${requestId}] N8N send failed:`, { error: n8nError, result: n8nResult });
         return new Response(JSON.stringify({
           success: false,
-          error: 'N8N and WhatsApp provider sending failed',
+          error: 'N8N sending failed',
           details: {
             n8n_error: n8nError,
             n8n_result: n8nResult
@@ -225,46 +148,12 @@ serve(async (req) => {
         });
       }
     } catch (n8nException) {
-      console.error(`❌ [${requestId}] N8N send exception, trying WhatsApp provider fallback:`, n8nException);
-      
-      // FALLBACK: Tentar enviar via WhatsApp provider
-      try {
-        const { data: whatsappResult, error: whatsappError } = await supabase.functions.invoke('send-whatsapp-message', {
-          body: {
-            messageId,
-            phoneNumber,
-            content,
-            messageType,
-            fileUrl,
-            fileName,
-            evolutionInstance,
-            workspaceId: finalWorkspaceId,
-            external_id: requestBody.external_id
-          }
-        });
-
-        if (!whatsappError && whatsappResult?.success) {
-          console.log(`✅ [${requestId}] WhatsApp provider fallback successful via ${whatsappResult.provider}`);
-          return new Response(JSON.stringify({
-            success: true,
-            method: 'whatsapp_provider_fallback',
-            provider: whatsappResult.provider,
-            result: whatsappResult,
-            n8n_exception: n8nException.message,
-            requestId
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (fallbackException) {
-        console.error(`❌ [${requestId}] WhatsApp provider fallback also failed:`, fallbackException);
-      }
-      
+      console.error(`❌ [${requestId}] N8N send exception:`, n8nException);
       return new Response(JSON.stringify({
         success: false,
-        error: 'N8N exception and WhatsApp provider fallback failed',
+        error: 'N8N exception',
         details: {
-          exception: n8nException.message
+          exception: n8nException instanceof Error ? n8nException.message : String(n8nException)
         },
         requestId
       }), {
@@ -278,7 +167,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal server error',
-      details: error.message,
+      details: error instanceof Error ? error.message : String(error),
       requestId
     }), {
       status: 500,

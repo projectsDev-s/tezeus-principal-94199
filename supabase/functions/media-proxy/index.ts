@@ -50,17 +50,22 @@ serve(async (req) => {
     const detectSafeMimeType = async (mimeType: string | undefined, fileName: string | undefined, mediaResponse?: Response) => {
       console.log(`Input mimeType: ${mimeType}, fileName: ${fileName}`)
       
+      type SafeMimeTypeKey = keyof typeof SAFE_MIME_TYPES;
+      const isSafeMimeType = (type: string): type is SafeMimeTypeKey => {
+        return type in SAFE_MIME_TYPES;
+      };
+      
       // 1. Tentar usar Content-Type da resposta HTTP se disponível
       if (mediaResponse) {
         const responseContentType = mediaResponse.headers.get('Content-Type')
-        if (responseContentType && SAFE_MIME_TYPES[responseContentType]) {
+        if (responseContentType && isSafeMimeType(responseContentType)) {
           console.log(`Using Content-Type from response: ${responseContentType}`)
           return SAFE_MIME_TYPES[responseContentType]
         }
       }
 
       // 2. Usar mimeType fornecido se for seguro
-      if (mimeType && SAFE_MIME_TYPES[mimeType]) {
+      if (mimeType && isSafeMimeType(mimeType)) {
         console.log(`Using provided mimeType: ${mimeType}`)
         return SAFE_MIME_TYPES[mimeType]
       }
@@ -152,13 +157,14 @@ serve(async (req) => {
         
       } catch (fetchError) {
         clearTimeout(timeoutId);
-        lastError = fetchError;
+        lastError = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
         
-        if (fetchError.name === 'AbortError') {
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
           console.warn(`⚠️ Attempt ${attempt} timed out after 60 seconds`)
           lastError = new Error(`Download timeout after 60 seconds`)
         } else {
-          console.warn(`⚠️ Attempt ${attempt} failed: ${fetchError.message}`)
+          const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          console.warn(`⚠️ Attempt ${attempt} failed: ${errorMsg}`)
         }
         
         // Se não é a última tentativa, esperar antes do retry
@@ -253,7 +259,7 @@ serve(async (req) => {
     }
 
     // Validação básica de tamanho mínimo por tipo
-    const minSizes = {
+    const minSizes: Record<string, number> = {
       'image/jpeg': 100,
       'image/png': 100, 
       'image/gif': 100,
@@ -320,7 +326,7 @@ serve(async (req) => {
       )
     } catch (saveError) {
       console.error('Failed to save media to storage:', saveError)
-      throw new Error(`Failed to save media: ${saveError.message}`)
+      throw new Error(`Failed to save media: ${saveError instanceof Error ? saveError.message : String(saveError)}`)
     }
 
   } catch (error) {
@@ -328,7 +334,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Failed to proxy media',
-        details: error.message 
+        details: error instanceof Error ? error.message : String(error)
       }),
       { 
         status: 500, 
