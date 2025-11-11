@@ -470,11 +470,12 @@ serve(async (req) => {
     }
 
     // Only check response.ok for actions that haven't handled it yet
-    // Skip this check for 'disconnect' and 'delete' as they handle their own responses
-    if (action !== 'disconnect' && action !== 'delete' && action !== 'status' && response && !response.ok) {
+    // Skip this check for actions that handle their own responses
+    const actionsWithOwnResponses = ['disconnect', 'delete', 'status'];
+    if (!actionsWithOwnResponses.includes(action as string) && response && !response.ok) {
       try {
         const errorText = await response.text().catch(() => 'Unknown error')
-        let errorData = {}
+        let errorData: { message?: string } = {}
         
         try {
           errorData = JSON.parse(errorText)
@@ -503,7 +504,7 @@ serve(async (req) => {
     }
 
     // Update connection status
-    if (action !== 'delete') {
+    if (action as string !== 'delete') {
       try {
         console.log(`💾 Updating connection status to: ${newStatus}`)
         const { error: updateError } = await supabase
@@ -553,7 +554,6 @@ serve(async (req) => {
               updated_at: new Date().toISOString()
             })
             .eq('id', connectionId)
-            .catch(() => {}) // Ignore errors
         }
       } catch {}
       
