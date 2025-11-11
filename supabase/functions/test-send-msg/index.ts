@@ -392,6 +392,9 @@ serve(async (req) => {
           evolutionInstance: instance_name,
           workspaceId: conversation.workspace_id,
           external_id: external_id
+        },
+        headers: {
+          Authorization: `Bearer ${serviceKey}`
         }
       });
 
