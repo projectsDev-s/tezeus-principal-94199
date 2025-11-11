@@ -709,7 +709,7 @@ serve(async (req) => {
       const { error: contextError } = await supabaseClient.rpc('set_current_user_context', {
         user_id: userId,
         user_email: userEmail
-      });
+      } as any);
       
       if (contextError) {
         console.warn('⚠️ RPC set_current_user_context failed (non-critical):', contextError);

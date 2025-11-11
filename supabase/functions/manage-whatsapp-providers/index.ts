@@ -14,7 +14,7 @@ function normalizeWebhookUrl(url: string) {
 }
 
 async function syncWorkspaceWebhook(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   workspaceId: string,
   webhookUrl?: string | null
 ) {

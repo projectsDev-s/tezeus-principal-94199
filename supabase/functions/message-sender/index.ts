@@ -92,7 +92,7 @@ serve(async (req) => {
     if (!settingsError && webhookSettings?.webhook_url) {
       workspaceWebhookUrl = webhookSettings.webhook_url;
       webhookSource = 'settings';
-      console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_settings: ${workspaceWebhookUrl.substring(0, 50)}...`, {
+      console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_settings: ${workspaceWebhookUrl!.substring(0, 50)}...`, {
         updated_at: webhookSettings?.updated_at
       });
     } else {
@@ -106,7 +106,7 @@ serve(async (req) => {
       if (!webhookError && webhookData?.webhook_url) {
         workspaceWebhookUrl = webhookData.webhook_url;
         webhookSource = 'secrets';
-        console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_secrets (fallback): ${workspaceWebhookUrl.substring(0, 50)}...`, {
+        console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_secrets (fallback): ${workspaceWebhookUrl!.substring(0, 50)}...`, {
           updated_at: webhookData?.updated_at
         });
       }
