@@ -134,14 +134,72 @@ serve(async (req) => {
 
     console.log(`🔍 [${messageId}] Buscando instância Evolution: ${finalEvolutionInstance} no workspace: ${finalWorkspaceId}`);
 
-    // Buscar configurações da Evolution API
-    const { data: evolutionConfig } = await supabase
-      .from('_master_config')
-      .select('evolution_api_url, evolution_api_key')
-      .single();
+    // Buscar configurações da Evolution API priorizando evolution_instance_tokens
+    let evolutionUrl: string | null = null;
+    let evolutionApiKey: string | null = null;
 
-    if (!evolutionConfig?.evolution_api_url || !evolutionConfig?.evolution_api_key) {
-      console.error(`❌ [${messageId}] Evolution API não configurada no _master_config`);
+    const { data: masterConfig, error: masterConfigError } = await supabase
+      .from('evolution_instance_tokens')
+      .select('evolution_url, token')
+      .eq('workspace_id', finalWorkspaceId)
+      .eq('instance_name', '_master_config')
+      .maybeSingle();
+
+    if (!masterConfigError && masterConfig) {
+      evolutionUrl = masterConfig.evolution_url;
+      evolutionApiKey = masterConfig.token;
+      console.log(`✅ [${messageId}] Evolution config encontrada em evolution_instance_tokens`);
+    } else {
+      console.warn(`⚠️ [${messageId}] evolution_instance_tokens não retornou config (_master_config). Tentando fallback _master_config`, {
+        error: masterConfigError?.message
+      });
+
+      const { data: evolutionConfig, error: fallbackError } = await supabase
+        .from('_master_config')
+        .select('evolution_api_url, evolution_api_key')
+        .maybeSingle();
+
+      if (!fallbackError && evolutionConfig) {
+        evolutionUrl = evolutionConfig.evolution_api_url;
+        evolutionApiKey = evolutionConfig.evolution_api_key;
+        console.log(`✅ [${messageId}] Evolution config encontrada no fallback _master_config`);
+      } else {
+        console.error(`❌ [${messageId}] Evolution API não configurada`, {
+          masterConfigError: masterConfigError?.message,
+          fallbackError: fallbackError?.message
+        });
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Evolution API não configurada',
+          message: messageId
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    if ((!evolutionUrl || !evolutionApiKey) && finalWorkspaceId) {
+      const { data: evolutionProvider, error: providerError } = await supabase
+        .from('whatsapp_providers')
+        .select('evolution_url, evolution_token, is_active')
+        .eq('workspace_id', finalWorkspaceId)
+        .eq('provider', 'evolution')
+        .order('is_active', { ascending: false })
+        .order('updated_at', { ascending: false })
+        .maybeSingle();
+
+      if (!providerError && evolutionProvider?.evolution_url && evolutionProvider?.evolution_token) {
+        evolutionUrl = evolutionProvider.evolution_url;
+        evolutionApiKey = evolutionProvider.evolution_token;
+        console.log(`✅ [${messageId}] Evolution config encontrada via whatsapp_providers (is_active=${evolutionProvider.is_active})`);
+      } else if (providerError) {
+        console.warn(`⚠️ [${messageId}] Falha ao buscar evolution config em whatsapp_providers`, providerError);
+      }
+    }
+
+    if (!evolutionUrl || !evolutionApiKey) {
+      console.error(`❌ [${messageId}] Evolution API config vazia após tentativas`);
       return new Response(JSON.stringify({
         success: false,
         error: 'Evolution API não configurada',
@@ -151,9 +209,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const evolutionUrl: string = evolutionConfig.evolution_api_url;
-    const evolutionApiKey: string = evolutionConfig.evolution_api_key;
 
     console.log(`✅ [${messageId}] Evolution API configurada: ${evolutionUrl}`);
 

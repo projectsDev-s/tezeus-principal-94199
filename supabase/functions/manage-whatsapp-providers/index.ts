@@ -6,6 +6,73 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-system-user-id, x-system-user-email',
 };
 
+function normalizeWebhookUrl(url: string) {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  return trimmed.includes('/test/') ? trimmed.replace('/test/', '/webhook/') : trimmed;
+}
+
+async function syncWorkspaceWebhook(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string,
+  webhookUrl?: string | null
+) {
+  if (!webhookUrl) return;
+  const normalizedUrl = normalizeWebhookUrl(webhookUrl);
+  if (!normalizedUrl) return;
+
+  const now = new Date().toISOString();
+
+  const { data: existingSettings } = await supabase
+    .from('workspace_webhook_settings')
+    .select('webhook_secret')
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+
+  const webhookSecret = existingSettings?.webhook_secret || crypto.randomUUID();
+
+  await supabase
+    .from('workspace_webhook_settings')
+    .upsert({
+      workspace_id: workspaceId,
+      webhook_url: normalizedUrl,
+      webhook_secret: webhookSecret,
+      updated_at: now
+    }, {
+      onConflict: 'workspace_id'
+    });
+
+  const secretName = `N8N_WEBHOOK_URL_${workspaceId}`;
+
+  const { data: existingSecret } = await supabase
+    .from('workspace_webhook_secrets')
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .eq('secret_name', secretName)
+    .maybeSingle();
+
+  if (existingSecret?.id) {
+    await supabase
+      .from('workspace_webhook_secrets')
+      .update({
+        webhook_url: normalizedUrl,
+        updated_at: now
+      })
+      .eq('id', existingSecret.id);
+  } else {
+    await supabase
+      .from('workspace_webhook_secrets')
+      .insert({
+        workspace_id: workspaceId,
+        secret_name: secretName,
+        webhook_url: normalizedUrl
+      });
+  }
+
+  console.log(`🔄 [Manage Providers] Webhook sincronizado com ${normalizedUrl.substring(0, 50)}...`);
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -80,6 +147,10 @@ serve(async (req) => {
 
       console.log('✅ Provider criado:', data.id);
 
+      if (data?.n8n_webhook_url) {
+        await syncWorkspaceWebhook(supabase, workspaceId, data.n8n_webhook_url);
+      }
+
       return new Response(
         JSON.stringify({ success: true, provider: data }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -127,6 +198,10 @@ serve(async (req) => {
       if (error) throw error;
 
       console.log('✅ Provider atualizado');
+
+      if (data?.n8n_webhook_url) {
+        await syncWorkspaceWebhook(supabase, workspaceId, data.n8n_webhook_url);
+      }
 
       return new Response(
         JSON.stringify({ success: true, provider: data }),
@@ -197,6 +272,10 @@ serve(async (req) => {
       if (error) throw error;
 
       console.log('✅ Provider ativado');
+
+      if (data?.n8n_webhook_url) {
+        await syncWorkspaceWebhook(supabase, workspaceId, data.n8n_webhook_url);
+      }
 
       return new Response(
         JSON.stringify({ success: true, provider: data }),

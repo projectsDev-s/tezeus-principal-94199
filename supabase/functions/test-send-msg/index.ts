@@ -300,6 +300,8 @@ serve(async (req) => {
     // CRÍTICO: Salvar a mensagem ANTES de chamar Evolution para evitar race condition
     console.log(`💾 [${requestId}] Saving message to database BEFORE calling Evolution`);
     
+    let savedMessageId: string | null = null;
+
     try {
       // ✅ CORREÇÃO: Gerar UUID válido para o campo id, manter external_id para tracking
       const message_id = crypto.randomUUID();
@@ -361,7 +363,7 @@ serve(async (req) => {
       });
       
       // ✅ Armazenar o ID real para retornar depois
-      const messageCreatedAt = savedMessage.id;
+      savedMessageId = savedMessage.id;
     } catch (preSaveError) {
       console.error(`❌ [${requestId}] Pre-save error:`, preSaveError);
       return new Response(JSON.stringify({
@@ -381,9 +383,20 @@ serve(async (req) => {
 
     // Chamar message-sender que usa N8N webhook (com fallback para envio direto)
     try {
+      if (!savedMessageId) {
+        console.error(`❌ [${requestId}] savedMessageId ausente antes de chamar message-sender`);
+        return new Response(JSON.stringify({
+          error: 'Failed to save message',
+          details: 'savedMessageId is null'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       const { data: sendResult, error: sendError } = await supabase.functions.invoke('message-sender', {
         body: {
-          messageId: external_id,
+          messageId: savedMessageId,
           phoneNumber: contact.phone,
           content: effectiveContent,
           messageType: message_type,

@@ -38,10 +38,22 @@ serve(async (req) => {
       workspaceId
     });
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error(`❌ [${requestId}] Missing SUPABASE_URL or SERVICE_ROLE_KEY`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Missing Supabase service credentials',
+        requestId
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey);
 
     // Resolver workspace se não fornecido
     let finalWorkspaceId = workspaceId;
@@ -69,33 +81,41 @@ serve(async (req) => {
     // VERIFICAR SE WEBHOOK N8N ESTÁ CONFIGURADO (OBRIGATÓRIO)
     const workspaceWebhookSecretName = `N8N_WEBHOOK_URL_${finalWorkspaceId}`;
     let workspaceWebhookUrl: string | null = null;
+    let webhookSource: 'settings' | 'secrets' | null = null;
 
     const { data: webhookSettings, error: settingsError } = await supabase
       .from('workspace_webhook_settings')
-      .select('webhook_url')
+      .select('webhook_url, updated_at, webhook_secret')
       .eq('workspace_id', finalWorkspaceId)
       .maybeSingle();
 
     if (!settingsError && webhookSettings?.webhook_url) {
       workspaceWebhookUrl = webhookSettings.webhook_url;
-      console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_settings: ${workspaceWebhookUrl.substring(0, 50)}...`);
+      webhookSource = 'settings';
+      console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_settings: ${workspaceWebhookUrl.substring(0, 50)}...`, {
+        updated_at: webhookSettings?.updated_at
+      });
     } else {
       const { data: webhookData, error: webhookError } = await supabase
         .from('workspace_webhook_secrets')
-        .select('webhook_url')
+        .select('webhook_url, updated_at')
         .eq('workspace_id', finalWorkspaceId)
         .eq('secret_name', workspaceWebhookSecretName)
         .maybeSingle();
 
       if (!webhookError && webhookData?.webhook_url) {
         workspaceWebhookUrl = webhookData.webhook_url;
-        console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_secrets (fallback): ${workspaceWebhookUrl.substring(0, 50)}...`);
+        webhookSource = 'secrets';
+        console.log(`🔍 [${requestId}] Webhook encontrado em workspace_webhook_secrets (fallback): ${workspaceWebhookUrl.substring(0, 50)}...`, {
+          updated_at: webhookData?.updated_at
+        });
       }
     }
 
     console.log(`🔍 [${requestId}] Webhook check:`, {
       configured: !!workspaceWebhookUrl,
-      webhookUrl: workspaceWebhookUrl ? workspaceWebhookUrl.substring(0, 50) + '...' : 'none'
+      webhookUrl: workspaceWebhookUrl ? workspaceWebhookUrl.substring(0, 50) + '...' : 'none',
+      source: webhookSource
     });
 
     if (!workspaceWebhookUrl) {
@@ -106,7 +126,7 @@ serve(async (req) => {
         details: 'Configure N8N webhook first to send messages',
         requestId
       }), {
-        status: 400,
+        status: 424,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
