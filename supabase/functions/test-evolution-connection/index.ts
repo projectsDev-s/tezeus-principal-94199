@@ -49,7 +49,7 @@ serve(async (req) => {
           evolutionError = `HTTP ${response.status}: ${errorData}`;
         }
       } catch (error) {
-        evolutionError = error.message;
+        evolutionError = error instanceof Error ? error.message : String(error);
       }
     } else {
       evolutionError = 'Missing API URL or Key';
@@ -76,7 +76,7 @@ serve(async (req) => {
           webhookError = 'Webhook URL must be HTTPS and from supabase.co domain';
         }
       } catch (error) {
-        webhookError = `Invalid URL format: ${error.message}`;
+        webhookError = `Invalid URL format: ${error instanceof Error ? error.message : String(error)}`;
       }
     } else {
       webhookError = 'Webhook URL not configured';

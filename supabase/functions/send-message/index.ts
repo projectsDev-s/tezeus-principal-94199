@@ -118,7 +118,7 @@ serve(async (req) => {
     );
 
     // Get conversation details with contact and connection info
-    const { data: conversation, error: conversationError } = await supabase
+    const { data: conversation, error: conversationError } = await (supabase as any)
       .from('conversations')
       .select(`
         id,
@@ -142,11 +142,19 @@ serve(async (req) => {
       });
     }
 
+    // Normalize joined data (Supabase may return arrays for joins)
+    const connection = Array.isArray(conversation.connection) 
+      ? conversation.connection[0] 
+      : conversation.connection;
+    const contact = Array.isArray(conversation.contact) 
+      ? conversation.contact[0] 
+      : conversation.contact;
+
     // Validate connection
-    if (!conversation.connection || conversation.connection.status !== 'connected') {
+    if (!connection || connection.status !== 'connected') {
       console.error(`❌ [${requestId}] Connection not ready:`, {
-        hasConnection: !!conversation.connection,
-        status: conversation.connection?.status
+        hasConnection: !!connection,
+        status: connection?.status
       });
       return new Response(JSON.stringify({
         code: 'CONNECTION_NOT_READY',
@@ -162,8 +170,8 @@ serve(async (req) => {
       conversationId: conversation.id,
       workspaceId: conversation.workspace_id,
       connectionId: conversation.connection_id,
-      instanceName: conversation.connection.instance_name,
-      contactPhone: conversation.contact?.phone?.substring(0, 8) + '***'
+      instanceName: connection.instance_name,
+      contactPhone: contact?.phone?.substring(0, 8) + '***'
     });
 
     // Create message record in database

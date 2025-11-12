@@ -37,6 +37,7 @@ serve(async (req) => {
         phone_number,
         qr_code,
         metadata,
+        updated_at,
         connection_secrets (
           token,
           evolution_url
@@ -62,8 +63,13 @@ serve(async (req) => {
     for (const connection of connections) {
       console.log(`🔍 [${requestId}] Checking instance: ${connection.instance_name}`);
       
+      // Normalize joined data (Supabase may return arrays for joins)
+      const secrets = Array.isArray(connection.connection_secrets) 
+        ? connection.connection_secrets[0] 
+        : connection.connection_secrets;
+      
       // Skip if no credentials
-      if (!connection.connection_secrets?.token || !connection.connection_secrets?.evolution_url) {
+      if (!secrets?.token || !secrets?.evolution_url) {
         console.log(`⚠️ [${requestId}] Skipping ${connection.instance_name} - missing credentials`);
         results.push({
           instance: connection.instance_name,
@@ -76,12 +82,12 @@ serve(async (req) => {
       try {
         // Check if instance exists in Evolution API
         const instanceResponse = await fetch(
-          `${connection.connection_secrets.evolution_url}/instance/fetchInstances`,
+          `${secrets.evolution_url}/instance/fetchInstances`,
           {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-              'apikey': connection.connection_secrets.token
+              'apikey': secrets.token
             }
           }
         );
@@ -208,7 +214,7 @@ serve(async (req) => {
         results.push({
           instance: connection.instance_name,
           status: 'error',
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
         errorCount++;
       }

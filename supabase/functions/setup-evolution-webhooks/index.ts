@@ -53,7 +53,12 @@ serve(async (req) => {
     for (const connection of connections) {
       console.log(`🔧 Setting up webhook for instance: ${connection.instance_name}`);
       
-      if (!connection.connection_secrets?.token || !connection.connection_secrets?.evolution_url) {
+      // Normalize joined data (Supabase may return arrays for joins)
+      const secrets = Array.isArray(connection.connection_secrets) 
+        ? connection.connection_secrets[0] 
+        : connection.connection_secrets;
+      
+      if (!secrets?.token || !secrets?.evolution_url) {
         console.log(`⚠️ Skipping ${connection.instance_name} - missing credentials`);
         results.push({
           instance: connection.instance_name,
@@ -66,12 +71,12 @@ serve(async (req) => {
       try {
         // Configure webhook in Evolution API
         const evolutionResponse = await fetch(
-          `${connection.connection_secrets.evolution_url}/webhook/set/${connection.instance_name}`,
+          `${secrets.evolution_url}/webhook/set/${connection.instance_name}`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'apikey': connection.connection_secrets.token
+              'apikey': secrets.token
             },
             body: JSON.stringify({
               url: webhookUrl,
@@ -129,7 +134,7 @@ serve(async (req) => {
         results.push({
           instance: connection.instance_name,
           status: 'error',
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     }
