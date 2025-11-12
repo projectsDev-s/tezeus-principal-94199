@@ -21,6 +21,7 @@ interface Fila {
   greeting_message?: string;
   workspace_id?: string;
   workspaces?: { name: string };
+  user_count?: number;
 }
 
 export function AutomacoesFilasMaster() {
@@ -138,7 +139,7 @@ export function AutomacoesFilasMaster() {
                       {fila.name}
                     </div>
                   </TableCell>
-                  <TableCell>1</TableCell>
+                  <TableCell>{fila.user_count || 0}</TableCell>
                   <TableCell className="max-w-xs truncate">
                     {fila.workspaces?.name || 'Sem empresa'}
                   </TableCell>

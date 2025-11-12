@@ -54,10 +54,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Buscar contagem de usuários por fila
+    const queueIds = queues.map(q => q.id)
+    let userCountMap = new Map()
+
+    if (queueIds.length > 0) {
+      const { data: queueUsers, error: queueUsersError } = await supabaseClient
+        .from('queue_users')
+        .select('queue_id')
+        .in('queue_id', queueIds)
+
+      if (queueUsersError) {
+        console.error('Erro ao buscar usuários das filas:', queueUsersError)
+      } else if (queueUsers) {
+        // Contar usuários por fila
+        const counts = queueUsers.reduce((acc, qu) => {
+          acc[qu.queue_id] = (acc[qu.queue_id] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+        
+        userCountMap = new Map(Object.entries(counts))
+      }
+    }
+
     // Combinar dados
     const queuesWithWorkspace = queues.map(queue => ({
       ...queue,
-      workspaces: queue.workspace_id ? workspacesMap.get(queue.workspace_id) || null : null
+      workspaces: queue.workspace_id ? workspacesMap.get(queue.workspace_id) || null : null,
+      user_count: userCountMap.get(queue.id) || 0
     }))
 
     console.log('✅ Retornando filas:', queuesWithWorkspace.length)
