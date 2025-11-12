@@ -25,7 +25,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
 import { useWhatsAppProviders } from '@/hooks/useWhatsAppProviders';
-import { useWebhookDiagnostics } from '@/hooks/useWebhookDiagnostics';
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -67,7 +66,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { queues } = useQueues(workspaceId);
   const { userRole } = useAuth();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
-  const { isReconfiguring, reconfigureWebhooks } = useWebhookDiagnostics();
   
   // Detectar se está na master-dashboard
   const isInMasterDashboard = window.location.pathname === '/master-dashboard';
@@ -1498,13 +1496,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                       <DropdownMenuItem onClick={() => openEditModal(connection)}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => reconfigureWebhooks(connection.id)}
-                        disabled={isReconfiguring || connection.status !== 'connected'}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        Reconfigurar Webhooks
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => openDeleteModal(connection)}
