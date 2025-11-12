@@ -14,6 +14,7 @@ export function useFloatingDate(
   const [floatingDate, setFloatingDate] = useState<string | null>(null);
   const [shouldShowFloating, setShouldShowFloating] = useState(false);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const formatDateLabel = useCallback((date: Date): string => {
     if (isToday(date)) return 'Hoje';
@@ -91,6 +92,12 @@ export function useFloatingDate(
       hideTimeoutRef.current = null;
     }
     
+    // Limpar timeout de parada de scroll
+    if (scrollStopTimeoutRef.current) {
+      clearTimeout(scrollStopTimeoutRef.current);
+      scrollStopTimeoutRef.current = null;
+    }
+    
     // Mostrar o flutuante se:
     // 1. Rolou para cima (scrollTop > 50)
     // 2. O primeiro separador não está visível no topo
@@ -99,6 +106,12 @@ export function useFloatingDate(
       console.log('🎯 [FloatingDate] MOSTRAR indicador:', currentVisibleDate);
       setFloatingDate(currentVisibleDate);
       setShouldShowFloating(true);
+      
+      // Timer para esconder após 2 segundos sem rolar
+      scrollStopTimeoutRef.current = setTimeout(() => {
+        console.log('⏱️ [FloatingDate] Scroll parado - ESCONDER indicador');
+        setShouldShowFloating(false);
+      }, 2000);
     } else {
       console.log('❌ [FloatingDate] ESCONDER indicador');
       // Adicionar delay antes de esconder para evitar piscar
@@ -121,6 +134,9 @@ export function useFloatingDate(
       scrollContainer.removeEventListener('scroll', handleScroll);
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
+      }
+      if (scrollStopTimeoutRef.current) {
+        clearTimeout(scrollStopTimeoutRef.current);
       }
     };
   }, [scrollRef, handleScroll]);
