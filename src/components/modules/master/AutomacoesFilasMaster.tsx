@@ -34,44 +34,12 @@ export function AutomacoesFilasMaster() {
     try {
       const { data, error } = await supabase
         .from('queues')
-        .select(`
-          id,
-          name,
-          description,
-          is_active,
-          created_at,
-          updated_at,
-          color,
-          order_position,
-          distribution_type,
-          ai_agent_id,
-          greeting_message,
-          workspace_id,
-          workspaces!inner (
-            name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      const filasComWorkspace = (data || []).map((fila: any) => ({
-        id: fila.id,
-        name: fila.name,
-        description: fila.description,
-        is_active: fila.is_active,
-        created_at: fila.created_at,
-        updated_at: fila.updated_at,
-        color: fila.color,
-        order_position: fila.order_position,
-        distribution_type: fila.distribution_type,
-        ai_agent_id: fila.ai_agent_id,
-        greeting_message: fila.greeting_message,
-        workspace_id: fila.workspace_id,
-        workspace_name: fila.workspaces?.name || 'Sem empresa'
-      }));
-      
-      setFilas(filasComWorkspace);
+      setFilas(data || []);
     } catch (error) {
       console.error('Erro ao carregar filas:', error);
       toast.error('Erro ao carregar filas');
@@ -167,8 +135,8 @@ export function AutomacoesFilasMaster() {
                     </div>
                   </TableCell>
                   <TableCell>1</TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {fila.workspace_name || 'Sem empresa'}
+                  <TableCell className="max-w-xs truncate font-mono text-sm">
+                    {fila.workspace_id?.substring(0, 8) || '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
