@@ -20,6 +20,7 @@ interface Fila {
   ai_agent_id?: string;
   greeting_message?: string;
   workspace_id?: string;
+  workspace_name?: string;
 }
 
 export function AutomacoesFilasMaster() {
@@ -33,11 +34,22 @@ export function AutomacoesFilasMaster() {
     try {
       const { data, error } = await supabase
         .from('queues')
-        .select('*')
+        .select(`
+          *,
+          workspaces (
+            name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFilas(data || []);
+      
+      const filasComWorkspace = (data || []).map((fila: any) => ({
+        ...fila,
+        workspace_name: fila.workspaces?.name || 'Sem empresa'
+      }));
+      
+      setFilas(filasComWorkspace);
     } catch (error) {
       console.error('Erro ao carregar filas:', error);
       toast.error('Erro ao carregar filas');
@@ -105,7 +117,7 @@ export function AutomacoesFilasMaster() {
               <TableHead>Id</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Usuários</TableHead>
-              <TableHead>Mensagem de saudação</TableHead>
+              <TableHead>Empresas</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -134,7 +146,7 @@ export function AutomacoesFilasMaster() {
                   </TableCell>
                   <TableCell>1</TableCell>
                   <TableCell className="max-w-xs truncate">
-                    {fila.greeting_message || fila.description || '-'}
+                    {fila.workspace_name || 'Sem empresa'}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
