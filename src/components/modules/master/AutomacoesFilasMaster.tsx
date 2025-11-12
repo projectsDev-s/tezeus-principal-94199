@@ -32,13 +32,17 @@ export function AutomacoesFilasMaster() {
 
   const loadFilas = async () => {
     try {
-      const { data, error } = await supabase
-        .from('queues')
-        .select('*, workspaces(name)')
-        .order('created_at', { ascending: false });
+      // Usar edge function com service_role para contornar RLS
+      const { data, error } = await supabase.functions.invoke('get-queues-with-workspaces');
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('Erro ao carregar filas:', error);
+        toast.error('Erro ao carregar filas');
+        setLoading(false);
+        return;
+      }
+
+      console.log('📊 Filas retornadas:', data);
       setFilas(data || []);
     } catch (error) {
       console.error('Erro ao carregar filas:', error);
