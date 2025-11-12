@@ -1,5 +1,8 @@
 project_id = "zldeaozqxjwvzgrblyrh"
 
+[functions.get-queue-users]
+verify_jwt = false
+
 [functions.send-whatsapp-message]
 verify_jwt = false
 

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { toast } from 'sonner';
+import { useRetry } from './useRetry';
 
 export interface QueueUser {
   id: string;
@@ -21,6 +22,7 @@ export interface QueueUser {
 export function useQueueUsers(queueId?: string) {
   const [users, setUsers] = useState<QueueUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const { retry } = useRetry();
 
   const loadQueueUsers = useCallback(async () => {
     if (!queueId) return;
@@ -28,18 +30,18 @@ export function useQueueUsers(queueId?: string) {
     try {
       setLoading(true);
 
-      // Usar edge function com service_role para contornar RLS
-      const { data, error } = await supabase.functions.invoke('get-queue-users', {
-        body: { queueId }
+      // Usar edge function com service_role para contornar RLS e retry para erros de conexão
+      const result = await retry(async () => {
+        const { data, error } = await supabase.functions.invoke('get-queue-users', {
+          body: { queueId }
+        });
+
+        if (error) throw error;
+        return data;
       });
 
-      if (error) {
-        console.error('Erro ao invocar função:', error);
-        throw error;
-      }
-
-      console.log('✅ Usuários da fila carregados:', data?.length || 0);
-      setUsers(data || []);
+      console.log('✅ Usuários da fila carregados:', result?.length || 0);
+      setUsers(result || []);
     } catch (error) {
       console.error('Erro ao carregar usuários da fila:', error);
       toast.error('Erro ao carregar usuários da fila');
