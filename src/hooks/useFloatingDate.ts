@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, RefObject } from 'react';
+import { useState, useEffect, useCallback, useRef, RefObject } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -13,6 +13,7 @@ export function useFloatingDate(
 ): UseFloatingDateReturn {
   const [floatingDate, setFloatingDate] = useState<string | null>(null);
   const [shouldShowFloating, setShouldShowFloating] = useState(false);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const formatDateLabel = useCallback((date: Date): string => {
     if (isToday(date)) return 'Hoje';
@@ -61,11 +62,20 @@ export function useFloatingDate(
     // Verificar se o separador está muito próximo do topo (visível)
     const isDateSeparatorVisible = closestToTop < 80;
     
+    // Limpar timeout anterior se existir
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+    
     if (scrollTop > 100 && !isDateSeparatorVisible && visibleDate) {
       setFloatingDate(visibleDate);
       setShouldShowFloating(true);
     } else {
-      setShouldShowFloating(false);
+      // Adicionar delay antes de esconder para evitar piscar
+      hideTimeoutRef.current = setTimeout(() => {
+        setShouldShowFloating(false);
+      }, 150);
     }
   }, [scrollRef, messages]);
 
@@ -80,6 +90,9 @@ export function useFloatingDate(
 
     return () => {
       scrollContainer.removeEventListener('scroll', handleScroll);
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
     };
   }, [scrollRef, handleScroll]);
 
