@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Wifi, QrCode, Plus, MoreVertical, Edit3, RefreshCw, Webhook, Star, Bug, ArrowRight, Zap, Cloud } from 'lucide-react';
+import { Trash2, Wifi, QrCode, Plus, MoreVertical, Edit3, RefreshCw, Webhook, Star, Bug, ArrowRight, Zap, Cloud, Settings } from 'lucide-react';
 import { TestWebhookReceptionModal } from "@/components/modals/TestWebhookReceptionModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -25,6 +25,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
 import { useWhatsAppProviders } from '@/hooks/useWhatsAppProviders';
+import { useWebhookDiagnostics } from '@/hooks/useWebhookDiagnostics';
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -66,6 +67,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { queues } = useQueues(workspaceId);
   const { userRole } = useAuth();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
+  const { isReconfiguring, reconfigureWebhooks } = useWebhookDiagnostics();
   
   // Detectar se está na master-dashboard
   const isInMasterDashboard = window.location.pathname === '/master-dashboard';
@@ -1496,6 +1498,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                       <DropdownMenuItem onClick={() => openEditModal(connection)}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => reconfigureWebhooks(connection.id)}
+                        disabled={isReconfiguring || connection.status !== 'connected'}
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        Reconfigurar Webhooks
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => openDeleteModal(connection)}

@@ -43,7 +43,9 @@ serve(async (req) => {
       phoneNumber: phoneNumber?.substring(0, 8) + '***', 
       content: content?.substring(0, 50), 
       messageType, 
-      hasFile: !!fileUrl 
+      hasFile: !!fileUrl,
+      hasQuoted: !!quoted_message,
+      reply_to: reply_to_message_id
     });
 
     const supabase = createClient(
@@ -446,30 +448,38 @@ serve(async (req) => {
     }
 
     console.log(`✅ [${messageId}] N8N webhook executado com sucesso`);
+    console.log(`📊 [${messageId}] N8N response data:`, JSON.stringify(responseData, null, 2));
 
     // 🔄 UPDATE external_id with Evolution API message ID if available
     // Tentar múltiplos caminhos para encontrar o Evolution message ID
     const evolutionMessageId = 
-      responseData?.key?.id ||           // Formato direto
-      responseData?.data?.key?.id ||     // Formato com "data"
-      responseData?.[0]?.data?.key?.id;  // Formato array
+      responseData?.key?.id ||                    // Formato direto
+      responseData?.data?.key?.id ||              // Formato com "data"
+      responseData?.evolution_key_id ||           // Formato evolution_key_id
+      responseData?.response?.key?.id ||          // Nested response
+      responseData?.[0]?.data?.key?.id;           // Formato array
 
     if (evolutionMessageId && messageId) {
       console.log(`🔄 [${messageId}] Updating external_id to Evolution message ID: ${evolutionMessageId}`);
       
       const { error: updateError } = await supabase
         .from('messages')
-        .update({ external_id: evolutionMessageId })
+        .update({ 
+          external_id: evolutionMessageId,
+          status: 'sent'  // Update status to sent after successful send
+        })
         .eq('id', messageId);
       
       if (updateError) {
         console.error(`❌ [${messageId}] Failed to update external_id:`, updateError);
       } else {
         console.log(`✅ [${messageId}] external_id updated successfully to ${evolutionMessageId}`);
+        console.log(`🔔 [${messageId}] WEBHOOK UPDATE EXPECTED: Evolution should now send messages.update webhooks for this message`);
       }
     } else {
       console.log(`⚠️ [${messageId}] No Evolution message ID found in response`);
       console.log(`📋 [${messageId}] Response structure:`, JSON.stringify(responseData, null, 2));
+      console.log(`❌ [${messageId}] WARNING: Without external_id, status updates via webhook cannot be tracked!`);
     }
 
     return new Response(JSON.stringify({
