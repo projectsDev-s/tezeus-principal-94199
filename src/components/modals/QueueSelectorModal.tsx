@@ -32,7 +32,7 @@ export function QueueSelectorModal({
   workspaceId,
 }: QueueSelectorModalProps) {
   const [selectedQueueId, setSelectedQueueId] = useState<string>("");
-  const { queues, loading } = useQueues(workspaceId);
+  const { queues, loading } = useQueues(workspaceId, true); // 🔧 includeInactive: true para mostrar todas as filas
 
   useEffect(() => {
     if (!open) {

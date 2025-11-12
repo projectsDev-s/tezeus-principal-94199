@@ -21,7 +21,7 @@ export interface Queue {
   };
 }
 
-export function useQueues(workspaceIdProp?: string) {
+export function useQueues(workspaceIdProp?: string, includeInactive?: boolean) {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedWorkspace } = useWorkspace();
@@ -60,17 +60,23 @@ export function useQueues(workspaceIdProp?: string) {
 
     try {
       setLoading(true);
-      console.log('🔍 useQueues: Buscando filas para workspace:', workspaceId);
+      console.log('🔍 useQueues: Buscando filas para workspace:', workspaceId, 
+        includeInactive ? '(incluindo inativas)' : '(apenas ativas)');
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('queues')
         .select(`
           *,
           ai_agent:ai_agents(id, name)
         `)
-        .eq('workspace_id', workspaceId)
-        .eq('is_active', true)
-        .order('order_position', { ascending: true });
+        .eq('workspace_id', workspaceId);
+
+      // Filtrar por is_active apenas se includeInactive for false ou undefined
+      if (!includeInactive) {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query.order('order_position', { ascending: true });
 
       if (error) {
         console.error('❌ useQueues: Erro ao buscar filas:', error);
