@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.evolution-webhook-v2]
 verify_jwt = false
+
+[functions.process-profile-image]
+verify_jwt = false
