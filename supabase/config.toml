@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.n8n-send-message]
 verify_jwt = false
+
+[functions.n8n-media-processor]
+verify_jwt = false
