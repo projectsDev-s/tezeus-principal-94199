@@ -1,15 +1,39 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2 } from "lucide-react";
 import { QueueUser } from "@/hooks/useQueueUsers";
 
 interface QueueUsersListProps {
   users: QueueUser[];
+  loading?: boolean;
   onRemoveUser: (userId: string) => void;
 }
 
-export function QueueUsersList({ users, onRemoveUser }: QueueUsersListProps) {
+export function QueueUsersList({ users, loading, onRemoveUser }: QueueUsersListProps) {
+  // Mostrar skeleton durante carregamento
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="flex items-center space-x-3 p-3 rounded-lg border bg-card"
+          >
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-8 w-8 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (users.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">

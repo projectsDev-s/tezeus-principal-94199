@@ -27,17 +27,6 @@ export function useQueueUsers(queueId?: string) {
 
     try {
       setLoading(true);
-      
-      // Set user context first
-      const userData = localStorage.getItem('currentUser');
-      const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (currentUserData?.id) {
-        await supabase.rpc('set_current_user_context', {
-          user_id: currentUserData.id,
-          user_email: currentUserData.email || ''
-        });
-      }
 
       const { data, error } = await supabase
         .from('queue_users')
@@ -68,17 +57,6 @@ export function useQueueUsers(queueId?: string) {
     if (!queueId) return;
 
     try {
-      // Set user context
-      const userData = localStorage.getItem('currentUser');
-      const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (currentUserData?.id) {
-        await supabase.rpc('set_current_user_context', {
-          user_id: currentUserData.id,
-          user_email: currentUserData.email || ''
-        });
-      }
-
       // Get max position
       const { data: existingUsers } = await supabase
         .from('queue_users')
@@ -118,17 +96,6 @@ export function useQueueUsers(queueId?: string) {
     if (!queueId) return;
 
     try {
-      // Set user context
-      const userData = localStorage.getItem('currentUser');
-      const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (currentUserData?.id) {
-        await supabase.rpc('set_current_user_context', {
-          user_id: currentUserData.id,
-          user_email: currentUserData.email || ''
-        });
-      }
-
       const { error } = await supabase
         .from('queue_users')
         .delete()
@@ -149,17 +116,6 @@ export function useQueueUsers(queueId?: string) {
     if (!queueId) return;
 
     try {
-      // Set user context
-      const userData = localStorage.getItem('currentUser');
-      const currentUserData = userData ? JSON.parse(userData) : null;
-      
-      if (currentUserData?.id) {
-        await supabase.rpc('set_current_user_context', {
-          user_id: currentUserData.id,
-          user_email: currentUserData.email || ''
-        });
-      }
-
       const { error } = await supabase
         .from('queue_users')
         .update({ order_position: newPosition })

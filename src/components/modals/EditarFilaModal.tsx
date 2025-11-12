@@ -283,6 +283,7 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
 
               <QueueUsersList 
                 users={queueUsers}
+                loading={loadingUsers}
                 onRemoveUser={removeUserFromQueue}
               />
             </TabsContent>
