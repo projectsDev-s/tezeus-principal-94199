@@ -45,44 +45,44 @@ export function useFloatingDate(
       containerHeight: containerRect.height 
     });
     
-    // Encontrar o separador de data mais visível no viewport
+    // Encontrar qual data corresponde às mensagens visíveis no viewport
     const dateSeparators = scrollContainer.querySelectorAll('[data-date-separator]');
     console.log('🏷️ [FloatingDate] Separadores encontrados:', dateSeparators.length);
     
-    let visibleDate: string | null = null;
-    let closestToTop = Infinity;
+    let currentVisibleDate: string | null = null;
+    let firstSeparatorTop: number | null = null;
     
+    // Percorrer todos os separadores para encontrar qual seção está visível
     dateSeparators.forEach((separator, index) => {
       const rect = separator.getBoundingClientRect();
       const separatorTop = rect.top - containerRect.top;
+      const dateLabel = separator.getAttribute('data-date-separator');
       
       console.log(`📍 [FloatingDate] Separador ${index}:`, {
-        date: separator.getAttribute('data-date-separator'),
+        date: dateLabel,
         separatorTop,
-        distanceFromTop: Math.abs(separatorTop),
-        isInViewport: separatorTop >= -50 && separatorTop <= containerRect.height
+        isAboveViewport: separatorTop < 100
       });
       
-      // Verificar se o separador está dentro ou próximo do viewport
-      if (separatorTop >= -50 && separatorTop <= containerRect.height) {
-        const distanceFromTop = Math.abs(separatorTop);
-        
-        if (distanceFromTop < closestToTop) {
-          closestToTop = distanceFromTop;
-          visibleDate = separator.getAttribute('data-date-separator');
+      // Se o separador está acima do viewport (ou muito próximo do topo)
+      // Isso significa que estamos vendo as mensagens DESTA data
+      if (separatorTop < 100) {
+        currentVisibleDate = dateLabel;
+        if (index === 0) {
+          firstSeparatorTop = separatorTop;
         }
       }
     });
     
-    // Verificar se o separador está muito próximo do topo (visível)
-    const isDateSeparatorVisible = closestToTop < 80;
+    // Verificar se o primeiro separador está muito próximo do topo (visível)
+    const isFirstSeparatorVisible = firstSeparatorTop !== null && firstSeparatorTop >= 0 && firstSeparatorTop < 80;
     
     console.log('✅ [FloatingDate] Resultado:', {
-      visibleDate,
-      closestToTop,
-      isDateSeparatorVisible,
+      currentVisibleDate,
+      firstSeparatorTop,
+      isFirstSeparatorVisible,
       scrollTop,
-      shouldShow: scrollTop > 100 && !isDateSeparatorVisible && visibleDate
+      shouldShow: scrollTop > 50 && !isFirstSeparatorVisible && currentVisibleDate
     });
     
     // Limpar timeout anterior se existir
@@ -91,9 +91,13 @@ export function useFloatingDate(
       hideTimeoutRef.current = null;
     }
     
-    if (scrollTop > 100 && !isDateSeparatorVisible && visibleDate) {
-      console.log('🎯 [FloatingDate] MOSTRAR indicador:', visibleDate);
-      setFloatingDate(visibleDate);
+    // Mostrar o flutuante se:
+    // 1. Rolou para cima (scrollTop > 50)
+    // 2. O primeiro separador não está visível no topo
+    // 3. Há uma data identificada
+    if (scrollTop > 50 && !isFirstSeparatorVisible && currentVisibleDate) {
+      console.log('🎯 [FloatingDate] MOSTRAR indicador:', currentVisibleDate);
+      setFloatingDate(currentVisibleDate);
       setShouldShowFloating(true);
     } else {
       console.log('❌ [FloatingDate] ESCONDER indicador');
