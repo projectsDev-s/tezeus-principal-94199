@@ -2038,18 +2038,24 @@ export function WhatsAppChat({
             </div>
 
             {/* Área de mensagens */}
-        <ScrollArea 
-          className="flex-1 h-0 px-4 py-2" 
-          ref={node => {
-            if (node) {
-              const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
-              if (scrollContainer) {
-                messagesScrollRef.current = scrollContainer as HTMLElement;
+        <div className="flex-1 h-0 relative">
+          {/* Indicador de data flutuante - FORA do ScrollArea */}
+          {shouldShowFloating && floatingDate && (
+            <FloatingDateIndicator date={floatingDate} visible={shouldShowFloating} />
+          )}
+          
+          <ScrollArea 
+            className="h-full px-4 py-2" 
+            ref={node => {
+              if (node) {
+                const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
+                if (scrollContainer) {
+                  messagesScrollRef.current = scrollContainer as HTMLElement;
+                }
               }
-            }
-          }}
-          onScroll={handleScroll}
-        >
+            }}
+            onScroll={handleScroll}
+          >
               {/* Botão Carregar Mais Mensagens */}
               {hasMore && !loadingMore && messages.length > 0 && (
                 <div className="flex justify-center py-3">
@@ -2082,11 +2088,6 @@ export function WhatsAppChat({
                 <div className="flex justify-center p-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 </div>
-              )}
-              
-              {/* Indicador de data flutuante */}
-              {shouldShowFloating && floatingDate && (
-                <FloatingDateIndicator date={floatingDate} visible={shouldShowFloating} />
               )}
               
               <div className="space-y-4">
@@ -2175,6 +2176,7 @@ export function WhatsAppChat({
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
+          </div>
 
             {/* Reply Preview */}
             {replyingTo && (
