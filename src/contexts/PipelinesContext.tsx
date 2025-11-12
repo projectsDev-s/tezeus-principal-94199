@@ -833,42 +833,44 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
           toColumn: updatedCard.column_id,
           timestamp: new Date().toISOString()
         });
-        
-        // 🔥 BUSCAR CONVERSATION ATUALIZADA quando houver mudança de coluna
-        // (pode ter sido atualizado o agente_ativo por automação)
-        if (existingCard.conversation_id && getHeaders) {
-          console.log('🔍 [Realtime] Buscando conversation atualizada:', existingCard.conversation_id);
-          supabase
-            .from('conversations')
-            .select('id, agente_ativo, agent_active_id, queue(id, name, ai_agent(id, name))')
-            .eq('id', existingCard.conversation_id)
-            .single()
-            .then(({ data: conversation, error }) => {
-              if (error) {
-                console.error('❌ Erro ao buscar conversation:', error);
-                return;
-              }
-              
-              if (conversation) {
-                console.log('✅ [Realtime] Conversation atualizada:', {
-                  id: conversation.id,
-                  agente_ativo: conversation.agente_ativo,
-                  agent_active_id: conversation.agent_active_id
-                });
-                
-                // Atualizar o card com a conversation fresh
-                setCards(current => 
-                  current.map(c => 
-                    c.id === updatedCard.id 
-                      ? { ...c, conversation } 
-                      : c
-                  )
-                );
-              }
-            });
-        }
       } else {
-        console.log('ℹ️ [Realtime] Sem mudança de coluna (mesma coluna)');
+        console.log('ℹ️ [Realtime] Update detectado (mesma coluna)');
+      }
+      
+      // 🔥 BUSCAR DADOS COMPLETOS ATUALIZADOS sempre que houver qualquer update
+      // (automações podem modificar tags, agentes, etc sem mudar coluna)
+      if (getHeaders) {
+        console.log('🔍 [Realtime] Buscando dados completos do card atualizado:', updatedCard.id);
+        supabase.functions.invoke(
+          `pipeline-management/cards?id=${updatedCard.id}`,
+          {
+            method: 'GET',
+            headers: getHeaders
+          }
+        ).then(({ data: fullCard, error }) => {
+          if (error) {
+            console.error('❌ Erro ao buscar card completo:', error);
+            return;
+          }
+          
+          if (fullCard) {
+            console.log('✅ [Realtime] Card completo atualizado:', {
+              id: fullCard.id,
+              column_id: fullCard.column_id,
+              tags: fullCard.contact?.tags?.length || 0,
+              hasAgent: !!fullCard.conversation?.agente_ativo
+            });
+            
+            // Atualizar o card com dados completos do backend
+            setCards(current => 
+              current.map(c => 
+                c.id === fullCard.id 
+                  ? fullCard
+                  : c
+              )
+            );
+          }
+        });
       }
       
       const mergedCard = {
