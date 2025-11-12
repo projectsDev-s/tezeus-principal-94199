@@ -2218,6 +2218,20 @@ export type Database = {
             referencedRelation: "ai_agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "queues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
         ]
       }
       quick_audios: {
