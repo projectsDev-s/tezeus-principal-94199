@@ -1561,32 +1561,8 @@ serve(async (req) => {
               .from('pipeline_cards')
               .select(`
                 *,
-                contact:contacts(
-                  *,
-                  contact_tags(
-                    tag_id,
-                    tags!contact_tags_tag_id_fkey(id, name, color)
-                  )
-                ),
-                conversation:conversations(
-                  *,
-                  connection:connections!conversations_connection_id_fkey(
-                    id,
-                    instance_name,
-                    phone_number,
-                    status,
-                    metadata
-                  ),
-                  queue:queues!conversations_queue_id_fkey(
-                    id,
-                    name,
-                    ai_agent:ai_agents(
-                      id,
-                      name
-                    )
-                  )
-                ),
-                responsible_user:system_users!responsible_user_id(id, name),
+                conversation:conversations(id, contact_id, connection_id, workspace_id),
+                contact:contacts(id, phone, name),
                 pipelines:pipelines!inner(id, workspace_id, name)
               `)
               .eq('id', cardId)

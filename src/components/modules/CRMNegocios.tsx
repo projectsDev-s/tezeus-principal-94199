@@ -188,29 +188,13 @@ function DraggableDeal({
   const [searchTerm, setSearchTerm] = React.useState("");
   const [visibleTagId, setVisibleTagId] = React.useState<string | null>(null);
   const [hideTimeout, setHideTimeout] = React.useState<NodeJS.Timeout | null>(null);
-  
-  // 🔥 Converter tags do formato backend para o formato do hook
-  const initialTags = React.useMemo(() => {
-    if (!deal.contact?.contact_tags) return undefined;
-    
-    return deal.contact.contact_tags
-      .map((ct: any) => ct.tags)
-      .filter(Boolean)
-      .map((tag: any) => ({
-        id: tag.id,
-        name: tag.name,
-        color: tag.color
-      }));
-  }, [JSON.stringify(deal.contact?.contact_tags)]);
-  
   const {
     contactTags,
     availableTags,
     addTagToContact,
     getFilteredTags,
     refreshTags
-  } = useContactTags(deal.contact?.id || null, initialTags);
-  
+  } = useContactTags(deal.contact?.id || null);
   const {
     attributes,
     listeners,
@@ -340,12 +324,7 @@ function DraggableDeal({
               </h3>
               
               {/* Badge de Agente IA Ativo */}
-              {deal.conversation?.agente_ativo && (
-                <AgentBadge 
-                  key={`agent-${deal.conversation.id}-${deal.conversation.agente_ativo}`} 
-                  conversationId={deal.conversation.id} 
-                />
-              )}
+              {deal.conversation?.agente_ativo && <AgentBadge conversationId={deal.conversation.id} />}
             </div>
             
             {/* Produto + Valor à direita */}
