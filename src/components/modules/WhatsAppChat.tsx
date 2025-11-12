@@ -43,6 +43,9 @@ import { SelectAgentModal } from "@/components/modals/SelectAgentModal";
 import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { QuickFunnelsModal } from "@/components/modals/QuickFunnelsModal";
 import { AssignmentHistoryModal } from "@/components/modals/AssignmentHistoryModal";
+import { DateSeparator } from "@/components/chat/DateSeparator";
+import { FloatingDateIndicator } from "@/components/chat/FloatingDateIndicator";
+import { useFloatingDate, groupMessagesByDate, formatMessageDate } from "@/hooks/useFloatingDate";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2, Workflow, Clock } from "lucide-react";
@@ -368,6 +371,12 @@ export function WhatsAppChat({
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<any>(null);
+
+  // Hook para data flutuante
+  const { floatingDate, shouldShowFloating } = useFloatingDate(messagesScrollRef, messages);
+
+  // Agrupar mensagens por data
+  const messagesByDate = useMemo(() => groupMessagesByDate(messages), [messages]);
 
   // Usar a função de filtro unificada
   const filteredConversations = getFilteredConversations();
@@ -2075,8 +2084,34 @@ export function WhatsAppChat({
                 </div>
               )}
               
-                <div className="space-y-4">
-                {messages.map(message => <div key={message.id} data-message-id={message.id} className={cn("flex items-start gap-3 max-w-[80%] relative", message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto", selectionMode && "cursor-pointer", selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg")} onClick={() => selectionMode && toggleMessageSelection(message.id)}>
+              {/* Indicador de data flutuante */}
+              {shouldShowFloating && floatingDate && (
+                <FloatingDateIndicator date={floatingDate} visible={shouldShowFloating} />
+              )}
+              
+              <div className="space-y-4">
+                {Array.from(messagesByDate.entries()).map(([dateKey, dateMessages]) => {
+                  const firstMessage = dateMessages[0];
+                  const dateLabel = formatMessageDate(firstMessage.created_at);
+                  
+                  return (
+                    <div key={dateKey}>
+                      {/* Separador de data */}
+                      <DateSeparator date={dateLabel} />
+                      
+                      {/* Mensagens do dia */}
+                      {dateMessages.map(message => (
+                        <div 
+                          key={message.id} 
+                          data-message-id={message.id} 
+                          className={cn(
+                            "flex items-start gap-3 max-w-[80%] relative",
+                            message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto",
+                            selectionMode && "cursor-pointer",
+                            selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
+                          )}
+                          onClick={() => selectionMode && toggleMessageSelection(message.id)}
+                        >
                     {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
                         <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact?.name || ''))}>
@@ -2132,7 +2167,11 @@ export function WhatsAppChat({
                     </div>
                   </div>}
                     </div>
-                  </div>)}
+                  </div>
+                      ))}
+                    </div>
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
