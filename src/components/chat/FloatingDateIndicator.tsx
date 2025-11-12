@@ -9,7 +9,7 @@ export function FloatingDateIndicator({ date, visible }: FloatingDateIndicatorPr
   return (
     <div 
       className={cn(
-        "fixed top-20 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-out",
+        "absolute top-4 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-out",
         visible 
           ? "opacity-100 translate-y-0 scale-100" 
           : "opacity-0 -translate-y-4 scale-95 pointer-events-none"
