@@ -26,7 +26,9 @@ serve(async (req) => {
       fileName, 
       evolutionInstance,
       conversationId,
-      workspaceId 
+      workspaceId,
+      reply_to_message_id,
+      quoted_message
     } = requestBody;
 
     console.log(`📤 [${requestId}] Message sender started:`, { 
@@ -146,7 +148,9 @@ serve(async (req) => {
           evolutionInstance,
           conversationId,
           workspaceId: finalWorkspaceId,
-          external_id: requestBody.external_id
+          external_id: requestBody.external_id,
+          reply_to_message_id,
+          quoted_message
         }
       });
 

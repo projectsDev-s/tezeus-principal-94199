@@ -306,6 +306,8 @@ serve(async (req) => {
         file_url: file_url || null,
         file_name: file_name || null,
         mime_type: mime_type || null,
+        reply_to_message_id: reply_to_message_id || null,
+        quoted_message: quoted_message || null,
         status: 'sending',
         origem_resposta: 'manual',
         external_id: external_id, // ✅ Salvar clientMessageId como external_id
@@ -394,7 +396,9 @@ serve(async (req) => {
           evolutionInstance: instance_name,
           workspaceId: conversation.workspace_id,
           external_id: external_id,
-          conversationId: conversation_id
+          conversationId: conversation_id,
+          reply_to_message_id: reply_to_message_id,
+          quoted_message: quoted_message
         }
       });
 

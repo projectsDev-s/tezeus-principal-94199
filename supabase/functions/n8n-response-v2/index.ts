@@ -243,8 +243,8 @@ serve(async (req) => {
       // Check if this is a duplicate N8N response (same external_id and content)
       const { data: existingMessage, error: findError } = await supabase
         .from('messages')
-        .select('id, conversation_id, workspace_id, content, file_url, file_name, mime_type, metadata, sender_type')
-        .eq('id', external_id)
+        .select('id, conversation_id, workspace_id, content, file_url, file_name, mime_type, metadata, sender_type, reply_to_message_id, quoted_message')
+        .eq('external_id', external_id)
         .maybeSingle();
 
       if (findError) {
@@ -301,6 +301,9 @@ serve(async (req) => {
         if (file_url !== undefined) updateData.file_url = file_url;
         if (file_name !== undefined) updateData.file_name = file_name;
         if (mime_type !== undefined) updateData.mime_type = mime_type;
+        // Preservar reply_to_message_id e quoted_message se existirem
+        if (reply_to_message_id !== undefined) updateData.reply_to_message_id = reply_to_message_id;
+        if (quoted_message !== undefined) updateData.quoted_message = quoted_message;
         if (Object.keys(metadata).length > 0) {
           updateData.metadata = { 
             ...existingMessage.metadata, 
@@ -312,7 +315,7 @@ serve(async (req) => {
         const { error: updateError } = await supabase
           .from('messages')
           .update(updateData)
-          .eq('id', external_id);
+          .eq('external_id', external_id);
 
         if (updateError) {
           console.error(`❌ [${requestId}] Error updating message:`, updateError);
