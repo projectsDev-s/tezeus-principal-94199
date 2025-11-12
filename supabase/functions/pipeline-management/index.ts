@@ -206,12 +206,22 @@ async function executeAutomationAction(
       break;
     }
     case 'send_message': {
+      console.log(`\n📨 ========== INICIANDO SEND_MESSAGE ==========`);
+      
       // Buscar conversa do card
       let conversationId = card.conversation?.id || card.conversation_id;
       let conversation = card.conversation;
       
+      console.log(`🔍 Dados iniciais do card:`, {
+        card_id: card.id,
+        conversation_id: conversationId,
+        contact_id: card.contact_id,
+        has_conversation_object: !!conversation
+      });
+      
       // Se não tem conversa, tentar buscar por contact_id
       if (!conversationId && card.contact_id) {
+        console.log(`🔍 Tentando buscar conversa pelo contact_id: ${card.contact_id}`);
         const workspaceId = card.pipelines?.workspace_id || card.conversation?.workspace_id;
         
         if (workspaceId) {
@@ -229,17 +239,26 @@ async function executeAutomationAction(
           if (existingConversation) {
             conversationId = existingConversation.id;
             conversation = existingConversation;
+            console.log(`✅ Conversa encontrada: ${conversationId}`);
+          } else {
+            console.log(`⚠️ Nenhuma conversa encontrada para o contato`);
           }
         }
       }
       
       if (!conversationId) {
-        console.warn(`⚠️ Card não tem conversa associada. Não é possível enviar mensagem. Card ID: ${card.id}, Contact ID: ${card.contact_id}`);
+        console.error(`❌ ERRO: Card não tem conversa associada`);
+        console.error(`   Card ID: ${card.id}`);
+        console.error(`   Contact ID: ${card.contact_id}`);
+        console.error(`   Não é possível enviar mensagem sem conversation_id`);
         return;
       }
       
+      console.log(`✅ conversation_id confirmado: ${conversationId}`);
+      
       // Se não tem conversation object completo, buscar
       if (!conversation || !conversation.connection_id) {
+        console.log(`🔍 Buscando dados completos da conversa...`);
         const { data: conversationData } = await supabaseClient
           .from('conversations')
           .select('id, connection_id, workspace_id')
@@ -247,31 +266,41 @@ async function executeAutomationAction(
           .single();
         
         if (!conversationData || !conversationData.connection_id) {
-          console.warn(`⚠️ Conversa ${conversationId} não tem connection_id. Não é possível enviar mensagem.`);
+          console.error(`❌ ERRO: Conversa ${conversationId} não tem connection_id`);
+          console.error(`   Dados da conversa:`, conversationData);
+          console.error(`   Não é possível enviar mensagem sem connection_id`);
           return;
         }
         
         conversation = conversationData;
+        console.log(`✅ Dados da conversa obtidos:`, {
+          id: conversation.id,
+          connection_id: conversation.connection_id,
+          workspace_id: conversation.workspace_id
+        });
       }
       
       // Obter conteúdo da mensagem do action_config
       const messageContent = action.action_config?.message || action.action_config?.content || '';
       
       if (!messageContent) {
-        console.warn(`⚠️ Ação send_message não tem conteúdo configurado.`);
+        console.error(`❌ ERRO: Ação send_message não tem conteúdo configurado`);
+        console.error(`   action_config:`, action.action_config);
         return;
       }
+      
+      console.log(`📝 Mensagem a ser enviada (${messageContent.length} caracteres):`, 
+        messageContent.length > 100 ? messageContent.substring(0, 100) + '...' : messageContent);
       
       // Chamar função test-send-msg que já busca automaticamente:
       // 1. Webhook URL do N8N (workspace_webhook_settings ou workspace_webhook_secrets)
       // 2. Credenciais Evolution API do _master_config (evolution_url + token)
       // 3. Dispara o webhook do N8N com todos os dados necessários
       try {
-        console.log(`📤 ========== ENVIANDO MENSAGEM VIA AUTOMAÇÃO ==========`);
+        console.log(`\n📤 ========== PREPARANDO ENVIO VIA N8N ==========`);
         console.log(`📤 Conversa ID: ${conversationId}`);
         console.log(`📤 Workspace ID: ${conversation.workspace_id}`);
         console.log(`📤 Connection ID: ${conversation.connection_id}`);
-        console.log(`📤 Conteúdo da mensagem (${messageContent.length} caracteres):`, messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : ''));
         
         // Preparar payload seguindo exatamente o padrão do envio manual
         const payload = {
@@ -283,11 +312,14 @@ async function executeAutomationAction(
           clientMessageId: `automation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` // ID único para deduplicação
         };
         
-        console.log(`📦 Payload sendo enviado:`, JSON.stringify(payload, null, 2));
+        console.log(`📦 Payload completo:`, JSON.stringify(payload, null, 2));
         
         // Usar fetch direto com as credenciais corretas (sem JWT)
         const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
         const sendMessageUrl = `${supabaseUrl}/functions/v1/test-send-msg`;
+        
+        console.log(`🌐 URL da edge function: ${sendMessageUrl}`);
+        console.log(`⏱️ Iniciando requisição HTTP...`);
         
         const sendResponse = await fetch(sendMessageUrl, {
           method: 'POST',
@@ -298,6 +330,8 @@ async function executeAutomationAction(
           body: JSON.stringify(payload)
         });
         
+        console.log(`✅ Resposta recebida - Status: ${sendResponse.status} ${sendResponse.statusText}`);
+        
         if (!sendResponse.ok) {
           const errorText = await sendResponse.text();
           let errorData;
@@ -307,7 +341,7 @@ async function executeAutomationAction(
             errorData = { error: errorText };
           }
           
-          console.error(`❌ Erro HTTP ao enviar mensagem via automação:`, {
+          console.error(`❌ ERRO HTTP ao enviar mensagem:`, {
             status: sendResponse.status,
             statusText: sendResponse.statusText,
             error: errorData
@@ -328,6 +362,8 @@ async function executeAutomationAction(
           }
         }
         
+        console.log(`📨 Resposta do servidor:`, JSON.stringify(sendResult, null, 2));
+        
         // Verificar sucesso - a função test-send-msg retorna success: true quando bem-sucedido
         if (!sendResult || (sendResult.error && !sendResult.success)) {
           const errorMsg = sendResult?.error || sendResult?.details || 'Erro desconhecido ao enviar mensagem';
@@ -335,26 +371,25 @@ async function executeAutomationAction(
           throw new Error(errorMsg);
         }
         
-        console.log(`✅ ========== MENSAGEM ENVIADA COM SUCESSO ==========`);
-        console.log(`✅ Resultado:`, {
-          success: sendResult?.success !== false,
-          message_id: sendResult?.message_id || sendResult?.message?.id,
-          status: sendResult?.status,
-          conversation_id: sendResult?.conversation_id,
-          phone_number: sendResult?.phone_number
-        });
+        console.log(`\n✅ ========== MENSAGEM ENVIADA COM SUCESSO ==========`);
+        console.log(`✅ Status: ${sendResult?.status || 'success'}`);
+        console.log(`✅ Message ID: ${sendResult?.message_id || sendResult?.message?.id || 'N/A'}`);
+        console.log(`✅ Phone: ${sendResult?.phone_number || 'N/A'}`);
         
         // Log adicional sobre o que aconteceu
         if (sendResult?.status === 'duplicate') {
-          console.log(`ℹ️ Mensagem duplicada detectada (já foi enviada anteriormente)`);
+          console.log(`ℹ️ Nota: Mensagem duplicada detectada (já foi enviada anteriormente)`);
         }
         
+        console.log(`📨 ========== FIM SEND_MESSAGE ==========\n`);
+        
       } catch (sendError) {
-        console.error(`❌ ========== ERRO AO ENVIAR MENSAGEM ==========`);
-        console.error(`❌ Erro:`, {
-          message: sendError instanceof Error ? sendError.message : String(sendError),
-          stack: sendError instanceof Error ? sendError.stack : undefined
-        });
+        console.error(`\n❌ ========== ERRO NO SEND_MESSAGE ==========`);
+        console.error(`❌ Mensagem: ${sendError instanceof Error ? sendError.message : String(sendError)}`);
+        if (sendError instanceof Error && sendError.stack) {
+          console.error(`❌ Stack trace:`, sendError.stack);
+        }
+        console.error(`❌ ========== FIM DO ERRO ==========\n`);
         
         // NÃO lançar erro aqui - apenas logar e retornar
         // A automação pode continuar com outras ações mesmo se uma falhar
@@ -1647,14 +1682,20 @@ serve(async (req) => {
                 console.error('❌ Erro ao buscar automações enter_column:', enterError);
               } else if (enterAutomations && enterAutomations.length > 0) {
                 console.log(`📋 ${enterAutomations.length} automação(ões) encontrada(s) na nova coluna`);
+                console.log(`📋 IDs das automações:`, enterAutomations.map((a: any) => a.id));
                 
                 for (const auto of enterAutomations) {
                   if (auto.is_active) {
                     automationsToProcess.push({ automation: auto, triggerType: 'enter_column' });
+                  } else {
+                    console.log(`⚠️ Automação ${auto.id} (${auto.name}) está INATIVA, pulando`);
                   }
                 }
               } else {
-                console.log(`ℹ️ Nenhuma automação encontrada para nova coluna ${body.column_id}`);
+                console.log(`⚠️ ========== ATENÇÃO: NENHUMA AUTOMAÇÃO ENCONTRADA ==========`);
+                console.log(`⚠️ Coluna destino: ${body.column_id}`);
+                console.log(`⚠️ Se você configurou automações de "ao entrar", elas devem estar na coluna de DESTINO`);
+                console.log(`⚠️ Verifique se as automações estão configuradas na coluna correta!`);
               }
               
               console.log(`📋 Total de automações a processar: ${automationsToProcess.length}`);
