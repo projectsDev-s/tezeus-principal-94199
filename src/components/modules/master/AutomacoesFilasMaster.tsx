@@ -35,8 +35,19 @@ export function AutomacoesFilasMaster() {
       const { data, error } = await supabase
         .from('queues')
         .select(`
-          *,
-          workspaces (
+          id,
+          name,
+          description,
+          is_active,
+          created_at,
+          updated_at,
+          color,
+          order_position,
+          distribution_type,
+          ai_agent_id,
+          greeting_message,
+          workspace_id,
+          workspaces!inner (
             name
           )
         `)
@@ -45,7 +56,18 @@ export function AutomacoesFilasMaster() {
       if (error) throw error;
       
       const filasComWorkspace = (data || []).map((fila: any) => ({
-        ...fila,
+        id: fila.id,
+        name: fila.name,
+        description: fila.description,
+        is_active: fila.is_active,
+        created_at: fila.created_at,
+        updated_at: fila.updated_at,
+        color: fila.color,
+        order_position: fila.order_position,
+        distribution_type: fila.distribution_type,
+        ai_agent_id: fila.ai_agent_id,
+        greeting_message: fila.greeting_message,
+        workspace_id: fila.workspace_id,
         workspace_name: fila.workspaces?.name || 'Sem empresa'
       }));
       
