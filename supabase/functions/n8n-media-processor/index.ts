@@ -48,10 +48,11 @@ serve(async (req) => {
       contactId: directContactId,
       metadata: directMetadata,
       
-      // Campos do N8N (mapeamento)
+      // Campos do N8N (mapeamento - snake_case)
       external_id,
       content,
       file_name,
+      file_url, // 🔧 CRÍTICO: campo que vem do N8N em snake_case
       mime_type,
       workspace_id,
       connection_id,
@@ -64,7 +65,7 @@ serve(async (req) => {
     
     // Priorizar campos diretos do evolution-webhook-v2, depois mapear do N8N
     const messageId = directMessageId || external_id;
-    const mediaUrl = directFileUrl || directMediaUrl; // fileUrl do evolution-webhook-v2 ou mediaUrl do N8N
+    const mediaUrl = directFileUrl || directMediaUrl || file_url; // 🔧 fileUrl camelCase OU file_url snake_case do N8N
     const base64 = directBase64 || content;
     const fileName = directFileName || file_name;
     const mimeType = directMimeType || mime_type;
