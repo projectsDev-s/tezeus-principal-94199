@@ -8,11 +8,19 @@ interface Tag {
   color: string;
 }
 
-export function useContactTags(contactId?: string) {
-  const [contactTags, setContactTags] = useState<Tag[]>([]);
+export function useContactTags(contactId?: string, initialTags?: Tag[]) {
+  const [contactTags, setContactTags] = useState<Tag[]>(initialTags || []);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // 🔥 Atualizar tags quando initialTags mudar (vindo do card atualizado via real-time)
+  useEffect(() => {
+    if (initialTags && initialTags.length > 0) {
+      console.log('🏷️ [useContactTags] Atualizando tags de initial props:', initialTags.length);
+      setContactTags(initialTags);
+    }
+  }, [JSON.stringify(initialTags)]);
 
   // Fetch tags already assigned to contact
   const fetchContactTags = async () => {
