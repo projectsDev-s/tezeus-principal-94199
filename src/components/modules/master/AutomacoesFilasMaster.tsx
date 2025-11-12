@@ -20,7 +20,7 @@ interface Fila {
   ai_agent_id?: string;
   greeting_message?: string;
   workspace_id?: string;
-  workspace_name?: string;
+  workspaces?: { name: string };
 }
 
 export function AutomacoesFilasMaster() {
@@ -34,7 +34,7 @@ export function AutomacoesFilasMaster() {
     try {
       const { data, error } = await supabase
         .from('queues')
-        .select('*')
+        .select('*, workspaces(name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -135,8 +135,8 @@ export function AutomacoesFilasMaster() {
                     </div>
                   </TableCell>
                   <TableCell>1</TableCell>
-                  <TableCell className="max-w-xs truncate font-mono text-sm">
-                    {fila.workspace_id?.substring(0, 8) || '-'}
+                  <TableCell className="max-w-xs truncate">
+                    {fila.workspaces?.name || 'Sem empresa'}
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
