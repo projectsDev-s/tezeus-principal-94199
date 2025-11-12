@@ -124,17 +124,6 @@ serve(async (req) => {
       }
     }
 
-    if (convError || !conversation) {
-      console.log(`❌ [${requestId}] Conversation error:`, convError);
-      return new Response(JSON.stringify({
-        error: 'Conversation not found',
-        details: convError?.message
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
     console.log(`✅ [${requestId}] Conversation found:`, conversation);
 
     // Fetch contact details
@@ -348,7 +337,7 @@ serve(async (req) => {
         console.error(`❌ [${requestId}] Failed to save message before N8N:`, saveError);
         return new Response(JSON.stringify({
           error: 'Failed to save message',
-          details: saveError.message
+          details: saveError instanceof Error ? saveError.message : String(saveError)
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -368,7 +357,7 @@ serve(async (req) => {
       console.error(`❌ [${requestId}] Pre-save error:`, preSaveError);
       return new Response(JSON.stringify({
         error: 'Failed to save message before N8N',
-        details: preSaveError.message
+        details: preSaveError instanceof Error ? preSaveError.message : String(preSaveError)
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -420,7 +409,7 @@ serve(async (req) => {
             metadata: {
               client_msg_id: clientMessageId,
               request_id: requestId,
-              error: sendError.message,
+              error: sendError instanceof Error ? sendError.message : String(sendError),
               step: 'whatsapp_provider_failed'
             }
           })
@@ -428,7 +417,7 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
           error: 'Failed to send message via WhatsApp provider',
-          details: sendError.message
+          details: sendError instanceof Error ? sendError.message : String(sendError)
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -494,7 +483,7 @@ serve(async (req) => {
           metadata: {
             client_msg_id: clientMessageId,
             request_id: requestId,
-            error: providerError.message,
+            error: providerError instanceof Error ? providerError.message : String(providerError),
             step: 'whatsapp_provider_exception'
           }
         })
@@ -502,7 +491,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         error: 'Failed to send message',
-        details: providerError.message
+        details: providerError instanceof Error ? providerError.message : String(providerError)
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

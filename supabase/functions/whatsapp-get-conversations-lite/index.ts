@@ -177,9 +177,14 @@ serve(async (req) => {
     
     console.log(`✅ Query executed - Found ${conversations?.length || 0} conversations for workspace ${workspaceId}`);
     if (conversations && conversations.length > 0) {
+      // Normalize joined data (Supabase may return arrays for joins)
+      const firstContact = Array.isArray(conversations[0].contacts) 
+        ? conversations[0].contacts[0] 
+        : conversations[0].contacts;
+      
       console.log('📋 First conversation sample:', {
         id: conversations[0].id,
-        contact_name: conversations[0].contacts?.name,
+        contact_name: firstContact?.name,
         last_activity: conversations[0].last_activity_at
       });
     }
@@ -204,7 +209,10 @@ serve(async (req) => {
         );
 
         // ✅ Garantir connection data de forma explícita
-        let connectionData = conv.connections;
+        // Normalize joined data (Supabase may return arrays for joins)
+        let connectionData: any = Array.isArray(conv.connections) 
+          ? conv.connections[0] 
+          : conv.connections;
         
         if (!connectionData && conv.connection_id) {
           // Fallback: buscar connection diretamente se JOIN falhou
@@ -214,7 +222,7 @@ serve(async (req) => {
             .eq('id', conv.connection_id)
             .single();
           
-          connectionData = connData;
+          connectionData = connData || null;
         }
 
         const { data: lastMessage } = await supabaseService

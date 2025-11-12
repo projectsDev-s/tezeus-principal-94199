@@ -207,17 +207,20 @@ serve(async (req) => {
     // Montar resultado final com mensagens agrupadas
     const conversationsWithMessages = (conversationsData || []).map(conv => {
       const messages = (messagesByConversation[conv.id] || [])
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         .slice(-50); // Manter apenas as últimas 50 mensagens ordenadas
 
+      // Normalize joined data (Supabase may return arrays for joins)
+      const contact = Array.isArray(conv.contacts) ? conv.contacts[0] : conv.contacts;
+      
       return {
         id: conv.id,
-        contact: conv.contacts ? {
-          id: conv.contacts.id,
-          name: conv.contacts.name,
-          phone: conv.contacts.phone,
-          email: conv.contacts.email,
-          profile_image_url: conv.contacts.profile_image_url,
+        contact: contact ? {
+          id: contact.id,
+          name: contact.name,
+          phone: contact.phone,
+          email: contact.email,
+          profile_image_url: contact.profile_image_url,
         } : {
           id: conv.contact_id,
           name: 'Unknown Contact',
@@ -235,7 +238,7 @@ serve(async (req) => {
         assigned_at: conv.assigned_at,
         connection_id: conv.connection_id,
         workspace_id: conv.workspace_id,
-        messages: messages.map(msg => ({
+        messages: messages.map((msg: any) => ({
           id: msg.id,
           content: msg.content,
           sender_type: msg.sender_type,
@@ -268,7 +271,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }),
       { 
         status: 500,

@@ -84,7 +84,7 @@ serve(async (req) => {
         results.push({
           instance_name: instance.instance_name,
           success: false,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     }
@@ -111,7 +111,7 @@ serve(async (req) => {
     console.error('❌ Error updating webhooks:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
