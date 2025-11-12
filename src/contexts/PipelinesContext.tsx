@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useToast } from '@/hooks/use-toast';
@@ -81,6 +81,9 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
+  
+  // 🔥 Ref para armazenar timeouts pendentes de movimentação de cards
+  const pendingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Estabilizar a função getHeaders para evitar re-renders desnecessários
   const getHeaders = useMemo(() => {
@@ -561,8 +564,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       // O evento realtime vai atualizar o estado com o timestamp correto do banco
       // Não fazemos nada aqui para evitar duplicação
 
-      // ✅ Timeout de segurança: se realtime não chegar em 5s, forçar atualização
-      setTimeout(() => {
+      // ✅ Cancelar timeout anterior se existir
+      const existingTimeout = pendingTimeoutsRef.current.get(cardId);
+      if (existingTimeout) {
+        console.log('🚫 [Optimistic] Cancelando timeout anterior para card:', cardId);
+        clearTimeout(existingTimeout);
+      }
+
+      // ✅ Timeout de segurança: se realtime não chegar em 3s, forçar atualização
+      const timeoutId = setTimeout(() => {
         console.warn('⏰ [Realtime] Timeout - forçando atualização local');
         
         setCards(prev => prev.map(card => 
@@ -570,7 +580,13 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
             ? { ...card, column_id: newColumnId }
             : card
         ));
-      }, 5000);
+        
+        // Remover timeout da lista após execução
+        pendingTimeoutsRef.current.delete(cardId);
+      }, 3000);
+      
+      // Armazenar timeout para possível cancelamento
+      pendingTimeoutsRef.current.set(cardId, timeoutId);
 
     } catch (error) {
       console.error('❌ [Optimistic] Erro - revertendo:', error);
@@ -841,6 +857,14 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
           toColumn: updatedCard.column_id,
           timestamp: new Date().toISOString()
         });
+        
+        // 🔥 CANCELAR TIMEOUT PENDENTE - evento realtime chegou!
+        const pendingTimeout = pendingTimeoutsRef.current.get(updatedCard.id);
+        if (pendingTimeout) {
+          console.log('✅ [Realtime] Cancelando timeout pendente - evento chegou a tempo!');
+          clearTimeout(pendingTimeout);
+          pendingTimeoutsRef.current.delete(updatedCard.id);
+        }
       } else {
         console.log('ℹ️ [Realtime] Update detectado (mesma coluna)');
       }
