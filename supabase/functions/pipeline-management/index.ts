@@ -1647,55 +1647,75 @@ serve(async (req) => {
             }, null, 2));
 
             try {
+              console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+              console.log(`🔍 MOVIMENTO DO CARD:`);
+              console.log(`   📤 SAIU da coluna: ${previousColumnId || 'N/A'}`);
+              console.log(`   📥 ENTROU na coluna: ${body.column_id}`);
+              console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+              
               // ✅ BUSCAR AUTOMAÇÕES DE AMBAS AS COLUNAS
               const automationsToProcess: Array<{ automation: any, triggerType: 'enter_column' | 'leave_column' }> = [];
               
-              // 1️⃣ Buscar automações da COLUNA ANTERIOR (leave_column)
+              // 1️⃣ Buscar automações "AO SAIR" da COLUNA ANTERIOR
               if (previousColumnId) {
-                console.log(`🚪 Buscando automações LEAVE_COLUMN para coluna anterior ${previousColumnId}...`);
+                console.log(`\n🚪 [1/2] Buscando automações "AO SAIR" da coluna ${previousColumnId}...`);
                 
                 const { data: leaveAutomations, error: leaveError } = (await (supabaseClient as any)
                   .rpc('get_column_automations', { p_column_id: previousColumnId })) as any;
                 
                 if (leaveError) {
-                  console.error('❌ Erro ao buscar automações leave_column:', leaveError);
+                  console.error('❌ Erro ao buscar automações:', leaveError);
                 } else if (leaveAutomations && leaveAutomations.length > 0) {
-                  console.log(`📋 ${leaveAutomations.length} automação(ões) encontrada(s) na coluna anterior`);
+                  console.log(`   ✅ ${leaveAutomations.length} automação(ões) encontrada(s) nesta coluna`);
                   
+                  let foundLeave = 0;
                   for (const auto of leaveAutomations) {
+                    console.log(`   📋 Automação: "${auto.name}" (${auto.is_active ? 'ATIVA' : 'INATIVA'})`);
                     if (auto.is_active) {
                       automationsToProcess.push({ automation: auto, triggerType: 'leave_column' });
+                      foundLeave++;
                     }
                   }
+                  
+                  if (foundLeave === 0) {
+                    console.log(`   ⚠️ Nenhuma automação "AO SAIR" configurada ou todas inativas`);
+                  } else {
+                    console.log(`   ✅ ${foundLeave} automação(ões) "AO SAIR" serão processadas`);
+                  }
                 } else {
-                  console.log(`ℹ️ Nenhuma automação encontrada para coluna anterior ${previousColumnId}`);
+                  console.log(`   ℹ️ Nenhuma automação configurada nesta coluna`);
                 }
               }
               
-              // 2️⃣ Buscar automações da NOVA COLUNA (enter_column)
-              console.log(`🚪 Buscando automações ENTER_COLUMN para nova coluna ${body.column_id}...`);
+              // 2️⃣ Buscar automações "AO ENTRAR" da NOVA COLUNA
+              console.log(`\n🚪 [2/2] Buscando automações "AO ENTRAR" na coluna ${body.column_id}...`);
               
               const { data: enterAutomations, error: enterError } = (await (supabaseClient as any)
                 .rpc('get_column_automations', { p_column_id: body.column_id })) as any;
               
               if (enterError) {
-                console.error('❌ Erro ao buscar automações enter_column:', enterError);
+                console.error('❌ Erro ao buscar automações:', enterError);
               } else if (enterAutomations && enterAutomations.length > 0) {
-                console.log(`📋 ${enterAutomations.length} automação(ões) encontrada(s) na nova coluna`);
-                console.log(`📋 IDs das automações:`, enterAutomations.map((a: any) => a.id));
+                console.log(`   ✅ ${enterAutomations.length} automação(ões) encontrada(s) nesta coluna`);
                 
+                let foundEnter = 0;
                 for (const auto of enterAutomations) {
+                  console.log(`   📋 Automação: "${auto.name}" (${auto.is_active ? 'ATIVA' : 'INATIVA'})`);
                   if (auto.is_active) {
                     automationsToProcess.push({ automation: auto, triggerType: 'enter_column' });
-                  } else {
-                    console.log(`⚠️ Automação ${auto.id} (${auto.name}) está INATIVA, pulando`);
+                    foundEnter++;
                   }
                 }
+                
+                if (foundEnter === 0) {
+                  console.log(`   ⚠️ Nenhuma automação "AO ENTRAR" configurada ou todas inativas`);
+                } else {
+                  console.log(`   ✅ ${foundEnter} automação(ões) "AO ENTRAR" serão processadas`);
+                }
               } else {
-                console.log(`⚠️ ========== ATENÇÃO: NENHUMA AUTOMAÇÃO ENCONTRADA ==========`);
-                console.log(`⚠️ Coluna destino: ${body.column_id}`);
-                console.log(`⚠️ Se você configurou automações de "ao entrar", elas devem estar na coluna de DESTINO`);
-                console.log(`⚠️ Verifique se as automações estão configuradas na coluna correta!`);
+                console.log(`   ⚠️ NENHUMA AUTOMAÇÃO ENCONTRADA NESTA COLUNA!`);
+                console.log(`   💡 DICA: Configure automações "AO ENTRAR" NESTA coluna (${body.column_id})`);
+                console.log(`   💡 Para automações dispararem quando o card ENTRA aqui`);
               }
               
               console.log(`📋 Total de automações a processar: ${automationsToProcess.length}`);
