@@ -369,12 +369,15 @@ serve(async (req) => {
     const n8nPayload = {
       event: 'send.message',
       instance: finalEvolutionInstance,
-      external_id: external_id || messageId, // Usar external_id se fornecido, senão messageId
+      workspace_id: finalWorkspaceId,           // ✅ Campo essencial adicionado
+      connection_id: instanceData.id,           // ✅ Campo essencial adicionado
+      phone_number: contactPhone,               // ✅ Campo essencial adicionado (sanitizado)
+      external_id: external_id || messageId,
       data: {
         key: {
           remoteJid: `${contactPhone}@s.whatsapp.net`,
           fromMe: true,
-          id: external_id || messageId // Usar external_id como ID também
+          id: external_id || messageId
         },
         message: evolutionMessage,
         messageType: evolutionMessageType,
@@ -387,7 +390,13 @@ serve(async (req) => {
       apikey: evolutionApiKey
     };
 
-    console.log(`📡 [${messageId}] Enviando para N8N workspace webhook`);
+    console.log(`📡 [${messageId}] Enviando para N8N:`, {
+      workspace_id: finalWorkspaceId,
+      connection_id: instanceData.id,
+      phone_number: contactPhone,
+      instance: finalEvolutionInstance,
+      messageType: evolutionMessageType
+    });
 
     // Chamar N8N com timeout e detecção de falhas melhorada
     const n8nResponse = await fetch(workspaceWebhookUrl, {

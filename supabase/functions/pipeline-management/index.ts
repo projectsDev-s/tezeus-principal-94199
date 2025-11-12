@@ -760,13 +760,13 @@ serve(async (req) => {
               workspace_id: workspaceId,
               name: body.name,
               type: body.type || 'padrao',
-            })
+            } as any)
             .select()
-            .single();
+            .single() as any;
 
           if (error) throw error;
 
-          console.log('✅ Pipeline created successfully:', pipeline.id);
+          console.log('✅ Pipeline created successfully:', (pipeline as any).id);
 
           return new Response(JSON.stringify(pipeline), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -865,9 +865,9 @@ serve(async (req) => {
             .eq('pipeline_id', body.pipeline_id)
             .order('order_position', { ascending: false })
             .limit(1)
-            .single();
+            .single() as any;
 
-          const nextPosition = lastColumn ? lastColumn.order_position + 1 : 0;
+          const nextPosition = lastColumn ? (lastColumn as any).order_position + 1 : 0;
 
           const { data: column, error } = await supabaseClient
             .from('pipeline_columns')
@@ -876,9 +876,9 @@ serve(async (req) => {
               name: body.name,
               color: body.color || '#808080',
               order_position: nextPosition,
-            })
+            } as any)
             .select()
-            .single();
+            .single() as any;
 
           if (error) throw error;
           return new Response(JSON.stringify(column), {
@@ -919,10 +919,10 @@ serve(async (req) => {
           
           const { data: column, error } = await supabaseClient
             .from('pipeline_columns')
-            .update(updateData)
+            .update(updateData as any)
             .eq('id', columnId)
             .select()
-            .single();
+            .single() as any;
 
           if (error) throw error;
           return new Response(JSON.stringify(column), {
@@ -1102,7 +1102,7 @@ serve(async (req) => {
                 status: body.status || 'aberto',
                 tags: body.tags || [],
                 responsible_user_id: body.responsible_user_id,
-              })
+              } as any)
               .select(`
                 *,
                 contact:contacts(
@@ -1165,17 +1165,17 @@ serve(async (req) => {
                 .from('pipeline_columns')
                 .select('pipeline_id')
                 .eq('id', body.column_id)
-                .single();
+                .single() as any;
 
               if (colError) {
                 console.error('❌ Column not found:', body.column_id);
                 throw new Error('Coluna não encontrada');
               }
 
-              if (column.pipeline_id !== body.pipeline_id) {
+              if ((column as any).pipeline_id !== body.pipeline_id) {
                 console.error('❌ Column does not belong to pipeline:', {
                   column_id: body.column_id,
-                  column_pipeline: column.pipeline_id,
+                  column_pipeline: (column as any).pipeline_id,
                   target_pipeline: body.pipeline_id
                 });
                 throw new Error('A coluna não pertence ao pipeline de destino');
@@ -1220,7 +1220,7 @@ serve(async (req) => {
                   });
                   previousColumnId = null;
                 } else if (currentCard) {
-                  previousColumnId = currentCard?.column_id || null;
+                  previousColumnId = (currentCard as any)?.column_id || null;
                   console.log(`📋 ✅ Coluna anterior do card: ${previousColumnId}`);
                   console.log(`📋 ✅ Nova coluna sendo definida: ${body.column_id}`);
                 } else {
@@ -1246,8 +1246,8 @@ serve(async (req) => {
                 .eq('id', cardId)
                 .single();
               
-              if (cardBeforeUpdate?.conversation_id) {
-                conversationIdFromCard = cardBeforeUpdate.conversation_id;
+              if ((cardBeforeUpdate as any)?.conversation_id) {
+                conversationIdFromCard = (cardBeforeUpdate as any).conversation_id;
                 console.log(`✅ [Pre-Update] conversation_id encontrado: ${conversationIdFromCard}`);
               } else {
                 console.warn(`⚠️ [Pre-Update] Card não tem conversation_id`);
@@ -1609,7 +1609,7 @@ serve(async (req) => {
                       to_assigned_user_id: body.responsible_user_id,
                       changed_by: userId,
                       action: action
-                    });
+                    } as any);
                   
                   if (logError) {
                     console.error('❌ Error logging assignment:', logError);
@@ -1725,7 +1725,7 @@ serve(async (req) => {
                 target_column_id: body.target_column_id,
                 deal_state: body.deal_state,
                 order_position: body.order_position || 0,
-              })
+              } as any)
               .select()
               .single();
 
@@ -1765,10 +1765,10 @@ serve(async (req) => {
                 target_column_id: body.target_column_id,
                 deal_state: body.deal_state,
                 order_position: body.order_position,
-              })
+              } as any)
               .eq('id', actionId)
               .select()
-              .single();
+              .single() as any;
 
             if (error) throw error;
             
