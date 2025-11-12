@@ -917,12 +917,12 @@ serve(async (req) => {
           
           console.log('🔄 Updating column:', columnId, 'with data:', updateData);
           
-          const { data: column, error } = await supabaseClient
-            .from('pipeline_columns')
-            .update(updateData as any)
+          const { data: column, error } = (await (supabaseClient
+            .from('pipeline_columns') as any)
+            .update(updateData)
             .eq('id', columnId)
             .select()
-            .single() as any;
+            .single()) as any;
 
           if (error) throw error;
           return new Response(JSON.stringify(column), {
@@ -1255,10 +1255,10 @@ serve(async (req) => {
             }
             
             // Fazer update sem select para evitar erro de workspace_id
-            const { error: updateError } = await supabaseClient
-              .from('pipeline_cards')
+            const { error: updateError } = (await (supabaseClient
+              .from('pipeline_cards') as any)
               .update(updateData)
-              .eq('id', cardId);
+              .eq('id', cardId)) as any;
 
             if (updateError) {
               console.error('❌ Database error updating card:', updateError);
@@ -1266,7 +1266,7 @@ serve(async (req) => {
             }
 
             // Buscar card atualizado separadamente com join de pipeline
-            const { data: card, error: selectError } = await supabaseClient
+            const { data: card, error: selectError } = (await supabaseClient
               .from('pipeline_cards')
               .select(`
                 *,
@@ -1275,7 +1275,7 @@ serve(async (req) => {
                 pipelines:pipelines!inner(id, workspace_id, name)
               `)
               .eq('id', cardId)
-              .single();
+              .single()) as any;
 
             if (selectError) {
               console.error('❌ Database error selecting updated card:', selectError);
@@ -1302,8 +1302,8 @@ serve(async (req) => {
               if (realtimeClient && card?.pipeline_id && card?.id && card?.column_id) {
                 const channelName = `pipeline-${card.pipeline_id}`;
                 const channel = realtimeClient.channel(channelName, { config: { broadcast: { self: false } } });
-                const status = await channel.subscribe();
-                if (status === 'SUBSCRIBED') {
+                await channel.subscribe();
+                if ((channel as any).state === 'joined') {
                   const ok = await channel.send({
                     type: 'broadcast',
                     event: 'pipeline-card-moved',
@@ -1311,7 +1311,7 @@ serve(async (req) => {
                   });
                   console.log('📡 [EF pipeline-management] Broadcast pipeline-card-moved enviado:', ok);
                 } else {
-                  console.warn('⚠️ [EF pipeline-management] Falha ao assinar canal para broadcast:', status);
+                  console.warn('⚠️ [EF pipeline-management] Falha ao assinar canal para broadcast:', (channel as any).state);
                 }
                 // Limpar canal para evitar vazamento
                 await realtimeClient.removeChannel(channel);
@@ -1363,8 +1363,8 @@ serve(async (req) => {
               if (previousColumnId) {
                 console.log(`🚪 Buscando automações LEAVE_COLUMN para coluna anterior ${previousColumnId}...`);
                 
-                const { data: leaveAutomations, error: leaveError } = await supabaseClient
-                  .rpc('get_column_automations', { p_column_id: previousColumnId });
+                const { data: leaveAutomations, error: leaveError } = (await (supabaseClient as any)
+                  .rpc('get_column_automations', { p_column_id: previousColumnId })) as any;
                 
                 if (leaveError) {
                   console.error('❌ Erro ao buscar automações leave_column:', leaveError);
@@ -1384,8 +1384,8 @@ serve(async (req) => {
               // 2️⃣ Buscar automações da NOVA COLUNA (enter_column)
               console.log(`🚪 Buscando automações ENTER_COLUMN para nova coluna ${body.column_id}...`);
               
-              const { data: enterAutomations, error: enterError } = await supabaseClient
-                .rpc('get_column_automations', { p_column_id: body.column_id });
+              const { data: enterAutomations, error: enterError } = (await (supabaseClient as any)
+                .rpc('get_column_automations', { p_column_id: body.column_id })) as any;
               
               if (enterError) {
                 console.error('❌ Erro ao buscar automações enter_column:', enterError);
@@ -1418,8 +1418,8 @@ serve(async (req) => {
                     
                     // Buscar triggers e actions da automação
                     console.log(`📥 Buscando detalhes da automação...`);
-                    const { data: automationDetails, error: detailsError } = await supabaseClient
-                      .rpc('get_automation_details', { p_automation_id: automation.id });
+                    const { data: automationDetails, error: detailsError } = (await (supabaseClient as any)
+                      .rpc('get_automation_details', { p_automation_id: automation.id })) as any;
                     
                     if (detailsError) {
                       console.error(`❌ Erro ao buscar detalhes da automação ${automation.id}:`, detailsError);
@@ -1577,22 +1577,22 @@ serve(async (req) => {
               console.log(`🔄 Syncing conversation ${card.conversation_id} with responsible user ${body.responsible_user_id}`);
               
               // Buscar estado atual da conversa
-              const { data: currentConversation } = await supabaseClient
+              const { data: currentConversation } = (await supabaseClient
                 .from('conversations')
                 .select('assigned_user_id, workspace_id')
                 .eq('id', card.conversation_id)
-                .single();
+                .single()) as any;
               
               if (currentConversation) {
                 // Atualizar a conversa com o novo responsável
-                const { error: convUpdateError } = await supabaseClient
-                  .from('conversations')
+                const { error: convUpdateError } = (await (supabaseClient
+                  .from('conversations') as any)
                   .update({
                     assigned_user_id: body.responsible_user_id,
                     assigned_at: new Date().toISOString(),
                     status: 'open'
                   })
-                  .eq('id', card.conversation_id);
+                  .eq('id', card.conversation_id)) as any;
                 
                 if (convUpdateError) {
                   console.error('❌ Error updating conversation:', convUpdateError);
@@ -1645,11 +1645,11 @@ serve(async (req) => {
           console.log('🗑️ Deleting card:', cardId);
 
           // Verificar se o card existe e pertence ao workspace
-          const { data: card, error: fetchError } = await supabaseClient
+          const { data: card, error: fetchError } = (await supabaseClient
             .from('pipeline_cards')
             .select('pipeline_id, pipelines!inner(workspace_id)')
             .eq('id', cardId)
-            .single();
+            .single()) as any;
 
           if (fetchError || !card) {
             return new Response(
@@ -1757,18 +1757,18 @@ serve(async (req) => {
             const body = await req.json();
             console.log('📝 Updating pipeline action:', actionId, body);
             
-            const { data: actionData, error } = await supabaseClient
-              .from('pipeline_actions')
+            const { data: actionData, error } = (await (supabaseClient
+              .from('pipeline_actions') as any)
               .update({
                 action_name: body.action_name,
                 target_pipeline_id: body.target_pipeline_id,
                 target_column_id: body.target_column_id,
                 deal_state: body.deal_state,
                 order_position: body.order_position,
-              } as any)
+              })
               .eq('id', actionId)
               .select()
-              .single() as any;
+              .single()) as any;
 
             if (error) throw error;
             
