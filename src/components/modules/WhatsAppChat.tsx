@@ -2072,11 +2072,11 @@ export function WhatsAppChat({
                 } : undefined} hasDownload={!!message.file_url} />}
                       
                       {/* Mostrar mensagem quotada se existir */}
-                      {(message as any).quoted_message && (
+                      {message.quoted_message && (
                         <QuotedMessagePreview
-                          quotedMessage={(message as any).quoted_message}
+                          quotedMessage={message.quoted_message}
                           senderName={
-                            (message as any).quoted_message.sender_type === 'contact' 
+                            message.quoted_message.sender_type === 'contact' 
                               ? selectedConversation.contact.name 
                               : 'Você'
                           }
