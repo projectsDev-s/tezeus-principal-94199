@@ -107,11 +107,11 @@ export function useFloatingDate(
       setFloatingDate(currentVisibleDate);
       setShouldShowFloating(true);
       
-      // Timer para esconder após 2 segundos sem rolar
+      // Timer para esconder após 1 segundo sem rolar
       scrollStopTimeoutRef.current = setTimeout(() => {
         console.log('⏱️ [FloatingDate] Scroll parado - ESCONDER indicador');
         setShouldShowFloating(false);
-      }, 2000);
+      }, 1000);
     } else {
       console.log('❌ [FloatingDate] ESCONDER indicador');
       // Adicionar delay antes de esconder para evitar piscar

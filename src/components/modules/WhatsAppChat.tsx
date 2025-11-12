@@ -2106,7 +2106,7 @@ export function WhatsAppChat({
                           key={message.id} 
                           data-message-id={message.id} 
                           className={cn(
-                            "flex items-start gap-3 max-w-[80%] relative",
+                            "flex items-start gap-3 max-w-[80%] relative mb-3",
                             message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto",
                             selectionMode && "cursor-pointer",
                             selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
