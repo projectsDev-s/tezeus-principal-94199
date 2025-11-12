@@ -207,7 +207,44 @@ serve(async (req) => {
       metadata = {}
     } = payload;
     
-    console.log(`📋 [${requestId}] Extracted fields: direction=${direction}, external_id=${external_id}, content="${content}", workspace_id=${workspace_id}`);
+    // 🔄 EXTRACT QUOTED MESSAGE from Evolution payload structure (data.message.quoted)
+    if (!reply_to_message_id && payload.data?.message?.quoted) {
+      const quotedData = payload.data.message.quoted;
+      console.log(`📨 [${requestId}] Extracting quoted message from Evolution payload:`, quotedData);
+      
+      // Try to find the quoted message in database by external_id
+      const quotedExternalId = quotedData.key?.id;
+      if (quotedExternalId) {
+        const { data: quotedMsg } = await supabase
+          .from('messages')
+          .select('id, content, sender_type, message_type, file_url, file_name')
+          .eq('external_id', quotedExternalId)
+          .maybeSingle();
+        
+        if (quotedMsg) {
+          console.log(`✅ [${requestId}] Found quoted message in database: ${quotedMsg.id}`);
+          reply_to_message_id = quotedMsg.id;
+          quoted_message = {
+            id: quotedMsg.id,
+            content: quotedMsg.content,
+            sender_type: quotedMsg.sender_type,
+            message_type: quotedMsg.message_type,
+            file_url: quotedMsg.file_url,
+            file_name: quotedMsg.file_name,
+            external_id: quotedExternalId
+          };
+        } else {
+          console.log(`⚠️ [${requestId}] Quoted message not found in database, creating minimal reference`);
+          quoted_message = {
+            content: quotedData.message?.conversation || quotedData.message?.extendedTextMessage?.text || '',
+            sender_type: quotedData.key?.fromMe ? 'agent' : 'contact',
+            external_id: quotedExternalId
+          };
+        }
+      }
+    }
+    
+    console.log(`📋 [${requestId}] Extracted fields: direction=${direction}, external_id=${external_id}, content="${content}", workspace_id=${workspace_id}, has_quote=${!!reply_to_message_id}`);
 
     // Validate required fields
     if (!direction || !['inbound', 'outbound'].includes(direction)) {
