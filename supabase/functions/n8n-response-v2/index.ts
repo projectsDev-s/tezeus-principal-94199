@@ -202,6 +202,8 @@ serve(async (req) => {
       workspace_id,       // Required for new conversations
       connection_id,      // Optional for inbound
       contact_name,       // Optional
+      reply_to_message_id, // Optional - UUID of quoted message
+      quoted_message,      // Optional - JSONB with quoted message data
       metadata = {}
     } = payload;
     
@@ -620,6 +622,8 @@ serve(async (req) => {
       file_url: file_url || null,
       file_name: file_name || null,
       mime_type: mime_type || null,
+      reply_to_message_id: reply_to_message_id || null,
+      quoted_message: quoted_message || null,
       status: direction === 'inbound' ? 'received' : 'sent',
       origem_resposta: direction === 'inbound' ? 'automatica' : 'manual',
       external_id: external_id || crypto.randomUUID(), // external_id separado do id
@@ -681,7 +685,10 @@ serve(async (req) => {
       });
     }
 
-    console.log(`✅ [${requestId}] Message created successfully: ${newMessage.id}`);
+    console.log(`✅ [${requestId}] Message created successfully: ${newMessage.id}`, {
+      has_quoted_message: !!reply_to_message_id,
+      quoted_message_id: reply_to_message_id || 'none'
+    });
 
     // Update conversation timestamp (triggers will handle unread_count)
     const { error: conversationUpdateError } = await supabase
