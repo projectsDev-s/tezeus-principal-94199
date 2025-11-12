@@ -200,13 +200,15 @@ function DraggableDeal({
     listeners,
     setNodeRef,
     transform,
-    transition
+    transition,
+    isDragging
   } = useSortable({
     id: `card-${deal.id}`
   });
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition
+    transition,
+    opacity: isDragging ? 0 : 1
   };
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
