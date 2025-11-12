@@ -721,37 +721,45 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       const contactId = (updatedCard.id as string).replace('refresh-contact-', '');
       console.log('🏷️ [Realtime] Refresh de tags para contato:', contactId);
       
-      // Encontrar todos os cards deste contato e fazer refresh
-      const cardsToRefresh = cards.filter(c => c.contact?.id === contactId);
-      console.log(`🔄 [Realtime] ${cardsToRefresh.length} card(s) encontrado(s) para refresh`);
-      
-      if (cardsToRefresh.length > 0 && getHeaders) {
-        // Buscar dados completos de cada card para atualizar as tags
-        for (const cardToRefresh of cardsToRefresh) {
-          try {
-            const { data: fullCard, error } = await supabase.functions.invoke(
-              `pipeline-management/cards?id=${cardToRefresh.id}`,
-              {
-                method: 'GET',
-                headers: getHeaders
-              }
-            );
-
-            if (!error && fullCard) {
-              console.log('✅ [Realtime] Card atualizado com novas tags:', fullCard.id);
-              setCards(p =>
-                p.map(c =>
-                  c.id === fullCard.id
-                    ? { ...c, contact: fullCard.contact }
-                    : c
-                )
+      // Buscar diretamente no estado atual dentro do setCards para evitar stale state
+      setCards(prevCards => {
+        const cardsToRefresh = prevCards.filter(c => c.contact_id === contactId);
+        console.log(`🔄 [Realtime] ${cardsToRefresh.length} card(s) encontrado(s) para refresh`);
+        
+        if (cardsToRefresh.length > 0 && getHeaders) {
+          // Buscar dados completos de cada card de forma assíncrona
+          cardsToRefresh.forEach(async (cardToRefresh) => {
+            try {
+              const { data: fullCard, error } = await supabase.functions.invoke(
+                `pipeline-management/cards?id=${cardToRefresh.id}`,
+                {
+                  method: 'GET',
+                  headers: getHeaders
+                }
               );
+
+              if (!error && fullCard) {
+                console.log('✅ [Realtime] Card atualizado com novas tags:', {
+                  cardId: fullCard.id,
+                  tags: fullCard.contact?.tags?.length || 0
+                });
+                
+                setCards(current =>
+                  current.map(c =>
+                    c.id === fullCard.id
+                      ? fullCard // Substituir card completo com dados atualizados
+                      : c
+                  )
+                );
+              }
+            } catch (err) {
+              console.error('❌ [Realtime] Erro ao atualizar card:', err);
             }
-          } catch (err) {
-            console.error('❌ [Realtime] Erro ao atualizar card:', err);
-          }
+          });
         }
-      }
+        
+        return prevCards; // Retornar estado atual enquanto busca
+      });
       
       return; // Não processar como update normal
     }
