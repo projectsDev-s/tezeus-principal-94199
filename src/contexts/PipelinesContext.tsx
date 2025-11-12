@@ -728,7 +728,6 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
   const handleCardUpdate = useCallback(async (updatedCard: PipelineCard) => {
     console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
-    console.log('📊 [Realtime] Estado atual dos cards ANTES da atualização:', cards.length, 'cards');
     
     // Detectar se é um evento de refresh de tags de contato
     const isContactRefresh = (updatedCard as any)._refresh && (updatedCard.id as string).startsWith('refresh-contact-');
@@ -737,44 +736,59 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       const contactId = (updatedCard.id as string).replace('refresh-contact-', '');
       console.log('🏷️ [Realtime] Refresh de tags para contato:', contactId);
       
-      // Buscar diretamente no estado atual dentro do setCards para evitar stale state
-      setCards(prevCards => {
-        const cardsToRefresh = prevCards.filter(c => c.contact_id === contactId);
+      if (!getHeaders) {
+        console.warn('⚠️ [Realtime] Headers não disponíveis para refresh');
+        return;
+      }
+      
+      // 🔥 Obter snapshot do estado atual para buscar os cards
+      setCards((currentCards) => {
+        // Identificar cards que precisam refresh
+        const cardsToRefresh = currentCards.filter(c => c.contact_id === contactId);
         console.log(`🔄 [Realtime] ${cardsToRefresh.length} card(s) encontrado(s) para refresh`);
         
-        if (cardsToRefresh.length > 0 && getHeaders) {
-          // Buscar dados completos de cada card de forma assíncrona
-          cardsToRefresh.forEach(async (cardToRefresh) => {
-            try {
-              const { data: fullCard, error } = await supabase.functions.invoke(
-                `pipeline-management/cards?id=${cardToRefresh.id}`,
-                {
-                  method: 'GET',
-                  headers: getHeaders
-                }
-              );
-
-              if (!error && fullCard) {
-                console.log('✅ [Realtime] Card atualizado com novas tags:', {
-                  cardId: fullCard.id,
-                  tags: fullCard.contact?.tags?.length || 0
-                });
-                
-                setCards(current =>
-                  current.map(c =>
-                    c.id === fullCard.id
-                      ? fullCard // Substituir card completo com dados atualizados
-                      : c
-                  )
-                );
-              }
-            } catch (err) {
-              console.error('❌ [Realtime] Erro ao atualizar card:', err);
-            }
-          });
+        if (cardsToRefresh.length === 0) {
+          console.log('ℹ️ [Realtime] Nenhum card encontrado para este contato');
+          return currentCards;
         }
         
-        return prevCards; // Retornar estado atual enquanto busca
+        // Executar fetches em paralelo e atualizar quando completos
+        Promise.all(
+          cardsToRefresh.map(cardToRefresh =>
+            supabase.functions.invoke(
+              `pipeline-management/cards?id=${cardToRefresh.id}`,
+              { method: 'GET', headers: getHeaders }
+            )
+          )
+        ).then((results) => {
+          // Processar resultados
+          const updatedCards = results
+            .map(({ data, error }) => {
+              if (error) {
+                console.error('❌ [Realtime] Erro ao buscar card:', error);
+                return null;
+              }
+              return data;
+            })
+            .filter(Boolean) as PipelineCard[];
+          
+          if (updatedCards.length > 0) {
+            console.log(`✅ [Realtime] ${updatedCards.length} card(s) atualizado(s) com novas tags`);
+            
+            // Atualizar estado com os cards atualizados
+            setCards(current => 
+              current.map(c => {
+                const updated = updatedCards.find(uc => uc.id === c.id);
+                return updated || c;
+              })
+            );
+          }
+        }).catch((err) => {
+          console.error('❌ [Realtime] Erro ao atualizar cards:', err);
+        });
+        
+        // Retornar estado atual imediatamente (updates virão depois)
+        return currentCards;
       });
       
       return; // Não processar como update normal
@@ -932,7 +946,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       
       return newCards;
     });
-  }, [selectedPipeline?.id, getHeaders, cards.length]);
+  }, [selectedPipeline?.id, getHeaders]);
 
   const handleCardDelete = useCallback((cardId: string) => {
     console.log('🗑️ [Realtime Handler] Card deletado:', cardId);
