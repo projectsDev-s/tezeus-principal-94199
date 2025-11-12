@@ -12,9 +12,10 @@ interface QuotedMessage {
 interface QuotedMessagePreviewProps {
   quotedMessage: QuotedMessage;
   senderName: string;
+  onQuoteClick?: () => void;
 }
 
-export function QuotedMessagePreview({ quotedMessage, senderName }: QuotedMessagePreviewProps) {
+export function QuotedMessagePreview({ quotedMessage, senderName, onQuoteClick }: QuotedMessagePreviewProps) {
   const renderMediaPreview = () => {
     const messageType = quotedMessage.message_type;
 
@@ -90,7 +91,11 @@ export function QuotedMessagePreview({ quotedMessage, senderName }: QuotedMessag
   };
 
   return (
-    <div className="flex items-start gap-3 px-4 py-2 bg-muted/50 border-l-4 border-primary mb-2">
+    <div 
+      className="flex items-start gap-3 px-4 py-2 bg-muted/50 border-l-4 border-primary mb-2 cursor-pointer hover:bg-muted/70 transition-colors" 
+      onClick={onQuoteClick}
+      title="Clique para ver a mensagem citada"
+    >
       <Reply className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
       
       <div className="flex-1 min-w-0">

@@ -822,6 +822,31 @@ export function WhatsAppChat({
     setSelectionMode(true);
     setSelectedMessages(new Set([messageId]));
   };
+  
+  const scrollToMessage = (messageId: string) => {
+    if (!messagesScrollRef.current) return;
+    
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Highlight temporário da mensagem
+      messageElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+      setTimeout(() => {
+        messageElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+      }, 2000);
+    } else {
+      toast({
+        title: "Mensagem não encontrada",
+        description: "A mensagem citada pode ter sido deletada ou não está carregada",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const toggleMessageSelection = (messageId: string) => {
     const newSelected = new Set(selectedMessages);
     if (newSelected.has(messageId)) {
@@ -2072,7 +2097,7 @@ export function WhatsAppChat({
                 } : undefined} hasDownload={!!message.file_url} />}
                       
                       {/* Mostrar mensagem quotada se existir */}
-                      {message.quoted_message && (
+                      {message.quoted_message && message.reply_to_message_id && (
                         <QuotedMessagePreview
                           quotedMessage={message.quoted_message}
                           senderName={
@@ -2080,6 +2105,7 @@ export function WhatsAppChat({
                               ? selectedConversation.contact.name 
                               : 'Você'
                           }
+                          onQuoteClick={() => scrollToMessage(message.reply_to_message_id!)}
                         />
                       )}
 
