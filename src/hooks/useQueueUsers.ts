@@ -28,22 +28,17 @@ export function useQueueUsers(queueId?: string) {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('queue_users')
-        .select(`
-          *,
-          system_users (
-            id,
-            name,
-            email,
-            profile,
-            avatar
-          )
-        `)
-        .eq('queue_id', queueId)
-        .order('order_position', { ascending: true });
+      // Usar edge function com service_role para contornar RLS
+      const { data, error } = await supabase.functions.invoke('get-queue-users', {
+        body: { queueId }
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao invocar função:', error);
+        throw error;
+      }
+
+      console.log('✅ Usuários da fila carregados:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
       console.error('Erro ao carregar usuários da fila:', error);
