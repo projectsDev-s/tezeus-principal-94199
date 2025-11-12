@@ -648,6 +648,262 @@ async function executeAutomationAction(
       break;
     }
     
+    case 'send_funnel': {
+      console.log(`🎯 ========== EXECUTANDO AÇÃO: ENVIAR FUNIL ==========`);
+      
+      const funnelId = action.action_config?.funnel_id;
+      
+      if (!funnelId) {
+        console.warn(`⚠️ Ação send_funnel não tem funnel_id configurado.`);
+        return;
+      }
+      
+      // Buscar conversa do card
+      let conversationId = card.conversation?.id || card.conversation_id;
+      let conversation = card.conversation;
+      
+      // Se não tem conversa, tentar buscar por contact_id
+      if (!conversationId && card.contact_id) {
+        const workspaceId = card.pipelines?.workspace_id || card.conversation?.workspace_id;
+        
+        if (workspaceId) {
+          const { data: existingConversation } = await supabaseClient
+            .from('conversations')
+            .select('id, connection_id, workspace_id')
+            .eq('contact_id', card.contact_id)
+            .eq('workspace_id', workspaceId)
+            .not('connection_id', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (existingConversation) {
+            conversationId = existingConversation.id;
+            conversation = existingConversation;
+          }
+        }
+      }
+      
+      if (!conversationId) {
+        console.warn(`⚠️ Card não tem conversa associada. Não é possível enviar funil. Card ID: ${card.id}, Contact ID: ${card.contact_id}`);
+        return;
+      }
+      
+      // Buscar dados completos da conversa se necessário
+      if (!conversation || !conversation.connection_id) {
+        const { data: conversationData } = await supabaseClient
+          .from('conversations')
+          .select('id, connection_id, workspace_id')
+          .eq('id', conversationId)
+          .single();
+        
+        if (!conversationData || !conversationData.connection_id) {
+          console.warn(`⚠️ Conversa ${conversationId} não tem connection_id. Não é possível enviar funil.`);
+          return;
+        }
+        
+        conversation = conversationData;
+      }
+      
+      console.log(`📋 Conversa encontrada:`, {
+        id: conversationId,
+        connection_id: conversation.connection_id,
+        workspace_id: conversation.workspace_id
+      });
+      
+      // Buscar o funil
+      console.log(`🔍 Buscando funil: ${funnelId}`);
+      const { data: funnel, error: funnelError } = await supabaseClient
+        .from('quick_funnels')
+        .select('*')
+        .eq('id', funnelId)
+        .single();
+      
+      if (funnelError || !funnel) {
+        console.error(`❌ Erro ao buscar funil:`, funnelError);
+        throw new Error(`Funil não encontrado: ${funnelId}`);
+      }
+      
+      console.log(`✅ Funil encontrado: "${funnel.title}" com ${funnel.steps?.length || 0} steps`);
+      
+      if (!funnel.steps || funnel.steps.length === 0) {
+        console.warn(`⚠️ Funil ${funnelId} não tem steps configurados.`);
+        return;
+      }
+      
+      // Ordenar steps por order
+      const sortedSteps = [...funnel.steps].sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      console.log(`📤 Iniciando envio de ${sortedSteps.length} mensagens do funil...`);
+      
+      // Preparar URL do test-send-msg
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const sendMessageUrl = `${supabaseUrl}/functions/v1/test-send-msg`;
+      
+      // Processar cada step
+      for (let i = 0; i < sortedSteps.length; i++) {
+        const step = sortedSteps[i];
+        console.log(`\n📨 Processando step ${i + 1}/${sortedSteps.length}:`, {
+          type: step.type,
+          item_id: step.item_id,
+          delay_seconds: step.delay_seconds
+        });
+        
+        try {
+          let messagePayload: any = null;
+          
+          // Buscar item de acordo com o tipo
+          switch (step.type) {
+            case 'mensagens': {
+              const { data: message } = await supabaseClient
+                .from('quick_messages')
+                .select('*')
+                .eq('id', step.item_id)
+                .single();
+              
+              if (message) {
+                messagePayload = {
+                  conversation_id: conversationId,
+                  content: message.content,
+                  message_type: 'text',
+                  sender_type: 'system',
+                  sender_id: null,
+                  clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
+                };
+              }
+              break;
+            }
+            
+            case 'audios': {
+              const { data: audio } = await supabaseClient
+                .from('quick_audios')
+                .select('*')
+                .eq('id', step.item_id)
+                .single();
+              
+              if (audio) {
+                messagePayload = {
+                  conversation_id: conversationId,
+                  content: '',
+                  message_type: 'audio',
+                  file_url: audio.audio_url,
+                  file_name: audio.title || 'audio.mp3',
+                  sender_type: 'system',
+                  sender_id: null,
+                  clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
+                };
+              }
+              break;
+            }
+            
+            case 'midias': {
+              const { data: media } = await supabaseClient
+                .from('quick_media')
+                .select('*')
+                .eq('id', step.item_id)
+                .single();
+              
+              if (media) {
+                // Determinar tipo baseado na URL/extensão
+                let mediaType = 'image';
+                if (media.media_url) {
+                  const url = media.media_url.toLowerCase();
+                  if (url.includes('.mp4') || url.includes('.mov') || url.includes('.avi')) {
+                    mediaType = 'video';
+                  }
+                }
+                
+                messagePayload = {
+                  conversation_id: conversationId,
+                  content: media.caption || '',
+                  message_type: mediaType,
+                  file_url: media.media_url,
+                  file_name: media.title || `media.${mediaType === 'video' ? 'mp4' : 'jpg'}`,
+                  sender_type: 'system',
+                  sender_id: null,
+                  clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
+                };
+              }
+              break;
+            }
+            
+            case 'document': {
+              const { data: document } = await supabaseClient
+                .from('quick_documents')
+                .select('*')
+                .eq('id', step.item_id)
+                .single();
+              
+              if (document) {
+                messagePayload = {
+                  conversation_id: conversationId,
+                  content: document.description || '',
+                  message_type: 'document',
+                  file_url: document.document_url,
+                  file_name: document.title || 'document.pdf',
+                  sender_type: 'system',
+                  sender_id: null,
+                  clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
+                };
+              }
+              break;
+            }
+            
+            default:
+              console.warn(`⚠️ Tipo de step desconhecido: ${step.type}`);
+          }
+          
+          if (!messagePayload) {
+            console.warn(`⚠️ Não foi possível criar payload para step ${i + 1} (tipo: ${step.type}, item_id: ${step.item_id})`);
+            continue;
+          }
+          
+          console.log(`📦 Enviando mensagem ${i + 1}/${sortedSteps.length}...`);
+          
+          // Enviar mensagem
+          const sendResponse = await fetch(sendMessageUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messagePayload)
+          });
+          
+          if (!sendResponse.ok) {
+            const errorText = await sendResponse.text();
+            console.error(`❌ Erro ao enviar step ${i + 1}:`, {
+              status: sendResponse.status,
+              error: errorText
+            });
+            // Continuar com próximo step mesmo se um falhar
+            continue;
+          }
+          
+          const sendResult = await sendResponse.json();
+          console.log(`✅ Mensagem ${i + 1}/${sortedSteps.length} enviada com sucesso:`, {
+            message_id: sendResult?.message_id,
+            status: sendResult?.status
+          });
+          
+          // Aguardar delay antes do próximo step (se houver)
+          if (step.delay_seconds && step.delay_seconds > 0 && i < sortedSteps.length - 1) {
+            console.log(`⏳ Aguardando ${step.delay_seconds} segundos antes do próximo step...`);
+            await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
+          }
+          
+        } catch (stepError) {
+          console.error(`❌ Erro ao processar step ${i + 1}:`, {
+            error: stepError instanceof Error ? stepError.message : String(stepError),
+            step
+          });
+          // Continuar com próximos steps mesmo se um falhar
+        }
+      }
+      
+      console.log(`✅ ========== FUNIL ENVIADO COM SUCESSO ==========`);
+      break;
+    }
+    
     default:
       console.warn(`⚠️ Tipo de ação desconhecido: ${action.action_type}`);
   }
