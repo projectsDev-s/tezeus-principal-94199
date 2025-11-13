@@ -106,12 +106,13 @@ serve(async (req) => {
 
     const zapiUrl = provider.zapi_url;
     const zapiToken = provider.zapi_token;
+    const zapiClientToken = provider.zapi_client_token;
 
-    if (!zapiUrl || !zapiToken) {
+    if (!zapiUrl || !zapiToken || !zapiClientToken) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Configuração Z-API incompleta (URL ou token ausente)",
+          error: "Configuração Z-API incompleta (URL, token ou client_token ausente)",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -161,7 +162,9 @@ serve(async (req) => {
 
     const zapiResponse = await fetch(fullUrl, {
       method: "GET",
-      // Não incluir Client-Token - o token da instância já está na URL
+      headers: {
+        "Client-Token": zapiClientToken,
+      },
     });
 
     if (!zapiResponse.ok) {

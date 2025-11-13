@@ -137,6 +137,7 @@ serve(async (req) => {
           evolution_token: providerData.evolution_token,
           zapi_url: providerData.zapi_url,
           zapi_token: providerData.zapi_token,
+          zapi_client_token: providerData.zapi_client_token,
           n8n_webhook_url: providerData.n8n_webhook_url,
           enable_fallback: providerData.enable_fallback || false,
         })
@@ -184,6 +185,7 @@ serve(async (req) => {
       if (providerData.evolution_token !== undefined) updateData.evolution_token = providerData.evolution_token;
       if (providerData.zapi_url !== undefined) updateData.zapi_url = providerData.zapi_url;
       if (providerData.zapi_token !== undefined) updateData.zapi_token = providerData.zapi_token;
+      if (providerData.zapi_client_token !== undefined) updateData.zapi_client_token = providerData.zapi_client_token;
       if (providerData.n8n_webhook_url !== undefined) updateData.n8n_webhook_url = providerData.n8n_webhook_url;
       if (providerData.enable_fallback !== undefined) updateData.enable_fallback = providerData.enable_fallback;
 

@@ -262,7 +262,7 @@ serve(async (req) => {
                 metadata?.result?.instanceId ||
                 metadata?.result?.instance_id
 
-              const integratorToken = provider.zapi_token?.trim()
+              const integratorToken = connection.provider?.zapi_token?.trim()
               const providerConfig = connection.provider
 
               if (!zapiInstanceId) {

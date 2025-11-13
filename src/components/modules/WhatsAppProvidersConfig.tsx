@@ -42,6 +42,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
 
   // Z-API form state (only token, URL is fixed)
   const [zapiToken, setZapiToken] = useState('');
+  const [zapiClientToken, setZapiClientToken] = useState('');
   const [zapiWebhook, setZapiWebhook] = useState('');
   const [zapiFallback, setZapiFallback] = useState(false);
   const [zapiIsActive, setZapiIsActive] = useState(false);
@@ -71,6 +72,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
 
     if (zapiProvider) {
       setZapiToken(zapiProvider.zapi_token || '');
+      setZapiClientToken(zapiProvider.zapi_client_token || '');
       setZapiWebhook(zapiProvider.n8n_webhook_url || '');
       setZapiFallback(zapiProvider.enable_fallback);
       setZapiIsActive(zapiProvider.is_active);
@@ -111,9 +113,10 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
   const handleSaveZapi = async () => {
     // Validar e limpar token
     const cleanedToken = zapiToken?.trim();
+    const cleanedClientToken = zapiClientToken?.trim();
     
-    if (!cleanedToken) {
-      toast.error('Preencha o Token do Z-API');
+    if (!cleanedToken || !cleanedClientToken) {
+      toast.error('Preencha o Token de Integrator e o Client Token do Z-API');
       return;
     }
 
@@ -124,6 +127,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
 
     console.log('💾 Salvando Z-API configuração:');
     console.log('  - Token length:', cleanedToken.length);
+    console.log('  - Client Token length:', cleanedClientToken.length);
     console.log('  - Token preview:', cleanedToken.substring(0, 10) + '...' + cleanedToken.substring(cleanedToken.length - 5));
     console.log('  - URL:', ZAPI_BASE_URL);
 
@@ -135,6 +139,7 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
         provider: 'zapi' as const,
         zapi_url: ZAPI_BASE_URL,
         zapi_token: cleanedToken, // Usar token limpo
+        zapi_client_token: cleanedClientToken, // Adicionar client_token
         n8n_webhook_url: zapiWebhook?.trim() || undefined,
         enable_fallback: zapiFallback,
         is_active: zapiIsActive,
@@ -469,6 +474,22 @@ export function WhatsAppProvidersConfig({ workspaceId, workspaceName }: WhatsApp
                 </div>
                 <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                   ⚠️ IMPORTANTE: Teste o token antes de salvar! Se o teste falhar, o token não é válido.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zapi-client-token" className="text-base font-semibold">
+                  🔐 Client Token *
+                </Label>
+                <Input
+                  id="zapi-client-token"
+                  type="password"
+                  placeholder="Cole aqui o Client Token da sua conta Z-API"
+                  value={zapiClientToken}
+                  onChange={(e) => setZapiClientToken(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Token de autenticação para acessar instâncias individuais
                 </p>
               </div>
 
