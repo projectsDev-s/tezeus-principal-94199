@@ -105,6 +105,22 @@ serve(async (req) => {
         }
 
         console.log(`✅ Automação "${automation.name}" com trigger message_received encontrada`);
+
+        // 🔒 Verificar se já foi executada para este card nesta coluna
+        const { data: existingExecution } = await supabase
+          .from('automation_executions')
+          .select('id')
+          .eq('card_id', card.id)
+          .eq('column_id', card.column_id)
+          .eq('automation_id', automation.id)
+          .eq('trigger_type', 'message_received')
+          .maybeSingle();
+
+        if (existingExecution) {
+          console.log(`🚫 Automação "${automation.name}" já foi executada para este card nesta coluna - pulando`);
+          continue;
+        }
+
         console.log(`🎬 Executando ${actions?.length || 0} ação(ões)...`);
 
         // 4. Executar ações
@@ -115,6 +131,23 @@ serve(async (req) => {
             } catch (actionError) {
               console.error(`❌ Erro ao executar ação:`, actionError);
             }
+          }
+
+          // ✅ Registrar execução após sucesso
+          const { error: execError } = await supabase
+            .from('automation_executions')
+            .insert({
+              card_id: card.id,
+              column_id: card.column_id,
+              automation_id: automation.id,
+              trigger_type: 'message_received',
+              workspace_id: workspaceId
+            });
+
+          if (execError) {
+            console.error(`❌ Erro ao registrar execução:`, execError);
+          } else {
+            console.log(`📝 Execução registrada para automação "${automation.name}"`);
           }
         }
       }
