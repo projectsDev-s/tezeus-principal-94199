@@ -900,11 +900,13 @@ async function executeAutomationAction(
             }
             
             case 'audios': {
-              const { data: audio } = await supabaseClient
+              const { data: audio, error: audioError } = await supabaseClient
                 .from('quick_audios')
                 .select('*')
                 .eq('id', step.item_id)
                 .single();
+              
+              console.log(`🔍 Audio query result:`, { audio, audioError, file_url: audio?.file_url });
               
               if (audio) {
                 messagePayload = {
@@ -922,11 +924,13 @@ async function executeAutomationAction(
             }
             
             case 'midias': {
-              const { data: media } = await supabaseClient
+              const { data: media, error: mediaError } = await supabaseClient
                 .from('quick_media')
                 .select('*')
                 .eq('id', step.item_id)
                 .single();
+              
+              console.log(`🔍 Media query result:`, { media, mediaError, file_url: media?.file_url });
               
               if (media) {
                 // Determinar tipo baseado no file_type ou URL/extensão
@@ -957,11 +961,13 @@ async function executeAutomationAction(
             }
             
             case 'document': {
-              const { data: document } = await supabaseClient
+              const { data: document, error: docError } = await supabaseClient
                 .from('quick_documents')
                 .select('*')
                 .eq('id', step.item_id)
                 .single();
+              
+              console.log(`🔍 Document query result:`, { document, docError, file_url: document?.file_url });
               
               if (document) {
                 messagePayload = {
@@ -988,6 +994,7 @@ async function executeAutomationAction(
           }
           
           console.log(`📦 Enviando mensagem ${i + 1}/${sortedSteps.length}...`);
+          console.log(`📋 Payload completo:`, JSON.stringify(messagePayload, null, 2));
           
           // Enviar mensagem
           const sendResponse = await fetch(sendMessageUrl, {
