@@ -64,22 +64,35 @@ serve(async (req) => {
       );
     }
 
-    // Obter credenciais do metadata
-    const zapiInstanceId = connection.metadata?.id || connection.metadata?.instanceId;
-    const zapiInstanceToken = connection.metadata?.token || connection.metadata?.instanceToken;
+    // Obter ID e token da instância Z-API do metadata
+    const zapiInstanceId = 
+      connection.metadata?.id || 
+      connection.metadata?.instanceId || 
+      connection.metadata?.instance_id;
+    
+    const zapiInstanceToken =
+      connection.metadata?.token ||
+      connection.metadata?.instanceToken ||
+      connection.metadata?.instance_token ||
+      connection.metadata?.accessToken;
+    
     const zapiClientToken = connection.provider.zapi_token;
 
-    console.log("🔑 Credentials check:", {
-      hasInstanceId: !!zapiInstanceId,
-      hasInstanceToken: !!zapiInstanceToken,
+    console.log("🔍 Z-API credentials in metadata:", {
+      hasId: !!zapiInstanceId,
+      hasToken: !!zapiInstanceToken,
       hasClientToken: !!zapiClientToken,
+      idValue: zapiInstanceId,
+      tokenPreview: zapiInstanceToken ? zapiInstanceToken.substring(0, 10) + "..." : "N/A",
+      metadataKeys: Object.keys(connection.metadata || {}),
     });
-
+    
     if (!zapiInstanceId || !zapiInstanceToken || !zapiClientToken) {
+      console.error("❌ Missing Z-API instance credentials in metadata:", connection.metadata);
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Credenciais da instância Z-API não encontradas. Verifique o metadata da conexão.",
+          error: "Credenciais da instância Z-API não encontradas. Recrie a conexão.",
           metadata: connection.metadata,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

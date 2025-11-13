@@ -498,10 +498,23 @@ serve(async (req) => {
       const zapiData = await zapiResponse.json();
       console.log("Z-API response data:", zapiData);
 
+      // Extrair ID e token da resposta da Z-API
+      const zapiInstanceId = zapiData.id;
+      const zapiInstanceToken = zapiData.token;
+
+      console.log("✅ Z-API instance created:", { id: zapiInstanceId, token: zapiInstanceToken?.substring(0, 10) + "..." });
+
       // Atualizar conexão com dados do Z-API
       const updateData: any = {
         status: "disconnected", // Z-API começa desconectado até escanear QR
-        metadata: zapiData,
+        metadata: {
+          id: zapiInstanceId,
+          token: zapiInstanceToken,
+          instanceId: zapiInstanceId, // Alias para compatibilidade
+          instanceToken: zapiInstanceToken, // Alias para compatibilidade
+          created_at: new Date().toISOString(),
+          raw_response: zapiData // Guardar resposta completa para referência
+        },
       };
 
       // Se Z-API retornou QR code
