@@ -156,17 +156,48 @@ serve(async (req) => {
       );
     }
 
-    const zapiResult = await zapiResponse.json();
-    console.log("✅ Z-API QR code response received");
+    // A resposta pode ser JSON ou texto puro (base64)
+    const contentType = zapiResponse.headers.get("content-type");
+    let zapiResult: any;
+    let qrCode: string | null = null;
 
-    // Extrair QR code
-    const qrCode = zapiResult.qrcode || zapiResult.value || zapiResult.code;
+    console.log("✅ Z-API QR code response received, content-type:", contentType);
+
+    try {
+      // Tentar parsear como JSON primeiro
+      zapiResult = await zapiResponse.json();
+      
+      // Extrair QR code de possíveis formatos de resposta
+      qrCode = zapiResult.qrcode || zapiResult.value || zapiResult.code || zapiResult.base64;
+      
+      // Se a resposta inteira for uma string base64, usar ela
+      if (!qrCode && typeof zapiResult === 'string' && zapiResult.startsWith('data:image')) {
+        qrCode = zapiResult;
+      }
+      
+      console.log("📋 Z-API response structure:", Object.keys(zapiResult));
+    } catch (jsonError) {
+      // Se não for JSON, pode ser texto puro (base64 direto)
+      const textResponse = await zapiResponse.text();
+      
+      console.log("📄 Z-API returned text response, length:", textResponse.length);
+      
+      // Se começar com data:image, é um base64 válido
+      if (textResponse.startsWith('data:image')) {
+        qrCode = textResponse;
+      } else if (textResponse.length > 50) {
+        // Assumir que é base64 puro e adicionar prefixo
+        qrCode = `data:image/png;base64,${textResponse}`;
+      }
+      
+      zapiResult = { raw: textResponse };
+    }
 
     if (!qrCode) {
       console.error("❌ No QR code in response:", zapiResult);
       
       // Verificar se já está conectado
-      if (zapiResult.connected || zapiResult.status === "CONNECTED") {
+      if (zapiResult?.connected || zapiResult?.status === "CONNECTED") {
         await supabase
           .from("connections")
           .update({
