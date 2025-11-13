@@ -28,7 +28,8 @@ serve(async (req) => {
       conversationId,
       workspaceId,
       reply_to_message_id,
-      quoted_message
+      quoted_message,
+      external_id
     } = requestBody;
 
     console.log(`📤 [${requestId}] Message sender started:`, { 
@@ -54,6 +55,61 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const sendViaDirectProvider = async (reason: string) => {
+      console.warn(`⚠️ [${requestId}] ${reason} → usando fallback direto (send-whatsapp-message)`);
+
+      const { data: fallbackResult, error: fallbackError } = await supabase.functions.invoke('send-whatsapp-message', {
+        body: {
+          messageId,
+          phoneNumber,
+          content,
+          messageType,
+          fileUrl,
+          fileName,
+          evolutionInstance,
+          external_id,
+          workspaceId: finalWorkspaceId,
+        }
+      });
+
+      if (fallbackError) {
+        console.error(`❌ [${requestId}] Falha ao enviar via fallback send-whatsapp-message:`, fallbackError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Fallback provider send failed',
+          details: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          requestId
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!fallbackResult?.success) {
+        console.error(`❌ [${requestId}] Fallback send-whatsapp-message retornou erro:`, fallbackResult);
+        return new Response(JSON.stringify({
+          success: false,
+          error: fallbackResult?.error || 'Fallback provider send failed',
+          details: fallbackResult?.details,
+          requestId
+        }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`✅ [${requestId}] Mensagem enviada via fallback direto (send-whatsapp-message)`);
+      return new Response(JSON.stringify({
+        success: true,
+        method: 'direct',
+        result: fallbackResult,
+        providerMsgId: fallbackResult?.providerMsgId,
+        requestId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    };
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
@@ -121,16 +177,7 @@ serve(async (req) => {
     });
 
     if (!workspaceWebhookUrl) {
-      console.error(`❌ [${requestId}] N8N webhook not configured for workspace ${finalWorkspaceId}`);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'N8N webhook not configured',
-        details: 'Configure N8N webhook first to send messages',
-        requestId
-      }), {
-        status: 424,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await sendViaDirectProvider(`N8N webhook não configurado para o workspace ${finalWorkspaceId}`);
     }
 
     // ENVIO VIA N8N (ÚNICO MÉTODO PERMITIDO)
@@ -173,32 +220,11 @@ serve(async (req) => {
         });
       } else {
         console.error(`❌ [${requestId}] N8N send failed:`, { error: n8nError, result: n8nResult });
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'N8N sending failed',
-          details: {
-            n8n_error: n8nError,
-            n8n_result: n8nResult
-          },
-          requestId
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return await sendViaDirectProvider('Falha no envio via N8N');
       }
     } catch (n8nException) {
       console.error(`❌ [${requestId}] N8N send exception:`, n8nException);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'N8N exception',
-        details: {
-          exception: n8nException instanceof Error ? n8nException.message : String(n8nException)
-        },
-        requestId
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await sendViaDirectProvider('Exceção ao enviar via N8N');
     }
 
   } catch (error) {
