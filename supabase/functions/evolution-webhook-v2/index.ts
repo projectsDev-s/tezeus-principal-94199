@@ -778,7 +778,7 @@ serve(async (req) => {
                 .select('id')
                 .eq('contact_id', contact.id)
                 .eq('workspace_id', workspaceId)
-                .eq('status', 'active')
+                .eq('status', 'open')
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
