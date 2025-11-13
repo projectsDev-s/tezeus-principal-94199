@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,7 +15,7 @@ export function useContactTags(contactId?: string) {
   const { toast } = useToast();
 
   // Fetch tags already assigned to contact
-  const fetchContactTags = async () => {
+  const fetchContactTags = useCallback(async () => {
     if (!contactId) return;
     
     try {
@@ -34,10 +34,10 @@ export function useContactTags(contactId?: string) {
     } catch (err) {
       console.error('Error fetching contact tags:', err);
     }
-  };
+  }, [contactId]);
 
   // Fetch all available tags
-  const fetchAvailableTags = async () => {
+  const fetchAvailableTags = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('tags')
@@ -49,7 +49,7 @@ export function useContactTags(contactId?: string) {
     } catch (err) {
       console.error('Error fetching available tags:', err);
     }
-  };
+  }, []);
 
   // Add tag to contact
   const addTagToContact = async (tagId: string) => {
@@ -108,11 +108,35 @@ export function useContactTags(contactId?: string) {
 
   useEffect(() => {
     fetchAvailableTags();
-  }, []);
+  }, [fetchAvailableTags]);
 
   useEffect(() => {
     fetchContactTags();
-  }, [contactId]);
+  }, [fetchContactTags]);
+
+  useEffect(() => {
+    if (!contactId) return;
+
+    const channel = supabase
+      .channel(`contact-tags-${contactId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contact_tags',
+          filter: `contact_id=eq.${contactId}`,
+        },
+        () => {
+          fetchContactTags();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [contactId, fetchContactTags]);
 
   return {
     contactTags,
