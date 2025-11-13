@@ -9,6 +9,7 @@ export interface WhatsAppProvider {
   evolution_token?: string;
   zapi_url?: string;
   zapi_token?: string;
+  zapi_client_token?: string;
   n8n_webhook_url?: string;
   enable_fallback: boolean;
   created_at: string;
