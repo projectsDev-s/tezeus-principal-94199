@@ -282,8 +282,8 @@ export class ZapiAdapter implements WhatsAppProvider {
     if (!config.zapi_token) {
       throw new Error('Z-API Token é obrigatório');
     }
-    // Z-API uses a fixed URL for on-demand instance creation
-    this.url = config.zapi_url || 'https://api.z-api.io/instances/integration/on-demand';
+    // Z-API uses a fixed URL for on-demand instance creation (endpoint correto: integrator)
+    this.url = config.zapi_url || 'https://api.z-api.io/instances/integrator/on-demand';
     this.token = config.zapi_token;
   }
 
