@@ -462,9 +462,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           });
         }
       } else {
-        // Try to get QR code immediately after creation
-        console.log('No QR code in response, trying to get one...');
-        connectInstance(connection);
+        // Para Z-API, não buscar QR automaticamente - aguardar ação manual do usuário
+        const isZAPI = selectedProvider === 'zapi';
+        if (!isZAPI) {
+          // Apenas para Evolution, buscar QR automaticamente
+          console.log('No QR code in response, trying to get one...');
+          connectInstance(connection);
+        } else {
+          console.log('Z-API instance created, waiting for manual connection...');
+        }
       }
 
     } catch (error) {

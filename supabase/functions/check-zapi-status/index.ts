@@ -80,9 +80,29 @@ serve(async (req) => {
 
     console.log("✅ Z-API provider validated");
 
-    // Chamar Z-API para obter status
-    const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
-    const fullUrl = `${baseUrl}/status/${connection.instance_name}`;
+    // Obter ID e token da instância Z-API do metadata
+    const zapiInstanceId = connection.metadata?.id || connection.metadata?.instanceId || connection.metadata?.instance_id;
+    const zapiInstanceToken =
+      connection.metadata?.token ||
+      connection.metadata?.instanceToken ||
+      connection.metadata?.instance_token ||
+      connection.metadata?.accessToken;
+    
+    if (!zapiInstanceId || !zapiInstanceToken) {
+      console.error("❌ Missing Z-API instance credentials in metadata:", connection.metadata);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Credenciais da instância Z-API não encontradas no metadata",
+          status: "credentials_missing",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Chamar Z-API para obter status usando o formato correto
+    // Formato: https://api.z-api.io/instances/{instance_id}/token/{instance_token}/status
+    const fullUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiInstanceToken}/status`;
 
     console.log("🔗 Z-API URL:", fullUrl);
     console.log("📊 Fetching instance status...");
