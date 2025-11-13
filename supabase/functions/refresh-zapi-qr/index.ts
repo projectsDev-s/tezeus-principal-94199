@@ -153,9 +153,19 @@ serve(async (req) => {
 
     // PASSO 1: Reiniciar a instância (necessário para gerar novo QR code)
     console.log("🔄 Step 1: Restarting Z-API instance before generating QR code...");
-    const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
+    
+    // ✅ CORREÇÃO: Usar apenas a base URL da Z-API (sem /instances/integrator/on-demand)
+    // O zapiUrl pode vir com caminho completo, então vamos extrair apenas a base
+    let baseUrl = zapiUrl;
+    if (zapiUrl.includes('/instances/integrator')) {
+      // Se contém o caminho do endpoint de criação, extrair apenas a base
+      baseUrl = zapiUrl.split('/instances/integrator')[0];
+    }
+    baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    
     const restartUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/restart`;
     
+    console.log("🔗 Base URL:", baseUrl);
     console.log("🔗 Restart URL:", restartUrl);
 
     const restartResponse = await fetch(restartUrl, {
