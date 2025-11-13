@@ -103,7 +103,29 @@ serve(async (req) => {
       );
     }
 
-    console.log("✅ Z-API provider validated");
+    // Obter ID e token da instância do metadata da conexão
+    const zapiInstanceId = 
+      connection.metadata?.id || 
+      connection.metadata?.instanceId || 
+      connection.metadata?.instance_id;
+    
+    const zapiInstanceToken =
+      connection.metadata?.token ||
+      connection.metadata?.instanceToken ||
+      connection.metadata?.instance_token;
+
+    if (!zapiInstanceId || !zapiInstanceToken) {
+      console.error("❌ Missing Z-API instance credentials in metadata");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Credenciais da instância Z-API não encontradas no metadata",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ Z-API provider and instance validated");
 
     // Formatar número de telefone para Z-API
     const formattedPhone = phoneNumber.replace(/[^0-9]/g, "");
@@ -195,9 +217,15 @@ serve(async (req) => {
     console.log(`📤 Sending ${messageType} via Z-API to ${formattedPhone}`);
     console.log("📦 Z-API Payload:", JSON.stringify(zapiPayload, null, 2));
 
-    // Enviar mensagem via Z-API
-    const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
-    const fullUrl = `${baseUrl}${endpoint}`;
+    // Enviar mensagem via Z-API usando formato correto com token na URL
+    // Formato: https://api.z-api.io/instances/{id}/token/{token}/send-text
+    let baseUrl = zapiUrl;
+    if (zapiUrl.includes('/instances/integrator')) {
+      baseUrl = zapiUrl.split('/instances/integrator')[0];
+    }
+    baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    
+    const fullUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}${endpoint}`;
 
     console.log("🔗 Z-API URL:", fullUrl);
 
@@ -205,7 +233,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Client-Token": zapiToken,
+        // Sem Client-Token - o token já está na URL
       },
       body: JSON.stringify(zapiPayload),
     });

@@ -102,15 +102,14 @@ serve(async (req) => {
     }
 
     // URL correta da Z-API para obter status
+    // ✅ IMPORTANTE: Token já está na URL, não precisa de Client-Token no header
     const statusUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiInstanceToken}/status`;
 
     console.log("🔗 Requesting status from:", statusUrl);
 
     const zapiResponse = await fetch(statusUrl, {
       method: "GET",
-      headers: {
-        "Client-Token": zapiClientToken,
-      },
+      // Sem headers de autenticação - o token já está na URL
     });
 
     console.log("📊 Z-API Response status:", zapiResponse.status);
