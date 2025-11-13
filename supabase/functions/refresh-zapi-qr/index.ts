@@ -113,10 +113,14 @@ serve(async (req) => {
 
     console.log("🔗 Z-API URL:", fullUrl);
     console.log("📱 Z-API Instance ID:", zapiInstanceId);
+    console.log("🔑 Using integrator Client-Token for authentication");
     console.log("📱 Requesting new QR code...");
 
     const zapiResponse = await fetch(fullUrl, {
       method: "GET",
+      headers: {
+        "Client-Token": zapiToken, // Token do integrador/provider
+      },
     });
 
     if (!zapiResponse.ok) {
