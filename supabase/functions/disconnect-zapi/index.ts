@@ -80,15 +80,37 @@ serve(async (req) => {
 
     console.log("✅ Z-API provider validated");
 
-    // Chamar Z-API para fazer logout
+    // Extrair ID e token da instância do metadata
+    const zapiInstanceId = 
+      connection.metadata?.id || 
+      connection.metadata?.instanceId || 
+      connection.metadata?.instance_id;
+    
+    const zapiInstanceToken =
+      connection.metadata?.token ||
+      connection.metadata?.instanceToken ||
+      connection.metadata?.instance_token;
+
+    if (!zapiInstanceId || !zapiInstanceToken) {
+      console.error("❌ Missing Z-API instance credentials in metadata");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Credenciais da instância Z-API não encontradas no metadata",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Chamar Z-API para fazer disconnect (endpoint correto)
     const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
-    const fullUrl = `${baseUrl}/logout/${connection.instance_name}`;
+    const fullUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/disconnect`;
 
     console.log("🔗 Z-API URL:", fullUrl);
-    console.log("📱 Logging out instance...");
+    console.log("📱 Disconnecting instance...");
 
     const zapiResponse = await fetch(fullUrl, {
-      method: "DELETE",
+      method: "GET",
       headers: {
         "Client-Token": zapiToken,
       },

@@ -151,16 +151,46 @@ serve(async (req) => {
       );
     }
 
-    // URL correta da Z-API para obter QR code
-    // Formato: https://api.z-api.io/instances/{instance_id}/token/{instance_token}/qr-code/image
-    // O token da instância JÁ está na URL, não precisa de header adicional
-    const fullUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiInstanceToken}/qr-code/image`;
+    // PASSO 1: Reiniciar a instância (necessário para gerar novo QR code)
+    console.log("🔄 Step 1: Restarting Z-API instance before generating QR code...");
+    const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
+    const restartUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/restart`;
+    
+    console.log("🔗 Restart URL:", restartUrl);
 
-    console.log("🔗 Z-API URL:", fullUrl);
+    const restartResponse = await fetch(restartUrl, {
+      method: "GET",
+      headers: {
+        "Client-Token": zapiClientToken,
+      },
+    });
+
+    if (!restartResponse.ok) {
+      const restartError = await restartResponse.text();
+      console.error("❌ Failed to restart Z-API instance:", restartError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Erro ao reiniciar instância Z-API: ${restartError}`,
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("✅ Instance restarted successfully");
+
+    // Aguardar um momento para a instância reiniciar
+    console.log("⏳ Waiting 2 seconds for instance to restart...");
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // PASSO 2: Buscar o QR code
+    console.log("🔄 Step 2: Fetching new QR code...");
+    const qrCodeUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/qr-code/image`;
+
+    console.log("🔗 QR Code URL:", qrCodeUrl);
     console.log("📱 Z-API Instance ID:", zapiInstanceId);
-    console.log("📱 Requesting new QR code...");
 
-    const zapiResponse = await fetch(fullUrl, {
+    const zapiResponse = await fetch(qrCodeUrl, {
       method: "GET",
       headers: {
         "Client-Token": zapiClientToken,
