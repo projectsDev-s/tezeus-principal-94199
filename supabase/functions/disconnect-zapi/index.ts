@@ -118,7 +118,9 @@ serve(async (req) => {
 
     const zapiResponse = await fetch(fullUrl, {
       method: "GET",
-      // Sem headers de autenticação - o token já está na URL
+      headers: {
+        "Client-Token": zapiToken,
+      },
     });
 
     if (!zapiResponse.ok) {
