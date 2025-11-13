@@ -109,18 +109,16 @@ serve(async (req) => {
 
     // URL correta da Z-API para obter QR code
     // Formato: https://api.z-api.io/instances/{instance_id}/token/{instance_token}/qr-code/image
+    // O token da instância JÁ está na URL, não precisa de header adicional
     const fullUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiInstanceToken}/qr-code/image`;
 
     console.log("🔗 Z-API URL:", fullUrl);
     console.log("📱 Z-API Instance ID:", zapiInstanceId);
-    console.log("🔑 Using integrator Client-Token for authentication");
     console.log("📱 Requesting new QR code...");
 
     const zapiResponse = await fetch(fullUrl, {
       method: "GET",
-      headers: {
-        "Client-Token": zapiToken, // Token do integrador/provider
-      },
+      // Não incluir Client-Token - o token da instância já está na URL
     });
 
     if (!zapiResponse.ok) {
