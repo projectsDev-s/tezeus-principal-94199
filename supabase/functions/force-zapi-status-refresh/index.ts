@@ -109,7 +109,9 @@ serve(async (req) => {
 
     const zapiResponse = await fetch(statusUrl, {
       method: "GET",
-      // Token já está na URL - não precisa de headers adicionais
+      headers: {
+        "Client-Token": zapiClientToken, // ✅ Token de CLIENTE para operar instância
+      },
     });
 
     console.log("📊 Z-API Response status:", zapiResponse.status);
