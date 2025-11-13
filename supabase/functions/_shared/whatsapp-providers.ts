@@ -289,13 +289,13 @@ export class ZapiAdapter implements WhatsAppProvider {
 
   async testConnection(): Promise<TestResult> {
     try {
-      console.log('🔍 [Z-API] Testando conexão com Bearer Token');
+      console.log('🔍 [Z-API] Testando conexão com Client-Token');
       
-      // Z-API test endpoint - uses Bearer authentication
+      // Z-API test endpoint - uses Client-Token authentication
       const response = await fetch(`${this.url}/ping`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
+          'Client-Token': this.token,
           'Content-Type': 'application/json',
         },
       });
@@ -305,7 +305,7 @@ export class ZapiAdapter implements WhatsAppProvider {
         console.error('❌ [Z-API] Resposta de erro:', response.status, errorText);
         return { 
           ok: false, 
-          message: `Erro HTTP ${response.status}. Verifique se o Bearer Token está correto.` 
+          message: `Erro HTTP ${response.status}. Verifique se o Client-Token está correto.` 
         };
       }
 
@@ -321,7 +321,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       console.error('❌ [Z-API] Erro na conexão:', message);
       return { 
         ok: false, 
-        message: `Erro: ${message}. Verifique o Bearer Token.` 
+        message: `Erro: ${message}. Verifique o Client-Token.` 
       };
     }
   }
@@ -333,7 +333,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(`${this.url}/send-text`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
+          'Client-Token': this.token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -375,7 +375,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
+          'Client-Token': this.token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -417,7 +417,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(this.url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
+          'Client-Token': this.token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),

@@ -397,7 +397,7 @@ serve(async (req) => {
       console.log(JSON.stringify({
         endpoint: `POST ${fullUrl}`,
         headers: {
-          "Authorization": `Bearer ${cleanToken.substring(0, 15)}...${cleanToken.substring(cleanToken.length - 5)}`,
+          "Client-Token": `${cleanToken.substring(0, 15)}...${cleanToken.substring(cleanToken.length - 5)}`,
           "Content-Type": "application/json"
         },
         body: zapiPayload
@@ -412,12 +412,12 @@ serve(async (req) => {
 
         const headers = {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${cleanToken}`,
+          "Client-Token": cleanToken,
         };
         
         console.log("📤 Request headers (sem token completo):", {
           "Content-Type": headers["Content-Type"],
-          "Authorization": `Bearer ${cleanToken.substring(0, 20)}...`
+          "Client-Token": `${cleanToken.substring(0, 20)}...`
         });
 
         zapiResponse = await fetch(fullUrl, {
