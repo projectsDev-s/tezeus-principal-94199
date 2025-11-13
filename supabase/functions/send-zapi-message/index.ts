@@ -233,7 +233,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Sem Client-Token - o token já está na URL
+        "Client-Token": zapiToken,
       },
       body: JSON.stringify(zapiPayload),
     });
