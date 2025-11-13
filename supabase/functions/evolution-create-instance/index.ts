@@ -410,18 +410,16 @@ serve(async (req) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        // ⚠️ IMPORTANTE: Z-API endpoint /integrator/on-demand usa "Authorization: Bearer {token}"
-        // enquanto outros endpoints usam "Client-Token"
+        // ✅ Endpoint de criação /integrator/on-demand usa APENAS "Authorization: Bearer {token}"
+        // (Token de Integrador/Parceiro - não precisa de Client-Token aqui)
         const headers = {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${cleanToken}`,
-          "Client-Token": cleanToken, // Enviar ambos para garantir
         };
         
         console.log("📤 Request headers sendo enviados:", {
           "Content-Type": headers["Content-Type"],
-          "Authorization": `Bearer ${cleanToken.substring(0, 20)}...`,
-          "Client-Token": `${cleanToken.substring(0, 20)}...`
+          "Authorization": `Bearer ${cleanToken.substring(0, 20)}...`
         });
 
         zapiResponse = await fetch(fullUrl, {
