@@ -496,32 +496,64 @@ serve(async (req) => {
       }
 
       const zapiData = await zapiResponse.json();
-      console.log("Z-API response data:", zapiData);
+      console.log("📦 Z-API response data (full):", JSON.stringify(zapiData, null, 2));
 
       // Extrair ID e token da resposta da Z-API
       const zapiInstanceId = zapiData.id;
       const zapiInstanceToken = zapiData.token;
 
-      console.log("✅ Z-API instance created:", { id: zapiInstanceId, token: zapiInstanceToken?.substring(0, 10) + "..." });
+      console.log("🔍 Extracted Z-API credentials:", {
+        id: zapiInstanceId,
+        hasId: !!zapiInstanceId,
+        token: zapiInstanceToken ? zapiInstanceToken.substring(0, 10) + "..." : "MISSING",
+        hasToken: !!zapiInstanceToken,
+        allKeys: Object.keys(zapiData)
+      });
+
+      // VALIDAÇÃO CRÍTICA: Verificar se Z-API retornou os dados necessários
+      if (!zapiInstanceId || !zapiInstanceToken) {
+        console.error("❌ Z-API não retornou id ou token!");
+        console.error("Resposta completa da Z-API:", zapiData);
+        
+        await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
+        await supabase.from("connections").delete().eq("id", connectionData.id);
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Z-API não retornou as credenciais da instância (id e token). Resposta recebida: " + JSON.stringify(zapiData),
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("✅ Z-API instance created with valid credentials");
 
       // Atualizar conexão com dados do Z-API
+      const metadata = {
+        id: zapiInstanceId,
+        token: zapiInstanceToken,
+        instanceId: zapiInstanceId, // Alias para compatibilidade
+        instanceToken: zapiInstanceToken, // Alias para compatibilidade
+        created_at: new Date().toISOString(),
+        raw_response: zapiData // Guardar resposta completa para referência
+      };
+
+      console.log("💾 Metadata to save:", JSON.stringify(metadata, null, 2));
+
       const updateData: any = {
         status: "disconnected", // Z-API começa desconectado até escanear QR
-        metadata: {
-          id: zapiInstanceId,
-          token: zapiInstanceToken,
-          instanceId: zapiInstanceId, // Alias para compatibilidade
-          instanceToken: zapiInstanceToken, // Alias para compatibilidade
-          created_at: new Date().toISOString(),
-          raw_response: zapiData // Guardar resposta completa para referência
-        },
+        metadata: metadata,
       };
 
       // Se Z-API retornou QR code
       if (zapiData.qrcode) {
+        console.log("📱 QR code found in response");
         updateData.qr_code = zapiData.qrcode;
         updateData.status = "qr";
       }
+
+      console.log("🔄 Updating connection with:", JSON.stringify(updateData, null, 2));
 
       const { error: updateError } = await supabase
         .from("connections")
@@ -529,7 +561,18 @@ serve(async (req) => {
         .eq("id", connectionData.id);
 
       if (updateError) {
-        console.error("Error updating connection for Z-API:", updateError);
+        console.error("❌ Error updating connection for Z-API:", updateError);
+        
+        await supabase.from("connection_secrets").delete().eq("connection_id", connectionData.id);
+        await supabase.from("connections").delete().eq("id", connectionData.id);
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Erro ao salvar dados da conexão: " + updateError.message,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       console.log("✅ Z-API instance created successfully");
