@@ -92,21 +92,24 @@ serve(async (req) => {
       );
     }
 
-    // Obter ID da instância Z-API do metadata
+    // Obter ID e token da instância Z-API do metadata
     const zapiInstanceId = connection.metadata?.id;
-    if (!zapiInstanceId) {
+    const zapiInstanceToken = connection.metadata?.token;
+    
+    if (!zapiInstanceId || !zapiInstanceToken) {
+      console.error("❌ Missing Z-API instance credentials in metadata:", connection.metadata);
       return new Response(
         JSON.stringify({
           success: false,
-          error: "ID da instância Z-API não encontrado. Recrie a conexão.",
+          error: "Credenciais da instância Z-API não encontradas. Recrie a conexão.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Chamar Z-API para obter novo QR code
-    const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
-    const fullUrl = `${baseUrl}/${zapiInstanceId}/qr-code/image`;
+    // URL correta da Z-API para obter QR code
+    // Formato: https://api.z-api.io/instances/{instance_id}/token/{instance_token}/qr-code/image
+    const fullUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiInstanceToken}/qr-code/image`;
 
     console.log("🔗 Z-API URL:", fullUrl);
     console.log("📱 Z-API Instance ID:", zapiInstanceId);
@@ -114,9 +117,6 @@ serve(async (req) => {
 
     const zapiResponse = await fetch(fullUrl, {
       method: "GET",
-      headers: {
-        "Client-Token": zapiToken,
-      },
     });
 
     if (!zapiResponse.ok) {
