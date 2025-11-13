@@ -92,11 +92,24 @@ serve(async (req) => {
       );
     }
 
+    // Obter ID da instância Z-API do metadata
+    const zapiInstanceId = connection.metadata?.id;
+    if (!zapiInstanceId) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "ID da instância Z-API não encontrado. Recrie a conexão.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Chamar Z-API para obter novo QR code
     const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
-    const fullUrl = `${baseUrl}/qr-code/${connection.instance_name}`;
+    const fullUrl = `${baseUrl}/${zapiInstanceId}/qr-code/image`;
 
     console.log("🔗 Z-API URL:", fullUrl);
+    console.log("📱 Z-API Instance ID:", zapiInstanceId);
     console.log("📱 Requesting new QR code...");
 
     const zapiResponse = await fetch(fullUrl, {

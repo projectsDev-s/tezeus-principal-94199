@@ -269,7 +269,23 @@ class EvolutionProvider {
   }
 
   async getQRCode(connectionId: string): Promise<{ qr_code: string }> {
-    const { data } = await supabase.functions.invoke('evolution-refresh-qr', {
+    // Primeiro, buscar a conexão para verificar o provider
+    const { data: connection, error: connError } = await supabase
+      .from('connections')
+      .select('provider_id, whatsapp_providers(provider)')
+      .eq('id', connectionId)
+      .single();
+
+    if (connError || !connection) {
+      throw new Error('Conexão não encontrada');
+    }
+
+    const provider = connection.whatsapp_providers?.provider;
+    const functionName = provider === 'zapi' ? 'refresh-zapi-qr' : 'evolution-refresh-qr';
+    
+    console.log(`📱 Getting QR code using ${functionName} for ${provider} provider`);
+
+    const { data } = await supabase.functions.invoke(functionName, {
       body: { connectionId }
     });
     
