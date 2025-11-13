@@ -37,15 +37,23 @@ serve(async (req) => {
       );
     }
 
-    // Buscar conexão com provider
+    // Buscar conexão
     const { data: connection, error: connError } = await supabase
       .from("connections")
-      .select("*, provider:whatsapp_providers(*)")
+      .select("id, instance_name, status, metadata, provider_id, workspace_id, connection_secrets(token)")
       .eq("id", connectionId)
       .maybeSingle();
 
-    if (connError || !connection) {
-      console.error("❌ Connection not found:", connError);
+    if (connError) {
+      console.error("❌ Error fetching connection:", connError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Conexão não encontrada" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!connection) {
+      console.error("❌ Connection not found for id:", connectionId);
       return new Response(
         JSON.stringify({ success: false, error: "Conexão não encontrada" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -54,8 +62,39 @@ serve(async (req) => {
 
     console.log(`✅ Connection found: ${connection.instance_name}`);
 
+    // Buscar provider associado
+    let provider = null;
+    if (connection.provider_id) {
+      const { data: providerData, error: providerError } = await supabase
+        .from("whatsapp_providers")
+        .select("*")
+        .eq("id", connection.provider_id)
+        .maybeSingle();
+
+      if (providerError) {
+        console.error("❌ Error fetching provider:", providerError);
+      } else {
+        provider = providerData;
+      }
+    } else {
+      // Fallback: tentar localizar provider ativo para esta conexão
+      const { data: providers, error: providersError } = await supabase
+        .from("whatsapp_providers")
+        .select("*")
+        .eq("workspace_id", connection.workspace_id)
+        .eq("provider", "zapi")
+        .order("updated_at", { ascending: false });
+
+      if (providersError) {
+        console.error("❌ Error fetching fallback providers:", providersError);
+      } else if (providers && providers.length > 0) {
+        provider = providers[0];
+        console.log("ℹ️ Using fallback Z-API provider for workspace:", provider.id);
+      }
+    }
+
     // Verificar se é Z-API
-    if (!connection.provider || connection.provider.provider !== "zapi") {
+    if (!provider || provider.provider !== "zapi") {
       return new Response(
         JSON.stringify({
           success: false,
@@ -65,8 +104,8 @@ serve(async (req) => {
       );
     }
 
-    const zapiUrl = connection.provider.zapi_url;
-    const zapiToken = connection.provider.zapi_token;
+    const zapiUrl = provider.zapi_url;
+    const zapiToken = provider.zapi_token;
 
     if (!zapiUrl || !zapiToken) {
       return new Response(
@@ -93,8 +132,12 @@ serve(async (req) => {
     }
 
     // Obter ID e token da instância Z-API do metadata
-    const zapiInstanceId = connection.metadata?.id;
-    const zapiInstanceToken = connection.metadata?.token;
+    const zapiInstanceId = connection.metadata?.id || connection.metadata?.instanceId || connection.metadata?.instance_id;
+    const zapiInstanceToken =
+      connection.metadata?.token ||
+      connection.metadata?.instanceToken ||
+      connection.metadata?.instance_token ||
+      connection.metadata?.accessToken;
     
     if (!zapiInstanceId || !zapiInstanceToken) {
       console.error("❌ Missing Z-API instance credentials in metadata:", connection.metadata);

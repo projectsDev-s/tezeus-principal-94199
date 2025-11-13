@@ -119,7 +119,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Get connection details
-    let query = supabase.from('connections').select('*')
+    let query = supabase.from('connections').select('*, provider:whatsapp_providers(*)')
     
     if (connectionId) {
       query = query.eq('id', connectionId)
@@ -235,25 +235,95 @@ serve(async (req) => {
         console.log(`🗑️ Deleting instance: ${connection.instance_name}`)
         
         try {
-          // Try to delete from Evolution API first (but don't fail if it doesn't work)
-          try {
+          const isZapiProvider = connection.provider?.provider === 'zapi'
+          let externalDeleteStatus: { ok: boolean; status: number; message?: string } | null = null
+          
+          if (isZapiProvider) {
+            console.log('🗑️ Z-API provider detected. Cancelling instance via Z-API integrator endpoint.')
+            try {
+              let metadata: any = connection.metadata || {}
+              if (typeof metadata === 'string') {
+                try {
+                  metadata = JSON.parse(metadata)
+                } catch (parseError) {
+                  console.warn('⚠️ Unable to parse connection metadata string:', parseError)
+                  metadata = {}
+                }
+              }
+
+              const zapiInstanceId =
+                metadata?.id ||
+                metadata?.instanceId ||
+                metadata?.instance_id ||
+                metadata?.instance?.id ||
+                metadata?.instance?.instanceId ||
+                metadata?.instance?.instance_id ||
+                metadata?.result?.id ||
+                metadata?.result?.instanceId ||
+                metadata?.result?.instance_id
+
+              const integratorToken = provider.zapi_token?.trim()
+              const providerConfig = connection.provider
+
+              if (!zapiInstanceId) {
+                console.warn('⚠️ Z-API metadata missing instance ID. Skipping remote cancellation.', { metadata })
+              } else if (!integratorToken) {
+                console.warn('⚠️ Z-API provider token missing. Skipping remote cancellation.')
+              } else {
+                let baseUrl = providerConfig?.zapi_url?.trim() || 'https://api.z-api.io'
+                const instancesIndex = baseUrl.toLowerCase().indexOf('/instances')
+                if (instancesIndex !== -1) {
+                  baseUrl = baseUrl.slice(0, instancesIndex)
+                }
+                baseUrl = baseUrl.replace(/\/$/, '')
+
+                const cancelUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${integratorToken}/integrator/on-demand/cancel`
+                console.log('🔗 Z-API cancel URL:', cancelUrl)
+
+                const cancelResponse = await fetch(cancelUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                })
+
+                externalDeleteStatus = {
+                  ok: cancelResponse.ok || cancelResponse.status === 404,
+                  status: cancelResponse.status
+                }
+
+                if (cancelResponse.ok) {
+                  console.log('✅ Z-API instance cancelled successfully')
+                } else if (cancelResponse.status === 404) {
+                  console.log('⚠️ Z-API instance already cancelled or not found (treating as success)')
+                } else {
+                  const cancelText = await cancelResponse.text().catch(() => 'Unknown error')
+                  console.warn(`⚠️ Z-API cancellation returned status ${cancelResponse.status}:`, cancelText.substring(0, 200))
+                  externalDeleteStatus.message = cancelText
+                }
+              }
+            } catch (zapiError) {
+              console.error('❌ Error cancelling Z-API instance (non-blocking):', zapiError)
+            }
+          } else {
+            // Try to delete from Evolution API first (but don't fail if it doesn't work)
+            try {
             response = await fetch(`${evolutionConfig.url}/instance/delete/${connection.instance_name}`, {
               method: 'DELETE',
               headers: { 'apikey': evolutionConfig.apiKey }
             })
-            
-            console.log(`📡 Evolution API delete response status: ${response.status}`)
-            
-            if (response.ok || response.status === 404) {
-              console.log('✅ Evolution API deletion successful')
-            } else {
-              const errorText = await response.text().catch(() => 'Unknown error')
-              console.warn(`⚠️ Evolution API deletion returned status ${response.status}:`, errorText.substring(0, 200))
+              
+              console.log(`📡 Evolution API delete response status: ${response.status}`)
+              
+              if (response.ok || response.status === 404) {
+                console.log('✅ Evolution API deletion successful')
+              } else {
+                const errorText = await response.text().catch(() => 'Unknown error')
+                console.warn(`⚠️ Evolution API deletion returned status ${response.status}:`, errorText.substring(0, 200))
+                // Continue with database deletion anyway
+              }
+            } catch (evolutionError) {
+              console.warn('⚠️ Error calling Evolution API for deletion (non-blocking):', evolutionError)
               // Continue with database deletion anyway
             }
-          } catch (evolutionError) {
-            console.warn('⚠️ Error calling Evolution API for deletion (non-blocking):', evolutionError)
-            // Continue with database deletion anyway
           }
 
           // Always proceed with database deletion, even if Evolution API failed
@@ -279,17 +349,17 @@ serve(async (req) => {
           // Delete messages first (they reference conversations) - only if there are conversations
           if (conversationIds.length > 0) {
             console.log('🗑️ Deleting messages...')
-            const { error: messagesError } = await supabase
-              .from('messages')
-              .delete()
-              .in('conversation_id', conversationIds)
-            
-            if (messagesError) {
-              console.error('❌ Error deleting messages:', messagesError)
-              throw new Error(`Failed to delete messages: ${messagesError.message}`)
-            } else {
-              console.log('✅ Messages deleted successfully')
-            }
+          const { error: messagesError } = await supabase
+            .from('messages')
+            .delete()
+            .in('conversation_id', conversationIds)
+          
+          if (messagesError) {
+            console.error('❌ Error deleting messages:', messagesError)
+            throw new Error(`Failed to delete messages: ${messagesError.message}`)
+          } else {
+            console.log('✅ Messages deleted successfully')
+          }
 
             // 2. Delete conversation assignments
             console.log('🗑️ Deleting conversation assignments...')
