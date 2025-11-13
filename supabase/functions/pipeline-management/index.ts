@@ -911,8 +911,8 @@ async function executeAutomationAction(
                   conversation_id: conversationId,
                   content: '',
                   message_type: 'audio',
-                  file_url: audio.audio_url,
-                  file_name: audio.title || 'audio.mp3',
+                  file_url: audio.file_url,
+                  file_name: audio.file_name || audio.title || 'audio.mp3',
                   sender_type: 'system',
                   sender_id: null,
                   clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
@@ -929,10 +929,14 @@ async function executeAutomationAction(
                 .single();
               
               if (media) {
-                // Determinar tipo baseado na URL/extensão
+                // Determinar tipo baseado no file_type ou URL/extensão
                 let mediaType = 'image';
-                if (media.media_url) {
-                  const url = media.media_url.toLowerCase();
+                if (media.file_type) {
+                  if (media.file_type.startsWith('video/')) {
+                    mediaType = 'video';
+                  }
+                } else if (media.file_url) {
+                  const url = media.file_url.toLowerCase();
                   if (url.includes('.mp4') || url.includes('.mov') || url.includes('.avi')) {
                     mediaType = 'video';
                   }
@@ -940,10 +944,10 @@ async function executeAutomationAction(
                 
                 messagePayload = {
                   conversation_id: conversationId,
-                  content: media.caption || '',
+                  content: media.title || '',
                   message_type: mediaType,
-                  file_url: media.media_url,
-                  file_name: media.title || `media.${mediaType === 'video' ? 'mp4' : 'jpg'}`,
+                  file_url: media.file_url,
+                  file_name: media.file_name || media.title || `media.${mediaType === 'video' ? 'mp4' : 'jpg'}`,
                   sender_type: 'system',
                   sender_id: null,
                   clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
@@ -962,10 +966,10 @@ async function executeAutomationAction(
               if (document) {
                 messagePayload = {
                   conversation_id: conversationId,
-                  content: document.description || '',
+                  content: document.title || '',
                   message_type: 'document',
-                  file_url: document.document_url,
-                  file_name: document.title || 'document.pdf',
+                  file_url: document.file_url,
+                  file_name: document.file_name || document.title || 'document.pdf',
                   sender_type: 'system',
                   sender_id: null,
                   clientMessageId: `funnel_${funnelId}_step_${i}_${Date.now()}`
