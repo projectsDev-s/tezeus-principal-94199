@@ -1379,21 +1379,134 @@ serve(async (req) => {
           try {
             const body = await req.json();
             console.log('📝 Creating card with data:', body);
-            
+
+            let resolvedConversationId = body.conversation_id || null;
+            let resolvedWorkspaceId: string | null = null;
+
+            // Descobrir workspace do pipeline (caso precise criar conversa)
+            if (body.pipeline_id) {
+              const { data: pipelineRow, error: pipelineError } = await supabaseClient
+                .from('pipelines')
+                .select('workspace_id')
+                .eq('id', body.pipeline_id)
+                .maybeSingle();
+
+              if (pipelineError) {
+                console.error('❌ Erro ao buscar pipeline para criação de card:', pipelineError);
+              } else if (pipelineRow?.workspace_id) {
+                resolvedWorkspaceId = pipelineRow.workspace_id;
+              }
+            }
+
+            // Se não veio conversation_id mas temos contact_id, tentar reutilizar ou criar conversa
+            if (!resolvedConversationId && body.contact_id) {
+              console.log('🔍 Card sem conversation_id informado. Tentando resolver automaticamente...');
+
+              const { data: contactRow, error: contactError } = await supabaseClient
+                .from('contacts')
+                .select('id, phone, workspace_id, name')
+                .eq('id', body.contact_id)
+                .maybeSingle();
+
+              if (contactError || !contactRow) {
+                console.error('❌ Não foi possível buscar o contato para criação da conversa:', contactError);
+              } else {
+                const effectiveWorkspaceId = contactRow.workspace_id || resolvedWorkspaceId;
+                resolvedWorkspaceId = effectiveWorkspaceId || resolvedWorkspaceId;
+
+                if (!effectiveWorkspaceId) {
+                  console.warn('⚠️ Workspace do contato/pipeline não encontrado. Não será possível criar conversa automaticamente.');
+                } else {
+                  const normalizedPhone = contactRow.phone?.replace(/\D/g, '') || null;
+
+                  if (!normalizedPhone) {
+                    console.warn('⚠️ Contato não possui telefone. Não é possível criar conversa automaticamente.');
+                  } else {
+                    // Procurar conversa aberta existente
+                    const { data: existingConversation, error: existingConversationError } = await supabaseClient
+                      .from('conversations')
+                      .select('id, connection_id')
+                      .eq('contact_id', contactRow.id)
+                      .eq('workspace_id', effectiveWorkspaceId)
+                      .eq('status', 'open')
+                      .maybeSingle();
+
+                    if (existingConversationError) {
+                      console.error('❌ Erro ao buscar conversa existente:', existingConversationError);
+                    } else if (existingConversation?.id) {
+                      resolvedConversationId = existingConversation.id;
+                      console.log(`✅ Conversa existente reutilizada: ${resolvedConversationId}`);
+                    } else {
+                      console.log('📡 Nenhuma conversa aberta encontrada. Criando nova conversa automaticamente...');
+
+                      // Buscar conexão padrão/ativa para associar à conversa
+                      const { data: defaultConnection, error: connectionError } = await supabaseClient
+                        .from('connections')
+                        .select('id, instance_name')
+                        .eq('workspace_id', effectiveWorkspaceId)
+                        .eq('status', 'connected')
+                        .order('is_default', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+
+                      if (connectionError) {
+                        console.error('❌ Erro ao buscar conexão padrão:', connectionError);
+                      }
+
+                      const conversationPayload: Record<string, any> = {
+                        contact_id: contactRow.id,
+                        workspace_id: effectiveWorkspaceId,
+                        status: 'open',
+                        canal: 'whatsapp',
+                        agente_ativo: false,
+                        connection_id: defaultConnection?.id || null,
+                        evolution_instance: defaultConnection?.instance_name || null,
+                      };
+
+                      const { data: newConversation, error: conversationError } = await supabaseClient
+                        .from('conversations')
+                        .insert(conversationPayload)
+                        .select('id')
+                        .single();
+
+                      if (conversationError || !newConversation?.id) {
+                        console.error('❌ Erro ao criar conversa automaticamente:', conversationError);
+                      } else {
+                        resolvedConversationId = newConversation.id;
+                        console.log(`✅ Conversa criada automaticamente: ${resolvedConversationId}`);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            if (!resolvedConversationId) {
+              console.error('❌ Não foi possível resolver conversation_id para o card. Cancelando criação.');
+              return new Response(
+                JSON.stringify({
+                  error: 'Não foi possível vincular o card a uma conversa. Verifique se o contato possui telefone válido e se há uma conexão WhatsApp ativa.',
+                }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+              );
+            }
+
+            const insertPayload = {
+              pipeline_id: body.pipeline_id,
+              column_id: body.column_id,
+              conversation_id: resolvedConversationId,
+              contact_id: body.contact_id,
+              title: body.title,
+              description: body.description,
+              value: body.value || 0,
+              status: body.status || 'aberto',
+              tags: body.tags || [],
+              responsible_user_id: body.responsible_user_id,
+            };
+
             const { data: card, error } = await supabaseClient
               .from('pipeline_cards')
-              .insert({
-                pipeline_id: body.pipeline_id,
-                column_id: body.column_id,
-                conversation_id: body.conversation_id,
-                contact_id: body.contact_id,
-                title: body.title,
-                description: body.description,
-                value: body.value || 0,
-                status: body.status || 'aberto',
-                tags: body.tags || [],
-                responsible_user_id: body.responsible_user_id,
-              } as any)
+              .insert(insertPayload as any)
               .select(`
                 *,
                 contact:contacts(
