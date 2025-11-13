@@ -52,6 +52,8 @@ serve(async (req) => {
     }
 
     console.log(`✅ Connection found: ${connection.instance_name}`);
+    console.log("📦 Connection metadata (full):", JSON.stringify(connection.metadata, null, 2));
+    console.log("📦 Connection provider:", connection.provider?.provider);
 
     // Verificar se é Z-API
     if (!connection.provider || connection.provider.provider !== "zapi") {
