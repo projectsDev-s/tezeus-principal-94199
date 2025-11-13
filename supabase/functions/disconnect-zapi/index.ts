@@ -103,10 +103,17 @@ serve(async (req) => {
     }
 
     // Chamar Z-API para fazer disconnect (endpoint correto)
-    const baseUrl = zapiUrl.endsWith("/") ? zapiUrl.slice(0, -1) : zapiUrl;
+    // ✅ CORREÇÃO: Usar apenas a base URL da Z-API (sem /instances/integrator/on-demand)
+    let baseUrl = zapiUrl;
+    if (zapiUrl.includes('/instances/integrator')) {
+      baseUrl = zapiUrl.split('/instances/integrator')[0];
+    }
+    baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    
     const fullUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/disconnect`;
 
-    console.log("🔗 Z-API URL:", fullUrl);
+    console.log("🔗 Base URL:", baseUrl);
+    console.log("🔗 Disconnect URL:", fullUrl);
     console.log("📱 Disconnecting instance...");
 
     const zapiResponse = await fetch(fullUrl, {

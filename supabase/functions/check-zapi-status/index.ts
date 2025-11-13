@@ -101,10 +101,17 @@ serve(async (req) => {
     }
 
     // Chamar Z-API para obter status usando o formato correto
-    // Formato: https://api.z-api.io/instances/{instance_id}/token/{instance_token}/status
-    const fullUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiInstanceToken}/status`;
+    // ✅ CORREÇÃO: Usar apenas a base URL da Z-API
+    let baseUrl = zapiUrl;
+    if (zapiUrl.includes('/instances/integrator')) {
+      baseUrl = zapiUrl.split('/instances/integrator')[0];
+    }
+    baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    
+    const fullUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/status`;
 
-    console.log("🔗 Z-API URL:", fullUrl);
+    console.log("🔗 Base URL:", baseUrl);
+    console.log("🔗 Status URL:", fullUrl);
     console.log("📊 Fetching instance status...");
 
     const zapiResponse = await fetch(fullUrl, {
