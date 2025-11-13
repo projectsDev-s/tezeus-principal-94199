@@ -721,8 +721,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           throw new Error(data?.error || 'Erro ao obter QR Code do Z-API');
         }
 
-        if (data.qr_code) {
-          setSelectedConnection(prev => prev ? { ...prev, qr_code: data.qr_code, status: 'qr' } : null);
+        if (data.qrCode) {
+          setSelectedConnection(prev => prev ? { ...prev, qr_code: data.qrCode, status: 'qr' } : null);
           setIsQRModalOpen(true);
           startPolling(connection.id);
           loadConnections();
