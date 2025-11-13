@@ -316,13 +316,18 @@ serve(async (req) => {
     }
 
     // Atualizar conexão com novo QR code
+    // ✅ IMPORTANTE: Mesclar com metadata existente para preservar credenciais da instância
     const { error: updateError } = await supabase
       .from("connections")
       .update({
         status: "qr",
         qr_code: qrCode,
         updated_at: new Date().toISOString(),
-        metadata: zapiResult,
+        metadata: {
+          ...connection.metadata, // Preservar credenciais existentes (id, token)
+          ...zapiResult, // Adicionar resposta do QR code
+          last_qr_refresh: new Date().toISOString(),
+        },
       })
       .eq("id", connectionId);
 
