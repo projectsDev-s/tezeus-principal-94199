@@ -416,7 +416,8 @@ async function executeAutomationAction(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // NÃO passar Authorization header já que test-send-msg tem verify_jwt = false
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'apikey': Deno.env.get('SUPABASE_ANON_KEY') || '',
           },
           body: JSON.stringify(payload)
         });
