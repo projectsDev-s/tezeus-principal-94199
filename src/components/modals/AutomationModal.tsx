@@ -73,6 +73,12 @@ const CONNECTION_MODES = [
   { value: 'specific', label: 'Conexão específica' },
 ];
 
+const TIME_UNITS = [
+  { value: 'minutes', label: 'minuto(s)' },
+  { value: 'hours', label: 'hora(s)' },
+  { value: 'days', label: 'dia(s)' },
+];
+
 export function AutomationModal({
   open,
   onOpenChange,
@@ -309,6 +315,12 @@ export function AutomationModal({
   const updateTrigger = (id: string, field: keyof Trigger, value: any) => {
     setTriggers(triggers.map(t => 
       t.id === id ? { ...t, [field]: value } : t
+    ));
+  };
+
+  const updateTriggerConfig = (id: string, configField: string, value: any) => {
+    setTriggers(triggers.map(t => 
+      t.id === id ? { ...t, trigger_config: { ...t.trigger_config, [configField]: value } } : t
     ));
   };
 
@@ -901,30 +913,70 @@ export function AutomationModal({
                 </p>
               ) : (
                 triggers.map((trigger) => (
-                  <div key={trigger.id} className="flex items-center gap-2 p-3 border rounded-lg">
-                    <Select
-                      value={trigger.trigger_type}
-                      onValueChange={(value) => updateTrigger(trigger.id, 'trigger_type', value)}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Selecione o tipo de gatilho" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TRIGGER_TYPES.map(type => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeTrigger(trigger.id)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <div key={trigger.id} className="space-y-3 p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={trigger.trigger_type}
+                        onValueChange={(value) => updateTrigger(trigger.id, 'trigger_type', value)}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Selecione o tipo de gatilho" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRIGGER_TYPES.map(type => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTrigger(trigger.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    {trigger.trigger_type === 'time_in_column' && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            placeholder="Tempo *"
+                            min="1"
+                            value={trigger.trigger_config?.time_value || ''}
+                            onChange={(e) => updateTriggerConfig(trigger.id, 'time_value', e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Select
+                            value={trigger.trigger_config?.time_unit || 'minutes'}
+                            onValueChange={(value) => updateTriggerConfig(trigger.id, 'time_unit', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_UNITS.map(unit => (
+                                <SelectItem key={unit.value} value={unit.value}>
+                                  {unit.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {trigger.trigger_type === 'time_in_column' && (
+                      <p className="text-xs text-muted-foreground flex items-start gap-2">
+                        <span className="text-yellow-500">⚠</span>
+                        Executa apenas uma vez quando o card atinge o tempo configurado na coluna
+                      </p>
+                    )}
                   </div>
                 ))
               )}
