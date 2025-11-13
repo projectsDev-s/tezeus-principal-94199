@@ -170,9 +170,7 @@ serve(async (req) => {
 
     const restartResponse = await fetch(restartUrl, {
       method: "GET",
-      headers: {
-        "Client-Token": zapiClientToken,
-      },
+      // Sem headers de autenticação - o token já está na URL
     });
 
     if (!restartResponse.ok) {
@@ -202,9 +200,7 @@ serve(async (req) => {
 
     const zapiResponse = await fetch(qrCodeUrl, {
       method: "GET",
-      headers: {
-        "Client-Token": zapiClientToken,
-      },
+      // Sem headers de autenticação - o token já está na URL
     });
 
     if (!zapiResponse.ok) {
