@@ -265,10 +265,8 @@ async function executeAutomationAction(
           .eq('id', conversationId)
           .single();
         
-        if (!conversationData || !conversationData.connection_id) {
-          console.error(`❌ ERRO: Conversa ${conversationId} não tem connection_id`);
-          console.error(`   Dados da conversa:`, conversationData);
-          console.error(`   Não é possível enviar mensagem sem connection_id`);
+        if (!conversationData) {
+          console.error(`❌ ERRO: Conversa ${conversationId} não encontrada`);
           return;
         }
         
@@ -279,6 +277,99 @@ async function executeAutomationAction(
           workspace_id: conversation.workspace_id
         });
       }
+
+      // 🔧 IMPLEMENTAR LÓGICA DE connection_mode
+      const connectionMode = action.action_config?.connection_mode || 'last';
+      let finalConnectionId = null;
+      
+      console.log(`\n🔌 ========== RESOLUÇÃO DE CONEXÃO ==========`);
+      console.log(`🔌 Modo de conexão configurado: ${connectionMode}`);
+      
+      if (connectionMode === 'last') {
+        // Modo "Última conversa" - buscar a última mensagem do contato que tem connection_id
+        console.log(`🔍 Buscando última conexão usada pelo contato...`);
+        const { data: lastMessage } = await supabaseClient
+          .from('messages')
+          .select('conversation_id, conversations!inner(connection_id, workspace_id)')
+          .eq('conversations.contact_id', card.contact_id)
+          .not('conversations.connection_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (lastMessage?.conversations?.connection_id) {
+          finalConnectionId = lastMessage.conversations.connection_id;
+          console.log(`✅ Última conexão encontrada: ${finalConnectionId}`);
+        } else {
+          // Fallback: usar a connection_id da conversa atual
+          finalConnectionId = conversation.connection_id;
+          console.log(`⚠️ Nenhuma última conexão encontrada, usando conversa atual: ${finalConnectionId}`);
+        }
+      } else if (connectionMode === 'default') {
+        // Modo "Conexão padrão" - buscar a primeira conexão ativa do workspace
+        console.log(`🔍 Buscando conexão padrão do workspace...`);
+        const { data: defaultConnection } = await supabaseClient
+          .from('connections')
+          .select('id')
+          .eq('workspace_id', conversation.workspace_id)
+          .eq('status', 'connected')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+        
+        if (defaultConnection?.id) {
+          finalConnectionId = defaultConnection.id;
+          console.log(`✅ Conexão padrão encontrada: ${finalConnectionId}`);
+        } else {
+          // Fallback: usar a connection_id da conversa atual
+          finalConnectionId = conversation.connection_id;
+          console.log(`⚠️ Nenhuma conexão padrão ativa, usando conversa atual: ${finalConnectionId}`);
+        }
+      } else if (connectionMode === 'specific') {
+        // Modo "Conexão específica" - usar o connection_id configurado
+        const specificConnectionId = action.action_config?.connection_id;
+        if (specificConnectionId) {
+          console.log(`🔍 Validando conexão específica: ${specificConnectionId}`);
+          
+          // Validar se a conexão existe e está ativa
+          const { data: specificConnection } = await supabaseClient
+            .from('connections')
+            .select('id, status, instance_name')
+            .eq('id', specificConnectionId)
+            .single();
+          
+          if (specificConnection) {
+            if (specificConnection.status === 'connected') {
+              finalConnectionId = specificConnectionId;
+              console.log(`✅ Conexão específica válida: ${specificConnection.instance_name}`);
+            } else {
+              console.error(`❌ ERRO: Conexão ${specificConnection.instance_name} não está ativa (status: ${specificConnection.status})`);
+              console.error(`   Mensagem não será enviada`);
+              return;
+            }
+          } else {
+            console.error(`❌ ERRO: Conexão específica ${specificConnectionId} não encontrada`);
+            console.error(`   Mensagem não será enviada`);
+            return;
+          }
+        } else {
+          console.error(`❌ ERRO: connection_mode é 'specific' mas connection_id não foi configurado`);
+          console.error(`   Mensagem não será enviada`);
+          return;
+        }
+      }
+      
+      // Validar se temos uma conexão válida
+      if (!finalConnectionId) {
+        console.error(`❌ ERRO: Não foi possível determinar uma conexão válida`);
+        console.error(`   connection_mode: ${connectionMode}`);
+        console.error(`   conversation.connection_id: ${conversation.connection_id}`);
+        console.error(`   Mensagem não será enviada`);
+        return;
+      }
+      
+      console.log(`✅ Conexão final determinada: ${finalConnectionId}`);
+      console.log(`=========================================\n`);
       
       // Obter conteúdo da mensagem do action_config
       const messageContent = action.action_config?.message || action.action_config?.content || '';
@@ -300,7 +391,7 @@ async function executeAutomationAction(
         console.log(`\n📤 ========== PREPARANDO ENVIO VIA N8N ==========`);
         console.log(`📤 Conversa ID: ${conversationId}`);
         console.log(`📤 Workspace ID: ${conversation.workspace_id}`);
-        console.log(`📤 Connection ID: ${conversation.connection_id}`);
+        console.log(`📤 Connection ID (resolvida): ${finalConnectionId}`);
         
         // Preparar payload seguindo exatamente o padrão do envio manual
         const payload = {
@@ -1389,11 +1480,11 @@ serve(async (req) => {
                 .from('pipelines')
                 .select('workspace_id')
                 .eq('id', body.pipeline_id)
-                .maybeSingle();
+                .maybeSingle() as any;
 
               if (pipelineError) {
                 console.error('❌ Erro ao buscar pipeline para criação de card:', pipelineError);
-              } else if (pipelineRow?.workspace_id) {
+              } else if (pipelineRow) {
                 resolvedWorkspaceId = pipelineRow.workspace_id;
               }
             }
@@ -1406,7 +1497,7 @@ serve(async (req) => {
                 .from('contacts')
                 .select('id, phone, workspace_id, name')
                 .eq('id', body.contact_id)
-                .maybeSingle();
+                .maybeSingle() as any;
 
               if (contactError || !contactRow) {
                 console.error('❌ Não foi possível buscar o contato para criação da conversa:', contactError);
@@ -1429,7 +1520,7 @@ serve(async (req) => {
                       .eq('contact_id', contactRow.id)
                       .eq('workspace_id', effectiveWorkspaceId)
                       .eq('status', 'open')
-                      .maybeSingle();
+                      .maybeSingle() as any;
 
                     if (existingConversationError) {
                       console.error('❌ Erro ao buscar conversa existente:', existingConversationError);
@@ -1447,13 +1538,13 @@ serve(async (req) => {
                         .eq('status', 'connected')
                         .order('is_default', { ascending: false })
                         .limit(1)
-                        .maybeSingle();
+                        .maybeSingle() as any;
 
                       if (connectionError) {
                         console.error('❌ Erro ao buscar conexão padrão:', connectionError);
                       }
 
-                      const conversationPayload: Record<string, any> = {
+                      const conversationPayload: any = {
                         contact_id: contactRow.id,
                         workspace_id: effectiveWorkspaceId,
                         status: 'open',
@@ -1463,7 +1554,7 @@ serve(async (req) => {
                         evolution_instance: defaultConnection?.instance_name || null,
                       };
 
-                      const { data: newConversation, error: conversationError } = await supabaseClient
+                      const { data: newConversation, error: conversationError }: any = await supabaseClient
                         .from('conversations')
                         .insert(conversationPayload)
                         .select('id')

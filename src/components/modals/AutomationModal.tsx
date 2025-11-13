@@ -129,7 +129,12 @@ export function AutomationModal({
     
     try {
       setConnectionsLoading(true);
-      if (!selectedWorkspace?.workspace_id) return;
+      if (!selectedWorkspace?.workspace_id) {
+        console.log('🔍 Conexões: workspace_id não disponível');
+        return;
+      }
+      
+      console.log('🔍 Carregando conexões para workspace:', selectedWorkspace.workspace_id);
       
       const { data, error } = await supabase
         .from('connections')
@@ -139,9 +144,20 @@ export function AutomationModal({
         .order('instance_name');
       
       if (error) throw error;
+      
+      console.log('🔍 Conexões carregadas:', {
+        total: data?.length || 0,
+        workspaceId: selectedWorkspace.workspace_id,
+        conexoes: data?.map(c => ({ id: c.id, nome: c.instance_name, status: c.status }))
+      });
+      
       setConnections(data || []);
+      
+      if (!data || data.length === 0) {
+        console.warn('⚠️ Nenhuma conexão ativa encontrada para o workspace');
+      }
     } catch (error: any) {
-      console.error('Erro ao carregar conexões:', error);
+      console.error('❌ Erro ao carregar conexões:', error);
     } finally {
       setConnectionsLoading(false);
     }
@@ -548,8 +564,11 @@ export function AutomationModal({
                         Carregando conexões...
                       </div>
                     ) : connections.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Nenhuma conexão encontrada
+                      <div className="p-3 text-sm text-muted-foreground text-center space-y-1">
+                        <div className="font-medium">Nenhuma conexão ativa encontrada</div>
+                        <div className="text-xs">
+                          Conecte uma instância do WhatsApp primeiro
+                        </div>
                       </div>
                     ) : (
                       connections.map(conn => (
@@ -636,8 +655,11 @@ export function AutomationModal({
                         Carregando conexões...
                       </div>
                     ) : connections.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Nenhuma conexão encontrada
+                      <div className="p-3 text-sm text-muted-foreground text-center space-y-1">
+                        <div className="font-medium">Nenhuma conexão ativa encontrada</div>
+                        <div className="text-xs">
+                          Conecte uma instância do WhatsApp primeiro
+                        </div>
                       </div>
                     ) : (
                       connections.map(conn => (
