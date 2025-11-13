@@ -752,6 +752,57 @@ serve(async (req) => {
         // ℹ️ AI agent logic is now handled entirely by N8N
         // N8N will query conversations.agente_ativo and invoke AI processing as needed
         
+        // 🔔 VERIFICAR AUTOMAÇÕES DE MENSAGENS RECEBIDAS (async, não bloqueia webhook)
+        if (processedData?.requires_processing && phoneNumber) {
+          console.log(`🔍 [${requestId}] Verificando automações de mensagens recebidas...`);
+          
+          // Chamar de forma assíncrona (não esperar resposta)
+          Promise.resolve().then(async () => {
+            try {
+              // Buscar contato pelo telefone
+              const { data: contact } = await supabase
+                .from('contacts')
+                .select('id')
+                .eq('phone', phoneNumber)
+                .eq('workspace_id', workspaceId)
+                .maybeSingle();
+              
+              if (!contact) {
+                console.log(`ℹ️ [${requestId}] Contato não encontrado para ${phoneNumber}`);
+                return;
+              }
+              
+              // Buscar conversa do contato
+              const { data: conversation } = await supabase
+                .from('conversations')
+                .select('id')
+                .eq('contact_id', contact.id)
+                .eq('workspace_id', workspaceId)
+                .eq('status', 'active')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              const { error } = await supabase.functions.invoke('check-message-automations', {
+                body: {
+                  contactId: contact.id,
+                  conversationId: conversation?.id,
+                  workspaceId: workspaceId,
+                  phoneNumber: phoneNumber
+                }
+              });
+              
+              if (error) {
+                console.error(`❌ [${requestId}] Erro ao verificar automações:`, error);
+              } else {
+                console.log(`✅ [${requestId}] Automações verificadas`);
+              }
+            } catch (err) {
+              console.error(`❌ [${requestId}] Exceção ao verificar automações:`, err);
+            }
+          });
+        }
+        
         // ✅ AUTO-CRIAR CARD NO CRM (se habilitado na conexão)
         if (connectionData?.auto_create_crm_card && processedData?.requires_processing) {
           console.log(`🎯 [${requestId}] Auto-criação de card habilitada - processando...`);
