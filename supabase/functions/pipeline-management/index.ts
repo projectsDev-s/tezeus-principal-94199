@@ -1111,6 +1111,180 @@ serve(async (req) => {
     console.log('📍 Request details:', { method, action, url: url.pathname });
 
     switch (action) {
+      case 'check-time-automations':
+        // ⏰ Verificar e executar automações baseadas em tempo
+        console.log('⏰ ========== VERIFICANDO AUTOMAÇÕES DE TEMPO ==========');
+        
+        try {
+          // 1. Buscar todos os cards com suas colunas
+          const { data: cards, error: cardsError } = await supabaseClient
+            .from('pipeline_cards')
+            .select(`
+              *,
+              column:pipeline_columns!inner(
+                id,
+                pipeline_id,
+                name
+              ),
+              conversation:conversations(id, contact_id, connection_id),
+              contact:contacts(id, phone, name)
+            `)
+            .order('updated_at', { ascending: true });
+
+          if (cardsError) {
+            console.error('❌ Erro ao buscar cards:', cardsError);
+            throw cardsError;
+          }
+
+          console.log(`📊 ${cards?.length || 0} cards encontrados para verificação`);
+
+          let executedCount = 0;
+          const results: any[] = [];
+
+          // 2. Para cada card, verificar se há automações de tempo
+          for (const card of (cards || []) as any[]) {
+            const columnId = (card as any).column_id;
+            const cardUpdatedAt = new Date((card as any).updated_at);
+            const now = new Date();
+            const timeInColumnMs = now.getTime() - cardUpdatedAt.getTime();
+            const timeInColumnMinutes = Math.floor(timeInColumnMs / (1000 * 60));
+
+            console.log(`\n🔍 Verificando card ${(card as any).id} (${(card as any).title})`);
+            console.log(`   ⏱️  Tempo na coluna: ${timeInColumnMinutes} minuto(s)`);
+
+            // 3. Buscar automações time_in_column para esta coluna
+            const { data: automations, error: automationsError } = await (supabaseClient as any)
+              .rpc('get_column_automations', { p_column_id: columnId });
+
+            if (automationsError) {
+              console.error(`❌ Erro ao buscar automações da coluna ${columnId}:`, automationsError);
+              continue;
+            }
+
+            if (!automations || automations.length === 0) {
+              console.log(`   ℹ️  Nenhuma automação configurada nesta coluna`);
+              continue;
+            }
+
+            console.log(`   📋 ${automations.length} automação(ões) encontrada(s)`);
+
+            // 4. Processar cada automação
+            for (const automation of automations) {
+              if (!automation.is_active) {
+                console.log(`   ⏭️  Automação "${automation.name}" está inativa, pulando`);
+                continue;
+              }
+
+              // Buscar triggers e actions
+              const { data: triggers } = await supabaseClient
+                .from('crm_column_automation_triggers')
+                .select('*')
+                .eq('automation_id', automation.id);
+
+              const { data: actions } = await supabaseClient
+                .from('crm_column_automation_actions')
+                .select('*')
+                .eq('automation_id', automation.id)
+                .order('action_order', { ascending: true });
+
+              // Verificar se tem trigger time_in_column
+              const timeInColumnTrigger = (triggers || []).find((t: any) => t.trigger_type === 'time_in_column');
+              
+              if (!timeInColumnTrigger) {
+                continue;
+              }
+
+              console.log(`   ⏰ Automação "${automation.name}" com trigger de tempo encontrada`);
+
+              // Parse trigger_config
+              let triggerConfig = timeInColumnTrigger.trigger_config || {};
+              if (typeof triggerConfig === 'string') {
+                try {
+                  triggerConfig = JSON.parse(triggerConfig);
+                } catch (e) {
+                  console.error(`   ❌ Erro ao fazer parse do trigger_config:`, e);
+                  continue;
+                }
+              }
+
+              const timeValue = parseInt(triggerConfig.time_value || '0');
+              const timeUnit = triggerConfig.time_unit || 'minutes';
+
+              if (!timeValue) {
+                console.log(`   ⚠️  Tempo não configurado, pulando`);
+                continue;
+              }
+
+              // Converter para minutos
+              let requiredMinutes = timeValue;
+              if (timeUnit === 'hours') {
+                requiredMinutes = timeValue * 60;
+              } else if (timeUnit === 'days') {
+                requiredMinutes = timeValue * 60 * 24;
+              }
+
+              console.log(`   📊 Tempo configurado: ${timeValue} ${timeUnit} (${requiredMinutes} minutos)`);
+              console.log(`   📊 Tempo atual do card: ${timeInColumnMinutes} minutos`);
+
+              // Verificar se já passou do tempo e se ainda não foi executado
+              if (timeInColumnMinutes >= requiredMinutes) {
+                // Verificar se já foi executado (usar algum campo de controle)
+                // Por enquanto, vamos executar sempre que o tempo for atingido
+                // TODO: Adicionar controle para evitar execuções múltiplas
+                
+                console.log(`   ✅ TEMPO ATINGIDO! Executando automação "${automation.name}"`);
+
+                // Executar as ações
+                if (actions && actions.length > 0) {
+                  console.log(`   🎬 Executando ${actions.length} ação(ões)...`);
+                  
+                  for (const action of actions) {
+                    try {
+                      await executeAutomationAction(action, card, supabaseClient);
+                      console.log(`   ✅ Ação ${action.action_type} executada`);
+                    } catch (actionError) {
+                      console.error(`   ❌ Erro ao executar ação ${action.action_type}:`, actionError);
+                    }
+                  }
+
+                  executedCount++;
+                  results.push({
+                    card_id: (card as any).id,
+                    card_title: (card as any).title,
+                    automation_name: automation.name,
+                    time_in_column_minutes: timeInColumnMinutes,
+                    required_minutes: requiredMinutes,
+                    status: 'executed'
+                  });
+                }
+              } else {
+                console.log(`   ⏳ Tempo ainda não atingido (faltam ${requiredMinutes - timeInColumnMinutes} minutos)`);
+              }
+            }
+          }
+
+          console.log(`\n✅ Verificação concluída: ${executedCount} automação(ões) executada(s)`);
+
+          return new Response(JSON.stringify({
+            success: true,
+            checked_cards: cards?.length || 0,
+            executed_automations: executedCount,
+            results
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+
+        } catch (error) {
+          console.error('❌ Erro ao verificar automações de tempo:', error);
+          return new Response(JSON.stringify({
+            success: false,
+            error: error.message
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
       case 'pipelines':
         if (method === 'GET') {
           console.log('📊 Fetching pipelines for workspace:', workspaceId);
