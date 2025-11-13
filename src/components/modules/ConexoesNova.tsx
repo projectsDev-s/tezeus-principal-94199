@@ -790,9 +790,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       try {
         let connectionStatus;
         
-        // Se for Z-API, usar endpoint específico
+        // Se for Z-API, usar endpoint específico de force refresh
         if (isZAPI) {
-          const { data, error } = await supabase.functions.invoke('check-zapi-status', {
+          const { data, error } = await supabase.functions.invoke('force-zapi-status-refresh', {
             body: { connectionId }
           });
           
@@ -805,8 +805,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           connectionStatus = {
             id: connectionId,
             instance_name: connection?.instance_name || '',
-            status: data.status || 'disconnected',
-            phone_number: data.zapiStatus?.phone || undefined,
+            status: data.newStatus || 'disconnected',
+            phone_number: data.status?.phone || undefined,
           };
         } else {
           // Evolution API (comportamento original)
@@ -1580,29 +1580,89 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                           )}
                         </Button>
                         
-                        {/* Botão de refresh QR para Z-API desconectado */}
+                        {/* Botões para Z-API desconectado */}
                         {connection.provider?.provider === 'zapi' && 
                          (connection.status === 'disconnected' || connection.status === 'qr') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => refreshQRCode(connection.id)}
-                            disabled={isRefreshing}
-                            className="flex items-center gap-2"
-                            title="Atualizar QR Code Z-API"
-                          >
-                            {isRefreshing ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                Atualizando...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="w-4 h-4" />
-                                Atualizar QR
-                              </>
-                            )}
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => refreshQRCode(connection.id)}
+                              disabled={isRefreshing}
+                              className="flex items-center gap-2"
+                              title="Atualizar QR Code Z-API"
+                            >
+                              {isRefreshing ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  Atualizando...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="w-4 h-4" />
+                                  Atualizar QR
+                                </>
+                              )}
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  setIsRefreshing(true);
+                                  
+                                  const { data, error } = await supabase.functions.invoke('force-zapi-status-refresh', {
+                                    body: { connectionId: connection.id }
+                                  });
+                                  
+                                  if (error) throw error;
+                                  
+                                  if (data?.success) {
+                                    await loadConnections();
+                                    
+                                    if (data.newStatus === 'connected') {
+                                      toast({
+                                        title: '✅ Conectado!',
+                                        description: `Instância está conectada${data.status?.phone ? ` como ${data.status.phone}` : ''}`,
+                                      });
+                                    } else {
+                                      toast({
+                                        title: 'Status atualizado',
+                                        description: `Status: ${data.newStatus}`,
+                                      });
+                                    }
+                                  } else {
+                                    throw new Error(data?.error || 'Erro ao verificar status');
+                                  }
+                                } catch (error) {
+                                  console.error('Error checking status:', error);
+                                  toast({
+                                    title: 'Erro',
+                                    description: `Erro ao verificar status: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+                                    variant: 'destructive',
+                                  });
+                                } finally {
+                                  setIsRefreshing(false);
+                                }
+                              }}
+                              disabled={isRefreshing}
+                              className="flex items-center gap-2"
+                              title="Verificar se instância está conectada"
+                            >
+                              {isRefreshing ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  Verificando...
+                                </>
+                              ) : (
+                                <>
+                                  <Settings className="w-4 h-4" />
+                                  Verificar Status
+                                </>
+                              )}
+                            </Button>
+                          </>
                         )}
                       </>
                     )}
