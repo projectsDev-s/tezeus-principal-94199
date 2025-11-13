@@ -74,6 +74,7 @@ const CONNECTION_MODES = [
 ];
 
 const TIME_UNITS = [
+  { value: 'seconds', label: 'segundo(s)' },
   { value: 'minutes', label: 'minuto(s)' },
   { value: 'hours', label: 'hora(s)' },
   { value: 'days', label: 'dia(s)' },
