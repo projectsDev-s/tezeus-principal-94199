@@ -1185,10 +1185,10 @@ serve(async (req) => {
                 .from('crm_column_automation_actions')
                 .select('*')
                 .eq('automation_id', automation.id)
-                .order('action_order', { ascending: true });
+                .order('action_order', { ascending: true }) as { data: any[] | null };
 
               // Verificar se tem trigger time_in_column
-              const timeInColumnTrigger = (triggers || []).find((t: any) => t.trigger_type === 'time_in_column');
+              const timeInColumnTrigger = (triggers || []).find((t: any) => t.trigger_type === 'time_in_column') as any;
               
               if (!timeInColumnTrigger) {
                 continue;
@@ -1226,11 +1226,21 @@ serve(async (req) => {
               console.log(`   📊 Tempo configurado: ${timeValue} ${timeUnit} (${requiredMinutes} minutos)`);
               console.log(`   📊 Tempo atual do card: ${timeInColumnMinutes} minutos`);
 
-              // Verificar se já passou do tempo e se ainda não foi executado
+              // Verificar se já passou do tempo
               if (timeInColumnMinutes >= requiredMinutes) {
-                // Verificar se já foi executado (usar algum campo de controle)
-                // Por enquanto, vamos executar sempre que o tempo for atingido
-                // TODO: Adicionar controle para evitar execuções múltiplas
+                // ✅ Verificar se já foi executado (controle de duplicação)
+                const { data: existingExecution } = await supabaseClient
+                  .from('crm_automation_executions')
+                  .select('id')
+                  .eq('automation_id', automation.id)
+                  .eq('card_id', (card as any).id)
+                  .eq('column_id', columnId)
+                  .single();
+
+                if (existingExecution) {
+                  console.log(`   ⏭️  Automação já foi executada para este card nesta coluna, pulando`);
+                  continue;
+                }
                 
                 console.log(`   ✅ TEMPO ATINGIDO! Executando automação "${automation.name}"`);
 
@@ -1238,12 +1248,38 @@ serve(async (req) => {
                 if (actions && actions.length > 0) {
                   console.log(`   🎬 Executando ${actions.length} ação(ões)...`);
                   
+                  let allActionsSucceeded = true;
+                  
                   for (const action of actions) {
                     try {
                       await executeAutomationAction(action, card, supabaseClient);
                       console.log(`   ✅ Ação ${action.action_type} executada`);
                     } catch (actionError) {
                       console.error(`   ❌ Erro ao executar ação ${action.action_type}:`, actionError);
+                      allActionsSucceeded = false;
+                    }
+                  }
+
+                  // Registrar execução apenas se todas as ações foram bem-sucedidas
+                  if (allActionsSucceeded) {
+                    const { error: insertError } = await (supabaseClient as any)
+                      .from('crm_automation_executions')
+                      .insert({
+                        automation_id: automation.id,
+                        card_id: (card as any).id,
+                        column_id: columnId,
+                        execution_type: 'time_in_column',
+                        metadata: {
+                          time_in_column_minutes: timeInColumnMinutes,
+                          required_minutes: requiredMinutes,
+                          actions_executed: actions.length
+                        }
+                      });
+
+                    if (insertError) {
+                      console.error(`   ❌ Erro ao registrar execução:`, insertError);
+                    } else {
+                      console.log(`   📝 Execução registrada com sucesso`);
                     }
                   }
 
@@ -1254,7 +1290,7 @@ serve(async (req) => {
                     automation_name: automation.name,
                     time_in_column_minutes: timeInColumnMinutes,
                     required_minutes: requiredMinutes,
-                    status: 'executed'
+                    status: allActionsSucceeded ? 'executed' : 'partial_failure'
                   });
                 }
               } else {
@@ -1278,7 +1314,7 @@ serve(async (req) => {
           console.error('❌ Erro ao verificar automações de tempo:', error);
           return new Response(JSON.stringify({
             success: false,
-            error: error.message
+            error: error instanceof Error ? error.message : 'Unknown error'
           }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1988,6 +2024,28 @@ serve(async (req) => {
               }
             } catch (bfErr) {
               console.error('❌ [EF pipeline-management] Erro ao enviar broadcast:', bfErr);
+            }
+
+            // ✅ Limpar execuções de automações quando card muda de coluna
+            if (previousColumnId && body.column_id && previousColumnId !== body.column_id) {
+              console.log('🗑️ Card mudou de coluna, limpando execuções de automações anteriores');
+              console.log(`   Coluna anterior: ${previousColumnId} -> Nova coluna: ${body.column_id}`);
+              
+              try {
+                const { error: deleteError } = await (supabaseClient as any)
+                  .from('crm_automation_executions')
+                  .delete()
+                  .eq('card_id', cardId)
+                  .eq('column_id', previousColumnId);
+
+                if (deleteError) {
+                  console.error('❌ Erro ao deletar execuções anteriores:', deleteError);
+                } else {
+                  console.log('✅ Execuções de automações anteriores limpas com sucesso');
+                }
+              } catch (delErr) {
+                console.error('❌ Exception ao deletar execuções:', delErr);
+              }
             }
 
           // ✅ EXECUTAR AUTOMAÇÕES quando card entra em nova coluna
