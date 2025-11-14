@@ -35,30 +35,41 @@ serve(async (req) => {
     const url = new URL(req.url)
     const pathname = url.pathname.replace('/serve-local-media', '')
     
-    // Extract messageId and fileName from path like /messages/{messageId}/{fileName}
+    // Extract path parts
     const pathParts = pathname.split('/').filter(Boolean)
     
-    if (pathParts.length < 3 || pathParts[0] !== 'messages') {
+    // Support two formats:
+    // 1. /messages/{messageId}/{fileName}
+    // 2. /messages/{fileName}
+    if (pathParts.length < 2 || pathParts[0] !== 'messages') {
       return new Response('Invalid path', { 
         status: 400, 
         headers: corsHeaders 
       })
     }
 
-    const messageId = pathParts[1]
-    const fileName = decodeURIComponent(pathParts[2]) // Handle encoded filenames
+    let storagePath: string
+    let fileName: string
     
-    console.log(`📂 Serving media for message ${messageId}: ${fileName}`)
-    console.log(`🔍 Full path requested: ${pathname}`)
+    if (pathParts.length === 2) {
+      // Format: /messages/{fileName}
+      fileName = decodeURIComponent(pathParts[1])
+      storagePath = `messages/${fileName}`
+    } else {
+      // Format: /messages/{messageId}/{fileName}
+      const messageId = pathParts[1]
+      fileName = decodeURIComponent(pathParts[2])
+      storagePath = `messages/${messageId}/${fileName}`
+    }
+    
+    console.log(`📂 Serving media: ${fileName}`)
+    console.log(`🔍 Storage path: ${storagePath}`)
     console.log(`🌐 Request method: ${req.method}, URL: ${req.url}`)
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Construct storage path
-    const storagePath = `messages/${messageId}/${fileName}`
     
     try {
       // Try whatsapp-media bucket first (where n8n-media-processor stores files)
@@ -112,7 +123,7 @@ serve(async (req) => {
           'Content-Length': fileBuffer.byteLength.toString(),
           'Accept-Ranges': 'bytes',
           'Last-Modified': new Date().toUTCString(),
-          'ETag': `"${messageId}-${fileName}"`,
+          'ETag': `"${storagePath.replace(/\//g, '-')}"`,
           'Content-Disposition': `inline; filename="${fileName}"`
         }
       })
