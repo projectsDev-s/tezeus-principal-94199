@@ -261,6 +261,72 @@ export type Database = {
           },
         ]
       }
+      automation_executions: {
+        Row: {
+          automation_id: string
+          card_id: string
+          column_id: string
+          executed_at: string
+          id: string
+          trigger_type: string
+          workspace_id: string
+        }
+        Insert: {
+          automation_id: string
+          card_id: string
+          column_id: string
+          executed_at?: string
+          id?: string
+          trigger_type: string
+          workspace_id: string
+        }
+        Update: {
+          automation_id?: string
+          card_id?: string
+          column_id?: string
+          executed_at?: string
+          id?: string
+          trigger_type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_executions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_column_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
       base_de_conhecimento: {
         Row: {
           contexto: string | null
@@ -1033,6 +1099,61 @@ export type Database = {
           },
         ]
       }
+      crm_automation_executions: {
+        Row: {
+          automation_id: string
+          card_id: string
+          column_id: string
+          created_at: string
+          executed_at: string
+          execution_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          automation_id: string
+          card_id: string
+          column_id: string
+          created_at?: string
+          executed_at?: string
+          execution_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          automation_id?: string
+          card_id?: string
+          column_id?: string
+          created_at?: string
+          executed_at?: string
+          execution_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_automation_executions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_column_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_automation_executions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_automation_executions_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_column_automation_actions: {
         Row: {
           action_config: Json
@@ -1783,6 +1904,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          moved_to_column_at: string | null
           pipeline_id: string
           responsible_user_id: string | null
           status: string
@@ -1798,6 +1920,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          moved_to_column_at?: string | null
           pipeline_id: string
           responsible_user_id?: string | null
           status?: string
@@ -1813,6 +1936,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          moved_to_column_at?: string | null
           pipeline_id?: string
           responsible_user_id?: string | null
           status?: string
@@ -3005,6 +3129,7 @@ export type Database = {
           provider: string
           updated_at: string
           workspace_id: string
+          zapi_client_token: string | null
           zapi_token: string | null
           zapi_url: string | null
         }
@@ -3019,6 +3144,7 @@ export type Database = {
           provider: string
           updated_at?: string
           workspace_id: string
+          zapi_client_token?: string | null
           zapi_token?: string | null
           zapi_url?: string | null
         }
@@ -3033,6 +3159,7 @@ export type Database = {
           provider?: string
           updated_at?: string
           workspace_id?: string
+          zapi_client_token?: string | null
           zapi_token?: string | null
           zapi_url?: string | null
         }
