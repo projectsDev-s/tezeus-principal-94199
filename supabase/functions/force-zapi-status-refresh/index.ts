@@ -78,7 +78,7 @@ serve(async (req) => {
       connection.metadata?.instance_token ||
       connection.metadata?.accessToken;
     
-    const zapiClientToken = connection.provider.zapi_token;
+    const zapiClientToken = connection.provider.zapi_client_token;
 
     console.log("🔍 Z-API credentials in metadata:", {
       hasId: !!zapiInstanceId,
