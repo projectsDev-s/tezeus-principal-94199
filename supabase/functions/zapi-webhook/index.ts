@@ -57,7 +57,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`✅ [${id}] Connection: ${conn.id}, Workspace: ${conn.workspace_id}`);
+    console.log(`✅ [${id}] Connection: ${conn.id}, Workspace: ${conn.workspace_id}, Instance Name: ${conn.instance_name}`);
 
     const n8nUrl = conn.provider?.n8n_webhook_url;
     
@@ -73,7 +73,7 @@ serve(async (req) => {
         body: JSON.stringify({
           event_type: data.event || data.type || 'UNKNOWN',
           provider: 'zapi',
-          instance_name: instanceName,
+          instance_name: conn.instance_name, // ✅ Usar o instance_name da conexão, não o instanceId do payload
           workspace_id: conn.workspace_id,
           connection_id: conn.id,
           external_id: externalId,
