@@ -87,6 +87,7 @@ serve(async (req) => {
     }
 
     // Buscar informações do contato e conversação se necessário
+    let connectionData: any = null;
     if (conversationIdResolved && !contactPhone) {
       console.log(`🔍 [${messageId}] Buscando informações de conversa: ${conversationIdResolved}`);
       
@@ -96,7 +97,21 @@ serve(async (req) => {
           id,
           workspace_id,
           contact:contacts(phone, name, email),
-          connection:connections(instance_name)
+          connection:connections(
+            id,
+            instance_name,
+            provider_id,
+            metadata,
+            provider:whatsapp_providers!connections_provider_id_fkey(
+              provider,
+              evolution_url,
+              evolution_token,
+              zapi_url,
+              zapi_token,
+              zapi_client_token,
+              n8n_webhook_url
+            )
+          )
         `)
         .eq('id', conversationIdResolved)
         .single();
@@ -110,6 +125,11 @@ serve(async (req) => {
         contactEmail = contact?.email;
         evolutionInstance = connection?.instance_name;
         finalWorkspaceId = convData.workspace_id;
+        connectionData = connection;
+        
+        // O provider pode vir como array também
+        const provider = Array.isArray(connection?.provider) ? connection.provider[0] : connection?.provider;
+        console.log(`📡 [${messageId}] Connection provider detected:`, provider?.provider || 'none');
       }
     }
 
@@ -134,77 +154,103 @@ serve(async (req) => {
 
     const finalEvolutionInstance = evolutionInstance;
 
-    console.log(`🔍 [${messageId}] Buscando instância Evolution: ${finalEvolutionInstance} no workspace: ${finalWorkspaceId}`);
+    console.log(`🔍 [${messageId}] Buscando configuração do provider para instância: ${finalEvolutionInstance}`);
 
-    // Buscar configurações da Evolution API priorizando evolution_instance_tokens
-    let evolutionUrl: string | null = null;
-    let evolutionApiKey: string | null = null;
+    // Detectar qual provider usar baseado na conexão
+    let providerType: 'evolution' | 'zapi' = 'evolution';
+    let providerUrl: string | null = null;
+    let providerToken: string | null = null;
+    let zapiInstanceId: string | null = null;
+    let zapiClientToken: string | null = null;
 
-    const { data: masterConfig, error: masterConfigError } = await supabase
-      .from('evolution_instance_tokens')
-      .select('evolution_url, token')
-      .eq('workspace_id', finalWorkspaceId)
-      .eq('instance_name', '_master_config')
-      .maybeSingle();
-
-    if (!masterConfigError && masterConfig) {
-      evolutionUrl = masterConfig.evolution_url;
-      evolutionApiKey = masterConfig.token;
-      console.log(`✅ [${messageId}] Evolution config encontrada em evolution_instance_tokens`);
-    } else {
-      console.warn(`⚠️ [${messageId}] evolution_instance_tokens não retornou config (_master_config). Tentando fallback _master_config`, {
-        error: masterConfigError?.message
-      });
-
-      const { data: evolutionConfig, error: fallbackError } = await supabase
-        .from('_master_config')
-        .select('evolution_api_url, evolution_api_key')
-        .maybeSingle();
-
-      if (!fallbackError && evolutionConfig) {
-        evolutionUrl = evolutionConfig.evolution_api_url;
-        evolutionApiKey = evolutionConfig.evolution_api_key;
-        console.log(`✅ [${messageId}] Evolution config encontrada no fallback _master_config`);
-      } else {
-        console.error(`❌ [${messageId}] Evolution API não configurada`, {
-          masterConfigError: masterConfigError?.message,
-          fallbackError: fallbackError?.message
-        });
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Evolution API não configurada',
-          message: messageId
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    // Primeiro: verificar se temos dados do provider via connectionData
+    if (connectionData?.provider) {
+      const provider = Array.isArray(connectionData.provider) ? connectionData.provider[0] : connectionData.provider;
+      
+      if (provider) {
+        providerType = provider.provider;
+        
+        if (providerType === 'zapi') {
+          providerUrl = provider.zapi_url;
+          providerToken = provider.zapi_token;
+          zapiClientToken = provider.zapi_client_token;
+          zapiInstanceId = connectionData.metadata?.instanceId;
+          console.log(`✅ [${messageId}] Usando Z-API provider da conexão`);
+        } else {
+          providerUrl = provider.evolution_url;
+          providerToken = provider.evolution_token;
+          console.log(`✅ [${messageId}] Usando Evolution provider da conexão`);
+        }
       }
     }
 
-    if ((!evolutionUrl || !evolutionApiKey) && finalWorkspaceId) {
-      const { data: evolutionProvider, error: providerError } = await supabase
-        .from('whatsapp_providers')
-        .select('evolution_url, evolution_token, is_active')
+    // Fallback: buscar Evolution API priorizando evolution_instance_tokens
+    if (!providerUrl && !providerToken) {
+      const { data: masterConfig, error: masterConfigError } = await supabase
+        .from('evolution_instance_tokens')
+        .select('evolution_url, token')
         .eq('workspace_id', finalWorkspaceId)
-        .eq('provider', 'evolution')
+        .eq('instance_name', '_master_config')
+        .maybeSingle();
+
+      if (!masterConfigError && masterConfig) {
+        providerType = 'evolution';
+        providerUrl = masterConfig.evolution_url;
+        providerToken = masterConfig.token;
+        console.log(`✅ [${messageId}] Evolution config encontrada em evolution_instance_tokens`);
+      } else {
+        console.warn(`⚠️ [${messageId}] evolution_instance_tokens não retornou config. Tentando fallback`, {
+          error: masterConfigError?.message
+        });
+
+        const { data: evolutionConfig, error: fallbackError } = await supabase
+          .from('_master_config')
+          .select('evolution_api_url, evolution_api_key')
+          .maybeSingle();
+
+        if (!fallbackError && evolutionConfig) {
+          providerType = 'evolution';
+          providerUrl = evolutionConfig.evolution_api_url;
+          providerToken = evolutionConfig.evolution_api_key;
+          console.log(`✅ [${messageId}] Evolution config encontrada no fallback _master_config`);
+        }
+      }
+    }
+
+    // Fallback: buscar em whatsapp_providers se ainda não tiver
+    if ((!providerUrl || !providerToken) && finalWorkspaceId) {
+      const { data: providers, error: providerError } = await supabase
+        .from('whatsapp_providers')
+        .select('provider, evolution_url, evolution_token, zapi_url, zapi_token, zapi_client_token, is_active')
+        .eq('workspace_id', finalWorkspaceId)
         .order('is_active', { ascending: false })
         .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (!providerError && evolutionProvider?.evolution_url && evolutionProvider?.evolution_token) {
-        evolutionUrl = evolutionProvider.evolution_url;
-        evolutionApiKey = evolutionProvider.evolution_token;
-        console.log(`✅ [${messageId}] Evolution config encontrada via whatsapp_providers (is_active=${evolutionProvider.is_active})`);
+      if (!providerError && providers) {
+        providerType = providers.provider;
+        
+        if (providerType === 'zapi' && providers.zapi_url && providers.zapi_token) {
+          providerUrl = providers.zapi_url;
+          providerToken = providers.zapi_token;
+          zapiClientToken = providers.zapi_client_token;
+          console.log(`✅ [${messageId}] Z-API config encontrada via whatsapp_providers (is_active=${providers.is_active})`);
+        } else if (providerType === 'evolution' && providers.evolution_url && providers.evolution_token) {
+          providerUrl = providers.evolution_url;
+          providerToken = providers.evolution_token;
+          console.log(`✅ [${messageId}] Evolution config encontrada via whatsapp_providers (is_active=${providers.is_active})`);
+        }
       } else if (providerError) {
-        console.warn(`⚠️ [${messageId}] Falha ao buscar evolution config em whatsapp_providers`, providerError);
+        console.warn(`⚠️ [${messageId}] Falha ao buscar config em whatsapp_providers`, providerError);
       }
     }
 
-    if (!evolutionUrl || !evolutionApiKey) {
-      console.error(`❌ [${messageId}] Evolution API config vazia após tentativas`);
+    if (!providerUrl || !providerToken) {
+      console.error(`❌ [${messageId}] Provider API não configurada após tentativas`);
       return new Response(JSON.stringify({
         success: false,
-        error: 'Evolution API não configurada',
+        error: 'WhatsApp Provider não configurado',
         message: messageId
       }), {
         status: 500,
@@ -212,7 +258,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`✅ [${messageId}] Evolution API configurada: ${evolutionUrl}`);
+    console.log(`✅ [${messageId}] Provider configurado: ${providerType} - ${providerUrl}`);
 
     // Buscar dados da instância no banco (connections)
     const { data: instanceData, error: instanceErr } = await supabase
@@ -371,10 +417,11 @@ serve(async (req) => {
     const n8nPayload = {
       event: 'send.message',
       instance: finalEvolutionInstance,
-      workspace_id: finalWorkspaceId,           // ✅ Campo essencial adicionado
-      connection_id: instanceData.id,           // ✅ Campo essencial adicionado
-      phone_number: contactPhone,               // ✅ Campo essencial adicionado (sanitizado)
+      workspace_id: finalWorkspaceId,
+      connection_id: instanceData.id,
+      phone_number: contactPhone,
       external_id: external_id || messageId,
+      provider: providerType, // 'evolution' ou 'zapi'
       data: {
         key: {
           remoteJid: `${contactPhone}@s.whatsapp.net`,
@@ -388,8 +435,16 @@ serve(async (req) => {
       destination: workspaceWebhookUrl,
       date_time: new Date().toISOString(),
       sender: contactPhone,
-      server_url: evolutionUrl,
-      apikey: evolutionApiKey
+      // Incluir dados específicos do provider
+      ...(providerType === 'evolution' ? {
+        server_url: providerUrl,
+        apikey: providerToken
+      } : {
+        zapi_url: providerUrl,
+        zapi_token: providerToken,
+        zapi_client_token: zapiClientToken,
+        zapi_instance_id: zapiInstanceId
+      })
     };
 
     console.log(`📡 [${messageId}] Enviando para N8N:`, {
