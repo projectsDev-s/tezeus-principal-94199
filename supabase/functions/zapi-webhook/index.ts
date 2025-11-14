@@ -9,10 +9,51 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Helper function to forward message to N8N
+async function forwardToN8N(
+  webhookUrl: string,
+  webhookSecret: string | null,
+  payload: any,
+  requestId: string
+) {
+  if (!webhookUrl) {
+    console.log(`⚠️ [${requestId}] No N8N webhook URL configured, skipping forward`);
+    return;
+  }
+
+  console.log(`🚀 [${requestId}] Forwarding to N8N: ${webhookUrl}`);
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (webhookSecret) {
+    headers['Authorization'] = `Bearer ${webhookSecret}`;
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    console.log(`✅ [${requestId}] N8N webhook called successfully, status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error');
+      console.error(`❌ [${requestId}] N8N webhook error response:`, errorText);
+    }
+  } catch (error) {
+    console.error(`❌ [${requestId}] Error calling N8N webhook:`, error);
+  }
+}
+
 serve(async (req) => {
-  console.log("🔥 Z-API WEBHOOK - BUILD 2025-11-05");
-  console.log("🔥 Method:", req.method);
-  console.log("🔥 URL:", req.url);
+  const requestId = `zapi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`🔥 [${requestId}] Z-API WEBHOOK - BUILD 2025-11-14`);
+  console.log(`🔥 [${requestId}] Method:`, req.method);
+  console.log(`🔥 [${requestId}] URL:`, req.url);
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -41,22 +82,41 @@ serve(async (req) => {
       );
     }
 
-    // Buscar conexão pelo instance_name
+    // Buscar conexão pelo instance_name com provider
     const { data: connection, error: connError } = await supabase
       .from("connections")
-      .select("*")
+      .select(`
+        *,
+        provider:whatsapp_providers!connections_provider_id_fkey(
+          id,
+          n8n_webhook_url
+        )
+      `)
       .eq("instance_name", instanceName)
       .maybeSingle();
 
     if (connError || !connection) {
-      console.error("❌ Connection not found:", connError);
+      console.error(`❌ [${requestId}] Connection not found:`, connError);
       return new Response(
         JSON.stringify({ success: false, error: "Connection not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`✅ Connection found: ${connection.id}`);
+    console.log(`✅ [${requestId}] Connection found: ${connection.id}`);
+
+    // Buscar webhook secret
+    let webhookSecret: string | null = null;
+    if (connection.provider?.n8n_webhook_url) {
+      const { data: webhookSecretData } = await supabase
+        .from('workspace_webhook_secrets')
+        .select('webhook_secret')
+        .eq('workspace_id', connection.workspace_id)
+        .maybeSingle();
+      
+      webhookSecret = webhookSecretData?.webhook_secret || null;
+      console.log(`🔐 [${requestId}] Webhook secret ${webhookSecret ? 'found' : 'not found'}`);
+    }
 
     // Processar evento de conexão
     if (eventType === "qrcode.updated" || webhookData.qrcode) {
@@ -304,7 +364,51 @@ serve(async (req) => {
         );
       }
 
-      console.log("✅ Message created successfully");
+      console.log(`✅ [${requestId}] Message created successfully`);
+
+      // 🚀 Disparar webhook para N8N
+      if (connection.provider?.n8n_webhook_url) {
+        console.log(`🎯 [${requestId}] Forwarding message to N8N`);
+        
+        const n8nPayload = {
+          event_type: 'MESSAGE_RECEIVED',
+          provider: 'zapi',
+          instance_name: instanceName,
+          workspace_id: connection.workspace_id,
+          connection_id: connection.id,
+          processed_locally: true,
+          processed_data: {
+            contact: {
+              id: contact.id,
+              name: contact.name,
+              phone: phoneNumber
+            },
+            conversation: {
+              id: conversation.id,
+              status: conversation.status
+            },
+            message: {
+              content: content,
+              message_type: messageType,
+              sender_type: 'contact',
+              file_url: fileUrl,
+              file_name: fileName,
+              mime_type: mimeType,
+              timestamp: new Date().toISOString()
+            }
+          },
+          original_event: webhookData
+        };
+
+        await forwardToN8N(
+          connection.provider.n8n_webhook_url,
+          webhookSecret,
+          n8nPayload,
+          requestId
+        );
+      } else {
+        console.log(`⚠️ [${requestId}] No N8N webhook configured, message not forwarded`);
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: "Message processed" }),
