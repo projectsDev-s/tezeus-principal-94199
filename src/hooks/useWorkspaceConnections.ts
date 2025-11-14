@@ -12,6 +12,7 @@ export interface WorkspaceConnection {
 export const useWorkspaceConnections = (workspaceId?: string) => {
   const [connections, setConnections] = useState<WorkspaceConnection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [pollingEnabled, setPollingEnabled] = useState(true);
 
   const fetchConnections = async () => {
     if (!workspaceId) return;
@@ -82,9 +83,21 @@ export const useWorkspaceConnections = (workspaceId?: string) => {
     fetchConnections();
   }, [workspaceId]);
 
+  // Polling automático a cada 5 segundos para atualizar status das conexões
+  useEffect(() => {
+    if (!workspaceId || !pollingEnabled) return;
+
+    const interval = setInterval(() => {
+      fetchConnections();
+    }, 5000); // 5 segundos
+
+    return () => clearInterval(interval);
+  }, [workspaceId, pollingEnabled]);
+
   return {
     connections,
     isLoading,
     fetchConnections,
+    setPollingEnabled,
   };
 };
