@@ -116,9 +116,14 @@ serve(async (req) => {
         .eq('id', conversationIdResolved)
         .single();
 
+      console.log(`🔍 [${messageId}] Query error:`, convErr);
+      console.log(`🔍 [${messageId}] Raw convData:`, JSON.stringify(convData, null, 2));
+
       if (convData) {
         const contact = Array.isArray(convData.contact) ? convData.contact[0] : convData.contact;
         const connection = Array.isArray(convData.connection) ? convData.connection[0] : convData.connection;
+        
+        console.log(`🔍 [${messageId}] Connection raw:`, JSON.stringify(connection, null, 2));
         
         contactPhone = contact?.phone;
         contactName = contact?.name;
@@ -130,6 +135,7 @@ serve(async (req) => {
         // O provider pode vir como array também
         const provider = Array.isArray(connection?.provider) ? connection.provider[0] : connection?.provider;
         console.log(`📡 [${messageId}] Connection provider detected:`, provider?.provider || 'none');
+        console.log(`📡 [${messageId}] ConnectionData stored:`, !!connectionData, 'provider_id:', connectionData?.provider_id);
       }
     }
 
@@ -153,6 +159,38 @@ serve(async (req) => {
     }
 
     const finalEvolutionInstance = evolutionInstance;
+    
+    // Se não conseguimos connectionData via conversação, buscar direto pela instância
+    if (!connectionData && finalEvolutionInstance && finalWorkspaceId) {
+      console.log(`🔍 [${messageId}] Buscando connection direto por instance_name: ${finalEvolutionInstance}`);
+      
+      const { data: directConnection, error: directErr } = await supabase
+        .from('connections')
+        .select(`
+          id,
+          instance_name,
+          provider_id,
+          metadata,
+          provider:whatsapp_providers!connections_provider_id_fkey(
+            provider,
+            evolution_url,
+            evolution_token,
+            zapi_url,
+            zapi_token,
+            zapi_client_token
+          )
+        `)
+        .eq('instance_name', finalEvolutionInstance)
+        .eq('workspace_id', finalWorkspaceId)
+        .maybeSingle();
+      
+      if (directConnection) {
+        console.log(`✅ [${messageId}] Connection encontrada direto:`, JSON.stringify(directConnection, null, 2));
+        connectionData = directConnection;
+      } else {
+        console.log(`❌ [${messageId}] Nenhuma connection encontrada. Error:`, directErr);
+      }
+    }
 
     console.log(`🔍 [${messageId}] Buscando configuração do provider para instância: ${finalEvolutionInstance}`);
 
