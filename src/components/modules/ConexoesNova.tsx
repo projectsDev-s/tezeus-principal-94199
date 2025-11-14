@@ -777,6 +777,12 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     // Verificação de status
     const checkStatus = async () => {
       try {
+        // Verificar se a conexão ainda existe
+        if (!connection) {
+          console.log(`⚠️ Conexão ${connectionId} não encontrada, cancelando verificação de status`);
+          return false;
+        }
+        
         let connectionStatus;
         
         // Se for Z-API, usar endpoint específico de force refresh
