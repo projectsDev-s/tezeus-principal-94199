@@ -417,7 +417,7 @@ export class ZapiAdapter implements WhatsAppProvider {
       const response = await fetch(this.url, {
         method: 'POST',
         headers: {
-          'Client-Token': this.token,
+          'Authorization': `Bearer ${this.token}`, // ✅ Bearer Token de Integrator para criar instância
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
