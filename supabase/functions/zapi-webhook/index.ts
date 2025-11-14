@@ -7,6 +7,70 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Função para extrair informações de mídia do payload Z-API
+function extractMediaInfo(data: any): {
+  downloadUrl?: string;
+  mimeType?: string;
+  fileName?: string;
+  mediaType?: string;
+} | null {
+  if (data.image) {
+    return {
+      downloadUrl: data.image.downloadUrl || data.image.imageUrl,
+      mimeType: data.image.mimeType || 'image/jpeg',
+      fileName: data.image.fileName || `image-${Date.now()}.jpg`,
+      mediaType: 'image'
+    };
+  }
+  if (data.video) {
+    return {
+      downloadUrl: data.video.downloadUrl || data.video.videoUrl,
+      mimeType: data.video.mimeType || 'video/mp4',
+      fileName: data.video.fileName || `video-${Date.now()}.mp4`,
+      mediaType: 'video'
+    };
+  }
+  if (data.audio) {
+    return {
+      downloadUrl: data.audio.downloadUrl || data.audio.audioUrl,
+      mimeType: data.audio.mimeType || 'audio/ogg',
+      fileName: data.audio.fileName || `audio-${Date.now()}.ogg`,
+      mediaType: 'audio'
+    };
+  }
+  if (data.document) {
+    return {
+      downloadUrl: data.document.downloadUrl || data.document.documentUrl,
+      mimeType: data.document.mimeType || 'application/octet-stream',
+      fileName: data.document.fileName || `document-${Date.now()}`,
+      mediaType: 'document'
+    };
+  }
+  return null;
+}
+
+// Função para baixar mídia com retry
+async function downloadMedia(url: string, maxRetries = 3): Promise<ArrayBuffer> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(30000) // 30s timeout
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      return await response.arrayBuffer();
+    } catch (error) {
+      console.error(`❌ Download attempt ${attempt} failed:`, error);
+      if (attempt === maxRetries) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  throw new Error('Failed after retries');
+}
+
 serve(async (req) => {
   const id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
@@ -67,19 +131,56 @@ serve(async (req) => {
       // Extrair external_id do messageId do Z-API
       const externalId = data.messageId || data.id || null;
       
+      // Verificar se há mídia no payload
+      const mediaInfo = extractMediaInfo(data);
+      let base64: string | undefined;
+      
+      if (mediaInfo?.downloadUrl) {
+        try {
+          console.log(`📥 [${id}] Downloading media from: ${mediaInfo.downloadUrl}`);
+          const mediaBuffer = await downloadMedia(mediaInfo.downloadUrl);
+          
+          // Converter para base64
+          const uint8Array = new Uint8Array(mediaBuffer);
+          const binaryString = Array.from(uint8Array)
+            .map(byte => String.fromCharCode(byte))
+            .join('');
+          base64 = btoa(binaryString);
+          
+          console.log(`✅ [${id}] Media downloaded and converted to base64 (${mediaInfo.mediaType}, ${Math.round(base64.length / 1024)}KB)`);
+        } catch (error) {
+          console.error(`❌ [${id}] Failed to download media:`, error);
+          // Continue sem base64 se falhar
+        }
+      }
+      
+      // Montar payload para n8n
+      const n8nPayload: any = {
+        event_type: data.event || data.type || 'UNKNOWN',
+        provider: 'zapi',
+        instance_name: conn.instance_name,
+        workspace_id: conn.workspace_id,
+        connection_id: conn.id,
+        external_id: externalId,
+        timestamp: new Date().toISOString(),
+        webhook_data: data
+      };
+      
+      // Adicionar dados de mídia se disponível
+      if (mediaInfo) {
+        n8nPayload.media = {
+          base64,
+          fileName: mediaInfo.fileName,
+          mimeType: mediaInfo.mimeType,
+          mediaUrl: mediaInfo.downloadUrl,
+          mediaType: mediaInfo.mediaType
+        };
+      }
+      
       fetch(n8nUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_type: data.event || data.type || 'UNKNOWN',
-          provider: 'zapi',
-          instance_name: conn.instance_name, // ✅ Usar o instance_name da conexão, não o instanceId do payload
-          workspace_id: conn.workspace_id,
-          connection_id: conn.id,
-          external_id: externalId,
-          timestamp: new Date().toISOString(),
-          webhook_data: data
-        })
+        body: JSON.stringify(n8nPayload)
       })
         .then(r => console.log(`✅ [${id}] N8N: ${r.status}`))
         .catch(e => console.error(`❌ [${id}] N8N error:`, e));
