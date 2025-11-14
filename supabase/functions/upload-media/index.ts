@@ -87,20 +87,17 @@ serve(async (req) => {
       throw new Error(`Erro no upload: ${uploadError.message}`);
     }
 
-    // Gerar URL pública
+    // Gerar URL através da edge function serve-local-media
     const finalPath = `messages/${uniqueFileName}`;
-    const { data: publicUrlData } = supabase.storage
-      .from('whatsapp-media')
-      .getPublicUrl(finalPath);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const proxyUrl = `${supabaseUrl}/functions/v1/serve-local-media/${finalPath}`;
 
-    const publicUrl = publicUrlData.publicUrl;
-
-    console.log('✅ Arquivo salvo:', publicUrl);
+    console.log('✅ Arquivo salvo:', proxyUrl);
     console.log(`✅ Upload confirmado - Path: ${finalPath}, MIME: ${finalMimeType}`);
 
     return new Response(JSON.stringify({
       success: true,
-      publicUrl: publicUrl,
+      publicUrl: proxyUrl,
       fileName: uniqueFileName,
       mimeType: finalMimeType,
       size: blob.size,

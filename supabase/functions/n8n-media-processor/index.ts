@@ -395,10 +395,9 @@ serve(async (req) => {
 
     console.log('✅ Upload realizado com sucesso:', uploadData);
 
-    // Obter URL pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('whatsapp-media')
-      .getPublicUrl(storagePath);
+    // Obter URL através da edge function serve-local-media
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const proxyUrl = `${supabaseUrl}/functions/v1/serve-local-media/${storagePath}`;
 
     console.log('📨 Mensagem existente encontrada - atualizando mídia:', existingMessage.id);
     
@@ -407,7 +406,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('messages')
       .update({
-        file_url: publicUrl,
+        file_url: proxyUrl,
         mime_type: finalMimeType,
         file_name: finalFileName,
         metadata: {
@@ -433,7 +432,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       messageId: existingMessage.id,
-      fileUrl: publicUrl,
+      fileUrl: proxyUrl,
       action: 'updated_existing',
       fileName: finalFileName,
       mimeType: finalMimeType,
