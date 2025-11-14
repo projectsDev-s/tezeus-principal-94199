@@ -426,17 +426,21 @@ export class ZapiAdapter implements WhatsAppProvider {
       const data = await response.json().catch(() => ({}));
 
     if (response.ok) {
-      console.log('✅ [Z-API] Instância criada:', data);
+      console.log('✅ [Z-API] Instância criada com dados:', JSON.stringify(data, null, 2));
       
       // Fazer assinatura da instância
       const instanceId = data.instanceId || data.id;
       const instanceToken = data.token;
       
+      console.log('🔍 [Z-API] Dados para assinatura - instanceId:', instanceId, 'instanceToken:', instanceToken);
+      
       if (instanceId && instanceToken) {
         try {
+          // Construir URL base corretamente
           const baseUrl = this.url.replace('/instances/integrator/on-demand', '');
           const subscriptionUrl = `${baseUrl}/instances/${instanceId}/token/${instanceToken}/integrator/on-demand/subscription`;
           
+          console.log('📤 [Z-API] URL de assinatura:', subscriptionUrl);
           console.log('📤 [Z-API] Assinando instância:', instanceId);
           
           const subscriptionResponse = await fetch(subscriptionUrl, {
@@ -447,14 +451,18 @@ export class ZapiAdapter implements WhatsAppProvider {
             },
           });
           
+          const subscriptionData = await subscriptionResponse.json().catch(() => ({}));
+          
           if (subscriptionResponse.ok) {
-            console.log('✅ [Z-API] Instância assinada com sucesso');
+            console.log('✅ [Z-API] Instância assinada com sucesso:', subscriptionData);
           } else {
-            console.warn('⚠️ [Z-API] Erro ao assinar instância:', await subscriptionResponse.text());
+            console.error('❌ [Z-API] Erro ao assinar instância (status:', subscriptionResponse.status, '):', subscriptionData);
           }
         } catch (subError: any) {
-          console.warn('⚠️ [Z-API] Erro na assinatura (não crítico):', subError.message);
+          console.error('❌ [Z-API] Exceção ao assinar instância:', subError.message, subError.stack);
         }
+      } else {
+        console.error('❌ [Z-API] Dados insuficientes para assinatura. instanceId:', instanceId, 'instanceToken:', instanceToken);
       }
       
       return {
