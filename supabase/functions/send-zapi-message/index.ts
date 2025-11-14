@@ -91,7 +91,7 @@ serve(async (req) => {
     }
 
     const zapiUrl = connection.provider.zapi_url;
-    const zapiToken = connection.provider.zapi_token;
+    const zapiClientToken = connection.provider.zapi_client_token;
 
     if (!zapiUrl || !zapiToken) {
       return new Response(
@@ -233,7 +233,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Client-Token": zapiToken, // ✅ Token de CLIENTE para operar instância
+        "Client-Token": zapiClientToken, // ✅ Token de CLIENTE para operar instância
       },
       body: JSON.stringify(zapiPayload),
     });
