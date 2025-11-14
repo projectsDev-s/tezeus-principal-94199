@@ -25,19 +25,24 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const instanceName = data.instanceName || data.instance;
+    // Z-API pode enviar instanceName OU instanceId
+    const instanceName = data.instanceName || data.instance || data.instanceId;
     
     if (!instanceName) {
+      console.error(`❌ [${id}] No instance identifier found in payload`);
       return new Response(
         JSON.stringify({ success: false, error: "No instance name" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    console.log(`📍 [${id}] Looking for instance: ${instanceName}`);
+
+    // Buscar conexão pelo instance_name OU instance_id (para Z-API)
     const { data: conn } = await supabase
       .from("connections")
       .select("*, provider:whatsapp_providers!connections_provider_id_fkey(n8n_webhook_url)")
-      .eq("instance_name", instanceName)
+      .or(`instance_name.eq.${instanceName},metadata->instanceId.eq.${instanceName}`)
       .maybeSingle();
 
     if (!conn) {
