@@ -288,19 +288,23 @@ serve(async (req) => {
                   }
                 })
 
+                const cancelText = await cancelResponse.text().catch(() => 'Unknown error')
+                const isNotFound = cancelResponse.status === 404 || 
+                                   cancelText.toLowerCase().includes('instance not found') ||
+                                   cancelText.toLowerCase().includes('not found')
+
                 externalDeleteStatus = {
-                  ok: cancelResponse.ok || cancelResponse.status === 404,
-                  status: cancelResponse.status
+                  ok: cancelResponse.ok || isNotFound,
+                  status: cancelResponse.status,
+                  message: cancelText
                 }
 
                 if (cancelResponse.ok) {
                   console.log('✅ Z-API instance cancelled successfully')
-                } else if (cancelResponse.status === 404) {
-                  console.log('⚠️ Z-API instance already cancelled or not found (treating as success)')
+                } else if (isNotFound) {
+                  console.log('⚠️ Z-API instance already cancelled or not found (treating as success)', cancelText.substring(0, 200))
                 } else {
-                  const cancelText = await cancelResponse.text().catch(() => 'Unknown error')
                   console.warn(`⚠️ Z-API cancellation returned status ${cancelResponse.status}:`, cancelText.substring(0, 200))
-                  externalDeleteStatus.message = cancelText
                 }
               }
             } catch (zapiError) {
