@@ -93,7 +93,7 @@ serve(async (req) => {
     const zapiUrl = connection.provider.zapi_url;
     const zapiClientToken = connection.provider.zapi_client_token;
 
-    if (!zapiUrl || !zapiToken) {
+    if (!zapiUrl || !zapiClientToken) {
       return new Response(
         JSON.stringify({
           success: false,
