@@ -259,6 +259,14 @@ serve(async (req) => {
     }
 
     console.log(`✅ [${messageId}] Provider configurado: ${providerType} - ${providerUrl}`);
+    console.log(`🔍 [${messageId}] Provider details:`, {
+      providerType,
+      providerUrl: providerUrl?.substring(0, 30) + '...',
+      hasZapiToken: !!zapiClientToken,
+      hasZapiInstanceId: !!zapiInstanceId,
+      isZapi: providerType === 'zapi',
+      isEvolution: providerType === 'evolution'
+    });
 
     // Buscar dados da instância no banco (connections)
     const { data: instanceData, error: instanceErr } = await supabase
@@ -414,14 +422,15 @@ serve(async (req) => {
       evolutionMessageType = 'conversation';
     }
 
-    const n8nPayload = {
+    // Montar payload base
+    const n8nPayloadBase: any = {
       event: 'send.message',
       instance: finalEvolutionInstance,
       workspace_id: finalWorkspaceId,
       connection_id: instanceData.id,
       phone_number: contactPhone,
       external_id: external_id || messageId,
-      provider: providerType, // 'evolution' ou 'zapi'
+      provider: providerType, // CAMPO IDENTIFICADOR DO PROVIDER
       data: {
         key: {
           remoteJid: `${contactPhone}@s.whatsapp.net`,
@@ -434,25 +443,33 @@ serve(async (req) => {
       },
       destination: workspaceWebhookUrl,
       date_time: new Date().toISOString(),
-      sender: contactPhone,
-      // Incluir dados específicos do provider
-      ...(providerType === 'evolution' ? {
-        server_url: providerUrl,
-        apikey: providerToken
-      } : {
-        zapi_url: providerUrl,
-        zapi_token: providerToken,
-        zapi_client_token: zapiClientToken,
-        zapi_instance_id: zapiInstanceId
-      })
+      sender: contactPhone
     };
 
+    // Adicionar dados específicos do provider (NUNCA MISTURAR!)
+    if (providerType === 'evolution') {
+      n8nPayloadBase.server_url = providerUrl;
+      n8nPayloadBase.apikey = providerToken;
+      console.log(`🔵 [${messageId}] Payload configurado para EVOLUTION API`);
+    } else if (providerType === 'zapi') {
+      n8nPayloadBase.zapi_url = providerUrl;
+      n8nPayloadBase.zapi_token = providerToken;
+      n8nPayloadBase.zapi_client_token = zapiClientToken;
+      n8nPayloadBase.zapi_instance_id = zapiInstanceId;
+      console.log(`🟢 [${messageId}] Payload configurado para Z-API`);
+    }
+
+    const n8nPayload = n8nPayloadBase;
+
     console.log(`📡 [${messageId}] Enviando para N8N:`, {
+      provider: providerType,
       workspace_id: finalWorkspaceId,
       connection_id: instanceData.id,
       phone_number: contactPhone,
       instance: finalEvolutionInstance,
-      messageType: evolutionMessageType
+      messageType: evolutionMessageType,
+      hasEvolutionFields: !!(n8nPayload.server_url && n8nPayload.apikey),
+      hasZapiFields: !!(n8nPayload.zapi_url && n8nPayload.zapi_token)
     });
 
     // Chamar N8N com timeout e detecção de falhas melhorada
