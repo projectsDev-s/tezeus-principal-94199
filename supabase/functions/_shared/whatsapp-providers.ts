@@ -425,15 +425,45 @@ export class ZapiAdapter implements WhatsAppProvider {
 
       const data = await response.json().catch(() => ({}));
 
-      if (response.ok) {
-        console.log('✅ [Z-API] Instância criada:', data);
-        return {
-          ok: true,
-          qrCode: data.qrcode || data.qr || null,
-          sessionId: data.instanceId || data.id || null,
-          details: data
-        };
-      } else {
+    if (response.ok) {
+      console.log('✅ [Z-API] Instância criada:', data);
+      
+      // Fazer assinatura da instância
+      const instanceId = data.instanceId || data.id;
+      const instanceToken = data.token;
+      
+      if (instanceId && instanceToken) {
+        try {
+          const baseUrl = this.url.replace('/instances/integrator/on-demand', '');
+          const subscriptionUrl = `${baseUrl}/instances/${instanceId}/token/${instanceToken}/integrator/on-demand/subscription`;
+          
+          console.log('📤 [Z-API] Assinando instância:', instanceId);
+          
+          const subscriptionResponse = await fetch(subscriptionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (subscriptionResponse.ok) {
+            console.log('✅ [Z-API] Instância assinada com sucesso');
+          } else {
+            console.warn('⚠️ [Z-API] Erro ao assinar instância:', await subscriptionResponse.text());
+          }
+        } catch (subError: any) {
+          console.warn('⚠️ [Z-API] Erro na assinatura (não crítico):', subError.message);
+        }
+      }
+      
+      return {
+        ok: true,
+        qrCode: data.qrcode || data.qr || null,
+        sessionId: data.instanceId || data.id || null,
+        details: data
+      };
+    } else {
         console.error('❌ [Z-API] Erro ao criar instância:', JSON.stringify(data));
         return {
           ok: false,
