@@ -816,12 +816,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         console.log(`📊 Status recebido (${isZAPI ? 'Z-API' : 'Evolution'}):`, connectionStatus);
         
         // Atualizar selectedConnection com o status atual
+        // MAS: se o status atual é 'qr' e recebeu 'disconnected', não atualizar
+        // (aguardando usuário escanear o QR code)
         if (selectedConnection) {
-          setSelectedConnection(prev => prev ? { 
-            ...prev, 
-            status: connectionStatus.status,
-            phone_number: connectionStatus.phone_number || prev.phone_number
-          } : null);
+          const shouldUpdate = !(
+            selectedConnection.status === 'qr' && 
+            connectionStatus.status === 'disconnected'
+          );
+          
+          if (shouldUpdate) {
+            setSelectedConnection(prev => prev ? { 
+              ...prev, 
+              status: connectionStatus.status,
+              phone_number: connectionStatus.phone_number || prev.phone_number
+            } : null);
+          } else {
+            console.log('⏸️ Status QR mantido, aguardando scan do usuário');
+          }
         }
         
         // Conectado - notificar apenas uma vez
@@ -851,11 +862,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         
         // Desconectado - NÃO notificar na verificação inicial do modal
         // Só notificar se for uma desconexão que aconteceu durante o processo
+        // E NÃO fechar o modal se o status atual for 'qr' (aguardando scan)
         if (connectionStatus.status === 'disconnected' && 
             !isInitialCheck && 
             selectedConnection?.status !== 'qr' && 
             lastNotifiedStatus !== 'disconnected') {
           lastNotifiedStatus = 'disconnected';
+          
+          console.log('⚠️ Desconexão detectada durante processo');
           
           // Só desconecta se não estiver aguardando QR
           if (pollInterval) clearInterval(pollInterval);
