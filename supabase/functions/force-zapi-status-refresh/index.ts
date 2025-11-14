@@ -164,6 +164,36 @@ serve(async (req) => {
     const newStatus = isConnected ? "connected" : "disconnected";
     const phoneNumber = zapiStatus.phone || zapiStatus.wid || null;
 
+    console.log(`🔄 New status from Z-API: ${newStatus}`);
+    console.log(`📊 Current status in DB: ${connection.status}`);
+
+    // NÃO atualizar o banco se:
+    // - Status atual é "qr" (aguardando scan do usuário)
+    // - E o novo status é "disconnected" (ainda não conectou)
+    const shouldUpdate = !(
+      connection.status === 'qr' && 
+      newStatus === 'disconnected'
+    );
+
+    if (!shouldUpdate) {
+      console.log("⏸️ Mantendo status 'qr' - aguardando usuário escanear QR Code");
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: {
+            connected: isConnected,
+            phone: phoneNumber,
+            raw: zapiStatus,
+          },
+          instanceName: connection.instance_name,
+          newStatus: connection.status, // Mantém o status atual (qr)
+          maintained: true, // Flag indicando que status foi mantido
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`🔄 Updating connection status to: ${newStatus}`);
 
     // Atualizar status no banco de dados
