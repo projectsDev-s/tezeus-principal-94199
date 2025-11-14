@@ -39,20 +39,25 @@ serve(async (req) => {
     console.log(`📍 [${id}] Looking for instance: ${instanceName}`);
 
     // Buscar conexão pelo instance_name OU instance_id (para Z-API)
-    const { data: conn } = await supabase
+    const { data: conn, error: connError } = await supabase
       .from("connections")
       .select("*, provider:whatsapp_providers!connections_provider_id_fkey(n8n_webhook_url)")
-      .or(`instance_name.eq.${instanceName},metadata->instanceId.eq.${instanceName}`)
+      .or(`instance_name.eq.${instanceName},metadata->>instanceId.eq.${instanceName}`)
       .maybeSingle();
 
+    if (connError) {
+      console.error(`❌ [${id}] Database error:`, connError);
+    }
+
     if (!conn) {
+      console.error(`❌ [${id}] Connection not found for instance: ${instanceName}`);
       return new Response(
         JSON.stringify({ success: false, error: "Connection not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`✅ [${id}] Connection: ${conn.id}`);
+    console.log(`✅ [${id}] Connection: ${conn.id}, Workspace: ${conn.workspace_id}`);
 
     const n8nUrl = conn.provider?.n8n_webhook_url;
     
@@ -74,6 +79,8 @@ serve(async (req) => {
       })
         .then(r => console.log(`✅ [${id}] N8N: ${r.status}`))
         .catch(e => console.error(`❌ [${id}] N8N error:`, e));
+    } else {
+      console.warn(`⚠️ [${id}] No N8N webhook URL configured for this provider`);
     }
 
     return new Response(
