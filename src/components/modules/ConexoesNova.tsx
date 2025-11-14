@@ -958,11 +958,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       
       // Reload connections to show updated status
       loadConnections();
-      
-      // Verificar status após desconexão
-      if (connection.id) {
-        setTimeout(() => startPolling(connection.id), 1000);
-      }
 
     } catch (error) {
       console.error('Error disconnecting instance:', error);
