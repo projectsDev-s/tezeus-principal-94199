@@ -147,7 +147,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -178,12 +177,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       loadConnections();
       refreshLimits(); // Force refresh limits when component mounts
     }
-    
-    return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-    };
   }, [workspaceId]);
 
   // Carregar pipelines e providers quando o modal for aberto
@@ -769,11 +762,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   };
 
   const startPolling = (connectionId: string) => {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-    }
-    
-    console.log(`🔄 Starting polling for connection ${connectionId}`);
+    console.log(`🔄 Starting status check for connection ${connectionId}`);
     
     // Buscar a conexão para verificar o provider
     const connection = connections.find(c => c.id === connectionId);
@@ -839,10 +828,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         if (connectionStatus.status === 'connected' && lastNotifiedStatus !== 'connected') {
           lastNotifiedStatus = 'connected';
           
-          // Clear polling
-          if (pollInterval) clearInterval(pollInterval);
-          setPollInterval(null);
-          
           // Close modal and update UI
           setIsQRModalOpen(false);
           setSelectedConnection(null);
@@ -871,9 +856,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           
           console.log('⚠️ Desconexão detectada durante processo');
           
-          // Só desconecta se não estiver aguardando QR
-          if (pollInterval) clearInterval(pollInterval);
-          setPollInterval(null);
           setIsQRModalOpen(false);
           setSelectedConnection(null);
           
@@ -897,14 +879,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       } catch (error) {
         console.error('Error polling connection status:', error);
         
-        // Se for erro 404 ou conexão não encontrada, parar polling
+        // Se for erro 404 ou conexão não encontrada
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('Connection not found')) {
-          console.log('⚠️ Conexão não encontrada (404), parando polling');
-          
-          // Limpar polling
-          if (pollInterval) clearInterval(pollInterval);
-          setPollInterval(null);
+          console.log('⚠️ Conexão não encontrada (404)');
           
           // Fechar modal
           setIsQRModalOpen(false);
@@ -926,13 +904,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       }
     };
     
-    // Primeira verificação imediata
+    // Verificação única após conexão/desconexão
     checkStatus();
-    
-    // Polling mais rápido (1.5 segundos) para melhor responsividade
-    const interval = setInterval(checkStatus, 1500);
-    
-    setPollInterval(interval);
   };
 
   const retryConnection = () => {
@@ -979,6 +952,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       
       // Reload connections to show updated status
       loadConnections();
+      
+      // Verificar status após desconexão
+      if (connection.id) {
+        setTimeout(() => startPolling(connection.id), 1000);
+      }
 
     } catch (error) {
       console.error('Error disconnecting instance:', error);
@@ -1691,11 +1669,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       {/* QR Code Modal */}
       <Dialog open={isQRModalOpen} onOpenChange={(open) => {
         if (!open) {
-          // Clear all timers when modal closes
-          if (pollInterval) {
-            clearInterval(pollInterval);
-            setPollInterval(null);
-          }
           setSelectedConnection(null);
         }
         setIsQRModalOpen(open);
