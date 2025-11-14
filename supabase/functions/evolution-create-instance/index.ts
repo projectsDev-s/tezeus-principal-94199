@@ -579,6 +579,36 @@ serve(async (req) => {
 
       console.log("✅ Z-API instance created successfully");
 
+      // ===== ASSINATURA DA INSTÂNCIA Z-API =====
+      try {
+        const baseUrl = fullUrl.replace('/instances/integrator/on-demand', '');
+        const subscriptionUrl = `${baseUrl}/instances/${zapiInstanceId}/token/${zapiInstanceToken}/integrator/on-demand/subscription`;
+        
+        console.log("📤 [Z-API] Iniciando assinatura da instância");
+        console.log("📤 [Z-API] URL de assinatura:", subscriptionUrl);
+        console.log("📤 [Z-API] Instance ID:", zapiInstanceId);
+        console.log("📤 [Z-API] Token preview:", zapiInstanceToken.substring(0, 10) + "...");
+        
+        const subscriptionResponse = await fetch(subscriptionUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cleanToken}`, // Usa o mesmo token de integrator
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        const subscriptionData = await subscriptionResponse.text();
+        
+        if (subscriptionResponse.ok) {
+          console.log("✅ [Z-API] Instância assinada com sucesso:", subscriptionData);
+        } else {
+          console.error("❌ [Z-API] Erro ao assinar instância (status:", subscriptionResponse.status, "):", subscriptionData);
+        }
+      } catch (subError: any) {
+        console.error("❌ [Z-API] Exceção ao assinar instância:", subError.message);
+      }
+      // ===== FIM DA ASSINATURA =====
+
       return new Response(
         JSON.stringify({
           success: true,
