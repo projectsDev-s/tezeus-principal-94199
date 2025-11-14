@@ -399,6 +399,7 @@ serve(async (req) => {
                 },
                 message: {
                   id: savedMessage.id,
+                  external_id: savedMessage.external_id,
                   content: message,
                   message_type: messageType,
                   sender_type: senderId ? 'user' : 'system',

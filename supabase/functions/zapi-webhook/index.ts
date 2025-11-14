@@ -64,6 +64,9 @@ serve(async (req) => {
     if (n8nUrl) {
       console.log(`🚀 [${id}] Forwarding to: ${n8nUrl}`);
       
+      // Extrair external_id do messageId do Z-API
+      const externalId = data.messageId || data.id || null;
+      
       fetch(n8nUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,6 +76,7 @@ serve(async (req) => {
           instance_name: instanceName,
           workspace_id: conn.workspace_id,
           connection_id: conn.id,
+          external_id: externalId,
           timestamp: new Date().toISOString(),
           webhook_data: data
         })
