@@ -329,7 +329,27 @@ serve(async (req) => {
             }
           }
 
-          // Always proceed with database deletion, even if Evolution API failed
+          // VALIDAÇÃO: Só permitir exclusão se o cancelamento foi bem-sucedido
+          if (isZapiProvider && externalDeleteStatus && !externalDeleteStatus.ok) {
+            console.error('❌ Não foi possível cancelar a assinatura Z-API')
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: 'Não conseguimos cancelar a assinatura. Verifique com o suporte.',
+                details: {
+                  status: externalDeleteStatus.status,
+                  message: externalDeleteStatus.message
+                }
+              }),
+              { 
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            )
+          }
+          
+          // Proceed with database deletion (subscription already cancelled or Evolution API)
+          console.log('✅ Cancelamento confirmado, prosseguindo com exclusão do banco')
           console.log('🗑️ Starting database deletion process')
           
           // First, delete all related data in the correct order

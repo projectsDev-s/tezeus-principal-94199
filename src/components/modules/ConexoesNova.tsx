@@ -611,13 +611,24 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       setIsDeleteModalOpen(false);
       setConnectionToDelete(null);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting connection:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir conexão",
-        variant: "destructive",
-      });
+      
+      // Verificar se é erro de cancelamento de assinatura
+      const errorMessage = error?.message || String(error);
+      if (errorMessage.includes('cancelar a assinatura')) {
+        toast({
+          title: "Erro ao Cancelar Assinatura",
+          description: "Não conseguimos cancelar a assinatura. Verifique com o suporte.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir conexão",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsDisconnecting(false);
     }

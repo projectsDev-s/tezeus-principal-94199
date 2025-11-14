@@ -427,7 +427,14 @@ class EvolutionProvider {
         throw new Error(error.message || 'Erro ao chamar função de exclusão');
       }
       
-      return { success: data?.success || false };
+      // Se o backend retornou success: false, lançar erro com a mensagem retornada
+      if (!data?.success) {
+        const errorMessage = data?.error || 'Erro ao excluir conexão';
+        console.error('❌ Delete failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      return { success: true };
     } catch (error) {
       console.error('❌ Error in deleteConnection:', error);
       throw error;
