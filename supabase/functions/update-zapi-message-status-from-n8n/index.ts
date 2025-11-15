@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -18,190 +17,156 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const payload = await req.json();
-    
-    console.log('🔄 [update-zapi-message-status] Recebido do N8N:', JSON.stringify(payload, null, 2));
+    console.log('🔄 [Z-API Status] Payload recebido:', JSON.stringify(payload, null, 2));
 
-    const { workspace_id, connection_id, status, external_id, timestamp, phone, conversation_id } = payload;
+    const { 
+      workspace_id: workspaceId, 
+      status: rawStatus, 
+      conversation_id: conversationId 
+    } = payload;
 
-    // Validações básicas
-    if (!workspace_id || !external_id || !status) {
-      console.error('❌ [update-zapi-message-status] Dados obrigatórios faltando:', { workspace_id, external_id, status });
-      return new Response(
-        JSON.stringify({ error: 'workspace_id, external_id e status são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Validações
+    if (!workspaceId || !rawStatus) {
+      return new Response(JSON.stringify({ 
+        error: 'workspace_id e status são obrigatórios' 
+      }), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ⚠️ EXIGIR conversation_id (fundamental para Z-API)
+    if (!conversationId) {
+      console.error('❌ conversation_id é OBRIGATÓRIO!');
+      console.log('💡 AÇÃO NECESSÁRIA: Configure o N8N Function Node para enviar:');
+      console.log('   conversation_id: $json.processed_data?.conversation?.id');
+      
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'conversation_id é obrigatório',
+        action_required: 'Configure o N8N para enviar conversation_id',
+        example: 'conversation_id: $json.processed_data?.conversation?.id'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Normalizar status
-    const normalizedStatus = status.toLowerCase();
-    console.log('📊 [update-zapi-message-status] Status normalizado:', normalizedStatus);
+    const normalizedStatus = rawStatus === 'received' ? 'delivered' : rawStatus.toLowerCase();
+    console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
-    // 🎯 ESTRATÉGIA: Validar conversation_id (deve vir sempre do N8N agora)
-    let discoveredConversationId = conversation_id;
-
-    if (!discoveredConversationId) {
-      console.warn('⚠️ [update-zapi-message-status] conversation_id NÃO foi fornecido pelo N8N');
-      
-      // Tentativa de descobrir apenas como fallback (phone pode estar encriptado)
-      if (connection_id && phone && !phone.includes('@')) {
-        console.log('🔍 [update-zapi-message-status] Tentando descobrir conversation_id via connection + phone');
-        
-        // Buscar contato pelo phone
-        const { data: contact } = await supabase
-          .from('contacts')
-          .select('id')
-          .eq('workspace_id', workspace_id)
-          .eq('phone', phone)
-          .maybeSingle();
-
-        if (contact) {
-          // Buscar conversa do contato nesta conexão
-          const { data: conversation } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('workspace_id', workspace_id)
-            .eq('contact_id', contact.id)
-            .eq('connection_id', connection_id)
-            .maybeSingle();
-
-          if (conversation) {
-            discoveredConversationId = conversation.id;
-            console.log('✅ [update-zapi-message-status] conversation_id descoberto:', discoveredConversationId);
-          }
-        }
-      }
-    } else {
-      console.log('✅ [update-zapi-message-status] conversation_id fornecido:', discoveredConversationId);
-    }
-
-    // Buscar mensagem pelo external_id ou evolution_key_id
-    console.log('🔍 [update-zapi-message-status] Buscando mensagem - external_id:', external_id, 'conversation_id:', discoveredConversationId);
+    // ✅ BUSCAR MENSAGEM RECENTE DA CONVERSA
+    // Não usamos external_id porque Z-API retorna IDs diferentes no envio vs webhook
+    console.log('🔍 Buscando última mensagem enviada da conversa:', conversationId);
     
-    // Primeira tentativa: buscar por external_id
-    let { data: message, error: findError } = await supabase
+    const twoMinutesAgo = new Date(Date.now() - 120000).toISOString();
+    
+    const { data: message, error: searchError } = await supabase
       .from('messages')
-      .select('id, status, delivered_at, read_at, conversation_id')
-      .eq('workspace_id', workspace_id)
-      .eq('external_id', external_id)
+      .select('id, external_id, status, delivered_at, read_at, content, created_at')
+      .eq('conversation_id', conversationId)
+      .eq('workspace_id', workspaceId)
+      .in('sender_type', ['user', 'agent', 'system'])
+      .in('status', ['sending', 'sent'])
+      .gte('created_at', twoMinutesAgo)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    // Segunda tentativa: buscar por evolution_key_id (caso Z-API use esse campo)
-    if (!message && external_id) {
-      console.log('🔍 [update-zapi-message-status] Tentando buscar por evolution_key_id:', external_id);
-      const { data: msg2 } = await supabase
-        .from('messages')
-        .select('id, status, delivered_at, read_at, conversation_id')
-        .eq('workspace_id', workspace_id)
-        .eq('evolution_key_id', external_id)
-        .maybeSingle();
-      
-      if (msg2) message = msg2;
-    }
-
-    // Terceira tentativa: buscar mensagem recente na conversa (usando conversation_id)
-    if (!message && discoveredConversationId) {
-      console.log('🔍 [update-zapi-message-status] Buscando mensagem recente por conversation_id:', discoveredConversationId);
-      
-      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
-      const { data: msg3 } = await supabase
-        .from('messages')
-        .select('id, status, delivered_at, read_at, conversation_id, external_id')
-        .eq('workspace_id', workspace_id)
-        .eq('conversation_id', discoveredConversationId)
-        .in('sender_type', ['user', 'agent']) // ✅ Aceitar ambos
-        .gte('created_at', thirtySecondsAgo)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (msg3) {
-        console.log('✅ [update-zapi-message-status] Mensagem encontrada por conversation_id e timestamp:', {
-          messageId: msg3.id,
-          external_id: msg3.external_id,
-          currentStatus: msg3.status
-        });
-        message = msg3;
-      }
+    if (searchError) {
+      console.error('❌ Erro na busca:', searchError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: searchError.message
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     if (!message) {
-      console.warn('⚠️ [update-zapi-message-status] Mensagem não encontrada após todas as tentativas');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Mensagem não encontrada - pode ser que ainda não tenha sido salva no banco',
-          details: { external_id, phone, workspace_id, connection_id, discoveredConversationId }
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('⚠️ Nenhuma mensagem encontrada');
+      
+      // Debug: mostrar últimas mensagens
+      const { data: debug } = await supabase
+        .from('messages')
+        .select('id, status, sender_type, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      console.log('🔍 Últimas mensagens da conversa:', debug);
+      
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Mensagem não encontrada',
+        debug_info: debug
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log('✅ [update-zapi-message-status] Mensagem encontrada:', {
+    console.log('✅ Mensagem encontrada:', {
       id: message.id,
-      currentStatus: message.status,
-      newStatus: normalizedStatus
+      current_status: message.status,
+      will_update_to: normalizedStatus
     });
 
-    // Preparar dados para atualização
-    const updateData: any = {
-      status: normalizedStatus
-    };
+    // Preparar update
+    const updateData: any = { status: normalizedStatus };
 
-    // Atualizar timestamps apropriados
     if (normalizedStatus === 'delivered' && !message.delivered_at) {
-      updateData.delivered_at = timestamp || new Date().toISOString();
-      console.log('📅 [update-zapi-message-status] Definindo delivered_at:', updateData.delivered_at);
+      updateData.delivered_at = new Date().toISOString();
     }
-
-    if (normalizedStatus === 'read' && !message.read_at) {
-      updateData.read_at = timestamp || new Date().toISOString();
-      // Se lida, também deve estar entregue
-      if (!message.delivered_at) {
-        updateData.delivered_at = timestamp || new Date().toISOString();
-      }
-      console.log('📅 [update-zapi-message-status] Definindo read_at:', updateData.read_at);
-    }
-
-    // Atualizar mensagem
-    console.log('🔄 [update-zapi-message-status] Atualizando mensagem:', updateData);
     
-    const { data: updatedMessage, error: updateError } = await supabase
+    if (normalizedStatus === 'read') {
+      updateData.read_at = new Date().toISOString();
+      if (!message.delivered_at) {
+        updateData.delivered_at = new Date().toISOString();
+      }
+    }
+
+    console.log('🔄 Atualizando:', updateData);
+
+    // Atualizar
+    const { data: updated, error: updateError } = await supabase
       .from('messages')
       .update(updateData)
       .eq('id', message.id)
-      .select()
+      .select('id, status, delivered_at, read_at')
       .single();
 
     if (updateError) {
-      console.error('❌ [update-zapi-message-status] Erro ao atualizar:', updateError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao atualizar mensagem', details: updateError }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('❌ Erro ao atualizar:', updateError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: updateError.message
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log('✅ [update-zapi-message-status] Mensagem atualizada com sucesso:', {
-      id: updatedMessage.id,
-      status: updatedMessage.status,
-      delivered_at: updatedMessage.delivered_at,
-      read_at: updatedMessage.read_at
+    console.log('✅✅✅ ATUALIZADO COM SUCESSO:', updated);
+
+    return new Response(JSON.stringify({
+      success: true,
+      data: updated
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Status atualizado com sucesso',
-        data: updatedMessage
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('💥 [update-zapi-message-status] Erro inesperado:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor', details: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('❌ Erro:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
