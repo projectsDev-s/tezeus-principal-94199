@@ -153,7 +153,8 @@ serve(async (req) => {
       console.log(`🚀 [${id}] Forwarding to: ${n8nUrl}`);
       
       // Extrair external_id do messageId do Z-API
-      const externalId = data.messageId || data.id || null;
+      // Para MessageStatusCallback, o ID vem em data.ids[0]
+      const externalId = data.messageId || data.id || (data.ids && data.ids[0]) || null;
       
       // Verificar se há mídia no payload
       const mediaInfo = extractMediaInfo(data);
