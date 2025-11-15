@@ -579,7 +579,11 @@ export const useWhatsAppConversations = () => {
     const workspaceId = selectedWorkspace.workspace_id;
     const channelName = `conversations-realtime-${workspaceId}`;
     
-    console.log('🔌 [Realtime] Iniciando subscrição:', { workspaceId, channelName });
+    console.log('🔌 [Realtime] Iniciando subscrição:', { 
+      workspaceId, 
+      channelName,
+      userId: currentUserData.id 
+    });
 
     const conversationsChannel = supabase
       .channel(channelName)
@@ -754,22 +758,32 @@ export const useWhatsAppConversations = () => {
         table: 'messages',
         filter: `workspace_id=eq.${workspaceId}`
       }, (payload) => {
-          console.log('📨 [REALTIME-MESSAGES] Nova mensagem recebida:', {
+          console.log('📨📨📨 [REALTIME-MESSAGES] ✅ NOVA MENSAGEM DETECTADA:', {
+            messageId: payload.new.id,
             conversationId: payload.new.conversation_id,
-            content: (payload.new as any).content?.substring(0, 30),
+            content: (payload.new as any).content?.substring(0, 50),
+            sender_type: payload.new.sender_type,
+            created_at: payload.new.created_at,
             timestamp: new Date().toISOString()
           });
 
           const newMessage = payload.new as any;
 
           setConversations(prev => {
+            console.log('🔄 [REALTIME-MESSAGES] Processando atualização de conversa:', {
+              totalConversations: prev.length,
+              targetConversationId: newMessage.conversation_id
+            });
+            
             // Atualizar a conversa com a nova mensagem
             const updated = prev.map(conv => {
               if (conv.id === newMessage.conversation_id) {
-                console.log('✅ [REALTIME] Atualizando card com nova mensagem:', {
+                console.log('✅✅✅ [REALTIME-MESSAGES] ATUALIZANDO CARD:', {
                   conversationId: conv.id,
-                  newContent: newMessage.content?.substring(0, 30),
-                  newTime: newMessage.created_at
+                  contactName: conv.contact.name,
+                  oldLastActivity: conv.last_activity_at,
+                  newLastActivity: newMessage.created_at,
+                  newContent: newMessage.content?.substring(0, 30)
                 });
                 
                 return {
@@ -787,11 +801,15 @@ export const useWhatsAppConversations = () => {
               return conv;
             });
             
+            console.log('📊 [REALTIME-MESSAGES] Reordenando lista...');
             // Reordenar lista por última atividade
-            return updated.sort((a, b) => 
+            const sorted = updated.sort((a, b) => 
               new Date(b.last_activity_at || b.created_at).getTime() - 
               new Date(a.last_activity_at || a.created_at).getTime()
             );
+            
+            console.log('✅ [REALTIME-MESSAGES] Lista atualizada e reordenada');
+            return sorted;
           });
         }
       )
@@ -858,16 +876,17 @@ export const useWhatsAppConversations = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 [REALTIME-CONVERSATIONS] STATUS DA SUBSCRIPTION:', {
+        console.log('📡📡📡 [REALTIME-STATUS] Status da subscrição mudou:', {
           status,
           channelName,
           workspaceId,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          listeners: ['conversations:INSERT', 'conversations:UPDATE', 'messages:INSERT', 'notifications:INSERT', 'notifications:UPDATE']
         });
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ [REALTIME-CONVERSATIONS] SUBSCRIPTION ATIVA E FUNCIONANDO!');
-          console.log('Aguardando eventos de INSERT, UPDATE em conversations e notifications');
+          console.log('✅✅✅ [REALTIME] CANAL SUBSCRITO COM SUCESSO!');
+          console.log('👂 Aguardando eventos de INSERT/UPDATE em conversations, messages e notifications');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Erro no canal, tentando reconectar...');
           setTimeout(() => fetchConversations(), 3000);
@@ -877,7 +896,7 @@ export const useWhatsAppConversations = () => {
         } else if (status === 'CLOSED') {
           console.error('🔌 Canal fechado');
         } else {
-          console.log(`🔄 [REALTIME-CONVERSATIONS] Status: ${status}`);
+          console.log(`🔄 [REALTIME] Status intermediário: ${status}`);
         }
       });
 
