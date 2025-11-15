@@ -385,7 +385,8 @@ export const useWhatsAppConversations = () => {
         content: content,
         message_type: messageType,
         sender_id: currentUserData.id,
-        sender_type: "agent",
+        sender_type: "user", // ✅ CORRIGIDO: user ao invés de agent
+        status: "sending", // ✅ CORRIGIDO: sending ao invés de sent
         file_url: fileUrl,
         file_name: fileName,
         clientMessageId // ✅ ENVIAR clientMessageId
