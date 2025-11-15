@@ -311,15 +311,16 @@ export function WhatsAppChat({
   };
   const tabs = getUserTabs();
 
-  // Filtrar conversas baseado na aba ativa e filtros
-  const getFilteredConversations = () => {
+  // Filtrar conversas baseado na aba ativa e filtros (useMemo para garantir re-render)
+  const filteredConversations = useMemo(() => {
     let filtered = [];
 
-    console.log('🔍 [Filter] Filtrando conversas:', {
+    console.log('🔍 [Filter] Recalculando conversas filtradas:', {
       totalConversations: conversations.length,
       activeTab,
       selectedTag,
-      userId: user?.id
+      userId: user?.id,
+      timestamp: new Date().toISOString()
     });
 
     // Filtrar por aba
@@ -373,8 +374,10 @@ export function WhatsAppChat({
     if (searchTerm) {
       filtered = filtered.filter(conv => conv.contact.name.toLowerCase().includes(searchTerm.toLowerCase()) || conv.contact.phone && conv.contact.phone.includes(searchTerm));
     }
+    
+    console.log('✅ [Filter] Conversas filtradas finais:', filtered.length);
     return filtered;
-  };
+  }, [conversations, activeTab, selectedTag, selectedConnection, searchTerm, user?.id, conversationNotifications, tags]);
   const [peekModalOpen, setPeekModalOpen] = useState(false);
   const [peekConversationId, setPeekConversationId] = useState<string | null>(null);
   const [contactPanelOpen, setContactPanelOpen] = useState(false);
@@ -398,9 +401,6 @@ export function WhatsAppChat({
 
   // Agrupar mensagens por data
   const messagesByDate = useMemo(() => groupMessagesByDate(messages), [messages]);
-
-  // Usar a função de filtro unificada
-  const filteredConversations = getFilteredConversations();
 
   // Estados para controle de carregamento manual
   const isInitialLoadRef = useRef(true);
@@ -1752,7 +1752,7 @@ export function WhatsAppChat({
             </div>
           ) : (
             <div className="space-y-0 group/list flex flex-col">
-              {getFilteredConversations().map(conversation => {
+              {filteredConversations.map(conversation => {
                 // ✅ Removido lastMessage (lazy loading)
                 const lastActivity = getActivityDisplay(conversation);
                 const initials = getInitials(conversation.contact?.name || conversation.contact?.phone || 'U');
