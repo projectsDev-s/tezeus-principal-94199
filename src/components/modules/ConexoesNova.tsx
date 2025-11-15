@@ -25,7 +25,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
 import { useWhatsAppProviders } from '@/hooks/useWhatsAppProviders';
-import { useZapiWebhooks } from '@/hooks/useZapiWebhooks';
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -67,7 +66,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const { queues } = useQueues(workspaceId);
   const { userRole } = useAuth();
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
-  const { configureWebhooks, isConfiguring: isConfiguringWebhooks } = useZapiWebhooks();
   
   // Detectar se está na master-dashboard
   const isInMasterDashboard = window.location.pathname === '/master-dashboard';
@@ -464,18 +462,19 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           console.log('No QR code in response, trying to get one...');
           connectInstance(connection);
         } else {
-          console.log('Z-API instance created, configuring webhooks...');
-          // Auto-configurar webhooks para Z-API
+          console.log('Z-API instance created, configuring webhooks automatically...');
+          // Auto-configurar webhooks para Z-API (silenciosamente)
           try {
-            const result = await configureWebhooks(connection.id, connection.instance_name);
-            if (result.success) {
-              toast({
-                title: 'Webhooks Configurados',
-                description: 'Webhooks Z-API configurados automaticamente',
-              });
-            }
+            await supabase.functions.invoke('configure-zapi-webhook', {
+              body: {
+                connectionId: connection.id,
+                instanceName: connection.instance_name,
+                webhookType: 'all'
+              }
+            });
+            console.log('✅ Webhooks Z-API configurados automaticamente');
           } catch (error) {
-            console.error('Erro ao configurar webhooks automaticamente:', error);
+            console.error('❌ Erro ao configurar webhooks:', error);
           }
         }
       }
@@ -1623,37 +1622,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                               )}
                             </Button>
                           </>
-                        )}
-                        
-                        {/* Botão para configurar webhooks Z-API */}
-                        {connection.provider?.provider === 'zapi' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              await configureWebhooks(connection.id, connection.instance_name);
-                              loadConnections(); // Reload to show updated metadata
-                            }}
-                            disabled={isConfiguringWebhooks}
-                            className="flex items-center gap-2"
-                            title={
-                              connection.metadata?.webhook_configured
-                                ? 'Reconfigurar Webhooks Z-API'
-                                : 'Configurar Webhooks Z-API'
-                            }
-                          >
-                            {isConfiguringWebhooks ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                Configurando...
-                              </>
-                            ) : (
-                              <>
-                                <Webhook className="w-4 h-4" />
-                                {connection.metadata?.webhook_configured ? 'Reconfigurar' : 'Webhooks'}
-                              </>
-                            )}
-                          </Button>
                         )}
                       </>
                     )}
