@@ -243,9 +243,6 @@ export function WhatsAppChat({
               _updated_at: Date.now()
             };
           });
-
-          // Recarregar conversas para sincronizar a lista
-          fetchConversations();
         }
       )
       .subscribe();
