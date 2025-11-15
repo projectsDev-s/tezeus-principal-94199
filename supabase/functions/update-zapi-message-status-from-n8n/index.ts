@@ -36,35 +36,42 @@ serve(async (req) => {
     const normalizedStatus = status.toLowerCase();
     console.log('📊 [update-zapi-message-status] Status normalizado:', normalizedStatus);
 
-    // 🎯 ESTRATÉGIA: Primeiro descobrir o conversation_id se não foi fornecido
+    // 🎯 ESTRATÉGIA: Validar conversation_id (deve vir sempre do N8N agora)
     let discoveredConversationId = conversation_id;
 
-    if (!discoveredConversationId && connection_id && phone) {
-      console.log('🔍 [update-zapi-message-status] Descobrindo conversation_id via connection + phone');
+    if (!discoveredConversationId) {
+      console.warn('⚠️ [update-zapi-message-status] conversation_id NÃO foi fornecido pelo N8N');
       
-      // Buscar contato pelo phone
-      const { data: contact } = await supabase
-        .from('contacts')
-        .select('id')
-        .eq('workspace_id', workspace_id)
-        .eq('phone', phone)
-        .maybeSingle();
-
-      if (contact) {
-        // Buscar conversa do contato nesta conexão
-        const { data: conversation } = await supabase
-          .from('conversations')
+      // Tentativa de descobrir apenas como fallback (phone pode estar encriptado)
+      if (connection_id && phone && !phone.includes('@')) {
+        console.log('🔍 [update-zapi-message-status] Tentando descobrir conversation_id via connection + phone');
+        
+        // Buscar contato pelo phone
+        const { data: contact } = await supabase
+          .from('contacts')
           .select('id')
           .eq('workspace_id', workspace_id)
-          .eq('contact_id', contact.id)
-          .eq('connection_id', connection_id)
+          .eq('phone', phone)
           .maybeSingle();
 
-        if (conversation) {
-          discoveredConversationId = conversation.id;
-          console.log('✅ [update-zapi-message-status] conversation_id descoberto:', discoveredConversationId);
+        if (contact) {
+          // Buscar conversa do contato nesta conexão
+          const { data: conversation } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('workspace_id', workspace_id)
+            .eq('contact_id', contact.id)
+            .eq('connection_id', connection_id)
+            .maybeSingle();
+
+          if (conversation) {
+            discoveredConversationId = conversation.id;
+            console.log('✅ [update-zapi-message-status] conversation_id descoberto:', discoveredConversationId);
+          }
         }
       }
+    } else {
+      console.log('✅ [update-zapi-message-status] conversation_id fornecido:', discoveredConversationId);
     }
 
     // Buscar mensagem pelo external_id ou evolution_key_id
@@ -91,24 +98,28 @@ serve(async (req) => {
       if (msg2) message = msg2;
     }
 
-    // Terceira tentativa: buscar mensagem recente na conversa (usando conversation_id descoberto)
+    // Terceira tentativa: buscar mensagem recente na conversa (usando conversation_id)
     if (!message && discoveredConversationId) {
       console.log('🔍 [update-zapi-message-status] Buscando mensagem recente por conversation_id:', discoveredConversationId);
       
-      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
       const { data: msg3 } = await supabase
         .from('messages')
-        .select('id, status, delivered_at, read_at, conversation_id')
+        .select('id, status, delivered_at, read_at, conversation_id, external_id')
         .eq('workspace_id', workspace_id)
         .eq('conversation_id', discoveredConversationId)
-        .eq('sender_type', 'user')
-        .gte('created_at', twoMinutesAgo)
+        .in('sender_type', ['user', 'agent']) // ✅ Aceitar ambos
+        .gte('created_at', thirtySecondsAgo)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       
       if (msg3) {
-        console.log('✅ [update-zapi-message-status] Mensagem encontrada por conversation_id');
+        console.log('✅ [update-zapi-message-status] Mensagem encontrada por conversation_id e timestamp:', {
+          messageId: msg3.id,
+          external_id: msg3.external_id,
+          currentStatus: msg3.status
+        });
         message = msg3;
       }
     }
