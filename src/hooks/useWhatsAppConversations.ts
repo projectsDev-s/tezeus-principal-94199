@@ -901,10 +901,14 @@ export const useWhatsAppConversations = () => {
       });
 
     return () => {
-      console.log('🔌 [useWhatsAppConversations] Removendo subscription do workspace:', workspaceId);
+      console.log('🔌🔌🔌 [Realtime] REMOVENDO SUBSCRIPTION do workspace:', workspaceId);
+      console.log('📊 Estado final antes de remover:', {
+        totalConversations: conversations.length,
+        channelName
+      });
       supabase.removeChannel(conversationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id]);
+  }, [selectedWorkspace?.workspace_id, fetchConversations]);
 
   return {
     conversations,
