@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.serve-local-media]
 verify_jwt = false
+
+[functions.update-zapi-message-status-from-n8n]
+verify_jwt = false
