@@ -53,10 +53,12 @@ serve(async (req) => {
     const normalizedStatus = rawStatus === 'received' ? 'delivered' : rawStatus.toLowerCase();
     console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
-    // ✅ BUSCAR ÚLTIMA MENSAGEM ENVIADA PARA ESSE TELEFONE/CONEXÃO
-    // Estratégia: buscar pela última mensagem enviada para aquele phone + connection
-    // Porque phone + connection_id são mais estáveis que conversation_id
-    console.log('🔍 Buscando última mensagem enviada:', { phone, connectionId, workspaceId });
+    // ✅ BUSCAR MENSAGEM POR ORDEM DE ENVIO E STATUS ATUAL
+    // Estratégia: buscar a mensagem MAIS ANTIGA que ainda não teve esse status atualizado
+    // - Se callback é "delivered" -> buscar mensagens com status "sent"
+    // - Se callback é "read" -> buscar mensagens com status "delivered"
+    // - Ordenar por created_at ASC (mais antiga primeiro)
+    console.log('🔍 Buscando mensagem para atualizar:', { phone, connectionId, workspaceId, status: normalizedStatus });
     
     // Primeiro, buscar a conversa desse telefone nessa conexão
     const { data: conversation } = await supabase
@@ -84,13 +86,33 @@ serve(async (req) => {
       });
     }
     
-    const { data: message, error: searchError } = await supabase
+    // Determinar qual status buscar baseado no callback recebido
+    let searchStatus: string | null = null;
+    if (normalizedStatus === 'delivered') {
+      searchStatus = 'sent';
+    } else if (normalizedStatus === 'read') {
+      searchStatus = 'delivered';
+    } else if (normalizedStatus === 'sent') {
+      searchStatus = 'sending';
+    }
+    
+    console.log('🎯 Buscando mensagem com status:', searchStatus || 'qualquer');
+    
+    // Montar query com filtro de status condicional
+    let query = supabase
       .from('messages')
       .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
       .eq('conversation_id', conversation.id)
       .eq('workspace_id', workspaceId)
-      .in('sender_type', ['user', 'agent', 'system']) // Apenas mensagens ENVIADAS
-      .order('created_at', { ascending: false })
+      .in('sender_type', ['user', 'agent', 'system']); // Apenas mensagens ENVIADAS
+    
+    // Filtrar pelo status anterior se definido
+    if (searchStatus) {
+      query = query.eq('status', searchStatus);
+    }
+    
+    const { data: message, error: searchError } = await query
+      .order('created_at', { ascending: true }) // MAIS ANTIGA PRIMEIRO (FIFO)
       .limit(1)
       .maybeSingle();
 
