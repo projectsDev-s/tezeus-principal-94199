@@ -574,32 +574,16 @@ export const useWhatsAppConversations = () => {
   }, [selectedWorkspace?.workspace_id]);
 
   // ===== REALTIME SUBSCRIPTION =====
-  useEffect(function realtimeSubscription() {
-    console.log('🔥🔥🔥 [REALTIME] INICIANDO SUBSCRIPTION', {
-      workspaceId: selectedWorkspace?.workspace_id,
-      timestamp: new Date().toISOString()
-    });
-    
+  useEffect(() => {
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
-    console.log('🔍 [REALTIME] Verificando dados:', {
-      hasUserData: !!currentUserData,
-      userId: currentUserData?.id,
-      hasWorkspace: !!selectedWorkspace?.workspace_id
-    });
-    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
-      console.log('⏸️ [Realtime] BLOQUEADO - Sem dados necessários');
       return;
     }
 
-    console.log('✅ [REALTIME] Dados OK, continuando...');
-
     const workspaceId = selectedWorkspace.workspace_id;
     const channelName = `conversations-realtime-${workspaceId}`;
-    
-    console.log('🔌 [Realtime] Criando canal:', channelName);
 
     const conversationsChannel = supabase
       .channel(channelName)
@@ -610,19 +594,9 @@ export const useWhatsAppConversations = () => {
         filter: `workspace_id=eq.${workspaceId}`
       },
         async (payload) => {
-          console.log('📨 [REALTIME-INSERT] Nova conversa detectada:', {
-            id: payload.new.id,
-            contact_id: payload.new.contact_id,
-            status: payload.new.status,
-            canal: payload.new.canal,
-            timestamp: new Date().toISOString()
-          });
-          
           const newConv = payload.new as any;
           
-          // Só processar conversas do WhatsApp
           if (newConv.canal !== 'whatsapp') {
-            console.log('⏭️ [Realtime] Conversa não-WhatsApp ignorada:', newConv.canal);
             return;
           }
           
