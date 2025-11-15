@@ -185,7 +185,14 @@ serve(async (req) => {
       // ✅ ATUALIZAR STATUS DA MENSAGEM NO BANCO DE DADOS
       if (data.type === 'MessageStatusCallback' && data.ids && data.ids.length > 0) {
         const messageExternalId = data.ids[0]; // ID da mensagem no Z-API
-        console.log(`📝 [${id}] Atualizando status da mensagem ${messageExternalId} → ${normalizedStatus}`);
+        console.log(`🔥🔥🔥 [${id}] CALLBACK DE STATUS RECEBIDO:`, {
+          type: data.type,
+          messageExternalId,
+          rawStatus: data.status,
+          normalizedStatus,
+          workspaceId: conn.workspace_id,
+          timestamp: new Date().toISOString()
+        });
         
         const updateData: any = {
           status: normalizedStatus,
@@ -199,6 +206,12 @@ serve(async (req) => {
           updateData.read_at = new Date().toISOString();
         }
         
+        console.log(`📝 [${id}] Executando UPDATE no banco:`, {
+          messageExternalId,
+          updateData,
+          workspaceId: conn.workspace_id
+        });
+        
         const { data: updatedMessage, error: updateError } = await supabase
           .from('messages')
           .update(updateData)
@@ -210,9 +223,23 @@ serve(async (req) => {
         if (updateError) {
           console.error(`❌ [${id}] Erro ao atualizar status da mensagem ${messageExternalId}:`, updateError);
         } else if (updatedMessage) {
-          console.log(`✅ [${id}] Status atualizado: ${messageExternalId} → ${normalizedStatus}`);
+          console.log(`✅✅✅ [${id}] STATUS ATUALIZADO NO BANCO COM SUCESSO:`, {
+            messageId: updatedMessage.id,
+            external_id: messageExternalId,
+            oldStatus: 'unknown',
+            newStatus: normalizedStatus,
+            conversation_id: updatedMessage.conversation_id,
+            updatedMessage
+          });
         } else {
-          console.warn(`⚠️ [${id}] Mensagem não encontrada no banco: ${messageExternalId}`);
+          console.warn(`⚠️⚠️⚠️ [${id}] MENSAGEM NÃO ENCONTRADA NO BANCO:`, {
+            messageExternalId,
+            workspaceId: conn.workspace_id,
+            tentouBuscarCom: {
+              external_id: messageExternalId,
+              workspace_id: conn.workspace_id
+            }
+          });
         }
       }
       
