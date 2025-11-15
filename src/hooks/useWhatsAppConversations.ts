@@ -583,10 +583,18 @@ export const useWhatsAppConversations = () => {
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
+    console.log('🔍 [REALTIME] Verificando dados:', {
+      hasUserData: !!currentUserData,
+      userId: currentUserData?.id,
+      hasWorkspace: !!selectedWorkspace?.workspace_id
+    });
+    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
-      console.log('⏸️ [Realtime] Sem dados necessários');
+      console.log('⏸️ [Realtime] BLOQUEADO - Sem dados necessários');
       return;
     }
+
+    console.log('✅ [REALTIME] Dados OK, continuando...');
 
     const workspaceId = selectedWorkspace.workspace_id;
     const channelName = `conversations-realtime-${workspaceId}`;
