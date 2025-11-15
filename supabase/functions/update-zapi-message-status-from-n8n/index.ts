@@ -36,8 +36,39 @@ serve(async (req) => {
     const normalizedStatus = status.toLowerCase();
     console.log('📊 [update-zapi-message-status] Status normalizado:', normalizedStatus);
 
+    // 🎯 ESTRATÉGIA: Primeiro descobrir o conversation_id se não foi fornecido
+    let discoveredConversationId = conversation_id;
+
+    if (!discoveredConversationId && connection_id && phone) {
+      console.log('🔍 [update-zapi-message-status] Descobrindo conversation_id via connection + phone');
+      
+      // Buscar contato pelo phone
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('workspace_id', workspace_id)
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (contact) {
+        // Buscar conversa do contato nesta conexão
+        const { data: conversation } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('workspace_id', workspace_id)
+          .eq('contact_id', contact.id)
+          .eq('connection_id', connection_id)
+          .maybeSingle();
+
+        if (conversation) {
+          discoveredConversationId = conversation.id;
+          console.log('✅ [update-zapi-message-status] conversation_id descoberto:', discoveredConversationId);
+        }
+      }
+    }
+
     // Buscar mensagem pelo external_id ou evolution_key_id
-    console.log('🔍 [update-zapi-message-status] Buscando mensagem - external_id:', external_id, 'workspace_id:', workspace_id);
+    console.log('🔍 [update-zapi-message-status] Buscando mensagem - external_id:', external_id, 'conversation_id:', discoveredConversationId);
     
     // Primeira tentativa: buscar por external_id
     let { data: message, error: findError } = await supabase
@@ -60,16 +91,16 @@ serve(async (req) => {
       if (msg2) message = msg2;
     }
 
-    // Terceira tentativa: buscar por conversation_id (direto, sem depender do phone que pode estar encriptado)
-    if (!message && conversation_id) {
-      console.log('🔍 [update-zapi-message-status] Buscando mensagem recente por conversation_id:', conversation_id);
+    // Terceira tentativa: buscar mensagem recente na conversa (usando conversation_id descoberto)
+    if (!message && discoveredConversationId) {
+      console.log('🔍 [update-zapi-message-status] Buscando mensagem recente por conversation_id:', discoveredConversationId);
       
       const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
       const { data: msg3 } = await supabase
         .from('messages')
         .select('id, status, delivered_at, read_at, conversation_id')
         .eq('workspace_id', workspace_id)
-        .eq('conversation_id', conversation_id)
+        .eq('conversation_id', discoveredConversationId)
         .eq('sender_type', 'user')
         .gte('created_at', twoMinutesAgo)
         .order('created_at', { ascending: false })
@@ -82,54 +113,13 @@ serve(async (req) => {
       }
     }
 
-    // Quarta tentativa (fallback): buscar pelo phone + connection (se phone não estiver encriptado)
-    if (!message && phone && connection_id && !conversation_id) {
-      console.log('🔍 [update-zapi-message-status] Fallback: Buscando mensagem recente pelo phone:', phone);
-      
-      const { data: contact } = await supabase
-        .from('contacts')
-        .select('id')
-        .eq('workspace_id', workspace_id)
-        .eq('phone', phone)
-        .maybeSingle();
-
-      if (contact) {
-        const { data: conversation } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('workspace_id', workspace_id)
-          .eq('contact_id', contact.id)
-          .eq('connection_id', connection_id)
-          .maybeSingle();
-
-        if (conversation) {
-          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-          const { data: msg4 } = await supabase
-            .from('messages')
-            .select('id, status, delivered_at, read_at, conversation_id')
-            .eq('workspace_id', workspace_id)
-            .eq('conversation_id', conversation.id)
-            .eq('sender_type', 'user')
-            .gte('created_at', twoMinutesAgo)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          if (msg4) {
-            console.log('✅ [update-zapi-message-status] Mensagem encontrada por busca com phone (fallback)');
-            message = msg4;
-          }
-        }
-      }
-    }
-
     if (!message) {
       console.warn('⚠️ [update-zapi-message-status] Mensagem não encontrada após todas as tentativas');
       return new Response(
         JSON.stringify({ 
           success: false, 
           message: 'Mensagem não encontrada - pode ser que ainda não tenha sido salva no banco',
-          details: { external_id, phone, workspace_id, connection_id, conversation_id }
+          details: { external_id, phone, workspace_id, connection_id, discoveredConversationId }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
