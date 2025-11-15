@@ -10,7 +10,7 @@ export const MessageStatusIndicator = ({ status, className }: MessageStatusIndic
   const getStatusIcon = () => {
     switch (status) {
       case 'sending':
-        return <Clock className="w-3.5 h-3.5 text-white/90 animate-spin" />;
+        return <Clock className="w-3.5 h-3.5 text-white/70" />; // ✅ Removido animate-spin
       case 'sent':
         return <Check className="w-3.5 h-3.5 text-white/90" />;
       case 'delivered':

@@ -420,38 +420,25 @@ export function WhatsAppChat({
   }, [selectedConversation?.id]);
 
 
-  // ✅ Enviar mensagem usando o hook de mensagens
+  // ✅ Enviar mensagem - OTIMIZADO
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedConversation) return;
+    if (!messageText.trim() || !selectedConversation || isSending) return;
     
-    // ✅ PROTEÇÃO 1: Verificar se já está enviando IMEDIATAMENTE
-    if (isSending) {
-      console.log('⏭️ Ignorando envio - já está enviando');
-      return;
-    }
-    
-    // ✅ PROTEÇÃO 2: MUTEX com chave idempotente (SEM Date.now())
     const messageKey = `${selectedConversation.id}-${messageText.trim()}`;
-    if (sendingRef.current.has(messageKey)) {
-      console.log('⏭️ Ignorando envio duplicado (MUTEX)');
-      return;
-    }
+    if (sendingRef.current.has(messageKey)) return;
     
-    // ✅ Marcar como "enviando" ANTES do try
     setIsSending(true);
     sendingRef.current.add(messageKey);
     
-    // ✅ CRÍTICO: Salvar texto e limpar input IMEDIATAMENTE
     const textToSend = messageText.trim();
     setMessageText('');
     
     try {
-      // ✅ OPÇÃO 3: Gerar clientMessageId único (será usado como external_id)
       const clientMessageId = crypto.randomUUID();
       
-      // ✅ Criar mensagem otimista com ID = clientMessageId (MESMO ID que será salvo no banco)
+      // ✅ Mensagem otimista com status 'sent' IMEDIATO
       const optimisticMessage = {
-        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
+        id: clientMessageId,
         external_id: clientMessageId,
         conversation_id: selectedConversation.id,
         content: textToSend,
@@ -459,7 +446,7 @@ export function WhatsAppChat({
         sender_type: 'agent' as const,
         sender_id: user?.id,
         created_at: new Date().toISOString(),
-        status: 'sending' as const,
+        status: 'sent' as const, // ✅ JÁ COMEÇA COMO 'sent' para não ficar em loading
         workspace_id: selectedWorkspace?.workspace_id || '',
         ...(replyingTo && {
           reply_to_message_id: replyingTo.id,
@@ -474,19 +461,19 @@ export function WhatsAppChat({
           }
         })
       };
-      addMessage(optimisticMessage);
       
-      const {
-        data: sendResult,
-        error
-      } = await supabase.functions.invoke('test-send-msg', {
+      addMessage(optimisticMessage);
+      setReplyingTo(null);
+      
+      // ✅ Enviar para backend (assíncrono, não bloqueia UI)
+      supabase.functions.invoke('test-send-msg', {
         body: {
           conversation_id: selectedConversation.id,
           content: textToSend,
           message_type: 'text',
           sender_id: user?.id,
           sender_type: 'agent',
-          clientMessageId: clientMessageId, // ✅ Backend vai usar isso como external_id
+          clientMessageId: clientMessageId,
           ...(replyingTo && {
             reply_to_message_id: replyingTo.id,
             quoted_message: {
@@ -505,98 +492,79 @@ export function WhatsAppChat({
           'x-system-user-email': user?.email || '',
           'x-workspace-id': selectedWorkspace?.workspace_id || ''
         }
+      }).then(({ error, data: sendResult }) => {
+        if (error || !sendResult?.success) {
+          console.error('❌ Erro ao enviar:', error);
+          updateMessage(clientMessageId, { status: 'failed' });
+          toast({
+            title: "Erro ao enviar",
+            description: "Não foi possível enviar a mensagem.",
+            variant: "destructive"
+          });
+        }
       });
       
-      if (error || !sendResult?.success) {
-        throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
-      }
-
-      console.log('✅ [handleSendMessage] Mensagem enviada com sucesso:', {
-        clientMessageId,
-        backendMessageId: sendResult.message?.id,
-        optimisticId: optimisticMessage.id
-      });
-
-      // ✅ Atualizar status para 'sent' quando N8N responder com sucesso
-      if (sendResult.success) {
-        updateMessage(clientMessageId, {
-          status: 'sent'
-        });
-        setReplyingTo(null); // Limpar reply após envio
-        console.log('✅ Mensagem marcada como "sent":', { clientMessageId });
-      }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast({
         title: "Erro ao enviar",
-        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        description: "Não foi possível enviar a mensagem.",
         variant: "destructive"
       });
     } finally {
       setIsSending(false);
-      // ✅ CRÍTICO: Remover do MUTEX após 1 segundo
-      setTimeout(() => {
-        sendingRef.current.delete(messageKey);
-      }, 1000);
-      setIsSending(false);
+      setTimeout(() => sendingRef.current.delete(messageKey), 500);
     }
   };
 
-  // Funções para enviar itens rápidos
+  // ✅ Enviar mensagens rápidas - OTIMIZADO
   const handleSendQuickMessage = async (content: string, type: 'text') => {
     if (!selectedConversation) return;
     
-    // ✅ MUTEX: Prevenir duplicação (SEM Date.now())
     const messageKey = `quick-${selectedConversation.id}-${content.trim()}`;
-    if (sendingRef.current.has(messageKey)) {
-      console.log('⏭️ Ignorando envio duplicado de mensagem rápida');
-      return;
-    }
+    if (sendingRef.current.has(messageKey)) return;
     sendingRef.current.add(messageKey);
     
     try {
-      // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
       const clientMessageId = crypto.randomUUID();
       
       const optimisticMessage = {
-        id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
-        external_id: clientMessageId, // ✅ Incluir external_id para correspondência
+        id: clientMessageId,
+        external_id: clientMessageId,
         conversation_id: selectedConversation.id,
         content: content,
         message_type: type as any,
         sender_type: 'agent' as const,
         sender_id: user?.id,
         created_at: new Date().toISOString(),
-        status: 'sending' as const,
+        status: 'sent' as const, // ✅ Status 'sent' imediato
         workspace_id: selectedWorkspace?.workspace_id || ''
       };
+      
       addMessage(optimisticMessage);
-      const {
-        data: sendResult,
-        error
-      } = await supabase.functions.invoke('test-send-msg', {
+      
+      // ✅ Enviar para backend (assíncrono)
+      supabase.functions.invoke('test-send-msg', {
         body: {
           conversation_id: selectedConversation.id,
           content: content,
           message_type: type,
           sender_id: user?.id,
           sender_type: 'agent',
-          clientMessageId: clientMessageId // ✅ Usar o mesmo clientMessageId
+          clientMessageId: clientMessageId
         },
         headers: {
           'x-system-user-id': user?.id || '',
           'x-system-user-email': user?.email || '',
           'x-workspace-id': selectedWorkspace?.workspace_id || ''
         }
+      }).catch(error => {
+        console.error('Erro ao enviar mensagem rápida:', error);
+        updateMessage(clientMessageId, { status: 'failed' });
       });
-      if (error || !sendResult?.success) {
-        throw new Error(sendResult?.error || 'Erro ao enviar mensagem');
-      }
-      // ✅ Não remover mensagem otimista - a subscription realtime vai substituí-la
-    } catch (error) {
-      console.error('Erro ao enviar mensagem rápida:', error);
+      
     } finally {
-      setTimeout(() => sendingRef.current.delete(messageKey), 1000);
+      setTimeout(() => sendingRef.current.delete(messageKey), 500);
     }
   };
   const handleSendQuickAudio = async (file: {
@@ -961,34 +929,24 @@ export function WhatsAppChat({
     return null;
   };
 
-  // Mapear status do Evolution para o componente MessageStatusIndicator
-  const mapEvolutionStatusToComponent = (evolutionStatus?: string): 'sending' | 'sent' | 'delivered' | 'read' | 'failed' => {
-    switch (evolutionStatus) {
-      case 'PENDING':
-      case 'sending':
-        return 'sending';
-      case 'SENT':
-      case 'sent':
-        return 'sent';
-      case 'DELIVERY_ACK':
-      case 'delivered':
-        return 'delivered';
-      case 'READ_ACK':
-      case 'read':
-        return 'read';
-      case 'FAILED':
-      case 'failed':
-        return 'failed';
-      default:
-        return 'sent';
-      // fallback
-    }
-  };
+  // ✅ SIMPLIFICADO: Mapear status (Evolution e Z-API já normalizam no backend)
+  const getDisplayMessageStatus = (message: ConversationMessage): DisplayMessageStatus | undefined => {
+    if (!message || message.sender_type === 'contact') return undefined;
 
-  // Mapear status do Z-API para o componente MessageStatusIndicator
-  // Status já vem normalizado do backend (sent, delivered, read, failed)
-  const mapZapiStatusToComponent = (zapiStatus?: string): 'sending' | 'sent' | 'delivered' | 'read' | 'failed' => {
-    switch (zapiStatus?.toLowerCase()) {
+    const status = message.status?.toLowerCase();
+    
+    console.log('🔍 [getDisplayMessageStatus]:', {
+      messageId: message.id,
+      external_id: message.external_id,
+      rawStatus: message.status,
+      normalizedStatus: status,
+      delivered_at: message.delivered_at,
+      read_at: message.read_at,
+      sender_type: message.sender_type
+    });
+
+    // ✅ Mapear status direto (já vem normalizado do backend)
+    switch (status) {
       case 'sending':
       case 'pending':
         return 'sending';
@@ -1001,28 +959,8 @@ export function WhatsAppChat({
       case 'failed':
         return 'failed';
       default:
-        return 'sent';
+        return 'sent'; // fallback
     }
-  };
-
-  // Função unificada para mapear status independente do provider
-  const mapMessageStatus = (status?: string): 'sending' | 'sent' | 'delivered' | 'read' | 'failed' => {
-    // Como ambos os providers já normalizam o status no backend,
-    // podemos usar uma lógica unificada
-    return mapEvolutionStatusToComponent(status);
-  };
-
-  const getDisplayMessageStatus = (message: ConversationMessage): DisplayMessageStatus | undefined => {
-    if (!message || message.sender_type === 'contact') {
-      return undefined;
-    }
-
-    if (message.sender_type === 'system') {
-      const normalizedStatus = mapMessageStatus(message.status);
-      return normalizedStatus === 'sending' ? 'sent' : normalizedStatus;
-    }
-
-    return mapMessageStatus(message.status);
   };
 
   const getSenderDisplayName = (
@@ -2268,9 +2206,16 @@ export function WhatsAppChat({
                         })}
                       </span>
                       {displayStatus && (
-                        <MessageStatusIndicator 
-                          status={displayStatus} 
-                        />
+                        <>
+                          {console.log('📊 [RENDER] MessageStatusIndicator:', {
+                            messageId: message.id,
+                            displayStatus,
+                            timestamp: new Date().toISOString()
+                          })}
+                          <MessageStatusIndicator 
+                            status={displayStatus} 
+                          />
+                        </>
                       )}
                     </div>
                   </div>
