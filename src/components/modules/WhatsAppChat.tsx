@@ -792,10 +792,10 @@ export function WhatsAppChat({
     setShouldAutoScroll(true);
     setIsAtBottom(true);
 
-    // ✅ Carregar mensagens ao clicar na conversa (evitar limpar/carregar repetidamente)
+    // ✅ Carregar mensagens com refresh forçado para garantir status atualizado
     console.log('📥 [handleSelectConversation] Atualizando mensagens:', conversation.id);
     clearMessages(); // Limpar mensagens da conversa anterior (somente na troca)
-    await loadMessages(conversation.id);
+    await loadMessages(conversation.id, true); // ✅ forceRefresh = true
     
     // Marcar notificações e conversa como lidas SEMPRE ao abrir conversa
     console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
@@ -2386,5 +2386,21 @@ export function WhatsAppChat({
       />
       </div>
 
+      {/* ✅ Listener para recarregar mensagens quando a página fica visível novamente */}
+      {(() => {
+        useEffect(() => {
+          const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && selectedConversation?.id) {
+              console.log('👁️ [WhatsAppChat] Página visível, recarregando mensagens:', selectedConversation.id);
+              loadMessages(selectedConversation.id, true); // ✅ Forçar refresh
+            }
+          };
+
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }, [selectedConversation?.id]);
+
+        return null;
+      })()}
     </div>;
 }
