@@ -182,6 +182,40 @@ serve(async (req) => {
         console.log(`🔄 [${id}] Status normalizado: ${data.status} → ${normalizedStatus}`);
       }
       
+      // ✅ ATUALIZAR STATUS DA MENSAGEM NO BANCO DE DADOS
+      if (data.type === 'MessageStatusCallback' && data.ids && data.ids.length > 0) {
+        const messageExternalId = data.ids[0]; // ID da mensagem no Z-API
+        console.log(`📝 [${id}] Atualizando status da mensagem ${messageExternalId} → ${normalizedStatus}`);
+        
+        const updateData: any = {
+          status: normalizedStatus,
+          updated_at: new Date().toISOString()
+        };
+        
+        // Adicionar timestamps específicos
+        if (normalizedStatus === 'delivered') {
+          updateData.delivered_at = new Date().toISOString();
+        } else if (normalizedStatus === 'read') {
+          updateData.read_at = new Date().toISOString();
+        }
+        
+        const { data: updatedMessage, error: updateError } = await supabase
+          .from('messages')
+          .update(updateData)
+          .eq('external_id', messageExternalId)
+          .eq('workspace_id', conn.workspace_id)
+          .select()
+          .maybeSingle();
+          
+        if (updateError) {
+          console.error(`❌ [${id}] Erro ao atualizar status da mensagem ${messageExternalId}:`, updateError);
+        } else if (updatedMessage) {
+          console.log(`✅ [${id}] Status atualizado: ${messageExternalId} → ${normalizedStatus}`);
+        } else {
+          console.warn(`⚠️ [${id}] Mensagem não encontrada no banco: ${messageExternalId}`);
+        }
+      }
+      
       // Montar payload para n8n
       const n8nPayload: any = {
         event_type: data.event || data.type || 'UNKNOWN',
