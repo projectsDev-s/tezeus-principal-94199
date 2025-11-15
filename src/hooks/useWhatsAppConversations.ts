@@ -572,13 +572,14 @@ export const useWhatsAppConversations = () => {
     const currentUserData = userData ? JSON.parse(userData) : null;
     
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
+      console.log('🔌 [Realtime] Aguardando usuário/workspace...');
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
-    const channelName = `conversations-${workspaceId}`;
+    const channelName = `conversations-realtime-${workspaceId}`;
     
-    console.log('🔌 Iniciando subscriptions:', workspaceId);
+    console.log('🔌 [Realtime] Iniciando subscrição:', { workspaceId, channelName });
 
     const conversationsChannel = supabase
       .channel(channelName)
@@ -589,15 +590,14 @@ export const useWhatsAppConversations = () => {
         filter: `workspace_id=eq.${workspaceId}`
       },
         async (payload) => {
-          console.log('📨 [REALTIME-CONVERSATIONS] ✅ NOVA CONVERSA RECEBIDA:', {
-            conversationId: payload.new.id,
+          console.log('📨 [REALTIME-INSERT] Nova conversa detectada:', {
+            id: payload.new.id,
             contact_id: payload.new.contact_id,
             status: payload.new.status,
             canal: payload.new.canal,
-            workspace_id: payload.new.workspace_id,
-            timestamp: new Date().toISOString(),
-            payload: payload.new
+            timestamp: new Date().toISOString()
           });
+          
           const newConv = payload.new as any;
           
           // Só processar conversas do WhatsApp
@@ -606,9 +606,7 @@ export const useWhatsAppConversations = () => {
             return;
           }
           
-          console.log('🔔 Nova conversa criada:', newConv);
-          
-          // Buscar dados completos da nova conversa
+          // Buscar dados completos da nova conversa incluindo connection
           const { data: conversationData, error: convError } = await supabase
             .from('conversations')
             .select(`
@@ -630,6 +628,12 @@ export const useWhatsAppConversations = () => {
                 phone,
                 email,
                 profile_image_url
+              ),
+              connections!conversations_connection_id_fkey (
+                id,
+                instance_name,
+                phone_number,
+                status
               )
             `)
             .eq('id', newConv.id)
@@ -637,55 +641,62 @@ export const useWhatsAppConversations = () => {
             .single();
 
           if (convError) {
-            console.error('❌ Erro ao buscar dados da conversa:', convError);
+            console.error('❌ [Realtime] Erro ao buscar dados da conversa:', convError);
             return;
           }
 
-          console.log('✅ Dados da nova conversa recebidos:', conversationData);
-
-          if (conversationData && conversationData.contacts && Array.isArray(conversationData.contacts) && conversationData.contacts.length > 0) {
-            const contact = conversationData.contacts[0];
-            const newConversation: WhatsAppConversation = {
-              id: conversationData.id,
-              contact: {
-                id: contact.id,
-                name: contact.name,
-                phone: contact.phone,
-                email: contact.email,
-                profile_image_url: contact.profile_image_url,
-              },
-              agente_ativo: conversationData.agente_ativo,
-              agent_active_id: (conversationData as any).agent_active_id ?? null,
-              status: conversationData.status as 'open' | 'closed' | 'pending',
-              unread_count: conversationData.unread_count || 0,
-              last_activity_at: conversationData.last_activity_at,
-              created_at: conversationData.created_at,
-              evolution_instance: (conversationData as any).evolution_instance ?? null,
-              connection_id: (conversationData as any).connection_id ?? null,
-              assigned_user_id: (conversationData as any).assigned_user_id ?? null,
-              messages: [],
-              last_message: [],
-            };
-
-            console.log('➕ Adicionando nova conversa à lista:', {
-              id: newConversation.id,
-              contact: newConversation.contact.name,
-              phone: newConversation.contact.phone
-            });
-
-            setConversations(prev => {
-              const exists = prev.some(conv => conv.id === newConversation.id);
-              if (exists) {
-                console.log('⚠️ [useWhatsAppConversations] Conversa duplicada ignorada:', newConversation.id);
-                return prev;
-              }
-              
-              return [newConversation, ...prev];
-            });
-          } else {
-            console.error('❌ Dados da conversa ou contato não encontrados');
+          if (!conversationData?.contacts || !Array.isArray(conversationData.contacts) || conversationData.contacts.length === 0) {
+            console.error('❌ [Realtime] Contato não encontrado para conversa:', conversationData);
+            return;
           }
 
+          const contact = conversationData.contacts[0];
+          const connection = Array.isArray(conversationData.connections) && conversationData.connections.length > 0 
+            ? conversationData.connections[0] 
+            : null;
+
+          const newConversation: WhatsAppConversation = {
+            id: conversationData.id,
+            contact: {
+              id: contact.id,
+              name: contact.name,
+              phone: contact.phone,
+              email: contact.email,
+              profile_image_url: contact.profile_image_url,
+            },
+            agente_ativo: conversationData.agente_ativo,
+            agent_active_id: conversationData.agent_active_id ?? null,
+            status: conversationData.status as 'open' | 'closed' | 'pending',
+            unread_count: conversationData.unread_count || 0,
+            last_activity_at: conversationData.last_activity_at,
+            created_at: conversationData.created_at,
+            evolution_instance: conversationData.evolution_instance ?? null,
+            connection_id: conversationData.connection_id ?? null,
+            connection: connection,
+            assigned_user_id: conversationData.assigned_user_id ?? null,
+            conversation_tags: [],
+            messages: [],
+            last_message: [],
+          };
+
+          console.log('✅ [Realtime] Adicionando nova conversa:', {
+            id: newConversation.id,
+            contact: newConversation.contact.name,
+            phone: newConversation.contact.phone,
+            status: newConversation.status,
+            connection: connection?.instance_name
+          });
+
+          setConversations(prev => {
+            const exists = prev.some(conv => conv.id === newConversation.id);
+            if (exists) {
+              console.log('⚠️ [Realtime] Conversa duplicada ignorada:', newConversation.id);
+              return prev;
+            }
+            
+            console.log('✅ [Realtime] Conversa adicionada ao estado. Total:', prev.length + 1);
+            return [newConversation, ...prev];
+          });
         }
       )
       .on('postgres_changes', {
