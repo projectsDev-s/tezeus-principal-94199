@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -56,20 +52,21 @@ serve(async (req) => {
     const normalizedStatus = rawStatus === 'received' ? 'delivered' : rawStatus.toLowerCase();
     console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
-    // ✅ BUSCAR MENSAGEM RECENTE DA CONVERSA
-    // Não usamos external_id porque Z-API retorna IDs diferentes no envio vs webhook
+    // ✅ BUSCAR ÚLTIMA MENSAGEM ENVIADA (OUTBOUND) NA CONVERSA
+    // Estratégia: buscar a última mensagem enviada, independente do status atual
+    // Janela de 5 minutos para capturar callbacks atrasados
     console.log('🔍 Buscando última mensagem enviada da conversa:', conversationId);
     
-    const twoMinutesAgo = new Date(Date.now() - 120000).toISOString();
+    const fiveMinutesAgo = new Date(Date.now() - 300000).toISOString(); // 5 minutos
     
     const { data: message, error: searchError } = await supabase
       .from('messages')
-      .select('id, external_id, status, delivered_at, read_at, content, created_at')
+      .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type')
       .eq('conversation_id', conversationId)
       .eq('workspace_id', workspaceId)
-      .in('sender_type', ['user', 'agent', 'system'])
-      .in('status', ['sending', 'sent', 'delivered']) // Incluir delivered também
-      .gte('created_at', twoMinutesAgo)
+      .in('sender_type', ['user', 'agent', 'system']) // Apenas mensagens ENVIADAS
+      .gte('created_at', fiveMinutesAgo) // Janela maior
+      // ❌ SEM FILTRO DE STATUS - pega qualquer status
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -88,31 +85,88 @@ serve(async (req) => {
     if (!message) {
       console.warn('⚠️ Nenhuma mensagem encontrada');
       
-      // Debug: mostrar últimas mensagens
-      const { data: debug } = await supabase
+      // Debug completo: mostrar últimas 5 mensagens
+      const { data: debugAll } = await supabase
         .from('messages')
-        .select('id, status, sender_type, created_at')
+        .select('id, status, sender_type, created_at, external_id, content')
         .eq('conversation_id', conversationId)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(5);
       
-      console.log('🔍 Últimas mensagens da conversa:', debug);
+      console.log('🔍 Últimas 5 mensagens da conversa:', JSON.stringify(debugAll, null, 2));
+      console.log('🔍 Critérios de busca:', {
+        conversationId,
+        workspaceId,
+        janela: '5 minutos',
+        sender_types: ['user', 'agent', 'system']
+      });
       
       return new Response(JSON.stringify({
         success: false,
         error: 'Mensagem não encontrada',
-        debug_info: debug
+        debug: {
+          search_criteria: {
+            conversation_id: conversationId,
+            workspace_id: workspaceId,
+            time_window: '5 minutes',
+            sender_types: ['user', 'agent', 'system']
+          },
+          last_messages: debugAll
+        }
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
+    // Log detalhado da mensagem encontrada
+    const ageSeconds = Math.floor((Date.now() - new Date(message.created_at).getTime()) / 1000);
     console.log('✅ Mensagem encontrada:', {
       id: message.id,
+      external_id: message.external_id,
       current_status: message.status,
+      sender_type: message.sender_type,
+      created_at: message.created_at,
+      age_seconds: ageSeconds,
       will_update_to: normalizedStatus
     });
+
+    // Hierarquia de status: sending < sent < delivered < read
+    const statusHierarchy: Record<string, number> = {
+      'sending': 1,
+      'sent': 2,
+      'delivered': 3,
+      'read': 4
+    };
+
+    const currentLevel = statusHierarchy[message.status] || 0;
+    const newLevel = statusHierarchy[normalizedStatus] || 0;
+
+    if (newLevel <= currentLevel) {
+      console.log('⏩ Status não precisa ser atualizado:', {
+        current: message.status,
+        new: normalizedStatus,
+        currentLevel,
+        newLevel,
+        reason: 'Status atual é igual ou superior'
+      });
+      
+      return new Response(JSON.stringify({
+        success: true,
+        action: 'skipped',
+        reason: 'Status já está atualizado ou superior',
+        data: {
+          id: message.id,
+          status: message.status,
+          delivered_at: message.delivered_at,
+          read_at: message.read_at
+        }
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     // Preparar update
     const updateData: any = { status: normalizedStatus };
@@ -128,7 +182,12 @@ serve(async (req) => {
       }
     }
 
-    console.log('🔄 Atualizando:', updateData);
+    console.log('🔄 Atualizando status:', {
+      message_id: message.id,
+      from: message.status,
+      to: normalizedStatus,
+      fields: Object.keys(updateData)
+    });
 
     // Atualizar
     const { data: updated, error: updateError } = await supabase
@@ -149,10 +208,17 @@ serve(async (req) => {
       });
     }
 
-    console.log('✅✅✅ ATUALIZADO COM SUCESSO:', updated);
+    console.log('✅✅✅ STATUS ATUALIZADO COM SUCESSO:', {
+      message_id: updated.id,
+      old_status: message.status,
+      new_status: updated.status,
+      delivered_at: updated.delivered_at,
+      read_at: updated.read_at
+    });
 
     return new Response(JSON.stringify({
       success: true,
+      action: 'updated',
       data: updated
     }), {
       status: 200,
