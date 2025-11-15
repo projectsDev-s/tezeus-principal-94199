@@ -435,29 +435,58 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          console.log('🔥🔥🔥 [REALTIME UPDATE] ✅ MENSAGEM ATUALIZADA RECEBIDA:', {
+          console.log('🔥🔥🔥 [REALTIME UPDATE] ✅ EVENTO RECEBIDO!', {
             messageId: payload.new.id,
             external_id: payload.new.external_id,
             conversationId: currentConversationId,
+            expectedConversation: currentConversationId,
             OLD_STATUS: payload.old?.status,
             NEW_STATUS: payload.new.status,
-            delivered_at: payload.new.delivered_at,
-            read_at: payload.new.read_at,
+            OLD_delivered: payload.old?.delivered_at,
+            NEW_delivered: payload.new.delivered_at,
+            OLD_read: payload.old?.read_at,
+            NEW_read: payload.new.read_at,
             timestamp: new Date().toISOString(),
             fullPayload: payload
           });
           
           const updatedMessage = payload.new as WhatsAppMessage;
           
-          console.log('🔥 [REALTIME UPDATE] Chamando updateMessage com:', {
-            messageId: updatedMessage.id,
-            updates: updatedMessage,
-            status: updatedMessage.status
+          // Verificar se a mensagem está no estado local
+          setMessages(prev => {
+            const messageIndex = prev.findIndex(m => m.id === updatedMessage.id || m.external_id === updatedMessage.external_id);
+            console.log('🔍 [REALTIME UPDATE] Buscando mensagem no estado:', {
+              messageId: updatedMessage.id,
+              external_id: updatedMessage.external_id,
+              found: messageIndex !== -1,
+              messageIndex,
+              totalMessages: prev.length,
+              currentStatus: messageIndex !== -1 ? prev[messageIndex].status : 'not_found'
+            });
+            
+            if (messageIndex === -1) {
+              console.warn('⚠️ [REALTIME UPDATE] Mensagem NÃO encontrada no estado!');
+              return prev;
+            }
+            
+            const newMessages = [...prev];
+            const oldMessage = newMessages[messageIndex];
+            newMessages[messageIndex] = { ...oldMessage, ...updatedMessage };
+            
+            console.log('✅ [REALTIME UPDATE] Mensagem ATUALIZADA no estado:', {
+              messageId: updatedMessage.id,
+              oldStatus: oldMessage.status,
+              newStatus: newMessages[messageIndex].status,
+              oldDelivered: oldMessage.delivered_at,
+              newDelivered: newMessages[messageIndex].delivered_at,
+              oldRead: oldMessage.read_at,
+              newRead: newMessages[messageIndex].read_at
+            });
+            
+            return newMessages;
           });
           
-          updateMessage(updatedMessage.id, updatedMessage);
-          
-          console.log('✅ [REALTIME UPDATE] updateMessage() executado para mensagem:', updatedMessage.id);
+          console.log('✅ [REALTIME UPDATE] Atualização concluída!');
         }
       )
       .subscribe((status) => {
