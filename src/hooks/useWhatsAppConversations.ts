@@ -568,11 +568,23 @@ export const useWhatsAppConversations = () => {
 
   // Subscription para atualizações em tempo real
   useEffect(() => {
+    console.log('🔌🔌🔌 [Realtime] useEffect EXECUTADO!', {
+      hasSelectedWorkspace: !!selectedWorkspace,
+      workspaceId: selectedWorkspace?.workspace_id,
+      timestamp: new Date().toISOString()
+    });
+    
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
+    console.log('👤 [Realtime] Dados do usuário:', {
+      hasUserData: !!userData,
+      userId: currentUserData?.id,
+      hasWorkspaceId: !!selectedWorkspace?.workspace_id
+    });
+    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
-      console.log('🔌 [Realtime] Aguardando usuário/workspace...');
+      console.log('⏸️ [Realtime] BLOQUEADO - Aguardando usuário/workspace...');
       return;
     }
 
