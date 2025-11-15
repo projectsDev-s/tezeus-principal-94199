@@ -247,22 +247,41 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   }, []); // ✅ ESTÁVEL - lê variáveis dentro da função
 
   const updateMessage = useCallback((messageId: string, updates: Partial<WhatsAppMessage>) => {
-    console.log('🔄 [useConversationMessages] updateMessage chamado:', {
+    console.log('🔄 [updateMessage] Chamado com:', {
       messageId,
       updates,
+      OLD_STATUS: messages.find(m => m.id === messageId || m.external_id === messageId)?.status,
+      NEW_STATUS: updates.status,
+      delivered_at: updates.delivered_at,
+      read_at: updates.read_at,
       timestamp: new Date().toISOString()
     });
 
     setMessages(prev => {
       const messageIndex = prev.findIndex(m => m.id === messageId || m.external_id === messageId);
       if (messageIndex === -1) {
-        console.log('⚠️ [useConversationMessages] Mensagem não encontrada para update:', messageId);
+        console.log('⚠️ [updateMessage] Mensagem não encontrada para update:', {
+          messageId,
+          totalMessages: prev.length,
+          availableIds: prev.map(m => ({ id: m.id, external_id: m.external_id }))
+        });
         return prev;
       }
 
       const newMessages = [...prev];
       const oldMessage = newMessages[messageIndex];
       newMessages[messageIndex] = { ...oldMessage, ...updates };
+
+      console.log('✅ [updateMessage] Mensagem atualizada no estado:', {
+        messageId,
+        messageIndex,
+        oldStatus: oldMessage.status,
+        newStatus: newMessages[messageIndex].status,
+        oldDelivered: oldMessage.delivered_at,
+        newDelivered: newMessages[messageIndex].delivered_at,
+        oldRead: oldMessage.read_at,
+        newRead: newMessages[messageIndex].read_at
+      });
 
       if (updates.id && updates.id !== messageId) {
         const workspaceId = selectedWorkspace?.workspace_id;
@@ -275,7 +294,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
       return newMessages;
     });
-  }, []); // ✅ ESTÁVEL - lê variáveis dentro da função
+  }, [messages, selectedWorkspace?.workspace_id, currentConversationId]);
 
   const removeMessage = useCallback((messageId: string) => {
     console.log('🗑️ [useConversationMessages] removeMessage chamado:', {
