@@ -416,18 +416,29 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           filter: `conversation_id=eq.${currentConversationId}`
         },
         (payload) => {
-          console.log('🔄 [REALTIME] ✅ MENSAGEM ATUALIZADA:', {
+          console.log('🔥🔥🔥 [REALTIME UPDATE] ✅ MENSAGEM ATUALIZADA RECEBIDA:', {
             messageId: payload.new.id,
+            external_id: payload.new.external_id,
             conversationId: currentConversationId,
-            status: payload.new.status,
+            OLD_STATUS: payload.old?.status,
+            NEW_STATUS: payload.new.status,
+            delivered_at: payload.new.delivered_at,
+            read_at: payload.new.read_at,
             timestamp: new Date().toISOString(),
-            changes: payload
+            fullPayload: payload
           });
           
           const updatedMessage = payload.new as WhatsAppMessage;
+          
+          console.log('🔥 [REALTIME UPDATE] Chamando updateMessage com:', {
+            messageId: updatedMessage.id,
+            updates: updatedMessage,
+            status: updatedMessage.status
+          });
+          
           updateMessage(updatedMessage.id, updatedMessage);
           
-          console.log('✅ [REALTIME] updateMessage() chamado para mensagem:', updatedMessage.id);
+          console.log('✅ [REALTIME UPDATE] updateMessage() executado para mensagem:', updatedMessage.id);
         }
       )
       .subscribe((status) => {
