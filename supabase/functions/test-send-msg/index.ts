@@ -457,6 +457,34 @@ serve(async (req) => {
 
       console.log(`✅ [${requestId}] Message sent successfully`);
       console.log(`📋 [${requestId}] Provider message ID: ${sendResult.providerMsgId}`);
+      
+      // ✅ ATUALIZAR STATUS DA MENSAGEM PARA 'sent' APÓS ENVIO BEM-SUCEDIDO
+      console.log(`📝 [${requestId}] Atualizando status da mensagem para 'sent'`);
+      const updateData: any = {
+        status: 'sent',
+        metadata: {
+          client_msg_id: clientMessageId,
+          request_id: requestId,
+          provider_msg_id: sendResult.providerMsgId,
+          step: 'sent_successfully'
+        }
+      };
+      
+      // Se o provider retornou um ID externo, atualizar também
+      if (sendResult.providerMsgId && sendResult.providerMsgId !== external_id) {
+        updateData.evolution_key_id = sendResult.providerMsgId;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update(updateData)
+        .eq('external_id', external_id);
+      
+      if (updateError) {
+        console.error(`❌ [${requestId}] Erro ao atualizar status para 'sent':`, updateError);
+      } else {
+        console.log(`✅ [${requestId}] Status atualizado para 'sent' com sucesso`);
+      }
 
       // A mensagem já foi atualizada pela função send-whatsapp-message com evolution_key_id
       return new Response(JSON.stringify({
