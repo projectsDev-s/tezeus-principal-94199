@@ -574,11 +574,6 @@ export const useWhatsAppConversations = () => {
   }, [selectedWorkspace?.workspace_id]);
 
   // Subscription para atualizações em tempo real
-  console.log('🚀 [Realtime] CHEGOU ANTES DO USEEFFECT', {
-    timestamp: new Date().toISOString(),
-    workspaceId: selectedWorkspace?.workspace_id
-  });
-  
   useEffect(() => {
     console.log('🔌🔌🔌 [Realtime] useEffect EXECUTADO!', {
       hasSelectedWorkspace: !!selectedWorkspace,
