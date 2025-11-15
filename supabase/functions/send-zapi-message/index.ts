@@ -342,24 +342,60 @@ serve(async (req) => {
         .maybeSingle();
 
       if (conversation) {
-        const { data: message_data, error: messageError } = await supabase
+        // ✅ Primeiro, verificar se já existe uma mensagem otimista (status = "sending")
+        const { data: existingMessage } = await supabase
           .from("messages")
-          .insert({
-            workspace_id: conversation.workspace_id,
-            conversation_id: conversationId,
-            external_id: messageId,
-            content: message,
-            message_type: messageType,
-            sender_type: senderId ? "user" : "system",
-            sender_id: senderId || null,
-            status: "sent",
-            file_url: fileUrl || null,
-            file_name: fileName || null,
-            mime_type: mimeType || null,
-            metadata: zapiResult,
-          })
-          .select()
-          .single();
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .eq("content", message)
+          .eq("status", "sending")
+          .eq("workspace_id", conversation.workspace_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let message_data;
+        let messageError;
+
+        if (existingMessage) {
+          // ✅ Atualizar mensagem otimista existente
+          console.log(`🔄 [${requestId}] Updating optimistic message ${existingMessage.id}`);
+          const { data, error } = await supabase
+            .from("messages")
+            .update({
+              external_id: messageId,
+              status: "sent",
+              metadata: zapiResult,
+            })
+            .eq("id", existingMessage.id)
+            .select()
+            .single();
+          message_data = data;
+          messageError = error;
+        } else {
+          // ✅ Criar nova mensagem se não existir otimista
+          console.log(`➕ [${requestId}] Creating new message`);
+          const { data, error } = await supabase
+            .from("messages")
+            .insert({
+              workspace_id: conversation.workspace_id,
+              conversation_id: conversationId,
+              external_id: messageId,
+              content: message,
+              message_type: messageType,
+              sender_type: senderId ? "user" : "system",
+              sender_id: senderId || null,
+              status: "sent",
+              file_url: fileUrl || null,
+              file_name: fileName || null,
+              mime_type: mimeType || null,
+              metadata: zapiResult,
+            })
+            .select()
+            .single();
+          message_data = data;
+          messageError = error;
+        }
 
         if (messageError) {
           console.error(`❌ [${requestId}] Error saving message:`, messageError);
