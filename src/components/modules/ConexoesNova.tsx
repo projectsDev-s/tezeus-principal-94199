@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Trash2, Wifi, QrCode, Plus, MoreVertical, Edit3, RefreshCw, Webhook, Star, Bug, ArrowRight, Zap, Cloud, Settings } from 'lucide-react';
 import { TestWebhookReceptionModal } from "@/components/modals/TestWebhookReceptionModal";
+import { ConfigureZapiWebhookModal } from "@/components/modals/ConfigureZapiWebhookModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { toast } from '@/hooks/use-toast';
@@ -166,6 +167,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'evolution' | 'zapi'>('evolution');
   const [hasActiveProvider, setHasActiveProvider] = useState(false);
+  
+  // Estado para modal de configuração de webhooks Z-API
+  const [isConfigureWebhookModalOpen, setIsConfigureWebhookModalOpen] = useState(false);
+  const [connectionToConfigureWebhook, setConnectionToConfigureWebhook] = useState<Connection | null>(null);
   
   // Hook para gerenciar providers
   const { providers, isLoading: loadingProvider, fetchProviders } = useWhatsAppProviders(workspaceId);
@@ -1511,11 +1516,20 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                     <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setDefaultConnection(connection)}>
                         <Star className="mr-2 h-4 w-4" />
                         Definir como Padrão
                       </DropdownMenuItem>
+                      {connection.provider?.provider === 'zapi' && (
+                        <DropdownMenuItem onClick={() => {
+                          setConnectionToConfigureWebhook(connection);
+                          setIsConfigureWebhookModalOpen(true);
+                        }}>
+                          <Webhook className="mr-2 h-4 w-4" />
+                          Configurar Webhooks
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => openEditModal(connection)}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
@@ -1757,6 +1771,19 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Modal de Configuração de Webhooks Z-API */}
+      {connectionToConfigureWebhook && (
+        <ConfigureZapiWebhookModal
+          isOpen={isConfigureWebhookModalOpen}
+          onClose={() => {
+            setIsConfigureWebhookModalOpen(false);
+            setConnectionToConfigureWebhook(null);
+          }}
+          connectionId={connectionToConfigureWebhook.id}
+          instanceName={connectionToConfigureWebhook.instance_name}
+        />
+      )}
 
     </div>
   );
