@@ -964,6 +964,33 @@ export function WhatsAppChat({
     }
   };
 
+  // Mapear status do Z-API para o componente MessageStatusIndicator
+  // Status já vem normalizado do backend (sent, delivered, read, failed)
+  const mapZapiStatusToComponent = (zapiStatus?: string): 'sending' | 'sent' | 'delivered' | 'read' | 'failed' => {
+    switch (zapiStatus?.toLowerCase()) {
+      case 'sending':
+      case 'pending':
+        return 'sending';
+      case 'sent':
+        return 'sent';
+      case 'delivered':
+        return 'delivered';
+      case 'read':
+        return 'read';
+      case 'failed':
+        return 'failed';
+      default:
+        return 'sent';
+    }
+  };
+
+  // Função unificada para mapear status independente do provider
+  const mapMessageStatus = (status?: string): 'sending' | 'sent' | 'delivered' | 'read' | 'failed' => {
+    // Como ambos os providers já normalizam o status no backend,
+    // podemos usar uma lógica unificada
+    return mapEvolutionStatusToComponent(status);
+  };
+
   // Importadas de avatarUtils para consistência
 
   // Gerenciar agente IA
@@ -2146,7 +2173,7 @@ export function WhatsAppChat({
                       )}
 
                       {/* Renderizar conteúdo baseado no tipo */}
-                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact?.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact?.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapEvolutionStatusToComponent(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
+                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact?.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact?.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapMessageStatus(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
                     <p className="text-sm break-words flex-1">{message.content}</p>
                     
                     <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
@@ -2162,7 +2189,7 @@ export function WhatsAppChat({
                       </span>
                       {message.sender_type !== 'contact' && (
                         <MessageStatusIndicator 
-                          status={mapEvolutionStatusToComponent(message.status)} 
+                          status={mapMessageStatus(message.status)} 
                         />
                       )}
                     </div>

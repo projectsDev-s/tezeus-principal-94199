@@ -7,6 +7,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Função para normalizar status do Z-API para o formato padrão
+function normalizeZapiStatus(zapiStatus: string): string {
+  const statusMap: Record<string, string> = {
+    'SENT': 'sent',
+    'DELIVERED': 'delivered', 
+    'READ': 'read',
+    'FAILED': 'failed',
+    'PENDING': 'sending'
+  };
+  
+  return statusMap[zapiStatus] || zapiStatus.toLowerCase();
+}
+
 // Função para extrair informações de mídia do payload Z-API
 function extractMediaInfo(data: any): {
   downloadUrl?: string;
@@ -162,6 +175,13 @@ serve(async (req) => {
       // Extrair client_token do provider
       const clientToken = conn.provider?.zapi_client_token;
       
+      // Normalizar status se presente no payload (para callbacks de status)
+      let normalizedStatus = data.status;
+      if (data.status && typeof data.status === 'string') {
+        normalizedStatus = normalizeZapiStatus(data.status);
+        console.log(`🔄 [${id}] Status normalizado: ${data.status} → ${normalizedStatus}`);
+      }
+      
       // Montar payload para n8n
       const n8nPayload: any = {
         event_type: data.event || data.type || 'UNKNOWN',
@@ -172,8 +192,12 @@ serve(async (req) => {
         workspace_id: conn.workspace_id,
         connection_id: conn.id,
         external_id: externalId,
+        status: normalizedStatus, // ✅ Status normalizado
         timestamp: new Date().toISOString(),
-        webhook_data: data
+        webhook_data: {
+          ...data,
+          status: normalizedStatus // ✅ Sobrescrever status no webhook_data também
+        }
       };
       
       // Adicionar dados de mídia se disponível
