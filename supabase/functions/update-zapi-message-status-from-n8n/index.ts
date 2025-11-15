@@ -21,7 +21,7 @@ serve(async (req) => {
     
     console.log('🔄 [update-zapi-message-status] Recebido do N8N:', JSON.stringify(payload, null, 2));
 
-    const { workspace_id, connection_id, status, external_id, timestamp, phone } = payload;
+    const { workspace_id, connection_id, status, external_id, timestamp, phone, conversation_id } = payload;
 
     // Validações básicas
     if (!workspace_id || !external_id || !status) {
@@ -60,11 +60,32 @@ serve(async (req) => {
       if (msg2) message = msg2;
     }
 
-    // Terceira tentativa: buscar mensagens recentes do contato (últimos 2 minutos)
-    if (!message && phone && connection_id) {
-      console.log('🔍 [update-zapi-message-status] Buscando mensagem recente do contato:', phone);
+    // Terceira tentativa: buscar por conversation_id (direto, sem depender do phone que pode estar encriptado)
+    if (!message && conversation_id) {
+      console.log('🔍 [update-zapi-message-status] Buscando mensagem recente por conversation_id:', conversation_id);
       
-      // Primeiro encontrar o contato
+      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: msg3 } = await supabase
+        .from('messages')
+        .select('id, status, delivered_at, read_at, conversation_id')
+        .eq('workspace_id', workspace_id)
+        .eq('conversation_id', conversation_id)
+        .eq('sender_type', 'user')
+        .gte('created_at', twoMinutesAgo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (msg3) {
+        console.log('✅ [update-zapi-message-status] Mensagem encontrada por conversation_id');
+        message = msg3;
+      }
+    }
+
+    // Quarta tentativa (fallback): buscar pelo phone + connection (se phone não estiver encriptado)
+    if (!message && phone && connection_id && !conversation_id) {
+      console.log('🔍 [update-zapi-message-status] Fallback: Buscando mensagem recente pelo phone:', phone);
+      
       const { data: contact } = await supabase
         .from('contacts')
         .select('id')
@@ -73,7 +94,6 @@ serve(async (req) => {
         .maybeSingle();
 
       if (contact) {
-        // Buscar conversas do contato
         const { data: conversation } = await supabase
           .from('conversations')
           .select('id')
@@ -83,9 +103,8 @@ serve(async (req) => {
           .maybeSingle();
 
         if (conversation) {
-          // Buscar mensagem enviada mais recente (últimos 2 minutos)
           const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-          const { data: msg3 } = await supabase
+          const { data: msg4 } = await supabase
             .from('messages')
             .select('id, status, delivered_at, read_at, conversation_id')
             .eq('workspace_id', workspace_id)
@@ -96,9 +115,9 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
           
-          if (msg3) {
-            console.log('✅ [update-zapi-message-status] Mensagem encontrada por busca recente');
-            message = msg3;
+          if (msg4) {
+            console.log('✅ [update-zapi-message-status] Mensagem encontrada por busca com phone (fallback)');
+            message = msg4;
           }
         }
       }
@@ -110,7 +129,7 @@ serve(async (req) => {
         JSON.stringify({ 
           success: false, 
           message: 'Mensagem não encontrada - pode ser que ainda não tenha sido salva no banco',
-          details: { external_id, phone, workspace_id, connection_id }
+          details: { external_id, phone, workspace_id, connection_id, conversation_id }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
