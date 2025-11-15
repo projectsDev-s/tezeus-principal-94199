@@ -343,16 +343,27 @@ serve(async (req) => {
 
       if (conversation) {
         // ✅ Primeiro, verificar se já existe uma mensagem otimista (status = "sending")
+        // Buscar mensagem dos últimos 30 segundos para evitar conflitos
+        const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+        
         const { data: existingMessage } = await supabase
           .from("messages")
           .select("id")
           .eq("conversation_id", conversationId)
           .eq("content", message)
           .eq("status", "sending")
+          .eq("sender_type", senderId ? "user" : "system")
           .eq("workspace_id", conversation.workspace_id)
+          .gte("created_at", thirtySecondsAgo)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        
+        console.log(`🔍 [${requestId}] Procurando mensagem otimista:`, {
+          conversationId,
+          content: message.substring(0, 50),
+          foundExisting: !!existingMessage
+        });
 
         let message_data;
         let messageError;
