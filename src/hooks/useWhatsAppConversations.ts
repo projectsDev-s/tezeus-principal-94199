@@ -83,6 +83,63 @@ export const useWhatsAppConversations = () => {
   // Refs simples
   const sendingRef = useRef<Map<string, boolean>>(new Map());
 
+  const sortConversationsByActivity = (list: WhatsAppConversation[]) => {
+    return [...list].sort((a, b) => {
+      const getTimestamp = (conv: WhatsAppConversation) => new Date(conv.last_activity_at || conv.created_at).getTime();
+      return getTimestamp(b) - getTimestamp(a);
+    });
+  };
+
+  const formatConversationRecord = (raw: any, previous?: WhatsAppConversation): WhatsAppConversation => {
+    const contactData = Array.isArray(raw?.contacts) ? raw.contacts[0] : raw?.contacts;
+    const connectionData = Array.isArray(raw?.connections) ? raw.connections[0] : raw?.connections;
+
+    const fallbackContact = previous?.contact || {
+      id: raw?.contact_id || 'unknown-contact',
+      name: 'Contato',
+      phone: undefined,
+      email: undefined,
+      profile_image_url: undefined
+    };
+
+    const contact = contactData ? {
+      id: contactData.id,
+      name: contactData.name || fallbackContact.name,
+      phone: contactData.phone ?? fallbackContact.phone,
+      email: contactData.email ?? fallbackContact.email,
+      profile_image_url: contactData.profile_image_url ?? fallbackContact.profile_image_url
+    } : fallbackContact;
+
+    const connection = connectionData ? {
+      id: connectionData.id,
+      instance_name: connectionData.instance_name,
+      phone_number: connectionData.phone_number,
+      status: connectionData.status
+    } : previous?.connection;
+
+    return {
+      id: raw.id,
+      contact,
+      agente_ativo: raw.agente_ativo ?? previous?.agente_ativo ?? false,
+      agent_active_id: raw.agent_active_id ?? previous?.agent_active_id ?? null,
+      status: (raw.status ?? previous?.status ?? 'open') as WhatsAppConversation['status'],
+      unread_count: raw.unread_count ?? previous?.unread_count ?? 0,
+      last_activity_at: raw.last_activity_at ?? previous?.last_activity_at ?? raw.created_at ?? new Date().toISOString(),
+      created_at: raw.created_at ?? previous?.created_at ?? raw.last_activity_at ?? new Date().toISOString(),
+      evolution_instance: raw.evolution_instance ?? previous?.evolution_instance ?? null,
+      assigned_user_id: raw.assigned_user_id ?? previous?.assigned_user_id ?? null,
+      assigned_user_name: raw.assigned_user_name ?? previous?.assigned_user_name ?? null,
+      assigned_at: raw.assigned_at ?? previous?.assigned_at ?? null,
+      connection_id: raw.connection_id ?? previous?.connection_id,
+      connection,
+      workspace_id: raw.workspace_id ?? previous?.workspace_id,
+      conversation_tags: raw.conversation_tags ?? previous?.conversation_tags ?? [],
+      last_message: raw.last_message ?? previous?.last_message ?? [],
+      messages: previous?.messages ?? [],
+      _updated_at: Date.now()
+    };
+  };
+
   const fetchConversations = async (): Promise<boolean> => {
     try {
       setLoading(true);
@@ -150,7 +207,7 @@ export const useWhatsAppConversations = () => {
                 messages: []
               }));
               
-              setConversations(transformedConversations);
+              setConversations(sortConversationsByActivity(transformedConversations));
             }
             setLoading(false);
           }, 1000);
@@ -184,7 +241,7 @@ export const useWhatsAppConversations = () => {
           messages: []
         }));
         
-        setConversations(transformedConversations);
+        setConversations(sortConversationsByActivity(transformedConversations));
         setLoading(false);
         return true;
       }
@@ -658,14 +715,8 @@ export const useWhatsAppConversations = () => {
               return prev;
             }
             console.log('✅ Adicionando nova conversa');
-            const formattedConv: WhatsAppConversation = {
-              ...conversationData,
-              status: conversationData.status as WhatsAppConversation['status'],
-              contact: Array.isArray(conversationData.contacts) ? conversationData.contacts[0] : conversationData.contacts,
-              messages: [],
-              connection: Array.isArray(conversationData.connections) ? conversationData.connections[0] : conversationData.connections
-            };
-            return [formattedConv, ...prev];
+            const formattedConv = formatConversationRecord(conversationData);
+            return sortConversationsByActivity([formattedConv, ...prev]);
           });
         }
       )
@@ -728,20 +779,59 @@ export const useWhatsAppConversations = () => {
 
           setConversations(prev => {
             const index = prev.findIndex(c => c.id === conversationData.id);
-            const formattedConv: WhatsAppConversation = {
-              ...conversationData,
-              status: conversationData.status as WhatsAppConversation['status'],
-              contact: Array.isArray(conversationData.contacts) ? conversationData.contacts[0] : conversationData.contacts,
-              messages: prev[index]?.messages || [],
-              connection: Array.isArray(conversationData.connections) ? conversationData.connections[0] : conversationData.connections
-            };
+            const formattedConv = formatConversationRecord(conversationData, index !== -1 ? prev[index] : undefined);
             if (index === -1) {
               console.log('⚠️ Conversa não encontrada, adicionando');
-              return [formattedConv, ...prev];
+              return sortConversationsByActivity([formattedConv, ...prev]);
             }
             const updated = [...prev];
             updated[index] = formattedConv;
-            return updated;
+            return sortConversationsByActivity(updated);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `workspace_id=eq.${workspaceId}`
+        },
+        (payload) => {
+          const newMessage = payload.new as any;
+
+          if (!newMessage) {
+            return;
+          }
+
+          setConversations(prev => {
+            const index = prev.findIndex(conv => conv.id === newMessage.conversation_id);
+            if (index === -1) {
+              return prev;
+            }
+
+            const currentConversation = prev[index];
+            const isContactMessage = newMessage.sender_type === 'contact';
+
+            const updatedConversation: WhatsAppConversation = {
+              ...currentConversation,
+              last_message: [{
+                content: newMessage.content || '',
+                message_type: newMessage.message_type || 'text',
+                sender_type: newMessage.sender_type || 'contact',
+                created_at: newMessage.created_at
+              }],
+              last_activity_at: newMessage.created_at || currentConversation.last_activity_at,
+              unread_count: isContactMessage
+                ? (currentConversation.unread_count || 0) + 1
+                : currentConversation.unread_count,
+              _updated_at: Date.now()
+            };
+
+            const updatedList = [...prev];
+            updatedList[index] = updatedConversation;
+            return sortConversationsByActivity(updatedList);
           });
         }
       )
