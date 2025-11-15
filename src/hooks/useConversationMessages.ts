@@ -342,6 +342,17 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return;
     }
 
+    // 🔥 Força remoção de canais antigos antes de criar novo
+    const existingChannels = supabase.getChannels();
+    const oldMessageChannels = existingChannels.filter(ch => 
+      ch.topic.includes('messages-') && ch.topic.includes(currentConversationId)
+    );
+    
+    if (oldMessageChannels.length > 0) {
+      console.log('🧹 [REALTIME] Removendo canais antigos:', oldMessageChannels.map(ch => ch.topic));
+      oldMessageChannels.forEach(ch => supabase.removeChannel(ch));
+    }
+
     const channelName = `messages-${currentConversationId}-workspace-${selectedWorkspace.workspace_id}`;
     console.log('🔌🔌🔌 [REALTIME] INICIANDO SUBSCRIPTION:', {
       channelName,
