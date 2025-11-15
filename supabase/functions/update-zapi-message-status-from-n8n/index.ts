@@ -36,21 +36,83 @@ serve(async (req) => {
     const normalizedStatus = status.toLowerCase();
     console.log('📊 [update-zapi-message-status] Status normalizado:', normalizedStatus);
 
-    // Buscar mensagem pelo external_id
+    // Buscar mensagem pelo external_id ou evolution_key_id
     console.log('🔍 [update-zapi-message-status] Buscando mensagem - external_id:', external_id, 'workspace_id:', workspace_id);
     
-    const { data: message, error: findError } = await supabase
+    // Primeira tentativa: buscar por external_id
+    let { data: message, error: findError } = await supabase
       .from('messages')
-      .select('id, status, delivered_at, read_at')
+      .select('id, status, delivered_at, read_at, conversation_id')
       .eq('workspace_id', workspace_id)
       .eq('external_id', external_id)
-      .single();
+      .maybeSingle();
 
-    if (findError || !message) {
-      console.error('❌ [update-zapi-message-status] Mensagem não encontrada:', findError);
+    // Segunda tentativa: buscar por evolution_key_id (caso Z-API use esse campo)
+    if (!message && external_id) {
+      console.log('🔍 [update-zapi-message-status] Tentando buscar por evolution_key_id:', external_id);
+      const { data: msg2 } = await supabase
+        .from('messages')
+        .select('id, status, delivered_at, read_at, conversation_id')
+        .eq('workspace_id', workspace_id)
+        .eq('evolution_key_id', external_id)
+        .maybeSingle();
+      
+      if (msg2) message = msg2;
+    }
+
+    // Terceira tentativa: buscar mensagens recentes do contato (últimos 2 minutos)
+    if (!message && phone && connection_id) {
+      console.log('🔍 [update-zapi-message-status] Buscando mensagem recente do contato:', phone);
+      
+      // Primeiro encontrar o contato
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('workspace_id', workspace_id)
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (contact) {
+        // Buscar conversas do contato
+        const { data: conversation } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('workspace_id', workspace_id)
+          .eq('contact_id', contact.id)
+          .eq('connection_id', connection_id)
+          .maybeSingle();
+
+        if (conversation) {
+          // Buscar mensagem enviada mais recente (últimos 2 minutos)
+          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+          const { data: msg3 } = await supabase
+            .from('messages')
+            .select('id, status, delivered_at, read_at, conversation_id')
+            .eq('workspace_id', workspace_id)
+            .eq('conversation_id', conversation.id)
+            .eq('sender_type', 'user')
+            .gte('created_at', twoMinutesAgo)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (msg3) {
+            console.log('✅ [update-zapi-message-status] Mensagem encontrada por busca recente');
+            message = msg3;
+          }
+        }
+      }
+    }
+
+    if (!message) {
+      console.warn('⚠️ [update-zapi-message-status] Mensagem não encontrada após todas as tentativas');
       return new Response(
-        JSON.stringify({ error: 'Mensagem não encontrada', details: findError }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          message: 'Mensagem não encontrada - pode ser que ainda não tenha sido salva no banco',
+          details: { external_id, phone, workspace_id, connection_id }
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
