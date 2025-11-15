@@ -105,7 +105,7 @@ serve(async (req) => {
     // Buscar conexão pelo instance_name OU instance_id (para Z-API)
     const { data: conn, error: connError } = await supabase
       .from("connections")
-      .select("*, provider:whatsapp_providers!connections_provider_id_fkey(n8n_webhook_url)")
+      .select("*, provider:whatsapp_providers!connections_provider_id_fkey(n8n_webhook_url, zapi_client_token)")
       .or(`instance_name.eq.${instanceName},metadata->>instanceId.eq.${instanceName}`)
       .maybeSingle();
 
@@ -154,14 +154,13 @@ serve(async (req) => {
         }
       }
       
-      // Extrair instance_token e client_token do metadata
+      // Extrair instance_token do metadata
       const instanceToken = conn.metadata?.token || 
                            conn.metadata?.instanceToken || 
                            conn.metadata?.instance_token;
       
-      const clientToken = conn.metadata?.clientToken || 
-                         conn.metadata?.client_token || 
-                         conn.metadata?.zapiClientToken;
+      // Extrair client_token do provider
+      const clientToken = conn.provider?.zapi_client_token;
       
       // Montar payload para n8n
       const n8nPayload: any = {
