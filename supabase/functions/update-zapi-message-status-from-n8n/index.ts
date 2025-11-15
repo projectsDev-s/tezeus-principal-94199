@@ -18,7 +18,8 @@ serve(async (req) => {
     const { 
       workspace_id: workspaceId, 
       status: rawStatus, 
-      conversation_id: conversationId 
+      phone,
+      connection_id: connectionId
     } = payload;
 
     // Validações
@@ -31,17 +32,17 @@ serve(async (req) => {
       });
     }
 
-    // ⚠️ EXIGIR conversation_id (fundamental para Z-API)
-    if (!conversationId) {
-      console.error('❌ conversation_id é OBRIGATÓRIO!');
+    // ⚠️ EXIGIR phone E connection_id (chave de busca mais estável)
+    if (!phone || !connectionId) {
+      console.error('❌ phone e connection_id são OBRIGATÓRIOS!');
       console.log('💡 AÇÃO NECESSÁRIA: Configure o N8N Function Node para enviar:');
-      console.log('   conversation_id: $json.processed_data?.conversation?.id');
+      console.log('   phone: $json.phone');
+      console.log('   connection_id: $json.connection_id');
       
       return new Response(JSON.stringify({
         success: false,
-        error: 'conversation_id é obrigatório',
-        action_required: 'Configure o N8N para enviar conversation_id',
-        example: 'conversation_id: $json.processed_data?.conversation?.id'
+        error: 'phone e connection_id são obrigatórios',
+        action_required: 'Configure o N8N para enviar phone e connection_id'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -52,15 +53,41 @@ serve(async (req) => {
     const normalizedStatus = rawStatus === 'received' ? 'delivered' : rawStatus.toLowerCase();
     console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
-    // ✅ BUSCAR ÚLTIMA MENSAGEM ENVIADA (OUTBOUND) NA CONVERSA
-    // Estratégia: buscar a última mensagem enviada, SEM LIMITE DE TEMPO
-    // Porque o callback de status SEMPRE se refere à última mensagem enviada
-    console.log('🔍 Buscando última mensagem enviada da conversa:', conversationId);
+    // ✅ BUSCAR ÚLTIMA MENSAGEM ENVIADA PARA ESSE TELEFONE/CONEXÃO
+    // Estratégia: buscar pela última mensagem enviada para aquele phone + connection
+    // Porque phone + connection_id são mais estáveis que conversation_id
+    console.log('🔍 Buscando última mensagem enviada:', { phone, connectionId, workspaceId });
+    
+    // Primeiro, buscar a conversa desse telefone nessa conexão
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('connection_id', connectionId)
+      .eq('contact_id', (await supabase
+        .from('contacts')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('phone', phone)
+        .single()
+      ).data?.id)
+      .single();
+    
+    if (!conversation) {
+      console.error('❌ Conversa não encontrada para phone:', phone);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Conversa não encontrada'
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     const { data: message, error: searchError } = await supabase
       .from('messages')
-      .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type')
-      .eq('conversation_id', conversationId)
+      .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
+      .eq('conversation_id', conversation.id)
       .eq('workspace_id', workspaceId)
       .in('sender_type', ['user', 'agent', 'system']) // Apenas mensagens ENVIADAS
       .order('created_at', { ascending: false })
@@ -84,17 +111,18 @@ serve(async (req) => {
       // Debug completo: mostrar últimas 5 mensagens
       const { data: debugAll } = await supabase
         .from('messages')
-        .select('id, status, sender_type, created_at, external_id, content')
-        .eq('conversation_id', conversationId)
+        .select('id, status, sender_type, created_at, external_id, content, conversation_id')
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
       
-      console.log('🔍 Últimas 5 mensagens da conversa:', JSON.stringify(debugAll, null, 2));
+      console.log('🔍 Últimas 10 mensagens do workspace:', JSON.stringify(debugAll, null, 2));
       console.log('🔍 Critérios de busca:', {
-        conversationId,
+        phone,
+        connectionId,
         workspaceId,
-        strategy: 'Última mensagem outbound (sem limite de tempo)',
+        conversation_id: conversation?.id,
+        strategy: 'Última mensagem outbound por phone + connection',
         sender_types: ['user', 'agent', 'system']
       });
       
@@ -103,9 +131,11 @@ serve(async (req) => {
         error: 'Mensagem não encontrada',
         debug: {
           search_criteria: {
-            conversation_id: conversationId,
+            phone,
+            connection_id: connectionId,
             workspace_id: workspaceId,
-            strategy: 'Última mensagem outbound (sem limite de tempo)',
+            conversation_id: conversation?.id,
+            strategy: 'Última mensagem outbound por phone + connection',
             sender_types: ['user', 'agent', 'system']
           },
           last_messages: debugAll
