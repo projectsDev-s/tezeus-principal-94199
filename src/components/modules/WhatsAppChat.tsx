@@ -1027,6 +1027,9 @@ export function WhatsAppChat({
       behavior: 'smooth'
     });
   };
+  
+  // ✅ Ref para rastrear o último tamanho do array de mensagens
+  const lastMessageLengthRef = useRef(0);
 
   // Gravação de áudio (microfone)
   const startRecording = async () => {
@@ -1430,21 +1433,28 @@ export function WhatsAppChat({
           console.log('📜 Scroll inicial para última mensagem');
           messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
           isInitialLoadRef.current = false;
+          lastMessageLengthRef.current = messages.length;
         }
       }, 150);
       return () => clearTimeout(timer);
     }
     
-    // Auto-scroll APENAS se o usuário estava no final do chat
-    if (shouldAutoScroll) {
+    // ✅ Auto-scroll APENAS se uma NOVA mensagem foi adicionada (não substituída)
+    const lengthChanged = messages.length !== lastMessageLengthRef.current;
+    
+    if (shouldAutoScroll && lengthChanged) {
       const timer = setTimeout(() => {
         if (messagesEndRef.current) {
           console.log('📜 Auto-scroll para nova mensagem');
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
+      lastMessageLengthRef.current = messages.length;
       return () => clearTimeout(timer);
     }
+    
+    // ✅ Atualizar a ref mesmo sem scroll para manter sincronizado
+    lastMessageLengthRef.current = messages.length;
   }, [selectedConversation?.id, messages.length, shouldAutoScroll]);
 
 
