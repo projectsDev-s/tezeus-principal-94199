@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface Message {
   id: string;
   content: string;
-  sender_type: 'contact' | 'agent' | 'ia';
+  sender_type: 'contact' | 'agent' | 'ia' | 'system' | 'user';
   created_at: string;
   message_type: 'text' | 'image' | 'audio' | 'document' | 'video' | 'sticker';
   file_url?: string;

@@ -11,7 +11,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 interface ChatMessage {
   id: string;
   content: string;
-  sender_type: 'contact' | 'agent' | 'ia';
+  sender_type: 'contact' | 'agent' | 'ia' | 'system' | 'user';
   created_at: string;
   origem_resposta: 'automatica' | 'manual';
 }
@@ -156,7 +156,7 @@ export const ChatWidget = ({
       setMessages(messagesData.map(msg => ({
         id: msg.id,
         content: msg.content,
-        sender_type: msg.sender_type as 'contact' | 'agent' | 'ia',
+        sender_type: msg.sender_type as ChatMessage['sender_type'],
         created_at: msg.created_at,
         origem_resposta: (msg.origem_resposta || 'manual') as 'automatica' | 'manual'
       })));

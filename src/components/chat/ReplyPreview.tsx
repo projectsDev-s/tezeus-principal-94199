@@ -5,7 +5,7 @@ interface WhatsAppMessage {
   id: string;
   content: string;
   message_type: 'text' | 'image' | 'video' | 'audio' | 'document';
-  sender_type: 'contact' | 'agent';
+  sender_type: 'contact' | 'agent' | 'system' | 'ia' | 'user';
   file_url?: string;
   file_name?: string;
 }
@@ -18,7 +18,16 @@ interface ReplyPreviewProps {
 
 export function ReplyPreview({ message, contactName, onCancel }: ReplyPreviewProps) {
   const getSenderName = () => {
-    return message.sender_type === 'contact' ? contactName : 'Você';
+    switch (message.sender_type) {
+      case 'contact':
+        return contactName;
+      case 'system':
+        return 'Sistema';
+      case 'ia':
+        return 'Assistente IA';
+      default:
+        return 'Você';
+    }
   };
 
   const renderMediaPreview = () => {

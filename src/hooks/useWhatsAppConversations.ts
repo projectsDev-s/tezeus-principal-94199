@@ -8,7 +8,7 @@ import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 export interface WhatsAppMessage {
   id: string;
   content: string;
-  sender_type: 'contact' | 'agent' | 'ia';
+  sender_type: 'contact' | 'agent' | 'ia' | 'system' | 'user';
   created_at: string;
   read_at?: string | null;
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';

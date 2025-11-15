@@ -5,7 +5,7 @@ import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 interface WhatsAppMessage {
   id: string;
   content: string;
-  sender_type: 'contact' | 'agent' | 'ia';
+  sender_type: 'contact' | 'agent' | 'ia' | 'system' | 'user';
   created_at: string;
   message_type: 'text' | 'image' | 'audio' | 'document' | 'video' | 'sticker';
   file_url?: string;

@@ -13,7 +13,7 @@ interface MediaViewerProps {
   fileName?: string;
   messageType: string;
   className?: string;
-  senderType?: 'agent' | 'contact';
+  senderType?: 'agent' | 'contact' | 'system' | 'ia' | 'user';
   senderAvatar?: string;
   senderName?: string;
   messageStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';

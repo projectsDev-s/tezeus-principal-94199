@@ -3,7 +3,7 @@ import { Video, Mic, FileText, Reply } from 'lucide-react';
 interface QuotedMessage {
   id: string;
   content: string;
-  sender_type: 'agent' | 'contact';
+  sender_type: 'agent' | 'contact' | 'system' | 'ia' | 'user';
   message_type?: string;
   file_url?: string;
   file_name?: string;

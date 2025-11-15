@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface WhatsAppAudioPlayerProps {
   audioUrl: string;
   fileName?: string;
-  senderType: 'agent' | 'contact';
+  senderType: 'agent' | 'contact' | 'system' | 'ia' | 'user';
   senderAvatar?: string;
   senderName?: string;
   messageStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
@@ -53,7 +53,7 @@ export const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     return Array.from({ length: 40 }, () => Math.random() * 0.7 + 0.3);
   });
 
-  const isOutgoing = senderType === 'agent';
+  const isOutgoing = senderType !== 'contact';
 
   // Detecta cliques fora do componente para voltar ao modo inicial
   useEffect(() => {

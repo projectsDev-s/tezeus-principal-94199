@@ -55,6 +55,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+type ConversationMessage = ReturnType<typeof useConversationMessages>['messages'][number];
+type DisplayMessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 interface WhatsAppChatProps {
   isDarkMode?: boolean;
   selectedConversationId?: string | null;
@@ -986,6 +989,35 @@ export function WhatsAppChat({
     // Como ambos os providers já normalizam o status no backend,
     // podemos usar uma lógica unificada
     return mapEvolutionStatusToComponent(status);
+  };
+
+  const getDisplayMessageStatus = (message: ConversationMessage): DisplayMessageStatus | undefined => {
+    if (!message || message.sender_type === 'contact') {
+      return undefined;
+    }
+
+    if (message.sender_type === 'system') {
+      const normalizedStatus = mapMessageStatus(message.status);
+      return normalizedStatus === 'sending' ? 'sent' : normalizedStatus;
+    }
+
+    return mapMessageStatus(message.status);
+  };
+
+  const getSenderDisplayName = (
+    senderType: ConversationMessage['sender_type'] | undefined,
+    contactName: string
+  ) => {
+    switch (senderType) {
+      case 'contact':
+        return contactName || 'Contato';
+      case 'system':
+        return 'Sistema';
+      case 'ia':
+        return 'Assistente IA';
+      default:
+        return 'Você';
+    }
   };
 
   // Importadas de avatarUtils para consistência
@@ -2135,26 +2167,34 @@ export function WhatsAppChat({
                       <DateSeparator date={dateLabel} />
                       
                       {/* Mensagens do dia */}
-                      {dateMessages.map(message => (
-                        <div 
-                          key={message.id} 
-                          data-message-id={message.id} 
-                          className={cn(
-                            "flex items-start gap-3 max-w-[80%] relative mb-3",
-                            message.sender_type === 'contact' ? "flex-row" : "flex-row-reverse ml-auto",
-                            selectionMode && "cursor-pointer",
-                            selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
-                          )}
-                          onClick={() => selectionMode && toggleMessageSelection(message.id)}
-                        >
-                    {message.sender_type === 'contact' && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
+                      {dateMessages.map(message => {
+                        const displayStatus = getDisplayMessageStatus(message);
+                        const isContactMessage = message.sender_type === 'contact';
+                        const senderDisplayName = getSenderDisplayName(
+                          message.sender_type,
+                          selectedConversation.contact?.name || ''
+                        );
+
+                        return (
+                          <div 
+                            key={message.id} 
+                            data-message-id={message.id} 
+                            className={cn(
+                              "flex items-start gap-3 max-w-[80%] relative mb-3",
+                              isContactMessage ? "flex-row" : "flex-row-reverse ml-auto",
+                              selectionMode && "cursor-pointer",
+                              selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
+                            )}
+                            onClick={() => selectionMode && toggleMessageSelection(message.id)}
+                          >
+                    {isContactMessage && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
                         <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact?.name || ''))}>
                           {getInitials(selectedConversation.contact?.name || '')}
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", message.sender_type === 'contact' ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary px-2 py-1.5" : "bg-primary text-primary-foreground px-2 py-1.5")}>
+                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", isContactMessage ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary px-2 py-1.5" : "bg-primary text-primary-foreground px-2 py-1.5")}>
                       {/* Menu de contexto */}
                       {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => handleReply(message)} onDownload={message.file_url ? () => {
                   const link = document.createElement('a');
@@ -2170,22 +2210,34 @@ export function WhatsAppChat({
                       {message.quoted_message && message.reply_to_message_id && (
                         <QuotedMessagePreview
                           quotedMessage={message.quoted_message}
-                          senderName={
-                            message.quoted_message.sender_type === 'contact' 
-                              ? selectedConversation.contact.name 
-                              : 'Você'
-                          }
+                          senderName={getSenderDisplayName(
+                            message.quoted_message.sender_type,
+                            selectedConversation.contact?.name || ''
+                          )}
                           onQuoteClick={() => scrollToMessage(message.reply_to_message_id!)}
                         />
                       )}
 
                       {/* Renderizar conteúdo baseado no tipo */}
-                      {message.message_type !== 'text' && message.file_url ? <MediaViewer fileUrl={message.file_url} fileName={message.file_name} messageType={message.message_type} className="max-w-xs" senderType={message.sender_type} senderAvatar={message.sender_type === 'contact' ? selectedConversation.contact?.profile_image_url : undefined} senderName={message.sender_type === 'contact' ? selectedConversation.contact?.name : 'Você'} messageStatus={message.sender_type !== 'contact' ? mapMessageStatus(message.status) : undefined} timestamp={message.created_at} /> : <div className="flex items-end justify-between gap-2 min-w-0">
+                      {message.message_type !== 'text' && message.file_url ? (
+                        <MediaViewer
+                          fileUrl={message.file_url}
+                          fileName={message.file_name}
+                          messageType={message.message_type}
+                          className="max-w-xs"
+                          senderType={message.sender_type}
+                          senderAvatar={isContactMessage ? selectedConversation.contact?.profile_image_url : undefined}
+                          senderName={senderDisplayName}
+                          messageStatus={displayStatus}
+                          timestamp={message.created_at}
+                        />
+                      ) : (
+                        <div className="flex items-end justify-between gap-2 min-w-0">
                     <p className="text-sm break-words flex-1">{message.content}</p>
                     
                     <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
                       <span className={cn(
-                        message.sender_type === 'contact' 
+                        isContactMessage 
                           ? "text-muted-foreground" 
                           : "text-primary-foreground/70"
                       )}>
@@ -2194,16 +2246,18 @@ export function WhatsAppChat({
                           minute: '2-digit'
                         })}
                       </span>
-                      {message.sender_type !== 'contact' && (
+                      {displayStatus && (
                         <MessageStatusIndicator 
-                          status={mapMessageStatus(message.status)} 
+                          status={displayStatus} 
                         />
                       )}
                     </div>
-                  </div>}
+                  </div>
+                      )}
                     </div>
                   </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })}

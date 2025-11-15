@@ -9,7 +9,7 @@ interface WhatsAppMessage {
   conversation_id: string;
   content: string;
   message_type: 'text' | 'image' | 'video' | 'audio' | 'document';
-  sender_type: 'contact' | 'agent';
+  sender_type: 'contact' | 'agent' | 'system' | 'ia' | 'user';
   sender_id?: string;
   file_url?: string;
   file_name?: string;
@@ -25,7 +25,7 @@ interface WhatsAppMessage {
   quoted_message?: {
     id: string;
     content: string;
-    sender_type: 'contact' | 'agent';
+    sender_type: 'contact' | 'agent' | 'system' | 'ia' | 'user';
     message_type?: 'text' | 'image' | 'video' | 'audio' | 'document';
     file_url?: string;
     file_name?: string;
