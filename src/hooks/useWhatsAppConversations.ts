@@ -575,15 +575,29 @@ export const useWhatsAppConversations = () => {
 
   // ===== REALTIME SUBSCRIPTION =====
   useEffect(() => {
+    console.log('🔥🔥🔥 [REALTIME useEffect] EXECUTADO!', {
+      timestamp: new Date().toISOString(),
+      workspaceId: selectedWorkspace?.workspace_id
+    });
+    
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
+    console.log('🔍 [REALTIME] Verificando dados:', {
+      hasUserData: !!currentUserData,
+      userId: currentUserData?.id,
+      hasWorkspace: !!selectedWorkspace?.workspace_id
+    });
+    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
+      console.log('⏸️ [REALTIME] ABORTADO - faltam dados');
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
     const channelName = `conversations-realtime-${workspaceId}`;
+    
+    console.log('🔌🔌🔌 [REALTIME] Iniciando subscription do canal:', channelName);
 
     const conversationsChannel = supabase
       .channel(channelName)
