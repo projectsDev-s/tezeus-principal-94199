@@ -38,7 +38,7 @@ interface UseConversationMessagesReturn {
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
-  loadInitial: (conversationId: string) => Promise<void>;
+  loadInitial: (conversationId: string, forceRefresh?: boolean) => Promise<void>;
   loadMore: () => Promise<void>;
   addMessage: (message: WhatsAppMessage) => void;
   updateMessage: (messageId: string, updates: Partial<WhatsAppMessage>) => void;
@@ -60,7 +60,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
   
   // Cache em memória
   const cacheRef = useRef<Map<string, { messages: WhatsAppMessage[]; timestamp: number }>>(new Map());
-  const CACHE_TTL = 2000;
+  const CACHE_TTL = 0; // ✅ Desabilitar cache para sempre buscar dados frescos
 
   // ✅ ESTABILIZAR headers com useMemo
   const headers = useMemo(() => {
@@ -82,17 +82,18 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     setCurrentConversationId(null);
   }, []);
 
-  const loadInitial = useCallback(async (conversationId: string) => {
+  const loadInitial = useCallback(async (conversationId: string, forceRefresh = false) => {
     const workspaceId = selectedWorkspace?.workspace_id;
     if (!workspaceId) return;
 
     console.log('🔄 [useConversationMessages] loadInitial chamado:', {
       conversationId,
       workspaceId,
+      forceRefresh,
       timestamp: new Date().toISOString()
     });
 
-    // Invalidar cache
+    // Invalidar cache (sempre, principalmente se forceRefresh)
     const cacheKey = `${workspaceId}:${conversationId}`;
     cacheRef.current.delete(cacheKey);
 
