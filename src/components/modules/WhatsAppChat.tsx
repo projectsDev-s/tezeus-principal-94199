@@ -107,6 +107,14 @@ export function WhatsAppChat({
     sendMessage
   } = useWhatsAppConversations();
   
+  // Debug: Detectar mudanças no array de conversas
+  useEffect(() => {
+    console.log('🔄 [WhatsAppChat] Array de conversas MUDOU:', {
+      total: conversations.length,
+      conversationIds: conversations.map(c => ({ id: c.id, name: c.contact.name, status: c.status })),
+      timestamp: new Date().toISOString()
+    });
+  }, [conversations.length, conversations]);
 
 
   // ✅ Hook específico para mensagens (lazy loading)
@@ -307,9 +315,17 @@ export function WhatsAppChat({
   const getFilteredConversations = () => {
     let filtered = [];
 
+    console.log('🔍 [Filter] Filtrando conversas:', {
+      totalConversations: conversations.length,
+      activeTab,
+      selectedTag,
+      userId: user?.id
+    });
+
     // Filtrar por aba
     switch (activeTab) {
       case 'all':
+        // Incluir todas exceto fechadas
         filtered = conversations.filter(c => c.status !== 'closed');
         break;
       case 'mine':
@@ -325,6 +341,11 @@ export function WhatsAppChat({
       default:
         filtered = conversations.filter(c => c.status !== 'closed');
     }
+
+    console.log('🔍 [Filter] Após filtro de aba:', {
+      filtered: filtered.length,
+      activeTab
+    });
 
     // Filtrar por tag se selecionada (ignorar "all" ou string vazia)
     if (selectedTag && selectedTag !== "all") {
