@@ -573,11 +573,9 @@ export const useWhatsAppConversations = () => {
     fetchConversations();
   }, [selectedWorkspace?.workspace_id]);
 
-  // Subscription para atualizações em tempo real
-  useEffect(() => {
-    const executionId = Math.random().toString(36).substring(7);
-    console.log(`🔌🔌🔌 [Realtime-${executionId}] useEffect EXECUTADO!`, {
-      hasSelectedWorkspace: !!selectedWorkspace,
+  // ===== REALTIME SUBSCRIPTION =====
+  useEffect(function realtimeSubscription() {
+    console.log('🔥🔥🔥 [REALTIME] INICIANDO SUBSCRIPTION', {
       workspaceId: selectedWorkspace?.workspace_id,
       timestamp: new Date().toISOString()
     });
@@ -585,25 +583,15 @@ export const useWhatsAppConversations = () => {
     const userData = localStorage.getItem('currentUser');
     const currentUserData = userData ? JSON.parse(userData) : null;
     
-    console.log('👤 [Realtime] Dados do usuário:', {
-      hasUserData: !!userData,
-      userId: currentUserData?.id,
-      hasWorkspaceId: !!selectedWorkspace?.workspace_id
-    });
-    
     if (!currentUserData?.id || !selectedWorkspace?.workspace_id) {
-      console.log('⏸️ [Realtime] BLOQUEADO - Aguardando usuário/workspace...');
+      console.log('⏸️ [Realtime] Sem dados necessários');
       return;
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
     const channelName = `conversations-realtime-${workspaceId}`;
     
-    console.log('🔌 [Realtime] Iniciando subscrição:', { 
-      workspaceId, 
-      channelName,
-      userId: currentUserData.id 
-    });
+    console.log('🔌 [Realtime] Criando canal:', channelName);
 
     const conversationsChannel = supabase
       .channel(channelName)
@@ -921,14 +909,10 @@ export const useWhatsAppConversations = () => {
       });
 
     return () => {
-      console.log('🔌🔌🔌 [Realtime] REMOVENDO SUBSCRIPTION do workspace:', workspaceId);
-      console.log('📊 Estado final antes de remover:', {
-        totalConversations: conversations.length,
-        channelName
-      });
+      console.log('🔌 [Realtime] Cleanup:', workspaceId);
       supabase.removeChannel(conversationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id, conversations.length]);
+  }, [selectedWorkspace?.workspace_id]);
 
   return {
     conversations,
