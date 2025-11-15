@@ -96,6 +96,17 @@ serve(async (req) => {
   try {
     const data = await req.json();
     console.log(`📦 [${id}] Data:`, JSON.stringify(data, null, 2));
+    
+    // 🔥🔥🔥 LOG DE DEBUG: Detectar callbacks de status
+    if (data.event === 'MessageStatusCallback' || data.status) {
+      console.log(`🔥🔥🔥 [${id}] CALLBACK DE STATUS RECEBIDO:`, {
+        event: data.event,
+        status: data.status,
+        messageId: data.messageId,
+        instanceName: data.instanceName || data.instance,
+        timestamp: new Date().toISOString()
+      });
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
