@@ -78,6 +78,8 @@ export const useWhatsAppConversations = () => {
     timestamp: new Date().toISOString()
   });
   
+  console.log('🚀🚀🚀 [DEBUG] Próximo passo: useEffect do Realtime deveria executar');
+  
   // Refs simples
   const sendingRef = useRef<Map<string, boolean>>(new Map());
 
@@ -572,6 +574,8 @@ export const useWhatsAppConversations = () => {
     console.log('🔄 Workspace mudou, carregando conversas');
     fetchConversations();
   }, [selectedWorkspace?.workspace_id]);
+
+  console.log('🎨🎨🎨 [DEBUG] ANTES do useEffect do Realtime - linha 578');
 
   // ===== REALTIME SUBSCRIPTION =====
   useEffect(() => {
