@@ -908,7 +908,7 @@ export const useWhatsAppConversations = () => {
       });
       supabase.removeChannel(conversationsChannel);
     };
-  }, [selectedWorkspace?.workspace_id, fetchConversations]);
+  }, [selectedWorkspace?.workspace_id]);
 
   return {
     conversations,
