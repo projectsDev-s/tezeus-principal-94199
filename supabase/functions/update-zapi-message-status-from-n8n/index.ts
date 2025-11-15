@@ -20,7 +20,6 @@ serve(async (req) => {
       status: rawStatus, 
       phone,
       connection_id: connectionId,
-      external_id: externalId,  // ← ID real do WhatsApp (Z-API/Evolution)
       conversation_id: conversationId  // ← ID da conversa (já vem no webhook N8N)
     } = payload;
 
@@ -38,9 +37,8 @@ serve(async (req) => {
     const normalizedStatus = rawStatus === 'received' ? 'delivered' : rawStatus.toLowerCase();
     console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
-    // 🎯 ESTRATÉGIA DE BUSCA MELHORADA
+    // 🎯 ESTRATÉGIA DE BUSCA POR TIMESTAMP
     console.log('🔍 Buscando mensagem para atualizar:', { 
-      externalId, 
       conversationId, 
       phone, 
       connectionId, 
@@ -48,30 +46,12 @@ serve(async (req) => {
       status: normalizedStatus 
     });
     
-    // ✅ PRIORIDADE 1: Buscar por external_id (ID real do WhatsApp)
     let message = null;
     let searchError = null;
     
-    if (externalId) {
-      console.log('🔑 Tentando buscar por external_id:', externalId);
-      const { data, error } = await supabase
-        .from('messages')
-        .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
-        .eq('workspace_id', workspaceId)
-        .eq('external_id', externalId)
-        .maybeSingle();
-      
-      message = data;
-      searchError = error;
-      
-      if (message) {
-        console.log('✅ Mensagem encontrada por external_id:', message.id);
-      }
-    }
-    
-    // ✅ FALLBACK 1: Buscar por conversation_id (se veio no webhook)
-    if (!message && conversationId) {
-      console.log('🔄 Fallback: Buscando por conversation_id:', conversationId);
+    // ✅ ESTRATÉGIA 1: Buscar por conversation_id + timestamp (últimos 60 segundos)
+    if (conversationId) {
+      console.log('🔍 Buscando por conversation_id + timestamp:', conversationId);
       
       // Determinar qual status buscar baseado no callback recebido
       let searchStatus: string | null = null;
@@ -196,12 +176,11 @@ serve(async (req) => {
       
       console.log('🔍 Últimas 10 mensagens do workspace:', JSON.stringify(debugAll, null, 2));
       console.log('🔍 Critérios de busca:', {
-        externalId,
         conversationId,
         phone,
         connectionId,
         workspaceId,
-        strategy: 'external_id → conversation_id (recente) → phone+connection (recente)',
+        strategy: 'conversation_id (timestamp) → phone+connection (timestamp)',
         sender_types: ['user', 'agent', 'system']
       });
       
@@ -210,12 +189,11 @@ serve(async (req) => {
         error: 'Mensagem não encontrada',
         debug: {
           search_criteria: {
-            external_id: externalId,
             conversation_id: conversationId,
             phone,
             connection_id: connectionId,
             workspace_id: workspaceId,
-            strategy: 'external_id → conversation_id (recente) → phone+connection (recente)',
+            strategy: 'conversation_id (timestamp) → phone+connection (timestamp)',
             sender_types: ['user', 'agent', 'system']
           },
           last_messages: debugAll
