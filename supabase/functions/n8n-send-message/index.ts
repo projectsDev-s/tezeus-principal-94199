@@ -490,12 +490,23 @@ serve(async (req) => {
       n8nPayloadBase.apikey = providerToken;
       console.log(`🔵 [${messageId}] Payload configurado para EVOLUTION API`);
     } else if (providerType === 'zapi') {
+      // ✅ Buscar instance_token correto do metadata (campo 'token' da Z-API)
+      const zapiInstanceToken = instanceData.metadata?.token || 
+                                 instanceData.metadata?.instanceToken || 
+                                 instanceData.metadata?.instance_token;
+      
       n8nPayloadBase.zapi_url = providerUrl;
       n8nPayloadBase.zapi_token = providerToken;
       n8nPayloadBase.zapi_client_token = zapiClientToken;
       n8nPayloadBase.zapi_instance_id = zapiInstanceId;
-      n8nPayloadBase.instance_token = providerToken; // INSTANCE_TOKEN = zapi_token
-      console.log(`🟢 [${messageId}] Payload configurado para Z-API`);
+      n8nPayloadBase.instance_id = zapiInstanceId; // ID da instância
+      n8nPayloadBase.instance_token = zapiInstanceToken; // ✅ Token real da instância (diferente do client_token)
+      
+      console.log(`🟢 [${messageId}] Payload Z-API configurado:`, {
+        instance_id: zapiInstanceId,
+        instance_token: zapiInstanceToken ? zapiInstanceToken.substring(0, 10) + '...' : 'MISSING',
+        client_token: zapiClientToken ? zapiClientToken.substring(0, 10) + '...' : 'MISSING'
+      });
     }
 
     const n8nPayload = n8nPayloadBase;
