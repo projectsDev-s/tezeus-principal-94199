@@ -53,11 +53,9 @@ serve(async (req) => {
     console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
     // ✅ BUSCAR ÚLTIMA MENSAGEM ENVIADA (OUTBOUND) NA CONVERSA
-    // Estratégia: buscar a última mensagem enviada, independente do status atual
-    // Janela de 5 minutos para capturar callbacks atrasados
+    // Estratégia: buscar a última mensagem enviada, SEM LIMITE DE TEMPO
+    // Porque o callback de status SEMPRE se refere à última mensagem enviada
     console.log('🔍 Buscando última mensagem enviada da conversa:', conversationId);
-    
-    const fiveMinutesAgo = new Date(Date.now() - 300000).toISOString(); // 5 minutos
     
     const { data: message, error: searchError } = await supabase
       .from('messages')
@@ -65,8 +63,6 @@ serve(async (req) => {
       .eq('conversation_id', conversationId)
       .eq('workspace_id', workspaceId)
       .in('sender_type', ['user', 'agent', 'system']) // Apenas mensagens ENVIADAS
-      .gte('created_at', fiveMinutesAgo) // Janela maior
-      // ❌ SEM FILTRO DE STATUS - pega qualquer status
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -98,7 +94,7 @@ serve(async (req) => {
       console.log('🔍 Critérios de busca:', {
         conversationId,
         workspaceId,
-        janela: '5 minutos',
+        strategy: 'Última mensagem outbound (sem limite de tempo)',
         sender_types: ['user', 'agent', 'system']
       });
       
@@ -109,7 +105,7 @@ serve(async (req) => {
           search_criteria: {
             conversation_id: conversationId,
             workspace_id: workspaceId,
-            time_window: '5 minutes',
+            strategy: 'Última mensagem outbound (sem limite de tempo)',
             sender_types: ['user', 'agent', 'system']
           },
           last_messages: debugAll
