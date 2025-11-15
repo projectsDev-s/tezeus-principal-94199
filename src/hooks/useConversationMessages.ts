@@ -342,8 +342,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       return;
     }
 
-    // 🔥 Incluir timestamp único no nome do canal para forçar recriação após migration
-    const channelName = `messages-${currentConversationId}-workspace-${selectedWorkspace.workspace_id}-${Date.now()}`;
+    const channelName = `messages-${currentConversationId}-workspace-${selectedWorkspace.workspace_id}`;
     console.log('🔌🔌🔌 [REALTIME] INICIANDO SUBSCRIPTION:', {
       channelName,
       conversationId: currentConversationId,
