@@ -436,7 +436,7 @@ export function WhatsAppChat({
     try {
       const clientMessageId = crypto.randomUUID();
       
-      // ✅ Mensagem otimista com status 'sent' IMEDIATO
+      // ✅ Mensagem otimista - começa com 'sending'
       const optimisticMessage = {
         id: clientMessageId,
         external_id: clientMessageId,
@@ -446,7 +446,7 @@ export function WhatsAppChat({
         sender_type: 'agent' as const,
         sender_id: user?.id,
         created_at: new Date().toISOString(),
-        status: 'sent' as const, // ✅ JÁ COMEÇA COMO 'sent' para não ficar em loading
+        status: 'sending' as const,
         workspace_id: selectedWorkspace?.workspace_id || '',
         ...(replyingTo && {
           reply_to_message_id: replyingTo.id,
@@ -537,7 +537,7 @@ export function WhatsAppChat({
         sender_type: 'agent' as const,
         sender_id: user?.id,
         created_at: new Date().toISOString(),
-        status: 'sent' as const, // ✅ Status 'sent' imediato
+        status: 'sending' as const,
         workspace_id: selectedWorkspace?.workspace_id || ''
       };
       
