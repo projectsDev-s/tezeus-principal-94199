@@ -573,12 +573,7 @@ export const useWhatsAppConversations = () => {
     fetchConversations();
   }, [selectedWorkspace?.workspace_id]);
 
-  // Subscription para atualizações em tempo real - LOG ANTES DO USEEFFECT
-  console.log('🔍🔍🔍 [Realtime] ANTES do useEffect:', {
-    selectedWorkspaceId: selectedWorkspace?.workspace_id,
-    timestamp: new Date().toISOString()
-  });
-  
+  // Subscription para atualizações em tempo real
   useEffect(() => {
     console.log('🔌🔌🔌 [Realtime] useEffect EXECUTADO!', {
       hasSelectedWorkspace: !!selectedWorkspace,
