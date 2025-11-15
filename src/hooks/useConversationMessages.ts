@@ -328,6 +328,12 @@ export function useConversationMessages(): UseConversationMessagesReturn {
 
   // ✅ SUBSCRIPTION DE MENSAGENS (ÚNICO E CENTRALIZADO)
   useEffect(() => {
+    console.log('🔄🔄🔄 [REALTIME] useEffect EXECUTADO:', {
+      currentConversationId,
+      workspaceId: selectedWorkspace?.workspace_id,
+      timestamp: new Date().toISOString()
+    });
+
     if (!currentConversationId || !selectedWorkspace?.workspace_id) {
       console.log('⚠️ [useConversationMessages] Subscription NÃO iniciada - faltam dados:', {
         currentConversationId,
@@ -500,7 +506,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         });
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅✅✅ [REALTIME] SUBSCRIPTION ATIVA! Aguardando eventos UPDATE...');
+          console.log('✅✅✅ [REALTIME] SUBSCRIPTION ATIVA! Aguardando eventos INSERT e UPDATE...');
           console.log('🔍 [REALTIME] Filtro ativo: conversation_id=eq.' + currentConversationId);
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌❌❌ [REALTIME] ERRO NO CANAL!', err);
@@ -510,6 +516,12 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           console.warn('🔴 [REALTIME] CANAL FECHADO');
         }
       });
+
+    console.log('🎯 [REALTIME] Subscription configurada e ativada para:', {
+      channelName,
+      conversationId: currentConversationId,
+      timestamp: new Date().toISOString()
+    });
 
     return () => {
       console.log('🔌 [useConversationMessages] 🔴 REMOVENDO subscription:', {
