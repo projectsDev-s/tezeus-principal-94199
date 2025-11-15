@@ -754,26 +754,45 @@ export const useWhatsAppConversations = () => {
         table: 'messages',
         filter: `workspace_id=eq.${workspaceId}`
       }, (payload) => {
-          console.log('📨 [REALTIME-MESSAGES] Nova mensagem recebida');
+          console.log('📨 [REALTIME-MESSAGES] Nova mensagem recebida:', {
+            conversationId: payload.new.conversation_id,
+            content: (payload.new as any).content?.substring(0, 30),
+            timestamp: new Date().toISOString()
+          });
 
           const newMessage = payload.new as any;
 
-          setConversations(prev => prev.map(conv => {
-            if (conv.id === newMessage.conversation_id) {
-              return {
-                ...conv,
-                last_message: [{
-                  content: newMessage.content,
-                  message_type: newMessage.message_type,
-                  sender_type: newMessage.sender_type,
-                  created_at: newMessage.created_at
-                }],
-                last_activity_at: newMessage.created_at,
-                _updated_at: Date.now()
-              };
-            }
-            return conv;
-          }));
+          setConversations(prev => {
+            // Atualizar a conversa com a nova mensagem
+            const updated = prev.map(conv => {
+              if (conv.id === newMessage.conversation_id) {
+                console.log('✅ [REALTIME] Atualizando card com nova mensagem:', {
+                  conversationId: conv.id,
+                  newContent: newMessage.content?.substring(0, 30),
+                  newTime: newMessage.created_at
+                });
+                
+                return {
+                  ...conv,
+                  last_message: [{
+                    content: newMessage.content,
+                    message_type: newMessage.message_type,
+                    sender_type: newMessage.sender_type,
+                    created_at: newMessage.created_at
+                  }],
+                  last_activity_at: newMessage.created_at,
+                  _updated_at: Date.now() // Forçar re-render
+                };
+              }
+              return conv;
+            });
+            
+            // Reordenar lista por última atividade
+            return updated.sort((a, b) => 
+              new Date(b.last_activity_at || b.created_at).getTime() - 
+              new Date(a.last_activity_at || a.created_at).getTime()
+            );
+          });
         }
       )
       .on('postgres_changes', {
@@ -782,7 +801,7 @@ export const useWhatsAppConversations = () => {
         table: 'notifications',
         filter: `workspace_id=eq.${workspaceId}`
       }, (payload) => {
-          console.log('📨 [useWhatsAppConversations] Nova notificação via real-time:', {
+          console.log('📨 [REALTIME-NOTIFICATIONS] Nova notificação:', {
             notificationId: payload.new.id,
             conversationId: payload.new.conversation_id,
             timestamp: new Date().toISOString()
@@ -793,9 +812,16 @@ export const useWhatsAppConversations = () => {
           if (!newNotification.is_read) {
             setConversations(prev => prev.map(conv => {
               if (conv.id === newNotification.conversation_id) {
+                console.log('🔔 [REALTIME] Incrementando unread_count:', {
+                  conversationId: conv.id,
+                  currentCount: conv.unread_count,
+                  newCount: (conv.unread_count || 0) + 1
+                });
+                
                 return {
                   ...conv,
-                  unread_count: (conv.unread_count || 0) + 1
+                  unread_count: (conv.unread_count || 0) + 1,
+                  _updated_at: Date.now() // Forçar re-render
                 };
               }
               return conv;
