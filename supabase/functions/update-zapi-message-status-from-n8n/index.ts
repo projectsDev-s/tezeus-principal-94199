@@ -19,7 +19,9 @@ serve(async (req) => {
       workspace_id: workspaceId, 
       status: rawStatus, 
       phone,
-      connection_id: connectionId
+      connection_id: connectionId,
+      external_id: externalId,  // ← ID real do WhatsApp (Z-API/Evolution)
+      conversation_id: conversationId  // ← ID da conversa (já vem no webhook N8N)
     } = payload;
 
     // Validações
@@ -32,89 +34,143 @@ serve(async (req) => {
       });
     }
 
-    // ⚠️ EXIGIR phone E connection_id (chave de busca mais estável)
-    if (!phone || !connectionId) {
-      console.error('❌ phone e connection_id são OBRIGATÓRIOS!');
-      console.log('💡 AÇÃO NECESSÁRIA: Configure o N8N Function Node para enviar:');
-      console.log('   phone: $json.phone');
-      console.log('   connection_id: $json.connection_id');
-      
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'phone e connection_id são obrigatórios',
-        action_required: 'Configure o N8N para enviar phone e connection_id'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
     // Normalizar status
     const normalizedStatus = rawStatus === 'received' ? 'delivered' : rawStatus.toLowerCase();
     console.log('📊 Status:', rawStatus, '->', normalizedStatus);
 
-    // ✅ BUSCAR MENSAGEM POR ORDEM DE ENVIO E STATUS ATUAL
-    // Estratégia: buscar a mensagem MAIS ANTIGA que ainda não teve esse status atualizado
-    // - Se callback é "delivered" -> buscar mensagens com status "sent"
-    // - Se callback é "read" -> buscar mensagens com status "delivered"
-    // - Ordenar por created_at ASC (mais antiga primeiro)
-    console.log('🔍 Buscando mensagem para atualizar:', { phone, connectionId, workspaceId, status: normalizedStatus });
+    // 🎯 ESTRATÉGIA DE BUSCA MELHORADA
+    console.log('🔍 Buscando mensagem para atualizar:', { 
+      externalId, 
+      conversationId, 
+      phone, 
+      connectionId, 
+      workspaceId, 
+      status: normalizedStatus 
+    });
     
-    // Primeiro, buscar a conversa desse telefone nessa conexão
-    const { data: conversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('workspace_id', workspaceId)
-      .eq('connection_id', connectionId)
-      .eq('contact_id', (await supabase
-        .from('contacts')
+    // ✅ PRIORIDADE 1: Buscar por external_id (ID real do WhatsApp)
+    let message = null;
+    let searchError = null;
+    
+    if (externalId) {
+      console.log('🔑 Tentando buscar por external_id:', externalId);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
+        .eq('workspace_id', workspaceId)
+        .eq('external_id', externalId)
+        .maybeSingle();
+      
+      message = data;
+      searchError = error;
+      
+      if (message) {
+        console.log('✅ Mensagem encontrada por external_id:', message.id);
+      }
+    }
+    
+    // ✅ FALLBACK 1: Buscar por conversation_id (se veio no webhook)
+    if (!message && conversationId) {
+      console.log('🔄 Fallback: Buscando por conversation_id:', conversationId);
+      
+      // Determinar qual status buscar baseado no callback recebido
+      let searchStatus: string | null = null;
+      if (normalizedStatus === 'delivered') {
+        searchStatus = 'sent';
+      } else if (normalizedStatus === 'read') {
+        searchStatus = 'delivered';
+      } else if (normalizedStatus === 'sent') {
+        searchStatus = 'sending';
+      }
+      
+      console.log('🎯 Buscando mensagem com status:', searchStatus || 'qualquer');
+      
+      // Buscar mensagem mais RECENTE (últimos 60 segundos) para evitar atualizar mensagens antigas
+      const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+      
+      let query = supabase
+        .from('messages')
+        .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
+        .eq('conversation_id', conversationId)
+        .eq('workspace_id', workspaceId)
+        .in('sender_type', ['user', 'agent', 'system'])
+        .gte('created_at', sixtySecondsAgo); // Últimos 60 segundos
+      
+      // Filtrar pelo status anterior se definido
+      if (searchStatus) {
+        query = query.eq('status', searchStatus);
+      }
+      
+      const { data, error } = await query
+        .order('created_at', { ascending: false }) // MAIS RECENTE PRIMEIRO
+        .limit(1)
+        .maybeSingle();
+      
+      message = data;
+      searchError = error;
+      
+      if (message) {
+        console.log('✅ Mensagem encontrada por conversation_id (fallback):', message.id);
+      }
+    }
+    
+    // ✅ FALLBACK 2: Buscar por phone + connection (legado)
+    if (!message && phone && connectionId) {
+      console.log('🔄 Fallback: Buscando por phone + connection');
+      
+      // Primeiro, buscar a conversa desse telefone nessa conexão
+      const { data: conversation } = await supabase
+        .from('conversations')
         .select('id')
         .eq('workspace_id', workspaceId)
-        .eq('phone', phone)
-        .single()
-      ).data?.id)
-      .single();
-    
-    if (!conversation) {
-      console.error('❌ Conversa não encontrada para phone:', phone);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Conversa não encontrada'
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+        .eq('connection_id', connectionId)
+        .eq('contact_id', (await supabase
+          .from('contacts')
+          .select('id')
+          .eq('workspace_id', workspaceId)
+          .eq('phone', phone)
+          .single()
+        ).data?.id)
+        .single();
+      
+      if (conversation) {
+        // Determinar qual status buscar
+        let searchStatus: string | null = null;
+        if (normalizedStatus === 'delivered') {
+          searchStatus = 'sent';
+        } else if (normalizedStatus === 'read') {
+          searchStatus = 'delivered';
+        } else if (normalizedStatus === 'sent') {
+          searchStatus = 'sending';
+        }
+        
+        const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+        
+        let query = supabase
+          .from('messages')
+          .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
+          .eq('conversation_id', conversation.id)
+          .eq('workspace_id', workspaceId)
+          .in('sender_type', ['user', 'agent', 'system'])
+          .gte('created_at', sixtySecondsAgo);
+        
+        if (searchStatus) {
+          query = query.eq('status', searchStatus);
+        }
+        
+        const { data, error } = await query
+          .order('created_at', { ascending: false }) // MAIS RECENTE PRIMEIRO
+          .limit(1)
+          .maybeSingle();
+        
+        message = data;
+        searchError = error;
+        
+        if (message) {
+          console.log('✅ Mensagem encontrada por phone + connection (fallback legado):', message.id);
+        }
+      }
     }
-    
-    // Determinar qual status buscar baseado no callback recebido
-    let searchStatus: string | null = null;
-    if (normalizedStatus === 'delivered') {
-      searchStatus = 'sent';
-    } else if (normalizedStatus === 'read') {
-      searchStatus = 'delivered';
-    } else if (normalizedStatus === 'sent') {
-      searchStatus = 'sending';
-    }
-    
-    console.log('🎯 Buscando mensagem com status:', searchStatus || 'qualquer');
-    
-    // Montar query com filtro de status condicional
-    let query = supabase
-      .from('messages')
-      .select('id, external_id, status, delivered_at, read_at, content, created_at, sender_type, conversation_id')
-      .eq('conversation_id', conversation.id)
-      .eq('workspace_id', workspaceId)
-      .in('sender_type', ['user', 'agent', 'system']); // Apenas mensagens ENVIADAS
-    
-    // Filtrar pelo status anterior se definido
-    if (searchStatus) {
-      query = query.eq('status', searchStatus);
-    }
-    
-    const { data: message, error: searchError } = await query
-      .order('created_at', { ascending: true }) // MAIS ANTIGA PRIMEIRO (FIFO)
-      .limit(1)
-      .maybeSingle();
 
     if (searchError) {
       console.error('❌ Erro na busca:', searchError);
@@ -130,7 +186,7 @@ serve(async (req) => {
     if (!message) {
       console.warn('⚠️ Nenhuma mensagem encontrada');
       
-      // Debug completo: mostrar últimas 5 mensagens
+      // Debug completo: mostrar últimas 10 mensagens
       const { data: debugAll } = await supabase
         .from('messages')
         .select('id, status, sender_type, created_at, external_id, content, conversation_id')
@@ -140,11 +196,12 @@ serve(async (req) => {
       
       console.log('🔍 Últimas 10 mensagens do workspace:', JSON.stringify(debugAll, null, 2));
       console.log('🔍 Critérios de busca:', {
+        externalId,
+        conversationId,
         phone,
         connectionId,
         workspaceId,
-        conversation_id: conversation?.id,
-        strategy: 'Última mensagem outbound por phone + connection',
+        strategy: 'external_id → conversation_id (recente) → phone+connection (recente)',
         sender_types: ['user', 'agent', 'system']
       });
       
@@ -153,11 +210,12 @@ serve(async (req) => {
         error: 'Mensagem não encontrada',
         debug: {
           search_criteria: {
+            external_id: externalId,
+            conversation_id: conversationId,
             phone,
             connection_id: connectionId,
             workspace_id: workspaceId,
-            conversation_id: conversation?.id,
-            strategy: 'Última mensagem outbound por phone + connection',
+            strategy: 'external_id → conversation_id (recente) → phone+connection (recente)',
             sender_types: ['user', 'agent', 'system']
           },
           last_messages: debugAll
@@ -223,26 +281,24 @@ serve(async (req) => {
       updateData.delivered_at = new Date().toISOString();
     }
     
-    if (normalizedStatus === 'read') {
+    if (normalizedStatus === 'read' && !message.read_at) {
       updateData.read_at = new Date().toISOString();
+      // Se ainda não tem delivered_at, preencher também
       if (!message.delivered_at) {
         updateData.delivered_at = new Date().toISOString();
       }
     }
 
-    console.log('🔄 Atualizando status:', {
-      message_id: message.id,
-      from: message.status,
-      to: normalizedStatus,
-      fields: Object.keys(updateData)
+    console.log('📝 Atualizando mensagem:', {
+      id: message.id,
+      updates: updateData
     });
 
-    // Atualizar
-    const { data: updated, error: updateError } = await supabase
+    const { data: updatedMessage, error: updateError } = await supabase
       .from('messages')
       .update(updateData)
       .eq('id', message.id)
-      .select('id, status, delivered_at, read_at')
+      .select()
       .single();
 
     if (updateError) {
@@ -256,25 +312,30 @@ serve(async (req) => {
       });
     }
 
-    console.log('✅✅✅ STATUS ATUALIZADO COM SUCESSO:', {
-      message_id: updated.id,
+    console.log('✅ Mensagem atualizada com sucesso:', {
+      id: updatedMessage.id,
       old_status: message.status,
-      new_status: updated.status,
-      delivered_at: updated.delivered_at,
-      read_at: updated.read_at
+      new_status: updatedMessage.status,
+      delivered_at: updatedMessage.delivered_at,
+      read_at: updatedMessage.read_at
     });
 
     return new Response(JSON.stringify({
       success: true,
       action: 'updated',
-      data: updated
+      data: {
+        id: updatedMessage.id,
+        status: updatedMessage.status,
+        delivered_at: updatedMessage.delivered_at,
+        read_at: updatedMessage.read_at
+      }
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('❌ Erro:', error);
+    console.error('❌ Erro geral:', error);
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : 'Erro desconhecido'
