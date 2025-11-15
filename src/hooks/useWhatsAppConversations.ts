@@ -71,6 +71,13 @@ export const useWhatsAppConversations = () => {
   const { user, logout } = useAuth();
   const { getHeaders } = useWorkspaceHeaders();
   
+  console.log('🎯🎯🎯 [useWhatsAppConversations] Hook EXECUTADO/RENDERIZADO:', {
+    hasSelectedWorkspace: !!selectedWorkspace,
+    workspaceId: selectedWorkspace?.workspace_id,
+    conversationsCount: conversations.length,
+    timestamp: new Date().toISOString()
+  });
+  
   // Refs simples
   const sendingRef = useRef<Map<string, boolean>>(new Map());
 
