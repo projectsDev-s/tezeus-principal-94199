@@ -154,11 +154,17 @@ serve(async (req) => {
         }
       }
       
+      // Extrair instance_token do metadata
+      const instanceToken = conn.metadata?.token || 
+                           conn.metadata?.instanceToken || 
+                           conn.metadata?.instance_token;
+      
       // Montar payload para n8n
       const n8nPayload: any = {
         event_type: data.event || data.type || 'UNKNOWN',
         provider: 'zapi',
         instance_name: conn.instance_name,
+        instance_token: instanceToken, // ✅ Token da instância Z-API
         workspace_id: conn.workspace_id,
         connection_id: conn.id,
         external_id: externalId,
