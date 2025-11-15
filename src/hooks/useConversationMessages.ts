@@ -337,10 +337,11 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     }
 
     const channelName = `messages-${currentConversationId}-workspace-${selectedWorkspace.workspace_id}`;
-    console.log('🔌 [useConversationMessages] INICIANDO subscription:', {
+    console.log('🔌🔌🔌 [REALTIME] INICIANDO SUBSCRIPTION:', {
       channelName,
       conversationId: currentConversationId,
       workspaceId: selectedWorkspace.workspace_id,
+      filter: `conversation_id=eq.${currentConversationId}`,
       timestamp: new Date().toISOString()
     });
 
@@ -489,20 +490,24 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           console.log('✅ [REALTIME UPDATE] Atualização concluída!');
         }
       )
-      .subscribe((status) => {
-        console.log('📡 [REALTIME] STATUS DA SUBSCRIPTION:', {
+      .subscribe((status, err) => {
+        console.log('📡📡📡 [REALTIME] STATUS DA SUBSCRIPTION:', {
           status,
+          error: err,
           channelName,
           conversationId: currentConversationId,
           timestamp: new Date().toISOString()
         });
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ [REALTIME] SUBSCRIPTION ATIVA E FUNCIONANDO!');
+          console.log('✅✅✅ [REALTIME] SUBSCRIPTION ATIVA! Aguardando eventos UPDATE...');
+          console.log('🔍 [REALTIME] Filtro ativo: conversation_id=eq.' + currentConversationId);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ [REALTIME] ERRO NO CANAL!');
+          console.error('❌❌❌ [REALTIME] ERRO NO CANAL!', err);
         } else if (status === 'TIMED_OUT') {
-          console.error('⏱️ [REALTIME] TIMEOUT NA SUBSCRIPTION!');
+          console.error('⏱️⏱️⏱️ [REALTIME] TIMEOUT NA SUBSCRIPTION!');
+        } else if (status === 'CLOSED') {
+          console.warn('🔴 [REALTIME] CANAL FECHADO');
         }
       });
 
@@ -514,7 +519,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       });
       supabase.removeChannel(channel);
     };
-  }, [currentConversationId, selectedWorkspace?.workspace_id, addMessage, updateMessage]);
+  }, [currentConversationId, selectedWorkspace?.workspace_id]); // ✅ Removido addMessage e updateMessage para evitar re-criações
 
   return {
     messages,
