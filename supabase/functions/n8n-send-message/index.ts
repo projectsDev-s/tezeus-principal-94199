@@ -494,7 +494,7 @@ serve(async (req) => {
       n8nPayloadBase.zapi_token = providerToken;
       n8nPayloadBase.zapi_client_token = zapiClientToken;
       n8nPayloadBase.zapi_instance_id = zapiInstanceId;
-      n8nPayloadBase.instance_token = zapiClientToken; // INSTANCE_TOKEN para Z-API
+      n8nPayloadBase.instance_token = providerToken; // INSTANCE_TOKEN = zapi_token
       console.log(`🟢 [${messageId}] Payload configurado para Z-API`);
     }
 
