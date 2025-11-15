@@ -68,7 +68,7 @@ serve(async (req) => {
       .eq('conversation_id', conversationId)
       .eq('workspace_id', workspaceId)
       .in('sender_type', ['user', 'agent', 'system'])
-      .in('status', ['sending', 'sent'])
+      .in('status', ['sending', 'sent', 'delivered']) // Incluir delivered também
       .gte('created_at', twoMinutesAgo)
       .order('created_at', { ascending: false })
       .limit(1)
