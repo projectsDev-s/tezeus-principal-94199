@@ -459,101 +459,124 @@ export function DSVoice() {
 
       case "midias":
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Mídias Rápidas</h3>
-              <Button onClick={() => setIsMediaModalOpen(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Nova Mídia
-              </Button>
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredMedia.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="col-span-full text-center py-8 text-muted-foreground">
                 Nenhuma mídia rápida encontrada.
               </div>
             ) : (
-              <div className="grid gap-4">
-                {filteredMedia.map((mediaItem) => (
-                  <Card key={mediaItem.id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{mediaItem.title}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{mediaItem.file_name}</p>
-                        <p className="text-xs text-muted-foreground">Tipo: {mediaItem.file_type}</p>
+              filteredMedia.map((mediaItem) => (
+                <Card key={mediaItem.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors overflow-hidden">
+                  {mediaItem.file_type.startsWith('image/') && mediaItem.file_url && (
+                    <div className="w-full h-32 bg-muted relative overflow-hidden">
+                      <img 
+                        src={mediaItem.file_url} 
+                        alt={mediaItem.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  {mediaItem.file_type.startsWith('video/') && mediaItem.file_url && (
+                    <div className="w-full h-32 bg-muted relative overflow-hidden">
+                      <video 
+                        src={mediaItem.file_url}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <Play className="w-8 h-8 text-white" />
                       </div>
-                      <div className="flex gap-2 ml-4">
+                    </div>
+                  )}
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-medium text-purple-900 text-sm leading-tight">{mediaItem.title}</h3>
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
                           onClick={() => handleEditMedia(mediaItem)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
                           onClick={() => handleDeleteMedia(mediaItem.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-xs text-purple-700">{mediaItem.file_name}</p>
+                    <p className="text-xs text-purple-600 mt-1">Tipo: {mediaItem.file_type}</p>
+                  </CardContent>
+                </Card>
+              ))
             )}
           </div>
         );
 
       case "documentos":
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Documentos Rápidos</h3>
-              <Button onClick={() => setIsDocumentModalOpen(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Documento
-              </Button>
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredDocuments.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="col-span-full text-center py-8 text-muted-foreground">
                 Nenhum documento rápido encontrado.
               </div>
             ) : (
-              <div className="grid gap-4">
-                {filteredDocuments.map((document) => (
-                  <Card key={document.id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{document.title}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{document.file_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Tipo: {document.file_type}
-                          {document.file_size && ` • ${(document.file_size / 1024 / 1024).toFixed(2)} MB`}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditDocument(document)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteDocument(document.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              filteredDocuments.map((document) => {
+                const getDocIcon = () => {
+                  if (document.file_type.includes('pdf')) return <FileText className="w-12 h-12 text-red-600" />;
+                  if (document.file_type.includes('excel') || document.file_type.includes('spreadsheet')) return <FileText className="w-12 h-12 text-green-600" />;
+                  if (document.file_type.includes('word') || document.file_type.includes('document')) return <FileText className="w-12 h-12 text-blue-600" />;
+                  if (document.file_type.includes('powerpoint') || document.file_type.includes('presentation')) return <FileText className="w-12 h-12 text-orange-600" />;
+                  return <FileText className="w-12 h-12 text-gray-600" />;
+                };
+
+                return (
+                  <Card key={document.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors overflow-hidden">
+                    <div className="w-full h-32 bg-muted flex items-center justify-center">
+                      {getDocIcon()}
                     </div>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium text-purple-900 text-sm leading-tight">{document.title}</h3>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
+                            onClick={() => handleEditDocument(document)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
+                            onClick={() => handleDeleteDocument(document.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-xs text-purple-700">{document.file_name}</p>
+                      <p className="text-xs text-purple-600 mt-1">
+                        {document.file_size && `${(document.file_size / 1024 / 1024).toFixed(2)} MB`}
+                      </p>
+                    </CardContent>
                   </Card>
-                ))}
-              </div>
+                );
+              })
             )}
           </div>
         );
@@ -714,6 +737,7 @@ export function DSVoice() {
               else if (activeCategory === "audios") setIsAudioModalOpen(true);
               else if (activeCategory === "midias") setIsMediaModalOpen(true);
               else if (activeCategory === "documentos") setIsDocumentModalOpen(true);
+              else if (activeCategory === "funis") setIsFunnelModalOpen(true);
             }}
           >
             Novo Item
