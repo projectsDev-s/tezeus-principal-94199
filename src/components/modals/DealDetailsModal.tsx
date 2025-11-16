@@ -1826,7 +1826,11 @@ export function DealDetailsModal({
                     <SelectItem value="user_assigned">Conversa Vinculada</SelectItem>
                     <SelectItem value="queue_transfer">Transferência de Fila</SelectItem>
                     <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
-                    <SelectItem value="activity">Atividade</SelectItem>
+                    <SelectItem value="activity_lembrete">Lembrete</SelectItem>
+                    <SelectItem value="activity_mensagem">Mensagem</SelectItem>
+                    <SelectItem value="activity_ligacao">Ligação</SelectItem>
+                    <SelectItem value="activity_reuniao">Reunião</SelectItem>
+                    <SelectItem value="activity_agendamento">Agendamento</SelectItem>
                     <SelectItem value="tag">Tag</SelectItem>
                   </SelectContent>
                 </Select>
