@@ -44,6 +44,7 @@ export function DSVoice() {
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaCaption, setMediaCaption] = useState("");
   const [editingMediaId, setEditingMediaId] = useState<string | null>(null);
+  const [editingMediaFileName, setEditingMediaFileName] = useState<string>("");
   
   // Estados para modais de documentos
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
@@ -51,6 +52,7 @@ export function DSVoice() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentCaption, setDocumentCaption] = useState("");
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [editingDocumentFileName, setEditingDocumentFileName] = useState<string>("");
 
   // Estados para funis
   const [isFunnelModalOpen, setIsFunnelModalOpen] = useState(false);
@@ -176,20 +178,24 @@ export function DSVoice() {
 
   // Handlers para mídias
   const handleCreateMedia = async () => {
-    if (mediaTitle.trim() && mediaFile) {
-      if (editingMediaId) {
-        await updateMedia(editingMediaId, mediaTitle, mediaFile, mediaCaption);
-      } else {
-        await createMedia(mediaTitle, mediaFile, mediaCaption);
-      }
-      handleCloseMediaModal();
+    if (!mediaTitle.trim()) return;
+    
+    if (editingMediaId) {
+      // Ao editar, arquivo é opcional
+      await updateMedia(editingMediaId, mediaTitle, mediaFile || undefined, mediaCaption);
+    } else {
+      // Ao criar, arquivo é obrigatório
+      if (!mediaFile) return;
+      await createMedia(mediaTitle, mediaFile, mediaCaption);
     }
+    handleCloseMediaModal();
   };
 
   const handleEditMedia = (mediaItem: any) => {
     setEditingMediaId(mediaItem.id);
     setMediaTitle(mediaItem.title);
     setMediaCaption(mediaItem.caption || "");
+    setEditingMediaFileName(mediaItem.file_name || "");
     setIsMediaModalOpen(true);
   };
 
@@ -205,24 +211,29 @@ export function DSVoice() {
     setMediaFile(null);
     setMediaCaption("");
     setEditingMediaId(null);
+    setEditingMediaFileName("");
   };
 
   // Handlers para documentos
   const handleCreateDocument = async () => {
-    if (documentTitle.trim() && documentFile) {
-      if (editingDocumentId) {
-        await updateDocument(editingDocumentId, documentTitle, documentFile, documentCaption);
-      } else {
-        await createDocument(documentTitle, documentFile, documentCaption);
-      }
-      handleCloseDocumentModal();
+    if (!documentTitle.trim()) return;
+    
+    if (editingDocumentId) {
+      // Ao editar, arquivo é opcional
+      await updateDocument(editingDocumentId, documentTitle, documentFile || undefined, documentCaption);
+    } else {
+      // Ao criar, arquivo é obrigatório
+      if (!documentFile) return;
+      await createDocument(documentTitle, documentFile, documentCaption);
     }
+    handleCloseDocumentModal();
   };
 
   const handleEditDocument = (document: any) => {
     setDocumentTitle(document.title);
     setDocumentCaption(document.caption || "");
     setEditingDocumentId(document.id);
+    setEditingDocumentFileName(document.file_name || "");
     setIsDocumentModalOpen(true);
   };
 
@@ -238,6 +249,7 @@ export function DSVoice() {
     setDocumentFile(null);
     setDocumentCaption("");
     setEditingDocumentId(null);
+    setEditingDocumentFileName("");
   };
 
   // Handlers para funis
@@ -832,11 +844,21 @@ export function DSVoice() {
             </div>
             <div>
               <label className="text-sm font-medium">Arquivo de Mídia</label>
+              {editingMediaId && editingMediaFileName && (
+                <p className="text-xs text-muted-foreground mb-2">
+                  Arquivo atual: <span className="font-medium">{editingMediaFileName}</span>
+                </p>
+              )}
               <Input
                 type="file"
                 accept="image/*,video/*"
                 onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
               />
+              {editingMediaId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deixe em branco para manter o arquivo atual
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium">Legenda (Caption)</label>
@@ -879,11 +901,21 @@ export function DSVoice() {
             </div>
             <div>
               <label className="text-sm font-medium">Arquivo do Documento</label>
+              {editingDocumentId && editingDocumentFileName && (
+                <p className="text-xs text-muted-foreground mb-2">
+                  Arquivo atual: <span className="font-medium">{editingDocumentFileName}</span>
+                </p>
+              )}
               <Input
                 type="file"
                 accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
                 onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
               />
+              {editingDocumentId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deixe em branco para manter o arquivo atual
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium">Legenda (Caption)</label>
