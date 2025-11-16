@@ -274,38 +274,56 @@ serve(async (req) => {
 
                   case 'send_message':
                   case 'enviar_mensagem': {
-                    if (card.contact_id) {
-                      const message = actionConfig?.message;
-                      if (message) {
-                        // Buscar o telefone do contato e workspace_id
-                        const { data: contact } = await supabase
-                          .from('contacts')
-                          .select('phone, workspace_id')
-                          .eq('id', card.contact_id)
-                          .single();
-                        
-                        if (contact?.phone && contact?.workspace_id) {
-                          // Enviar mensagem via send-whatsapp-message function
-                          try {
-                            const { data, error: sendError } = await supabase.functions.invoke('send-whatsapp-message', {
-                              body: {
-                                phoneNumber: contact.phone,
-                                content: message,
-                                messageType: 'text',
-                                workspaceId: contact.workspace_id
-                              }
-                            });
-                            
-                            if (sendError) {
-                              console.error(`❌ [Time Automations] Erro ao enviar mensagem:`, sendError);
-                            } else {
-                              console.log(`✅ [Time Automations] Mensagem enviada para ${contact.phone}`);
-                            }
-                          } catch (sendError) {
-                            console.error(`❌ [Time Automations] Erro ao enviar mensagem:`, sendError);
-                          }
-                        }
+                    const messageText = actionConfig?.message;
+                    if (!messageText) {
+                      console.warn('⚠️ [Time Automations] send_message sem mensagem configurada');
+                      break;
+                    }
+
+                    // Buscar contato
+                    const { data: contact } = await supabase
+                      .from('contacts')
+                      .select('phone')
+                      .eq('id', card.contact_id)
+                      .single();
+
+                    if (!contact?.phone) {
+                      console.error('❌ [Time Automations] Contato não encontrado');
+                      break;
+                    }
+
+                    // Buscar connection_id da conversa
+                    if (!card.conversation_id) {
+                      console.error('❌ [Time Automations] Conversa não encontrada no card');
+                      break;
+                    }
+
+                    const { data: conversation } = await supabase
+                      .from('conversations')
+                      .select('connection_id')
+                      .eq('id', card.conversation_id)
+                      .single();
+
+                    if (!conversation?.connection_id) {
+                      console.error('❌ [Time Automations] Connection não encontrada na conversa');
+                      break;
+                    }
+
+                    console.log(`📤 [Time Automations] Enviando mensagem para ${contact.phone}`);
+
+                    // Chamar test-send-msg (mesma função usada em check-message-automations)
+                    const { error: sendError } = await supabase.functions.invoke('test-send-msg', {
+                      body: {
+                        connectionId: conversation.connection_id,
+                        phone: contact.phone,
+                        message: messageText
                       }
+                    });
+
+                    if (sendError) {
+                      console.error('❌ [Time Automations] Erro ao enviar mensagem:', sendError);
+                    } else {
+                      console.log('✅ [Time Automations] Mensagem enviada com sucesso');
                     }
                     break;
                   }
