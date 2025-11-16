@@ -477,7 +477,8 @@ export function AutomationModal({
           p_name: name.trim(),
           p_description: description.trim() || null,
           p_triggers: triggersJson as any,
-          p_actions: actionsJson as any
+          p_actions: actionsJson as any,
+          p_user_id: headers['x-system-user-id']
         });
 
         if (updateError) throw updateError;
@@ -509,7 +510,8 @@ export function AutomationModal({
           p_name: name.trim(),
           p_description: description.trim() || null,
           p_triggers: triggersJson as any,
-          p_actions: actionsJson as any
+          p_actions: actionsJson as any,
+          p_user_id: headers['x-system-user-id']
         });
 
         if (createError) throw createError;

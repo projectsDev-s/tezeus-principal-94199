@@ -3568,26 +3568,48 @@ export type Database = {
     }
     Functions: {
       block_system_user: { Args: { user_email: string }; Returns: undefined }
-      check_automation_permission: {
-        Args: { p_automation_id: string; p_permission: string }
-        Returns: boolean
-      }
+      check_automation_permission:
+        | {
+            Args: { p_automation_id: string; p_permission: string }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_automation_id: string
+              p_permission: string
+              p_user_id?: string
+            }
+            Returns: boolean
+          }
       check_column_permission: {
         Args: { p_column_id: string; p_permission: string }
         Returns: boolean
       }
       clear_all_conversations: { Args: never; Returns: undefined }
-      create_column_automation: {
-        Args: {
-          p_actions: Json
-          p_column_id: string
-          p_description: string
-          p_name: string
-          p_triggers: Json
-          p_workspace_id: string
-        }
-        Returns: string
-      }
+      create_column_automation:
+        | {
+            Args: {
+              p_actions: Json
+              p_column_id: string
+              p_description: string
+              p_name: string
+              p_triggers: Json
+              p_workspace_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_actions: Json
+              p_column_id: string
+              p_description: string
+              p_name: string
+              p_triggers: Json
+              p_user_id?: string
+              p_workspace_id: string
+            }
+            Returns: string
+          }
       create_connection_anon: {
         Args: {
           p_history_recovery: string
@@ -3602,10 +3624,12 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
-      delete_column_automation: {
-        Args: { p_automation_id: string }
-        Returns: undefined
-      }
+      delete_column_automation:
+        | { Args: { p_automation_id: string }; Returns: undefined }
+        | {
+            Args: { p_automation_id: string; p_user_id?: string }
+            Returns: undefined
+          }
       delete_connection_anon: {
         Args: { p_connection_id: string }
         Returns: undefined
@@ -3701,20 +3725,34 @@ export type Database = {
       }
       slugify: { Args: { txt: string }; Returns: string }
       sync_user_roles: { Args: never; Returns: undefined }
-      toggle_column_automation: {
-        Args: { p_automation_id: string }
-        Returns: boolean
-      }
-      update_column_automation: {
-        Args: {
-          p_actions: Json
-          p_automation_id: string
-          p_description: string
-          p_name: string
-          p_triggers: Json
-        }
-        Returns: undefined
-      }
+      toggle_column_automation:
+        | { Args: { p_automation_id: string }; Returns: boolean }
+        | {
+            Args: { p_automation_id: string; p_user_id?: string }
+            Returns: boolean
+          }
+      update_column_automation:
+        | {
+            Args: {
+              p_actions: Json
+              p_automation_id: string
+              p_description: string
+              p_name: string
+              p_triggers: Json
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_actions: Json
+              p_automation_id: string
+              p_description: string
+              p_name: string
+              p_triggers: Json
+              p_user_id?: string
+            }
+            Returns: undefined
+          }
       update_connection_status_anon: {
         Args: {
           p_connection_id: string
