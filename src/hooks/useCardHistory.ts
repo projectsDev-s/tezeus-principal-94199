@@ -21,64 +21,98 @@ export const useCardHistory = (cardId: string, contactId: string) => {
   useEffect(() => {
     if (!cardId || !contactId) return;
 
-    const channel = supabase
-      .channel(`card-history-${cardId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversation_agent_history'
-        },
-        (payload) => {
-          console.log('🔄 Realtime: conversation_agent_history changed', payload);
-          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversation_assignments'
-        },
-        (payload) => {
-          console.log('🔄 Realtime: conversation_assignments changed', payload);
-          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'pipeline_card_history',
-          filter: `card_id=eq.${cardId}`
-        },
-        (payload) => {
-          console.log('🔄 Realtime: pipeline_card_history changed', payload);
-          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'activities'
-        },
-        (payload) => {
-          console.log('🔄 Realtime: activities changed', payload);
-          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔌 Realtime connection status:', status);
-      });
+    console.log('🔌 Configurando realtime para histórico do card:', cardId);
+
+    // Primeiro buscar as conversas do contato para filtrar os eventos
+    const setupRealtimeWithFilters = async () => {
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('contact_id', contactId);
+
+      const conversationIds = conversations?.map(c => c.id) || [];
+      console.log('📋 Conversas encontradas para realtime:', conversationIds);
+
+      const channel = supabase
+        .channel(`card-history-${cardId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'conversation_agent_history'
+          },
+          (payload) => {
+            console.log('🔄 Realtime: conversation_agent_history changed', payload);
+            // Verificar se o evento pertence a uma das conversas do contato
+            const record = payload.new as any;
+            if (conversationIds.includes(record?.conversation_id)) {
+              console.log('✅ Evento válido, invalidando cache');
+              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'conversation_assignments'
+          },
+          (payload) => {
+            console.log('🔄 Realtime: conversation_assignments changed', payload);
+            const record = payload.new as any;
+            if (conversationIds.includes(record?.conversation_id)) {
+              console.log('✅ Evento válido, invalidando cache');
+              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'pipeline_card_history',
+            filter: `card_id=eq.${cardId}`
+          },
+          (payload) => {
+            console.log('🔄 Realtime: pipeline_card_history changed', payload);
+            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'activities'
+          },
+          (payload) => {
+            console.log('🔄 Realtime: activities changed', payload);
+            const record = payload.new as any;
+            if (record?.contact_id === contactId || record?.pipeline_card_id === cardId) {
+              console.log('✅ Evento válido, invalidando cache');
+              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔌 Realtime connection status:', status);
+        });
+
+      return channel;
+    };
+
+    const channelPromise = setupRealtimeWithFilters();
 
     return () => {
       console.log('🔌 Desconectando realtime do histórico');
-      supabase.removeChannel(channel);
+      channelPromise.then(channel => {
+        if (channel) {
+          supabase.removeChannel(channel);
+        }
+      });
     };
   }, [cardId, contactId, queryClient]);
 
