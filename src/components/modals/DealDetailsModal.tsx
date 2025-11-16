@@ -688,7 +688,7 @@ export function DealDetailsModal({
           .from('contacts')
           .select('id, name, email, phone, profile_image_url, workspace_id')
           .eq('id', initialContactData.id)
-          .single();
+          .maybeSingle();
         
         if (fullContact) {
           setWorkspaceId(fullContact.workspace_id);
@@ -901,7 +901,7 @@ export function DealDetailsModal({
           )
         `)
         .eq('id', cardId)
-        .single();
+        .maybeSingle();
 
       if (card) {
         // Timeline simples: criação e posição atual
