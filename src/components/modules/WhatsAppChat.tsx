@@ -2284,6 +2284,7 @@ export function WhatsAppChat({
               
               const optimisticMessage = {
                 id: clientMessageId,
+                external_id: clientMessageId,
                 conversation_id: selectedConversation.id,
                 content: caption || '', // Caption do modal ou vazio
                 message_type: mediaType as any,
@@ -2335,10 +2336,12 @@ export function WhatsAppChat({
                   });
                 } else {
                   console.log('✅ Mídia enviada com sucesso:', sendResult);
-                  updateMessage(optimisticMessage.id, {
-                    status: 'sent',
-                    external_id: sendResult.external_id
-                  });
+                  // Atualizar external_id para corresponder à mensagem real que virá do Realtime
+                  if (sendResult.external_id) {
+                    updateMessage(clientMessageId, {
+                      external_id: sendResult.external_id
+                    });
+                  }
                 }
               } catch (err) {
                 console.error('Erro ao enviar mídia:', err);
