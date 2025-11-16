@@ -31,15 +31,40 @@ export function ChangeAgentModal({
   const queryClient = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(currentAgentId || null);
+  const [actualCurrentAgentId, setActualCurrentAgentId] = useState<string | null>(currentAgentId || null);
 
-  // Refresh e atualizar selectedAgentId quando o modal abre
+  // Buscar o agente ativo REAL do banco quando o modal abrir
   useEffect(() => {
-    if (open) {
-      console.log('🔄 Modal de agente aberto - Atualizando lista de agentes');
-      setSelectedAgentId(currentAgentId || null);
+    const fetchCurrentAgent = async () => {
+      if (!open || !conversationId) return;
+      
+      console.log('🔄 Modal de agente aberto - Buscando agente atual do banco');
+      
+      try {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('agent_active_id')
+          .eq('id', conversationId)
+          .single();
+        
+        if (error) throw error;
+        
+        const agentId = data?.agent_active_id || null;
+        console.log('✅ Agente atual do banco:', agentId);
+        setActualCurrentAgentId(agentId);
+        setSelectedAgentId(agentId);
+      } catch (error) {
+        console.error('❌ Erro ao buscar agente atual:', error);
+        setActualCurrentAgentId(null);
+        setSelectedAgentId(null);
+      }
+      
+      // Refresh da lista de agentes
       queryClient.invalidateQueries({ queryKey: ['workspace-agents', selectedWorkspace?.workspace_id] });
-    }
-  }, [open, currentAgentId, selectedWorkspace?.workspace_id, queryClient]);
+    };
+
+    fetchCurrentAgent();
+  }, [open, conversationId, selectedWorkspace?.workspace_id, queryClient]);
 
   // Buscar agentes ativos do workspace
   const { data: agents, isLoading } = useQuery({
@@ -187,10 +212,10 @@ export function ChangeAgentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-primary" />
-            {currentAgentId ? 'Trocar Agente de IA' : 'Ativar Agente de IA'}
+            {actualCurrentAgentId ? 'Trocar Agente de IA' : 'Ativar Agente de IA'}
           </DialogTitle>
           <DialogDescription>
-            {currentAgentId 
+            {actualCurrentAgentId 
               ? 'Selecione um novo agente para esta conversa. O agente permanecerá ativo.'
               : 'Selecione um agente para ativar nesta conversa.'}
           </DialogDescription>
@@ -316,7 +341,7 @@ export function ChangeAgentModal({
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Trocando...
                 </>
-              ) : selectedAgentId === currentAgentId ? (
+              ) : selectedAgentId === actualCurrentAgentId ? (
                 <>
                   <Check className="w-4 h-4 mr-2" />
                   Agente Atual
@@ -324,7 +349,7 @@ export function ChangeAgentModal({
               ) : (
                 <>
                   <Check className="w-4 h-4 mr-2" />
-                  {currentAgentId ? 'Trocar Agente' : 'Ativar Agente'}
+                  {actualCurrentAgentId ? 'Trocar Agente' : 'Ativar Agente'}
                 </>
               )}
             </Button>
