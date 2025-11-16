@@ -1828,7 +1828,6 @@ export function DealDetailsModal({
                     <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
                     <SelectItem value="activity">Atividade</SelectItem>
                     <SelectItem value="tag">Tag</SelectItem>
-                    <SelectItem value="message">Mensagem</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1870,9 +1869,6 @@ export function DealDetailsModal({
                     } else if (event.type === 'tag') {
                       Icon = TagIcon;
                       iconBgColor = "bg-purple-400";
-                    } else if (event.type === 'message') {
-                      Icon = MessageSquare;
-                      iconBgColor = "bg-green-400";
                     }
 
                     return (

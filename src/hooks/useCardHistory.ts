@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 export interface CardHistoryEvent {
   id: string;
-  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned' | 'activity' | 'tag' | 'message';
+  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned' | 'activity' | 'tag';
   action: string;
   description: string;
   timestamp: string;
@@ -100,30 +100,69 @@ export const useCardHistory = (cardId: string, contactId: string) => {
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: 'INSERT',
             schema: 'public',
             table: 'contact_tags',
             filter: `contact_id=eq.${contactId}`
           },
           (payload) => {
-            console.log('🔄 Realtime: contact_tags changed', payload);
+            console.log('🔄 Realtime: Tag adicionada', payload);
             queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
           }
         )
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: 'DELETE',
             schema: 'public',
-            table: 'messages'
+            table: 'contact_tags',
+            filter: `contact_id=eq.${contactId}`
           },
-          (payload) => {
-            console.log('🔄 Realtime: messages changed', payload);
-            const record = payload.new as any;
-            if (conversationIds.includes(record?.conversation_id)) {
-              console.log('✅ Nova mensagem, invalidando cache');
-              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+          async (payload) => {
+            console.log('🔄 Realtime: Tag removida', payload);
+            // Registrar remoção de tag no histórico
+            const oldRecord = payload.old as any;
+            if (oldRecord) {
+              // Buscar workspace_id do card
+              const { data: cardData } = await supabase
+                .from('pipeline_cards')
+                .select('pipeline_id')
+                .eq('id', cardId)
+                .maybeSingle();
+
+              if (cardData) {
+                const { data: pipelineData } = await supabase
+                  .from('pipelines')
+                  .select('workspace_id')
+                  .eq('id', cardData.pipeline_id)
+                  .maybeSingle();
+
+                // Buscar informações da tag removida
+                const { data: tagInfo } = await supabase
+                  .from('tags')
+                  .select('name, color')
+                  .eq('id', oldRecord.tag_id)
+                  .maybeSingle();
+
+                if (tagInfo && pipelineData) {
+                  // Salvar evento de remoção no pipeline_card_history
+                  await supabase
+                    .from('pipeline_card_history')
+                    .insert({
+                      card_id: cardId,
+                      action: 'tag_removed',
+                      workspace_id: pipelineData.workspace_id,
+                      metadata: {
+                        tag_id: oldRecord.tag_id,
+                        tag_name: tagInfo.name,
+                        tag_color: tagInfo.color,
+                        removed_at: new Date().toISOString()
+                      }
+                    });
+                }
+              }
             }
+            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
           }
         )
         .subscribe((status) => {
@@ -171,11 +210,19 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             description = 'Negócio iniciado por mensagem';
           } else if (event.action === 'status_changed' && metadata) {
             description = `Status alterado para: ${metadata.new_status}`;
+          } else if (event.action === 'tag_removed' && metadata) {
+            description = `Tag "${metadata.tag_name}" foi removida do contato`;
+          }
+
+          // Determinar o tipo de evento correto
+          let eventType: CardHistoryEvent['type'] = 'column_transfer';
+          if (event.action === 'tag_removed') {
+            eventType = 'tag';
           }
 
           allEvents.push({
             id: event.id,
-            type: 'column_transfer',
+            type: eventType,
             action: event.action,
             description,
             timestamp: event.changed_at,
@@ -341,7 +388,8 @@ export const useCardHistory = (cardId: string, contactId: string) => {
         }
       }
 
-      // 4. Buscar tags adicionadas ao contato
+      // 4. Buscar tags adicionadas E removidas do contato
+      // Primeiro buscar tags atuais (adicionadas)
       const { data: contactTags } = await supabase
         .from('contact_tags')
         .select(`
@@ -357,7 +405,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
       if (contactTags) {
         for (const tagEvent of contactTags) {
           const tagData = tagEvent.tags as any;
-          const description = `Tag "${tagData?.name}" foi adicionada ao contato`;
+          const description = `Tag "${tagData?.name}" foi atribuída ao contato`;
           
           allEvents.push({
             id: tagEvent.id,
@@ -368,49 +416,15 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             user_name: (tagEvent.system_users as any)?.name,
             metadata: {
               tag_name: tagData?.name,
-              tag_color: tagData?.color
+              tag_color: tagData?.color,
+              action: 'added'
             }
           });
         }
       }
 
-      // 5. Buscar mensagens importantes (apenas do contato, para não ficar muito grande)
-      if (conversations && conversations.length > 0) {
-        const conversationIds = conversations.map(c => c.id);
-        
-        const { data: messages } = await supabase
-          .from('messages')
-          .select('id, content, created_at, sender_type, message_type')
-          .in('conversation_id', conversationIds)
-          .eq('sender_type', 'contact')
-          .order('created_at', { ascending: false })
-          .limit(50); // Limitar para não trazer muitas mensagens
-
-        if (messages) {
-          for (const message of messages) {
-            let description = '';
-            if (message.message_type === 'text') {
-              const preview = message.content.length > 50 
-                ? message.content.substring(0, 50) + '...' 
-                : message.content;
-              description = `Mensagem do contato: "${preview}"`;
-            } else {
-              description = `Contato enviou ${message.message_type}`;
-            }
-            
-            allEvents.push({
-              id: message.id,
-              type: 'message' as any,
-              action: 'message_received',
-              description,
-              timestamp: message.created_at,
-              metadata: {
-                message_type: message.message_type
-              }
-            });
-          }
-        }
-      }
+      // Buscar histórico de tags removidas através de audit/logs se existir
+      // Como não temos uma tabela de audit, vamos registrar quando detectarmos remoções via realtime
 
       // Ordenar todos os eventos por data (mais recentes primeiro)
       allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
