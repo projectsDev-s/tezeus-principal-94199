@@ -184,6 +184,28 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   }, [workspaceId]);
 
+  // Monitor selected connection status and close modal when connected
+  useEffect(() => {
+    if (selectedConnection && selectedConnection.status === 'connected' && isQRModalOpen) {
+      console.log('✅ Conexão estabelecida, fechando modal automaticamente');
+      
+      // Close modal
+      setIsQRModalOpen(false);
+      setSelectedConnection(null);
+      
+      // Reload connections to update the UI
+      loadConnections();
+      
+      // Show success toast
+      toast({
+        title: '✅ Conectado!',
+        description: selectedConnection.phone_number ? 
+          `WhatsApp conectado como ${selectedConnection.phone_number}!` : 
+          'WhatsApp conectado com sucesso!',
+      });
+    }
+  }, [selectedConnection?.status, selectedConnection?.phone_number, isQRModalOpen]);
+
   // Carregar pipelines e providers quando o modal for aberto
   useEffect(() => {
     const loadModalData = async () => {
