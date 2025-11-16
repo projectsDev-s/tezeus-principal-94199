@@ -167,19 +167,29 @@ serve(async (req) => {
 
           // Executar as ações via pipeline-management
           try {
-            const { data: actionResult, error: actionError } = await supabase.functions.invoke(
-              'pipeline-management/execute-automation-actions',
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+            const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+            
+            const response = await fetch(
+              `${supabaseUrl}/functions/v1/pipeline-management/execute-automation-actions`,
               {
-                body: {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${serviceRoleKey}`,
+                  'apikey': serviceRoleKey,
+                  'x-workspace-id': automation.workspace_id
+                },
+                body: JSON.stringify({
                   card_id: card.id,
                   automation_id: automation.id,
                   actions: automation.actions
-                },
-                headers: {
-                  'x-workspace-id': automation.workspace_id
-                }
+                })
               }
             );
+
+            const actionResult = await response.json();
+            const actionError = !response.ok ? actionResult : null;
 
             if (!actionError) {
               // Registrar execução
