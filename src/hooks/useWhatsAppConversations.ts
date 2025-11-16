@@ -83,12 +83,12 @@ export const useWhatsAppConversations = () => {
   // Refs simples
   const sendingRef = useRef<Map<string, boolean>>(new Map());
 
-  const sortConversationsByActivity = (list: WhatsAppConversation[]) => {
+  const sortConversationsByActivity = useCallback((list: WhatsAppConversation[]) => {
     return [...list].sort((a, b) => {
       const getTimestamp = (conv: WhatsAppConversation) => new Date(conv.last_activity_at || conv.created_at).getTime();
       return getTimestamp(b) - getTimestamp(a);
     });
-  };
+  }, []);
 
   const formatConversationRecord = (raw: any, previous?: WhatsAppConversation): WhatsAppConversation => {
     const contactData = Array.isArray(raw?.contacts) ? raw.contacts[0] : raw?.contacts;
@@ -635,6 +635,12 @@ export const useWhatsAppConversations = () => {
 
   // ===== REALTIME SUBSCRIPTION =====
   useEffect(() => {
+    console.log('🔍 [Realtime Conversations] useEffect EXECUTADO:', {
+      hasSelectedWorkspace: !!selectedWorkspace,
+      workspaceId: selectedWorkspace?.workspace_id,
+      timestamp: new Date().toISOString()
+    });
+
     if (!selectedWorkspace?.workspace_id) {
       console.log('⚠️ [Realtime Conversations] Subscription NÃO iniciada - falta workspace');
       return;
@@ -903,7 +909,7 @@ export const useWhatsAppConversations = () => {
       });
       supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace?.workspace_id]);
+  }, [selectedWorkspace?.workspace_id, sortConversationsByActivity]);
 
   return {
     conversations,
