@@ -117,12 +117,13 @@ serve(async (req) => {
     
     // Check if user can manage this workspace
     const isMaster = systemUser.profile === 'master'
-    let canManageWorkspace = isMaster
+    const isGlobalAdmin = systemUser.profile === 'admin'
+    let canManageWorkspace = isMaster || isGlobalAdmin
     let isMemberOfWorkspace = false
     
-    console.log('User profile:', systemUser.profile, 'isMaster:', isMaster)
+    console.log('User profile:', systemUser.profile, 'isMaster:', isMaster, 'isGlobalAdmin:', isGlobalAdmin)
     
-    if (!isMaster) {
+    if (!isMaster && !isGlobalAdmin) {
       // Check if user is admin or master in this workspace
       const { data: membership, error: membershipError } = await supabase
         .from('workspace_members')
@@ -142,6 +143,9 @@ serve(async (req) => {
       console.log('Workspace membership:', membership)
       canManageWorkspace = membership?.role === 'admin' || membership?.role === 'master'
       isMemberOfWorkspace = !!membership
+    } else {
+      // Master and global admin are automatically considered members
+      isMemberOfWorkspace = true
     }
     
     // For 'list' action, any workspace member can view
@@ -154,7 +158,7 @@ serve(async (req) => {
     }
     
     // For 'list' action, verify user is at least a member
-    if (action === 'list' && !isMaster && !isMemberOfWorkspace) {
+    if (action === 'list' && !isMaster && !isGlobalAdmin && !isMemberOfWorkspace) {
       return new Response(
         JSON.stringify({ success: false, error: 'You must be a member of this workspace to view members' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
