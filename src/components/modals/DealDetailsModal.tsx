@@ -31,7 +31,7 @@ import { useUsersCache } from "@/hooks/useUsersCache";
 import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 import { useCardHistory } from "@/hooks/useCardHistory";
-import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon } from "lucide-react";
+import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon, CalendarClock, Calendar as CalendarIconLucide } from "lucide-react";
 interface Tag {
   id: string;
   name: string;
@@ -1863,9 +1863,21 @@ export function DealDetailsModal({
                     } else if (event.type === 'column_transfer') {
                       Icon = ArrowRightLeft;
                       iconBgColor = "bg-yellow-400";
-                    } else if (event.type === 'activity') {
+                    } else if (event.type === 'activity_lembrete') {
                       Icon = Clock;
                       iconBgColor = "bg-blue-400";
+                    } else if (event.type === 'activity_mensagem') {
+                      Icon = MessageSquare;
+                      iconBgColor = "bg-green-400";
+                    } else if (event.type === 'activity_ligacao') {
+                      Icon = Phone;
+                      iconBgColor = "bg-indigo-400";
+                    } else if (event.type === 'activity_reuniao') {
+                      Icon = CalendarIconLucide;
+                      iconBgColor = "bg-pink-400";
+                    } else if (event.type === 'activity_agendamento') {
+                      Icon = CalendarClock;
+                      iconBgColor = "bg-orange-400";
                     } else if (event.type === 'tag') {
                       Icon = TagIcon;
                       iconBgColor = "bg-purple-400";
