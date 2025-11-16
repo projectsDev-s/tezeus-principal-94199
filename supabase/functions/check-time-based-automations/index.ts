@@ -54,7 +54,7 @@ serve(async (req) => {
         )
       `)
       .eq('is_active', true)
-      .eq('triggers.trigger_type', 'tempo_na_coluna');
+      .in('triggers.trigger_type', ['time_in_column', 'tempo_na_coluna']);
 
     if (automationsError) {
       console.error('❌ [Time Automations] Error fetching automations:', automationsError);
@@ -92,6 +92,7 @@ serve(async (req) => {
           originalUnit = triggerConfig.time_unit;
           timeInMinutes = convertToMinutes(originalValue, originalUnit);
           
+          console.log(`🔍 [Time Automations] Trigger type found: "${trigger.trigger_type}"`);
           console.log(`🔍 [Time Automations] Automation "${automation.name}": ${originalValue} ${originalUnit} = ${timeInMinutes.toFixed(4)} minutes`);
         } else if (triggerConfig?.time_in_minutes) {
           // Configuração antiga em minutos
