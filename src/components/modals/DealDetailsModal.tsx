@@ -358,11 +358,11 @@ export function DealDetailsModal({
     id: "atividades",
     label: "Atividades"
   }, {
+    id: "historico",
+    label: "Histórico"
+  }, {
     id: "historico-atividades",
     label: "Histórico de Atividades"
-  }, {
-    id: "historico",
-    label: "Histórico de Ações"
   }, {
     id: "contato",
     label: "Contato"
