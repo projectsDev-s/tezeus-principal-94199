@@ -162,21 +162,21 @@ serve(async (req) => {
 
           // Executar as ações via pipeline-management
           try {
-            const response = await fetch(`${supabaseUrl}/functions/v1/pipeline-management/execute-automation-actions`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabaseKey}`,
-                'x-workspace-id': automation.workspace_id
-              },
-              body: JSON.stringify({
-                card_id: card.id,
-                automation_id: automation.id,
-                actions: automation.actions
-              })
-            });
+            const { data: actionResult, error: actionError } = await supabase.functions.invoke(
+              'pipeline-management/execute-automation-actions',
+              {
+                body: {
+                  card_id: card.id,
+                  automation_id: automation.id,
+                  actions: automation.actions
+                },
+                headers: {
+                  'x-workspace-id': automation.workspace_id
+                }
+              }
+            );
 
-            if (response.ok) {
+            if (!actionError) {
               // Registrar execução
               await supabase
                 .from('crm_automation_executions')
@@ -196,7 +196,7 @@ serve(async (req) => {
               totalProcessed++;
               console.log(`✅ [Time Automations] Automation executed successfully for card ${card.id}`);
             } else {
-              console.error(`❌ [Time Automations] Failed to execute automation for card ${card.id}:`, await response.text());
+              console.error(`❌ [Time Automations] Failed to execute automation for card ${card.id}:`, actionError);
             }
           } catch (execError) {
             console.error(`❌ [Time Automations] Error executing automation for card ${card.id}:`, execError);
