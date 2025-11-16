@@ -1846,12 +1846,17 @@ export function DealDetailsModal({
                             </div>
                             
                             {/* Descrição */}
-                            <p className={cn(
+                            <div className={cn(
                               "text-sm mb-2",
                               isDarkMode ? "text-gray-300" : "text-gray-700"
                             )}>
-                              {event.description}
-                            </p>
+                              {event.description.split(/(\*\*.*?\*\*)/).map((part, i) => {
+                                if (part.startsWith('**') && part.endsWith('**')) {
+                                  return <strong key={i}>{part.slice(2, -2)}</strong>;
+                                }
+                                return <span key={i}>{part}</span>;
+                              })}
+                            </div>
                             
                             {/* Data e hora */}
                             <div className="flex items-center gap-2">
