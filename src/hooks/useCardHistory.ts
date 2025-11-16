@@ -213,8 +213,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             changed_at,
             from_assigned_user_id,
             to_assigned_user_id,
-            changed_by,
-            system_users!conversation_assignments_changed_by_fkey(name)
+            changed_by
           `)
           .in('conversation_id', conversationIds)
           .order('changed_at', { ascending: false });
@@ -223,6 +222,17 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           for (const event of assignmentHistory) {
             let description = '';
             let eventType: 'queue_transfer' | 'user_assigned' = 'user_assigned';
+            let changedByName: string | undefined;
+
+            // Buscar nome do usuário que fez a mudança
+            if (event.changed_by) {
+              const { data: changedByUser } = await supabase
+                .from('system_users')
+                .select('name')
+                .eq('id', event.changed_by)
+                .maybeSingle();
+              changedByName = changedByUser?.name;
+            }
 
             if (event.action === 'transfer') {
               // Buscar nomes dos usuários
@@ -245,7 +255,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
                 .from('system_users')
                 .select('name')
                 .eq('id', event.to_assigned_user_id)
-                .single();
+                .maybeSingle();
 
               description = `Conversa vinculada ao responsável: ${toUser?.name || 'Desconhecido'}`;
               eventType = 'user_assigned';
@@ -260,7 +270,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
               action: event.action,
               description,
               timestamp: event.changed_at,
-              user_name: (event.system_users as any)?.name,
+              user_name: changedByName,
             });
           }
         }
