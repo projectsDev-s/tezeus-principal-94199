@@ -412,53 +412,47 @@ export function DSVoice() {
 
       case "audios":
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Áudios Rápidos</h3>
-              <Button onClick={() => setIsAudioModalOpen(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Áudio
-              </Button>
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredAudios.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="col-span-full text-center py-8 text-muted-foreground">
                 Nenhum áudio rápido encontrado.
               </div>
             ) : (
-              <div className="grid gap-4">
-                {filteredAudios.map((audio) => (
-                  <Card key={audio.id} className="p-4">
+              filteredAudios.map((audio) => (
+                <Card key={audio.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors">
+                  <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{audio.title}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{audio.file_name}</p>
-                        {audio.duration_seconds && (
-                          <p className="text-xs text-muted-foreground">
-                            Duração: {Math.floor(audio.duration_seconds / 60)}:{(audio.duration_seconds % 60).toString().padStart(2, '0')}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2 ml-4">
+                      <h3 className="font-medium text-purple-900 text-sm leading-tight">{audio.title}</h3>
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
                           onClick={() => handleEditAudio(audio)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
                           onClick={() => handleDeleteAudio(audio.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-xs text-purple-700">{audio.file_name}</p>
+                    {audio.duration_seconds && (
+                      <p className="text-xs text-purple-600 mt-1">
+                        Duração: {Math.floor(audio.duration_seconds / 60)}:{(audio.duration_seconds % 60).toString().padStart(2, '0')}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
             )}
           </div>
         );
@@ -589,79 +583,64 @@ export function DSVoice() {
 
       case "funis":
         return (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex-1">
-                <Input
-                  placeholder="Buscar funis..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
-              </div>
-              <Button onClick={handleOpenFunnelModal} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Item
-              </Button>
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredFunnels.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="col-span-full text-center py-8 text-muted-foreground">
                 {searchTerm ? 'Nenhum funil encontrado.' : 'Nenhum funil criado ainda.'}
               </div>
             ) : (
-              <div className="grid gap-4">
-                {filteredFunnels.map((funnel) => {
-                  // Ordenar steps por order
-                  const sortedSteps = [...funnel.steps].sort((a, b) => a.order - b.order);
-                  
-                  return (
-                    <Card key={funnel.id} className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-medium text-lg">{funnel.title}</h4>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEditFunnel(funnel)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteFunnel(funnel.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {sortedSteps.map((step: FunnelStep, index: number) => {
-                            const itemDetails = getItemDetails(step.type, step.item_id);
-                            const delayMinutes = Math.floor(step.delay_seconds / 60);
-                            const delaySeconds = step.delay_seconds % 60;
-                            return (
-                              <div key={step.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                                <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">
-                                  {index + 1}
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">{itemDetails?.title || 'Item não encontrado'}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Tipo: {dbTypeToComponentType(step.type)} • Delay: {delayMinutes}m {delaySeconds}s
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
+              filteredFunnels.map((funnel) => {
+                // Ordenar steps por order
+                const sortedSteps = [...funnel.steps].sort((a, b) => a.order - b.order);
+                
+                return (
+                  <Card key={funnel.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-medium text-purple-900 text-sm leading-tight">{funnel.title}</h3>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
+                            onClick={() => handleEditFunnel(funnel)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800"
+                            onClick={() => handleDeleteFunnel(funnel.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
-                    </Card>
-                  );
-                })}
-              </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-2">
+                      {sortedSteps.map((step: FunnelStep, index: number) => {
+                        const itemDetails = getItemDetails(step.type, step.item_id);
+                        const delayMinutes = Math.floor(step.delay_seconds / 60);
+                        const delaySeconds = step.delay_seconds % 60;
+                        return (
+                          <div key={step.id} className="flex items-center gap-2 p-2 bg-purple-50 rounded text-xs">
+                            <div className="flex-shrink-0 bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-purple-900 font-medium truncate">{itemDetails?.title || 'Item não encontrado'}</p>
+                              <p className="text-purple-600">
+                                {dbTypeToComponentType(step.type)} • {delayMinutes}m {delaySeconds}s
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         );
