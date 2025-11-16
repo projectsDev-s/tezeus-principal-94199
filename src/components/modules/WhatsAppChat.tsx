@@ -2153,7 +2153,32 @@ export function WhatsAppChat({
                         </AvatarFallback>
                       </Avatar>}
                      
-                     <div className={cn("max-w-full group relative", message.message_type === 'audio' ? "" : "rounded-lg", isContactMessage ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-muted px-2 py-1.5" : message.message_type !== 'text' && message.file_url ? message.message_type === 'audio' ? "" : message.message_type === 'image' || message.message_type === 'video' ? "bg-transparent" : "bg-primary px-2 py-1.5" : "bg-primary text-primary-foreground px-2 py-1.5")}>
+                     <div className={cn(
+                       "max-w-full group relative",
+                       message.message_type === 'audio' ? "" : "rounded-lg",
+                       // Mensagens de contato
+                       isContactMessage 
+                         ? message.message_type === 'audio' 
+                           ? "" 
+                           : message.message_type === 'image' || message.message_type === 'video' 
+                             ? "bg-transparent" 
+                             : "bg-muted px-2 py-1.5"
+                       // Mensagens do agente
+                       : message.sender_type === 'ia'
+                         ? message.message_type === 'audio'
+                           ? ""
+                           : message.message_type === 'image' || message.message_type === 'video'
+                             ? "bg-transparent"
+                             : "bg-green-50 dark:bg-green-950/20 px-2 py-1.5"
+                       // Mensagens normais do agente
+                       : message.message_type !== 'text' && message.file_url 
+                         ? message.message_type === 'audio' 
+                           ? "" 
+                           : message.message_type === 'image' || message.message_type === 'video' 
+                             ? "bg-transparent" 
+                             : "bg-primary px-2 py-1.5" 
+                         : "bg-primary text-primary-foreground px-2 py-1.5"
+                     )}>
                       {/* Menu de contexto */}
                       {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => handleReply(message)} onDownload={message.file_url ? () => {
                   const link = document.createElement('a');
@@ -2192,13 +2217,18 @@ export function WhatsAppChat({
                         />
                       ) : (
                         <div className="flex items-end justify-between gap-2 min-w-0">
-                    <p className="text-sm break-words flex-1">{message.content}</p>
+                    <p className={cn(
+                      "text-sm break-words flex-1",
+                      message.sender_type === 'ia' && "text-green-900 dark:text-green-100"
+                    )}>{message.content}</p>
                     
                     <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
                       <span className={cn(
                         isContactMessage 
-                          ? "text-muted-foreground" 
-                          : "text-primary-foreground/70"
+                          ? "text-muted-foreground"
+                          : message.sender_type === 'ia'
+                            ? "text-green-700 dark:text-green-300"
+                            : "text-primary-foreground/70"
                       )}>
                         {new Date(message.created_at).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
