@@ -273,7 +273,7 @@ export function DealDetailsModal({
 }: DealDetailsModalProps) {
   
   const [activeTab, setActiveTab] = useState("negocios");
-  const [contactId, setContactId] = useState<string>("");
+  const [contactId, setContactId] = useState<string>(initialContactData?.id || "");
   const [workspaceId, setWorkspaceId] = useState<string>("");
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -340,16 +340,16 @@ export function DealDetailsModal({
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
   
-  // Hook para histórico completo do card
-  const { data: fullHistory = [], isLoading: isLoadingHistory } = useCardHistory(selectedCardId, contactId);
+  // Hook para histórico completo do card - usar cardId direto pois selectedCardId pode estar vazio no início
+  const { data: fullHistory = [], isLoading: isLoadingHistory } = useCardHistory(cardId, contactId);
 
   // Refresh dos dados do histórico quando o modal abrir
   useEffect(() => {
-    if (isOpen && selectedCardId && contactId) {
+    if (isOpen && cardId && contactId) {
       console.log('🔄 Modal aberto - Atualizando histórico do card');
-      queryClient.invalidateQueries({ queryKey: ['card-history', selectedCardId, contactId] });
+      queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
     }
-  }, [isOpen, selectedCardId, contactId, queryClient]);
+  }, [isOpen, cardId, contactId, queryClient]);
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
@@ -402,6 +402,27 @@ export function DealDetailsModal({
       }
     }
   }, [cardId]); // Remover dependência de props desatualizados
+
+  // CRÍTICO: Buscar contactId imediatamente se não estiver disponível (para habilitar useCardHistory)
+  useEffect(() => {
+    if (isOpen && cardId && !contactId) {
+      console.log('⚡ Buscando contactId urgentemente para habilitar histórico...');
+      const fetchContactIdQuickly = async () => {
+        const { data: card } = await supabase
+          .from('pipeline_cards')
+          .select('contact_id')
+          .eq('id', cardId)
+          .maybeSingle();
+        
+        if (card?.contact_id) {
+          console.log('✅ ContactId encontrado:', card.contact_id);
+          setContactId(card.contact_id);
+        }
+      };
+      
+      fetchContactIdQuickly();
+    }
+  }, [isOpen, cardId, contactId]);
 
   // Carregar dados quando modal abrir - usando referência confiável do card
   useEffect(() => {
