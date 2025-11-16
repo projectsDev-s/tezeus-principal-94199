@@ -1380,48 +1380,52 @@ function CRMNegociosContent({
                                   <Plus className="mr-2 h-4 w-4" />
                                   Novo negócio
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                            setSelectedColumnForAction(column.id);
-                            setIsEditarColunaModalOpen(true);
-                          }}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Editar coluna
-                                </DropdownMenuItem>
+                                {canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedColumnForAction(column.id);
+                                    setIsEditarColunaModalOpen(true);
+                                  }}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar coluna
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => {
-                            setSelectedColumnForAction(column.id);
-                            setIsSelectionMode(true);
-                            setSelectedCardsForTransfer(new Set());
-                          }}>
+                                  setSelectedColumnForAction(column.id);
+                                  setIsSelectionMode(true);
+                                  setSelectedCardsForTransfer(new Set());
+                                }}>
                                   <ArrowRight className="mr-2 h-4 w-4" />
                                   Transferir negócios
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                            // Exportar CSV da coluna
-                            const columnCards = getCardsByColumn(column.id);
-                            const csvData = columnCards.map(card => ({
-                              'Título': card.title,
-                              'Preço': card.value || 0,
-                              'Status': card.status,
-                              'Responsável': card.responsible_user?.name || 'Não atribuído',
-                              'Criado em': new Date(card.created_at).toLocaleDateString('pt-BR')
-                            }));
-                            const csv = [Object.keys(csvData[0] || {}).join(','), ...csvData.map(row => Object.values(row).join(','))].join('\n');
-                            const blob = new Blob([csv], {
-                              type: 'text/csv;charset=utf-8;'
-                            });
-                            const link = document.createElement('a');
-                            const url = URL.createObjectURL(blob);
-                            link.setAttribute('href', url);
-                            link.setAttribute('download', `${column.name}_negocios.csv`);
-                            link.style.visibility = 'hidden';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}>
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Baixar CSV
-                                </DropdownMenuItem>
+                                {canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                                  <DropdownMenuItem onClick={() => {
+                                    // Exportar CSV da coluna
+                                    const columnCards = getCardsByColumn(column.id);
+                                    const csvData = columnCards.map(card => ({
+                                      'Título': card.title,
+                                      'Preço': card.value || 0,
+                                      'Status': card.status,
+                                      'Responsável': card.responsible_user?.name || 'Não atribuído',
+                                      'Criado em': new Date(card.created_at).toLocaleDateString('pt-BR')
+                                    }));
+                                    const csv = [Object.keys(csvData[0] || {}).join(','), ...csvData.map(row => Object.values(row).join(','))].join('\n');
+                                    const blob = new Blob([csv], {
+                                      type: 'text/csv;charset=utf-8;'
+                                    });
+                                    const link = document.createElement('a');
+                                    const url = URL.createObjectURL(blob);
+                                    link.setAttribute('href', url);
+                                    link.setAttribute('download', `${column.name}_negocios.csv`);
+                                    link.style.visibility = 'hidden';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                  }}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Baixar CSV
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
