@@ -34,11 +34,7 @@ const mockPhones = [
 
 export function AdicionarUsuarioModal({ isOpen, onClose, onAddUser }: AdicionarUsuarioModalProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedCargos, setSelectedCargos] = useState<string[]>([]);
-  const [showCargoDropdown, setShowCargoDropdown] = useState(false);
   const { channels } = useChannels();
-  const { listCargos, loading: cargosLoading } = useCargos();
-  const [cargos, setCargos] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -60,20 +56,6 @@ export function AdicionarUsuarioModal({ isOpen, onClose, onAddUser }: AdicionarU
     defaultChannel: false,
     defaultPhone: false,
   });
-
-  // Load cargos on modal open
-  useEffect(() => {
-    if (isOpen) {
-      loadCargos();
-    }
-  }, [isOpen]);
-
-  const loadCargos = async () => {
-    const result = await listCargos();
-    if (result.data) {
-      setCargos(result.data);
-    }
-  };
 
   const handleSubmit = async () => {
     if (isSubmitting || !formData.name || !formData.email || !formData.password) {
@@ -105,7 +87,6 @@ export function AdicionarUsuarioModal({ isOpen, onClose, onAddUser }: AdicionarU
       defaultPhone: "",
     });
     setShowPassword(false);
-    setSelectedCargos([]);
     onClose();
     setIsSubmitting(false);
   };
@@ -122,7 +103,6 @@ export function AdicionarUsuarioModal({ isOpen, onClose, onAddUser }: AdicionarU
       defaultPhone: "",
     });
     setShowPassword(false);
-    setSelectedCargos([]);
     onClose();
   };
 
@@ -321,57 +301,6 @@ export function AdicionarUsuarioModal({ isOpen, onClose, onAddUser }: AdicionarU
               >
                 Filas (em breve)
               </label>
-            </div>
-
-            {/* Cargos */}
-            <div className="space-y-2 relative">
-              <label className="text-sm font-medium text-gray-700">Cargos</label>
-              <div className="min-h-12 border border-input rounded-md p-2 flex flex-wrap items-center gap-2 bg-white">
-                <button 
-                  type="button"
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 border border-dashed border-gray-300 rounded-md hover:bg-gray-50"
-                  onClick={() => setShowCargoDropdown(!showCargoDropdown)}
-                >
-                  <Plus className="h-3 w-3" />
-                  <span>Adicionar</span>
-                </button>
-                {selectedCargos.map(cargoId => {
-                  const cargo = cargos.find(c => c.id === cargoId);
-                  return cargo ? (
-                    <div key={cargoId} className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md">
-                      <span>{cargo.nome}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCargos(prev => prev.filter(id => id !== cargoId))}
-                        className="ml-1 text-blue-600 hover:text-blue-800"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : null;
-                })}
-              </div>
-              
-              {/* Dropdown de cargos */}
-              {showCargoDropdown && cargos.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
-                  {cargos
-                    .filter(cargo => !selectedCargos.includes(cargo.id))
-                    .map((cargo) => (
-                      <button
-                        key={cargo.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                        onClick={() => {
-                          setSelectedCargos(prev => [...prev, cargo.id]);
-                          setShowCargoDropdown(false);
-                        }}
-                      >
-                        {cargo.nome}
-                      </button>
-                    ))}
-                </div>
-              )}
             </div>
 
             {/* Canal de atendimento padrão */}

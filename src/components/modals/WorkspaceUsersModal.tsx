@@ -60,9 +60,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [defaultInstance, setDefaultInstance] = useState<string | null>(null);
-  const [selectedCargos, setSelectedCargos] = useState<string[]>([]);
-  const [showCargoDropdown, setShowCargoDropdown] = useState(false);
-  const [cargos, setCargos] = useState<any[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -81,22 +78,7 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
   const { members, isLoading, createUserAndAddToWorkspace, updateMember, removeMember } = useWorkspaceMembers(workspaceId);
   const { connections, isLoading: connectionsLoading } = useWorkspaceConnections(workspaceId);
   const { toast } = useToast();
-  const { listCargos, loading: cargosLoading } = useCargos();
   const { deleteUser } = useSystemUsers();
-
-  // Load cargos when modal opens
-  useEffect(() => {
-    if (open) {
-      loadCargos();
-    }
-  }, [open]);
-
-  const loadCargos = async () => {
-    const result = await listCargos();
-    if (result.data) {
-      setCargos(result.data);
-    }
-  };
 
   // Fetch default instance when showing add user form
   useEffect(() => {
@@ -162,7 +144,7 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
     
     setIsSubmitting(true);
     try {
-      await createUserAndAddToWorkspace({...finalFormData, cargo_ids: selectedCargos}, selectedRole);
+      await createUserAndAddToWorkspace(finalFormData, selectedRole);
       
       // Reset form
       setFormData({
@@ -176,7 +158,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
       setSelectedRole('user');
       setShowAddUser(false);
       setDefaultInstance(null);
-      setSelectedCargos([]);
       
       toast({
         title: "Sucesso",
@@ -201,7 +182,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
     setSelectedRole('user');
     setShowAddUser(false);
     setDefaultInstance(null);
-    setSelectedCargos([]);
   };
 
   const handleUpdateRole = async (memberId: string, newRole: 'user' | 'admin' | 'master') => {
@@ -383,57 +363,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                         )}
                       </SelectContent>
                     </Select>
-                  </div>
-                  
-                  {/* Cargos */}
-                  <div className="space-y-2 relative col-span-2">
-                    <Label htmlFor="cargos">Cargos</Label>
-                    <div className="min-h-12 border border-input rounded-md p-2 flex flex-wrap items-center gap-2 bg-background">
-                      <button 
-                        type="button"
-                        className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground border border-dashed border-border rounded-md hover:bg-muted"
-                        onClick={() => setShowCargoDropdown(!showCargoDropdown)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        <span>Adicionar</span>
-                      </button>
-                      {selectedCargos.map(cargoId => {
-                        const cargo = cargos.find(c => c.id === cargoId);
-                        return cargo ? (
-                          <div key={cargoId} className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md">
-                            <span>{cargo.nome}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedCargos(prev => prev.filter(id => id !== cargoId))}
-                              className="ml-1 hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                    
-                    {/* Dropdown de cargos */}
-                    {showCargoDropdown && cargos.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
-                        {cargos
-                          .filter(cargo => !selectedCargos.includes(cargo.id))
-                          .map((cargo) => (
-                            <button
-                              key={cargo.id}
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted border-b border-border last:border-b-0"
-                              onClick={() => {
-                                setSelectedCargos(prev => [...prev, cargo.id]);
-                                setShowCargoDropdown(false);
-                              }}
-                            >
-                              {cargo.nome}
-                            </button>
-                          ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
