@@ -909,7 +909,7 @@ export const useWhatsAppConversations = () => {
       });
       supabase.removeChannel(channel);
     };
-  }, [selectedWorkspace?.workspace_id, sortConversationsByActivity]);
+  }, [selectedWorkspace?.workspace_id]);
 
   return {
     conversations,
