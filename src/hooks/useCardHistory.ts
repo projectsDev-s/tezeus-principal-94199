@@ -34,8 +34,8 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           const metadata = event.metadata as any;
           
           if (event.action === 'column_changed' && metadata) {
-            const fromColumn = metadata.from_column_name || 'Desconhecida';
-            const toColumn = metadata.to_column_name || 'Desconhecida';
+            const fromColumn = metadata.old_column_name || 'Desconhecida';
+            const toColumn = metadata.new_column_name || 'Desconhecida';
             description = `Negócio movido: ${fromColumn} → ${toColumn}`;
           } else if (event.action === 'created') {
             description = 'Negócio iniciado por mensagem';
