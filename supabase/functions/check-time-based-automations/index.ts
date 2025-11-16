@@ -274,53 +274,35 @@ serve(async (req) => {
 
                   case 'send_message':
                   case 'enviar_mensagem': {
-                    if (card.conversation_id) {
+                    if (card.contact_id) {
                       const message = actionConfig?.message;
                       if (message) {
-                        // Buscar o connection_id da conversa
-                        const { data: conversation } = await supabase
-                          .from('conversations')
-                          .select('connection_id')
-                          .eq('id', card.conversation_id)
+                        // Buscar o telefone do contato e workspace_id
+                        const { data: contact } = await supabase
+                          .from('contacts')
+                          .select('phone, workspace_id')
+                          .eq('id', card.contact_id)
                           .single();
                         
-                        if (conversation?.connection_id && card.contact_id) {
-                          // Buscar o telefone do contato
-                          const { data: contact } = await supabase
-                            .from('contacts')
-                            .select('phone')
-                            .eq('id', card.contact_id)
-                            .single();
-                          
-                          if (contact?.phone) {
-                            // Enviar mensagem via send-message function
-                            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-                            const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-                            
-                            try {
-                              const response = await fetch(`${supabaseUrl}/functions/v1/send-message`, {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': `Bearer ${supabaseKey}`,
-                                  'apikey': supabaseKey,
-                                },
-                                body: JSON.stringify({
-                                  instanceId: conversation.connection_id,
-                                  numero: contact.phone,
-                                  mensagem: message
-                                })
-                              });
-                              
-                              if (response.ok) {
-                                console.log(`✅ [Time Automations] Mensagem enviada para ${contact.phone}`);
-                              } else {
-                                const error = await response.text();
-                                console.error(`❌ [Time Automations] Erro ao enviar mensagem: ${error}`);
+                        if (contact?.phone && contact?.workspace_id) {
+                          // Enviar mensagem via send-whatsapp-message function
+                          try {
+                            const { data, error: sendError } = await supabase.functions.invoke('send-whatsapp-message', {
+                              body: {
+                                phoneNumber: contact.phone,
+                                content: message,
+                                messageType: 'text',
+                                workspaceId: contact.workspace_id
                               }
-                            } catch (sendError) {
+                            });
+                            
+                            if (sendError) {
                               console.error(`❌ [Time Automations] Erro ao enviar mensagem:`, sendError);
+                            } else {
+                              console.log(`✅ [Time Automations] Mensagem enviada para ${contact.phone}`);
                             }
+                          } catch (sendError) {
+                            console.error(`❌ [Time Automations] Erro ao enviar mensagem:`, sendError);
                           }
                         }
                       }
