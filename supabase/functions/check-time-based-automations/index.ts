@@ -126,7 +126,9 @@ serve(async (req) => {
             column_id,
             title,
             moved_to_column_at,
-            pipeline_id
+            pipeline_id,
+            contact_id,
+            conversation_id
           `)
           .eq('column_id', automation.column_id)
           .lt('moved_to_column_at', timeThreshold.toISOString())
@@ -165,33 +167,121 @@ serve(async (req) => {
 
           console.log(`🎬 [Time Automations] Executing automation for card "${card.title}" (${card.id})`);
 
-          // Executar as ações via pipeline-management
+          // Executar as ações diretamente
           try {
-            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-            const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+            let actionSuccess = true;
             
-            const response = await fetch(
-              `${supabaseUrl}/functions/v1/pipeline-management/execute-automation-actions`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${serviceRoleKey}`,
-                  'apikey': serviceRoleKey,
-                  'x-workspace-id': automation.workspace_id
-                },
-                body: JSON.stringify({
-                  card_id: card.id,
-                  automation_id: automation.id,
-                  actions: automation.actions
-                })
-              }
+            // Ordenar ações por action_order
+            const sortedActions = automation.actions.sort((a: any, b: any) => 
+              (a.action_order || 0) - (b.action_order || 0)
             );
 
-            const actionResult = await response.json();
-            const actionError = !response.ok ? actionResult : null;
+            // Executar cada ação
+            for (const action of sortedActions) {
+              try {
+                const actionConfig = typeof action.action_config === 'string' 
+                  ? JSON.parse(action.action_config) 
+                  : action.action_config;
 
-            if (!actionError) {
+                console.log(`🎬 [Time Automations] Executando ação: ${action.action_type}`, actionConfig);
+
+                switch (action.action_type) {
+                  case 'mover_coluna':
+                  case 'move_to_column': {
+                    const targetColumnId = actionConfig?.column_id || actionConfig?.target_column_id;
+                    if (targetColumnId) {
+                      await supabase
+                        .from('pipeline_cards')
+                        .update({ 
+                          column_id: targetColumnId,
+                          moved_to_column_at: new Date().toISOString()
+                        })
+                        .eq('id', card.id);
+                      console.log(`✅ [Time Automations] Card movido para coluna ${targetColumnId}`);
+                    }
+                    break;
+                  }
+
+                  case 'add_tag':
+                  case 'adicionar_tag': {
+                    const tagId = actionConfig?.tag_id;
+                    if (tagId && card.contact_id) {
+                      // Verificar se a tag já existe
+                      const { data: existingTag } = await supabase
+                        .from('contact_tags')
+                        .select('id')
+                        .eq('contact_id', card.contact_id)
+                        .eq('tag_id', tagId)
+                        .maybeSingle();
+
+                      if (!existingTag) {
+                        await supabase
+                          .from('contact_tags')
+                          .insert({
+                            contact_id: card.contact_id,
+                            tag_id: tagId
+                          });
+                        console.log(`✅ [Time Automations] Tag ${tagId} adicionada ao contato`);
+                      }
+                    }
+                    break;
+                  }
+
+                  case 'remove_tag':
+                  case 'remover_tag': {
+                    const tagId = actionConfig?.tag_id;
+                    if (tagId && card.contact_id) {
+                      await supabase
+                        .from('contact_tags')
+                        .delete()
+                        .eq('contact_id', card.contact_id)
+                        .eq('tag_id', tagId);
+                      console.log(`✅ [Time Automations] Tag ${tagId} removida do contato`);
+                    }
+                    break;
+                  }
+
+                  case 'assign_responsible':
+                  case 'atribuir_responsavel': {
+                    const userId = actionConfig?.user_id;
+                    if (userId) {
+                      await supabase
+                        .from('pipeline_cards')
+                        .update({ responsible_user_id: userId })
+                        .eq('id', card.id);
+                      console.log(`✅ [Time Automations] Responsável ${userId} atribuído ao card`);
+                    }
+                    break;
+                  }
+
+                  case 'add_agent': {
+                    if (card.conversation_id) {
+                      const agentId = actionConfig?.agent_id;
+                      if (agentId) {
+                        await supabase
+                          .from('conversations')
+                          .update({
+                            agente_ativo: true,
+                            agent_active_id: agentId,
+                            status: 'open'
+                          })
+                          .eq('id', card.conversation_id);
+                        console.log(`✅ [Time Automations] Agente ${agentId} ativado na conversa`);
+                      }
+                    }
+                    break;
+                  }
+
+                  default:
+                    console.log(`⚠️ [Time Automations] Ação ${action.action_type} não implementada em time-based automations`);
+                }
+              } catch (actionError) {
+                console.error(`❌ [Time Automations] Erro ao executar ação ${action.action_type}:`, actionError);
+                actionSuccess = false;
+              }
+            }
+
+            if (actionSuccess) {
               // Registrar execução
               await supabase
                 .from('crm_automation_executions')
@@ -211,7 +301,7 @@ serve(async (req) => {
               totalProcessed++;
               console.log(`✅ [Time Automations] Automation executed successfully for card ${card.id}`);
             } else {
-              console.error(`❌ [Time Automations] Failed to execute automation for card ${card.id}:`, actionError);
+              console.error(`❌ [Time Automations] Failed to execute automation for card ${card.id}`);
             }
           } catch (execError) {
             console.error(`❌ [Time Automations] Error executing automation for card ${card.id}:`, execError);
