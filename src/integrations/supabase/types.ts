@@ -3720,6 +3720,7 @@ export type Database = {
         Returns: undefined
       }
       update_fixed_phone_numbers: { Args: never; Returns: number }
+      update_my_password: { Args: { new_password: string }; Returns: boolean }
       verify_password: {
         Args: { hash: string; password: string }
         Returns: boolean

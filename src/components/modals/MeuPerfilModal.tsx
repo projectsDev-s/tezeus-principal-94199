@@ -57,8 +57,8 @@ export function MeuPerfilModal({ isOpen, onClose }: MeuPerfilModalProps) {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: formData.newPassword
+      const { data, error } = await supabase.rpc('update_my_password', {
+        new_password: formData.newPassword
       });
 
       if (error) throw error;
