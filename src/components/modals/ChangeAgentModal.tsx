@@ -101,7 +101,7 @@ export function ChangeAgentModal({
       const { data: oldAgentData } = await supabase
         .from('ai_agents')
         .select('name')
-        .eq('id', currentAgentId)
+        .eq('id', actualCurrentAgentId)
         .single();
 
       const { data: newAgentData } = await supabase
@@ -131,7 +131,7 @@ export function ChangeAgentModal({
           agent_name: newAgentData?.name || 'Novo agente',
           changed_by: (await supabase.auth.getUser()).data.user?.id || null,
           metadata: {
-            old_agent_id: currentAgentId,
+            old_agent_id: actualCurrentAgentId,
             old_agent_name: oldAgentData?.name
           }
         });
@@ -166,7 +166,7 @@ export function ChangeAgentModal({
       const { data: agentData } = await supabase
         .from('ai_agents')
         .select('name')
-        .eq('id', currentAgentId)
+        .eq('id', actualCurrentAgentId)
         .single();
 
       // Desativar o agente da conversa
@@ -186,7 +186,7 @@ export function ChangeAgentModal({
         .insert({
           conversation_id: conversationId,
           action: 'deactivated',
-          agent_id: currentAgentId,
+          agent_id: actualCurrentAgentId,
           agent_name: agentData?.name || 'Agente IA',
           changed_by: (await supabase.auth.getUser()).data.user?.id || null
         });
@@ -237,7 +237,7 @@ export function ChangeAgentModal({
           <ScrollArea className="max-h-[400px] pr-4">
             <div className="space-y-2">
               {agents.map((agent) => {
-                const isCurrentAgent = agent.id === currentAgentId;
+                const isCurrentAgent = agent.id === actualCurrentAgentId;
                 const isSelected = agent.id === selectedAgentId;
 
                 return (
@@ -339,9 +339,9 @@ export function ChangeAgentModal({
             </Button>
             <Button
               onClick={handleChangeAgent}
-              disabled={isChanging || !selectedAgentId || selectedAgentId === currentAgentId}
+              disabled={isChanging || !selectedAgentId || selectedAgentId === actualCurrentAgentId}
               className={cn(
-                selectedAgentId === currentAgentId && "opacity-50 cursor-not-allowed"
+                selectedAgentId === actualCurrentAgentId && "opacity-50 cursor-not-allowed"
               )}
             >
               {isChanging ? (
