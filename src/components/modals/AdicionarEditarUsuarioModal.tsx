@@ -39,9 +39,6 @@ export function AdicionarEditarUsuarioModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('');
-  const [selectedCargos, setSelectedCargos] = useState<string[]>([]);
-  const [showCargoDropdown, setShowCargoDropdown] = useState(false);
-  const [cargos, setCargos] = useState<any[]>([]);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -57,21 +54,6 @@ export function AdicionarEditarUsuarioModal({
   const { workspaces, isLoading: workspacesLoading } = useWorkspaces();
   const { connections, isLoading: connectionsLoading } = useWorkspaceConnections(selectedWorkspaceId);
   const { createUser, updateUser } = useSystemUsers();
-  const { listCargos, loading: cargosLoading } = useCargos();
-
-  // Load cargos when modal opens
-  useEffect(() => {
-    if (open) {
-      loadCargos();
-    }
-  }, [open]);
-
-  const loadCargos = async () => {
-    const result = await listCargos();
-    if (result.data) {
-      setCargos(result.data);
-    }
-  };
 
   // Reset form when modal opens/closes or editing user changes
   useEffect(() => {
@@ -86,9 +68,6 @@ export function AdicionarEditarUsuarioModal({
           default_channel: editingUser.default_channel || '',
           phone: '' // Phone not available in SystemUser type
         });
-        
-        // Populate selected cargos
-        setSelectedCargos(editingUser.cargo_ids || []);
         
         // Get workspace from user's workspaces (first one if multiple)
         if (editingUser.workspaces && editingUser.workspaces.length > 0) {
@@ -105,7 +84,6 @@ export function AdicionarEditarUsuarioModal({
           phone: ''
         });
         setSelectedWorkspaceId('');
-        setSelectedCargos([]);
       }
     }
   }, [open, editingUser]);
@@ -150,7 +128,6 @@ export function AdicionarEditarUsuarioModal({
         status: editingUser.status,
         phone: formData.phone,
         default_channel: formData.default_channel || null,
-        cargo_ids: selectedCargos,
         // Only include password if it was changed
         ...(formData.senha && { senha: formData.senha })
       };
@@ -173,8 +150,7 @@ export function AdicionarEditarUsuarioModal({
           profile: formData.profile,
           senha: formData.senha,
           phone: formData.phone,
-          default_channel: formData.default_channel || null,
-          cargo_ids: selectedCargos
+          default_channel: formData.default_channel || null
         };
 
         const result = await createUser(userData);
@@ -227,7 +203,6 @@ export function AdicionarEditarUsuarioModal({
       phone: ''
     });
     setSelectedWorkspaceId('');
-    setSelectedCargos([]);
     onOpenChange(false);
   };
 
@@ -320,56 +295,6 @@ export function AdicionarEditarUsuarioModal({
                 />
               </div>
 
-              {/* Cargos */}
-              <div className="space-y-2 relative col-span-2">
-                <Label htmlFor="cargos">Cargos</Label>
-                <div className="min-h-12 border border-input rounded-md p-2 flex flex-wrap items-center gap-2 bg-background">
-                  <button 
-                    type="button"
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground border border-dashed border-border rounded-md hover:bg-muted"
-                    onClick={() => setShowCargoDropdown(!showCargoDropdown)}
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Adicionar</span>
-                  </button>
-                  {selectedCargos.map(cargoId => {
-                    const cargo = cargos.find(c => c.id === cargoId);
-                    return cargo ? (
-                      <div key={cargoId} className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md">
-                        <span>{cargo.nome}</span>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCargos(prev => prev.filter(id => id !== cargoId))}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-                
-                {/* Dropdown de cargos */}
-                {showCargoDropdown && cargos.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
-                    {cargos
-                      .filter(cargo => !selectedCargos.includes(cargo.id))
-                      .map((cargo) => (
-                        <button
-                          key={cargo.id}
-                          type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted border-b border-border last:border-b-0"
-                          onClick={() => {
-                            setSelectedCargos(prev => [...prev, cargo.id]);
-                            setShowCargoDropdown(false);
-                          }}
-                        >
-                          {cargo.nome}
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
