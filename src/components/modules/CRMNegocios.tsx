@@ -1097,7 +1097,7 @@ function CRMNegociosContent({
       <main className="h-screen flex flex-col w-full overflow-hidden">
         
         {/* CARD DE FILTROS */}
-        <div className="sticky top-0 z-10 px-2 py-2">
+        <div className="sticky top-0 z-10 px-4 py-2 flex-shrink-0">
           <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Settings Button */}
@@ -1207,7 +1207,7 @@ function CRMNegociosContent({
         </div>
 
         {/* CONTAINER DO PIPELINE */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto px-2">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4">
           {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
