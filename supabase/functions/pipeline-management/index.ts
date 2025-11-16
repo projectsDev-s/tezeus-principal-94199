@@ -491,9 +491,9 @@ async function executeAutomationAction(
     }
     
     case 'move_to_column': {
-      const targetColumnId = action.action_config?.column_id;
+      const targetColumnId = action.action_config?.target_column_id || action.action_config?.column_id;
       if (!targetColumnId) {
-        console.warn(`⚠️ Ação move_to_column não tem column_id configurado.`);
+        console.warn(`⚠️ Ação move_to_column não tem target_column_id configurado.`);
         return;
       }
       
