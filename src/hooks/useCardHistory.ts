@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
+import { useEffect } from 'react';
 
 export interface CardHistoryEvent {
   id: string;
@@ -14,6 +15,55 @@ export interface CardHistoryEvent {
 
 export const useCardHistory = (cardId: string, contactId: string) => {
   const { getHeaders } = useWorkspaceHeaders();
+  const queryClient = useQueryClient();
+
+  // Adicionar realtime listener para atualizar automaticamente
+  useEffect(() => {
+    if (!cardId || !contactId) return;
+
+    const channel = supabase
+      .channel('card-history-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversation_agent_history'
+        },
+        () => {
+          // Invalidar a query quando houver mudanças
+          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversation_assignments'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pipeline_card_history',
+          filter: `card_id=eq.${cardId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [cardId, contactId, queryClient]);
 
   return useQuery({
     queryKey: ['card-history', cardId, contactId],

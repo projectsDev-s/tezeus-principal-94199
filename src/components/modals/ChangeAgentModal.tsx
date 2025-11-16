@@ -69,8 +69,14 @@ export function ChangeAgentModal({
 
     setIsChanging(true);
     try {
-      // Buscar nome do novo agente
-      const { data: agentData } = await supabase
+      // Buscar nome do agente anterior e do novo agente
+      const { data: oldAgentData } = await supabase
+        .from('ai_agents')
+        .select('name')
+        .eq('id', currentAgentId)
+        .single();
+
+      const { data: newAgentData } = await supabase
         .from('ai_agents')
         .select('name')
         .eq('id', selectedAgentId)
@@ -87,9 +93,24 @@ export function ChangeAgentModal({
 
       if (error) throw error;
 
+      // Registrar no histórico de agentes
+      await supabase
+        .from('conversation_agent_history')
+        .insert({
+          conversation_id: conversationId,
+          action: 'changed',
+          agent_id: selectedAgentId,
+          agent_name: newAgentData?.name || 'Novo agente',
+          changed_by: (await supabase.auth.getUser()).data.user?.id || null,
+          metadata: {
+            old_agent_id: currentAgentId,
+            old_agent_name: oldAgentData?.name
+          }
+        });
+
       toast({
         title: "✅ Agente trocado",
-        description: `Agora usando: ${agentData?.name || 'Novo agente'}`,
+        description: `Agora usando: ${newAgentData?.name || 'Novo agente'}`,
       });
 
       onAgentChanged?.();
@@ -109,6 +130,13 @@ export function ChangeAgentModal({
   const handleDeactivateAgent = async () => {
     setIsChanging(true);
     try {
+      // Buscar nome do agente atual antes de desativar
+      const { data: agentData } = await supabase
+        .from('ai_agents')
+        .select('name')
+        .eq('id', currentAgentId)
+        .single();
+
       // Desativar o agente da conversa
       const { error } = await supabase
         .from('conversations')
@@ -119,6 +147,17 @@ export function ChangeAgentModal({
         .eq('id', conversationId);
 
       if (error) throw error;
+
+      // Registrar no histórico de agentes
+      await supabase
+        .from('conversation_agent_history')
+        .insert({
+          conversation_id: conversationId,
+          action: 'deactivated',
+          agent_id: currentAgentId,
+          agent_name: agentData?.name || 'Agente IA',
+          changed_by: (await supabase.auth.getUser()).data.user?.id || null
+        });
 
       toast({
         title: "✅ Agente desativado",
