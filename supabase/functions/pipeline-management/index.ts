@@ -2012,31 +2012,6 @@ serve(async (req) => {
               contact_id: card.contact_id
             });
 
-            // 📡 Enviar broadcast de movimento para canal do pipeline
-            try {
-              if (realtimeClient && card?.pipeline_id && card?.id && card?.column_id) {
-                const channelName = `pipeline-${card.pipeline_id}`;
-                const channel = realtimeClient.channel(channelName, { config: { broadcast: { self: false } } });
-                await channel.subscribe();
-                if ((channel as any).state === 'joined') {
-                  const ok = await channel.send({
-                    type: 'broadcast',
-                    event: 'pipeline-card-moved',
-                    payload: { cardId: card.id, newColumnId: card.column_id }
-                  });
-                  console.log('📡 [EF pipeline-management] Broadcast pipeline-card-moved enviado:', ok);
-                } else {
-                  console.warn('⚠️ [EF pipeline-management] Falha ao assinar canal para broadcast:', (channel as any).state);
-                }
-                // Limpar canal para evitar vazamento
-                await realtimeClient.removeChannel(channel);
-              } else {
-                console.warn('⚠️ [EF pipeline-management] Realtime client indisponível ou dados incompletos');
-              }
-            } catch (bfErr) {
-              console.error('❌ [EF pipeline-management] Erro ao enviar broadcast:', bfErr);
-            }
-
             // ✅ Limpar execuções de automações quando card muda de coluna
             if (previousColumnId && body.column_id && previousColumnId !== body.column_id) {
               console.log('🗑️ Card mudou de coluna, limpando execuções de automações anteriores');
@@ -2334,6 +2309,38 @@ serve(async (req) => {
               console.log(`🤖 ========== FIM DA EXECUÇÃO DE AUTOMAÇÕES ==========\n`);
             }
           }
+
+            // 📡 Enviar broadcast APÓS automações para garantir coluna correta
+            try {
+              // Buscar card atualizado do banco para pegar a coluna final (após automações)
+              const { data: finalCard } = (await supabaseClient
+                .from('pipeline_cards')
+                .select('id, column_id, pipeline_id')
+                .eq('id', cardId)
+                .single()) as any;
+
+              if (realtimeClient && finalCard?.pipeline_id && finalCard?.id && finalCard?.column_id) {
+                const channelName = `pipeline-${finalCard.pipeline_id}`;
+                const channel = realtimeClient.channel(channelName, { config: { broadcast: { self: false } } });
+                await channel.subscribe();
+                if ((channel as any).state === 'joined') {
+                  const ok = await channel.send({
+                    type: 'broadcast',
+                    event: 'pipeline-card-moved',
+                    payload: { cardId: finalCard.id, newColumnId: finalCard.column_id }
+                  });
+                  console.log('📡 [EF pipeline-management] Broadcast pipeline-card-moved enviado após automações:', ok);
+                  console.log('📡 [EF pipeline-management] Coluna final:', finalCard.column_id);
+                } else {
+                  console.warn('⚠️ [EF pipeline-management] Falha ao assinar canal para broadcast:', (channel as any).state);
+                }
+                await realtimeClient.removeChannel(channel);
+              } else {
+                console.warn('⚠️ [EF pipeline-management] Realtime client indisponível ou dados incompletos');
+              }
+            } catch (bfErr) {
+              console.error('❌ [EF pipeline-management] Erro ao enviar broadcast:', bfErr);
+            }
             
             // ✅ Se o responsável foi atualizado E o card tem conversa associada, sincronizar
             if (body.responsible_user_id !== undefined && card.conversation_id) {
