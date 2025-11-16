@@ -58,7 +58,7 @@ export function QuickItemsModal({
       const type = mediaItem.file_type?.startsWith('image/') ? 'image' : 'video';
       onSendMedia(
         { name: mediaItem.file_name, url: mediaItem.file_url },
-        mediaItem.title,
+        mediaItem.caption || '',
         type
       );
       onOpenChange(false);
@@ -69,7 +69,7 @@ export function QuickItemsModal({
     if (onSendDocument) {
       onSendDocument(
         { name: document.file_name, url: document.file_url },
-        document.title
+        document.caption || ''
       );
       onOpenChange(false);
     }
