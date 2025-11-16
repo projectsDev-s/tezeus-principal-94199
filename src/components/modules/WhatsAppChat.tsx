@@ -2214,6 +2214,7 @@ export function WhatsAppChat({
                           senderName={senderDisplayName}
                           messageStatus={displayStatus}
                           timestamp={message.created_at}
+                          caption={message.content}
                         />
                       ) : (
                         <div className="flex items-end justify-between gap-2 min-w-0">
