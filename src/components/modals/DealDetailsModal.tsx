@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -334,12 +335,21 @@ export function DealDetailsModal({
   const { selectedPipeline, moveCardOptimistic } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   const { getHeaders } = useWorkspaceHeaders();
+  const queryClient = useQueryClient();
   
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
   
   // Hook para histórico completo do card
   const { data: fullHistory = [], isLoading: isLoadingHistory } = useCardHistory(selectedCardId, contactId);
+
+  // Refresh dos dados do histórico quando o modal abrir
+  useEffect(() => {
+    if (isOpen && selectedCardId && contactId) {
+      console.log('🔄 Modal aberto - Atualizando histórico do card');
+      queryClient.invalidateQueries({ queryKey: ['card-history', selectedCardId, contactId] });
+    }
+  }, [isOpen, selectedCardId, contactId, queryClient]);
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
