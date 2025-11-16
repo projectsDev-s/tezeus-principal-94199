@@ -207,7 +207,8 @@ export function AssignmentHistoryModal({
                           )}
                         </div>
 
-                        {agent.metadata && Object.keys(agent.metadata).length > 0 && (
+                        {agent.metadata && Object.keys(agent.metadata).length > 0 && 
+                         !(agent.metadata.old_agent_id === null && Object.keys(agent.metadata).length === 1) && (
                           <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
                             {JSON.stringify(agent.metadata, null, 2)}
                           </div>
