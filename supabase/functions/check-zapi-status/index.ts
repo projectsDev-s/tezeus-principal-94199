@@ -161,10 +161,25 @@ serve(async (req) => {
     const zapiStatus = await zapiResponse.json();
     console.log("✅ Z-API status response:", zapiStatus);
 
+    // Determinar se está conectado - cobrir diferentes formatos de resposta da Z-API
+    const isConnected = 
+      zapiStatus.connected === true || 
+      zapiStatus.state === "CONNECTED" ||
+      zapiStatus.status === "CONNECTED" ||
+      (zapiStatus.session && zapiStatus.session.connected === true);
+
+    // Extrair número de telefone de diferentes campos possíveis
+    const phoneNumber = 
+      zapiStatus.phone || 
+      zapiStatus.wid || 
+      zapiStatus.phoneNumber ||
+      (zapiStatus.session && zapiStatus.session.phone) ||
+      null;
+
     // Extrair informações principais do status
     const statusInfo = {
-      connected: zapiStatus.connected || false,
-      phone: zapiStatus.phone || null,
+      connected: isConnected,
+      phone: phoneNumber,
       battery: zapiStatus.battery || null,
       platform: zapiStatus.platform || null,
       pushname: zapiStatus.pushname || null,
@@ -176,16 +191,24 @@ serve(async (req) => {
       raw: zapiStatus,
     };
 
+    console.log(`🔍 Connection detection:`);
+    console.log(`   - connected field: ${zapiStatus.connected}`);
+    console.log(`   - state field: ${zapiStatus.state}`);
+    console.log(`   - status field: ${zapiStatus.status}`);
+    console.log(`   - session.connected: ${zapiStatus.session?.connected}`);
+    console.log(`   - Final isConnected: ${isConnected}`);
+    console.log(`   - Phone number: ${phoneNumber}`);
+
     // Atualizar status no banco de dados se necessário
-    const newStatus = zapiStatus.connected ? "connected" : "disconnected";
-    if (connection.status !== newStatus || connection.phone_number !== zapiStatus.phone) {
+    const newStatus = isConnected ? "connected" : "disconnected";
+    if (connection.status !== newStatus || connection.phone_number !== phoneNumber) {
       console.log(`🔄 Updating connection status from '${connection.status}' to '${newStatus}'`);
       
       const { error: updateError } = await supabase
         .from("connections")
         .update({
           status: newStatus,
-          phone_number: zapiStatus.phone || connection.phone_number,
+          phone_number: phoneNumber || connection.phone_number,
           updated_at: new Date().toISOString(),
         })
         .eq("id", connectionId);

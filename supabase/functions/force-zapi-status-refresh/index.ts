@@ -160,12 +160,32 @@ serve(async (req) => {
     console.log("✅ Z-API status response:", JSON.stringify(zapiStatus, null, 2));
 
     // Determinar status da conexão
-    const isConnected = zapiStatus.connected === true || zapiStatus.state === "CONNECTED";
+    // Z-API pode retornar diferentes formatos dependendo da versão
+    const isConnected = 
+      zapiStatus.connected === true || 
+      zapiStatus.state === "CONNECTED" ||
+      zapiStatus.status === "CONNECTED" ||
+      (zapiStatus.session && zapiStatus.session.connected === true);
+    
     const newStatus = isConnected ? "connected" : "disconnected";
-    const phoneNumber = zapiStatus.phone || zapiStatus.wid || null;
+    
+    // Tentar extrair número de telefone de diferentes campos possíveis
+    const phoneNumber = 
+      zapiStatus.phone || 
+      zapiStatus.wid || 
+      zapiStatus.phoneNumber ||
+      (zapiStatus.session && zapiStatus.session.phone) ||
+      null;
 
-    console.log(`🔄 New status from Z-API: ${newStatus}`);
-    console.log(`📊 Current status in DB: ${connection.status}`);
+    console.log(`🔄 Connection detection:`);
+    console.log(`   - connected field: ${zapiStatus.connected}`);
+    console.log(`   - state field: ${zapiStatus.state}`);
+    console.log(`   - status field: ${zapiStatus.status}`);
+    console.log(`   - session.connected: ${zapiStatus.session?.connected}`);
+    console.log(`   - Final isConnected: ${isConnected}`);
+    console.log(`   - New status: ${newStatus}`);
+    console.log(`   - Phone number: ${phoneNumber}`);
+    console.log(`   - Current DB status: ${connection.status}`);
 
     // NÃO atualizar o banco se:
     // - Status atual é "qr" (aguardando scan do usuário)
