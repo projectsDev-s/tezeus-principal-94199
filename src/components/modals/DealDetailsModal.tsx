@@ -361,6 +361,9 @@ export function DealDetailsModal({
     id: "historico",
     label: "Histórico"
   }, {
+    id: "historico-atividades",
+    label: "Histórico de Atividades"
+  }, {
     id: "contato",
     label: "Contato"
   }];
@@ -1896,13 +1899,15 @@ export function DealDetailsModal({
                   <p>Nenhum histórico encontrado</p>
                 </div>
               )}
+            </div>}
+
+          {isInitialLoading ? null : activeTab === "historico-atividades" && <div className="space-y-6">
+              <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
+                Histórico de Atividades
+              </h3>
               
-              {/* Histórico de atividades concluídas */}
-              {completedActivities.length > 0 && (
-                <div className="space-y-3 mt-8">
-                  <h4 className={cn("text-md font-medium", isDarkMode ? "text-gray-200" : "text-gray-800")}>
-                    Atividades Concluídas
-                  </h4>
+              {completedActivities.length > 0 ? (
+                <div className="space-y-3">
                   {completedActivities.map(activity => (
                     <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
                       <div className="flex items-center gap-2 mb-2">
@@ -1948,6 +1953,14 @@ export function DealDetailsModal({
                       )}
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className={cn(
+                  "text-center py-8 rounded-lg border",
+                  isDarkMode ? "bg-[#1f1f1f] border-gray-700 text-gray-400" : "bg-gray-50 border-gray-200 text-gray-600"
+                )}>
+                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-40" />
+                  <p>Nenhuma atividade concluída</p>
                 </div>
               )}
             </div>}
