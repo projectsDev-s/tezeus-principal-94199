@@ -1094,7 +1094,7 @@ function CRMNegociosContent({
       </div>;
   }
   return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
-      <main className="min-h-screen flex flex-col w-full">
+      <main className="h-screen flex flex-col w-full overflow-hidden">
         
         {/* CARD DE FILTROS */}
         <div className="sticky top-0 z-10 px-2 py-2">
@@ -1209,7 +1209,7 @@ function CRMNegociosContent({
         {/* CONTAINER DO PIPELINE */}
         <div className="flex-1 overflow-x-auto overflow-y-auto px-2">
           {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
-              {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0">
+              {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                     <div className="p-4 pb-3">
                       <div className="flex items-center justify-between">
@@ -1245,7 +1245,7 @@ function CRMNegociosContent({
             </div> : isLoadingColumns ?
         // Skeleton loading para colunas
         <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
-              {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0">
+              {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
                     <div className="p-4 pb-3 flex-shrink-0">
                       <div className="flex items-center justify-between">
@@ -1297,7 +1297,7 @@ function CRMNegociosContent({
               }).format(value);
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
-                    <div className="w-60 sm:w-72 flex-shrink-0">
+                    <div className="w-60 sm:w-72 flex-shrink-0 h-full">
                        <div className={cn("bg-card rounded-lg border border-t-4 h-full flex flex-col border-b-2 border-b-primary", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color
                 }}>
