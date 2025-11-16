@@ -1521,15 +1521,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <Star className="mr-2 h-4 w-4" />
                         Definir como Padrão
                       </DropdownMenuItem>
-                      {connection.provider?.provider === 'zapi' && (
-                        <DropdownMenuItem onClick={() => {
-                          setConnectionToConfigureWebhook(connection);
-                          setIsConfigureWebhookModalOpen(true);
-                        }}>
-                          <Webhook className="mr-2 h-4 w-4" />
-                          Configurar Webhooks
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuItem onClick={() => openEditModal(connection)}>
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
