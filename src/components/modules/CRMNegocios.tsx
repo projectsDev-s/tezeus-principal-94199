@@ -327,21 +327,18 @@ function DraggableDeal({
               {deal.conversation?.agente_ativo && <AgentBadge conversationId={deal.conversation.id} />}
             </div>
             
-            {/* Produto + Valor à direita */}
+            {/* Produto + Preço à direita */}
             <div className="flex items-center gap-1 text-xs flex-shrink-0">
               {deal.product_name && <span className="text-muted-foreground truncate max-w-[80px]">
                   {deal.product_name}
                 </span>}
-              {deal.value > 0 ? <span className={cn("font-medium cursor-pointer hover:underline", "text-primary")} onClick={e => {
+              {deal.value ? <span className="text-primary font-medium">
+                  R$ {deal.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span> : <span className="text-xs text-muted-foreground/60 hover:text-primary/70 cursor-pointer transition-colors" onClick={(e) => {
               e.stopPropagation();
               onValueClick?.(deal);
             }}>
-                  {formatCurrency(deal.value)}
-                </span> : <span className={cn("font-medium cursor-pointer hover:underline text-muted-foreground")} onClick={e => {
-              e.stopPropagation();
-              onValueClick?.(deal);
-            }}>
-                  +valor
+                  +preço
                 </span>}
             </div>
           </div>
@@ -917,14 +914,14 @@ function CRMNegociosContent({
       });
       toast({
         title: "Sucesso",
-        description: "Valor do negócio atualizado com sucesso"
+        description: "Preço do negócio atualizado com sucesso"
       });
       setSelectedCardForValue(null);
     } catch (error) {
       console.error('Erro ao atualizar valor do card:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar valor do negócio",
+        description: "Erro ao atualizar preço do negócio",
         variant: "destructive"
       });
     }
@@ -1403,7 +1400,7 @@ function CRMNegociosContent({
                             const columnCards = getCardsByColumn(column.id);
                             const csvData = columnCards.map(card => ({
                               'Título': card.title,
-                              'Valor': card.value || 0,
+                              'Preço': card.value || 0,
                               'Status': card.status,
                               'Responsável': card.responsible_user?.name || 'Não atribuído',
                               'Criado em': new Date(card.created_at).toLocaleDateString('pt-BR')
