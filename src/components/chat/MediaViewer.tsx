@@ -284,19 +284,19 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     
     return (
       <div className={className}>
-        <div className="relative inline-block">
+        <div className="relative inline-block rounded-lg overflow-hidden">
           {!imageError && (
             <>
               {/* Skeleton/placeholder enquanto carrega */}
               {isLoading && (
-                <div className="absolute inset-0 bg-muted animate-pulse rounded-lg max-w-[300px] max-h-[200px]" 
+                <div className="absolute inset-0 bg-muted animate-pulse max-w-[300px] max-h-[200px]" 
                      style={{ width: '300px', height: '200px' }} />
               )}
               
               <img
                 src={fileUrl}
                 alt={fileName || 'Imagem'}
-                className="max-w-[300px] max-h-[200px] rounded-lg object-cover cursor-pointer border border-border"
+                className="max-w-[300px] max-h-[200px] object-cover cursor-pointer block"
                 onClick={() => setIsImageModalOpen(true)}
                 onError={handleImageError}
                 onLoad={() => {
@@ -309,8 +309,30 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
                 }}
               />
               
-              {/* Timestamp e status sobreposto na imagem */}
-              {timestamp && !isLoading && (
+              {/* Caption dentro do container da imagem */}
+              {caption && (
+                <div className="px-2 py-1.5 bg-primary">
+                  <div className="flex items-end justify-between gap-2">
+                    <p className="text-sm break-words text-primary-foreground flex-1">{caption}</p>
+                    {timestamp && !isLoading && (
+                      <div className="flex items-center gap-1 flex-shrink-0" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                        <span>
+                          {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                        {messageStatus && senderType !== 'contact' && (
+                          <MessageStatusIndicator status={messageStatus} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Timestamp e status sobreposto na imagem quando NÃO houver caption */}
+              {!caption && timestamp && !isLoading && (
                 <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1.5 py-0.5 rounded flex items-center gap-1" style={{ fontSize: '11px' }}>
                   <span>
                     {new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -328,7 +350,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           
           {imageError && (
             <div 
-              className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-destructive/20"
+              className="flex items-center gap-3 p-3 bg-muted max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-destructive/20"
               onClick={handleDownload}
             >
               <AlertCircle className="h-8 w-8 text-destructive flex-shrink-0" />
@@ -351,9 +373,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           imageUrl={fileUrl}
           fileName={fileName}
         />
-        {caption && (
-          <p className="text-sm mt-1 break-words">{caption}</p>
-        )}
       </div>
     );
   }
@@ -362,18 +381,41 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   if (isVideoFile || messageType === 'video') {
     return (
       <div className={className}>
-        <div className="relative inline-block max-w-[300px]">
+        <div className="relative inline-block rounded-lg overflow-hidden max-w-[300px]">
           <video
             src={fileUrl}
             controls
-            className="w-full rounded-lg cursor-pointer border border-border"
+            className="w-full cursor-pointer block"
             style={{ maxHeight: '200px' }}
             onClick={() => setIsVideoModalOpen(true)}
           >
             Seu navegador não suporta o elemento de vídeo.
           </video>
-          {/* Timestamp e status sobreposto */}
-          {timestamp && (
+          
+          {/* Caption dentro do container do vídeo */}
+          {caption && (
+            <div className="px-2 py-1.5 bg-primary">
+              <div className="flex items-end justify-between gap-2">
+                <p className="text-sm break-words text-primary-foreground flex-1">{caption}</p>
+                {timestamp && (
+                  <div className="flex items-center gap-1 flex-shrink-0" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                    <span>
+                      {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                    {messageStatus && senderType !== 'contact' && (
+                      <MessageStatusIndicator status={messageStatus} />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Timestamp e status sobreposto quando NÃO houver caption */}
+          {!caption && timestamp && (
             <div className="absolute bottom-1 right-1 bg-black/50 text-white px-1.5 py-0.5 rounded pointer-events-none flex items-center gap-1" style={{ fontSize: '11px' }}>
               <span>
                 {new Date(timestamp).toLocaleTimeString('pt-BR', {
@@ -394,9 +436,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           videoUrl={fileUrl}
           fileName={fileName}
         />
-        {caption && (
-          <p className="text-sm mt-1 break-words">{caption}</p>
-        )}
       </div>
     );
   }
