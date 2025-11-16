@@ -21,6 +21,7 @@ interface WhatsAppMessage {
   external_id?: string;
   metadata?: any;
   workspace_id?: string;
+  origem_resposta?: string;
   reply_to_message_id?: string;
   quoted_message?: {
     id: string;
