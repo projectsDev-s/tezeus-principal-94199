@@ -31,7 +31,7 @@ import { useUsersCache } from "@/hooks/useUsersCache";
 import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 import { useCardHistory } from "@/hooks/useCardHistory";
-import { Bot, UserCheck, Users, ArrowRightLeft } from "lucide-react";
+import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon } from "lucide-react";
 interface Tag {
   id: string;
   name: string;
@@ -342,6 +342,9 @@ export function DealDetailsModal({
   
   // Hook para histórico completo do card - usar cardId direto pois selectedCardId pode estar vazio no início
   const { data: fullHistory = [], isLoading: isLoadingHistory } = useCardHistory(cardId, contactId);
+  
+  // Estado para filtro de histórico
+  const [historyFilter, setHistoryFilter] = useState<string>("todos");
 
   // Refresh dos dados do histórico quando o modal abrir
   useEffect(() => {
@@ -1807,9 +1810,68 @@ export function DealDetailsModal({
             </div>}
 
           {isInitialLoading ? null : activeTab === "historico" && <div className="space-y-6">
-              <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
-                Histórico Completo
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
+                  Histórico de eventos
+                </h3>
+                
+                {/* Filtro de eventos */}
+                <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid className="w-4 h-4" />
+                        <span>Todos</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="agent_activity">
+                      <div className="flex items-center gap-2">
+                        <Bot className="w-4 h-4" />
+                        <span>Evento de Agente IA</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="user_assigned">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="w-4 h-4" />
+                        <span>Conversa Vinculada</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="queue_transfer">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        <span>Transferência de Fila</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="column_transfer">
+                      <div className="flex items-center gap-2">
+                        <ArrowRightLeft className="w-4 h-4" />
+                        <span>Transferência de Etapa</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="activity">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>Atividade</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="tag">
+                      <div className="flex items-center gap-2">
+                        <TagIcon className="w-4 h-4" />
+                        <span>Tag</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="message">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Mensagem</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
               {/* Timeline de eventos */}
               {isLoadingHistory ? (
@@ -1819,8 +1881,12 @@ export function DealDetailsModal({
                   <Skeleton className="h-20 w-full" />
                 </div>
               ) : fullHistory.length > 0 ? (
-                <div className="space-y-0">
-                  {fullHistory.map((event, index) => {
+                (() => {
+                  const filteredHistory = fullHistory.filter(event => historyFilter === "todos" || event.type === historyFilter);
+                  
+                  return (
+                    <div className="space-y-0">
+                      {filteredHistory.map((event, index) => {
                     // Ícone baseado no tipo de evento
                     let Icon = MessageSquare;
                     let iconBgColor = "bg-yellow-400";
@@ -1843,7 +1909,7 @@ export function DealDetailsModal({
                     return (
                       <div key={event.id} className="relative">
                         {/* Linha vertical conectando os eventos */}
-                        {index < fullHistory.length - 1 && (
+                        {index < filteredHistory.length - 1 && (
                           <div 
                             className={cn(
                               "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
@@ -1911,6 +1977,8 @@ export function DealDetailsModal({
                     );
                   })}
                 </div>
+              );
+            })()
               ) : (
                 <div className={cn(
                   "text-center py-8 rounded-lg border",
