@@ -10,6 +10,7 @@ interface QuickMedia {
   file_url: string;
   file_name: string;
   file_type: string;
+  caption?: string;
   workspace_id: string;
   created_at: string;
   updated_at: string;
@@ -50,7 +51,7 @@ export const useQuickMedia = () => {
     }
   };
 
-  const createMedia = async (title: string, file: File) => {
+  const createMedia = async (title: string, file: File, caption?: string) => {
     if (!selectedWorkspace?.workspace_id || !user) {
       toast({
         title: 'Erro',
@@ -85,6 +86,7 @@ export const useQuickMedia = () => {
           file_url: publicUrl,
           file_name: file.name,
           file_type: file.type,
+          caption: caption || null,
           workspace_id: selectedWorkspace.workspace_id,
         })
         .select()
@@ -108,9 +110,9 @@ export const useQuickMedia = () => {
     }
   };
 
-  const updateMedia = async (id: string, title: string, file?: File) => {
+  const updateMedia = async (id: string, title: string, file?: File, caption?: string) => {
     try {
-      let updateData: any = { title };
+      let updateData: any = { title, caption: caption || null };
 
       if (file && selectedWorkspace?.workspace_id) {
         // Upload novo arquivo se fornecido

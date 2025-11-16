@@ -42,12 +42,14 @@ export function DSVoice() {
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [mediaTitle, setMediaTitle] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaCaption, setMediaCaption] = useState("");
   const [editingMediaId, setEditingMediaId] = useState<string | null>(null);
   
   // Estados para modais de documentos
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentCaption, setDocumentCaption] = useState("");
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
 
   // Estados para funis
@@ -176,17 +178,18 @@ export function DSVoice() {
   const handleCreateMedia = async () => {
     if (mediaTitle.trim() && mediaFile) {
       if (editingMediaId) {
-        await updateMedia(editingMediaId, mediaTitle, mediaFile);
+        await updateMedia(editingMediaId, mediaTitle, mediaFile, mediaCaption);
       } else {
-        await createMedia(mediaTitle, mediaFile);
+        await createMedia(mediaTitle, mediaFile, mediaCaption);
       }
       handleCloseMediaModal();
     }
   };
 
   const handleEditMedia = (mediaItem: any) => {
-    setMediaTitle(mediaItem.title);
     setEditingMediaId(mediaItem.id);
+    setMediaTitle(mediaItem.title);
+    setMediaCaption(mediaItem.caption || "");
     setIsMediaModalOpen(true);
   };
 
@@ -200,6 +203,7 @@ export function DSVoice() {
     setIsMediaModalOpen(false);
     setMediaTitle("");
     setMediaFile(null);
+    setMediaCaption("");
     setEditingMediaId(null);
   };
 
@@ -207,9 +211,9 @@ export function DSVoice() {
   const handleCreateDocument = async () => {
     if (documentTitle.trim() && documentFile) {
       if (editingDocumentId) {
-        await updateDocument(editingDocumentId, documentTitle, documentFile);
+        await updateDocument(editingDocumentId, documentTitle, documentFile, documentCaption);
       } else {
-        await createDocument(documentTitle, documentFile);
+        await createDocument(documentTitle, documentFile, documentCaption);
       }
       handleCloseDocumentModal();
     }
@@ -217,6 +221,7 @@ export function DSVoice() {
 
   const handleEditDocument = (document: any) => {
     setDocumentTitle(document.title);
+    setDocumentCaption(document.caption || "");
     setEditingDocumentId(document.id);
     setIsDocumentModalOpen(true);
   };
@@ -231,6 +236,7 @@ export function DSVoice() {
     setIsDocumentModalOpen(false);
     setDocumentTitle("");
     setDocumentFile(null);
+    setDocumentCaption("");
     setEditingDocumentId(null);
   };
 
@@ -853,6 +859,15 @@ export function DSVoice() {
                 onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">Legenda (Caption)</label>
+              <Textarea
+                value={mediaCaption}
+                onChange={(e) => setMediaCaption(e.target.value)}
+                placeholder="Digite a legenda para a mídia (opcional)"
+                rows={3}
+              />
+            </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={handleCloseMediaModal}>
                 Cancelar
@@ -889,6 +904,15 @@ export function DSVoice() {
                 type="file"
                 accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
                 onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Legenda (Caption)</label>
+              <Textarea
+                value={documentCaption}
+                onChange={(e) => setDocumentCaption(e.target.value)}
+                placeholder="Digite a legenda para o documento (opcional)"
+                rows={3}
               />
             </div>
             <div className="flex gap-2 justify-end">

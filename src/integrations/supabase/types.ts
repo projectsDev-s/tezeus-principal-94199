@@ -2393,6 +2393,7 @@ export type Database = {
       }
       quick_documents: {
         Row: {
+          caption: string | null
           created_at: string
           file_name: string
           file_size: number | null
@@ -2404,6 +2405,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          caption?: string | null
           created_at?: string
           file_name: string
           file_size?: number | null
@@ -2415,6 +2417,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          caption?: string | null
           created_at?: string
           file_name?: string
           file_size?: number | null
@@ -2456,6 +2459,7 @@ export type Database = {
       }
       quick_media: {
         Row: {
+          caption: string | null
           created_at: string
           file_name: string
           file_type: string
@@ -2466,6 +2470,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          caption?: string | null
           created_at?: string
           file_name: string
           file_type: string
@@ -2476,6 +2481,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          caption?: string | null
           created_at?: string
           file_name?: string
           file_type?: string
