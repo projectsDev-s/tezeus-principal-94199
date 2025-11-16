@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ImpersonateWorkspaceModal } from "@/components/modals/ImpersonateWorkspaceModal";
+import { MeuPerfilModal } from "@/components/modals/MeuPerfilModal";
 import { useSystemCustomizationContext } from "@/contexts/SystemCustomizationContext";
 import { useCargoPermissions } from "@/hooks/useCargoPermissions";
 import { LayoutDashboard, MessageCircle, Users, FolderOpen, Settings, Zap, Link, Shield, DollarSign, Target, Package, Calendar, CheckSquare, MessageSquare, Bot, BrainCircuit, GitBranch, Bell, User, LogOut, Handshake, FileText, Building2, BarChart3, AudioLines } from "lucide-react";
@@ -43,6 +44,7 @@ export function Sidebar({
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
+  const [isPerfilModalOpen, setIsPerfilModalOpen] = useState(false);
 
   // Hooks para notificações - usando o provider compartilhado
   const {
@@ -407,6 +409,10 @@ export function Sidebar({
                     Dashboard Master
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={() => setIsPerfilModalOpen(true)}>
+                  <User className="w-4 h-4 mr-2" />
+                  Meu Perfil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout} className="text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sair
@@ -436,6 +442,10 @@ export function Sidebar({
                       Dashboard Master
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={() => setIsPerfilModalOpen(true)}>
+                    <User className="w-4 h-4 mr-2" />
+                    Meu Perfil
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair
@@ -446,5 +456,11 @@ export function Sidebar({
           )}
         </div>
       </div>
+
+      {/* Modal Meu Perfil */}
+      <MeuPerfilModal 
+        isOpen={isPerfilModalOpen} 
+        onClose={() => setIsPerfilModalOpen(false)} 
+      />
     </div>;
 }
