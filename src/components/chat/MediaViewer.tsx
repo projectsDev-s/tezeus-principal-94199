@@ -154,8 +154,8 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
                onClick={handleDownload}>
             <div className="relative">
-              <FileText className="h-10 w-10 text-primary" />
-              <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-1 rounded font-medium">
+              <FileText className="h-10 w-10 text-blue-600" />
+              <div className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs px-1 rounded font-medium">
                 DOC
               </div>
             </div>
