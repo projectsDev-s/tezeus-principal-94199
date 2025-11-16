@@ -280,43 +280,19 @@ serve(async (req) => {
                       break;
                     }
 
-                    // Buscar contato
-                    const { data: contact } = await supabase
-                      .from('contacts')
-                      .select('phone')
-                      .eq('id', card.contact_id)
-                      .single();
-
-                    if (!contact?.phone) {
-                      console.error('❌ [Time Automations] Contato não encontrado');
-                      break;
-                    }
-
-                    // Buscar connection_id da conversa
                     if (!card.conversation_id) {
                       console.error('❌ [Time Automations] Conversa não encontrada no card');
                       break;
                     }
 
-                    const { data: conversation } = await supabase
-                      .from('conversations')
-                      .select('connection_id')
-                      .eq('id', card.conversation_id)
-                      .single();
+                    console.log(`📤 [Time Automations] Enviando mensagem via test-send-msg`);
 
-                    if (!conversation?.connection_id) {
-                      console.error('❌ [Time Automations] Connection não encontrada na conversa');
-                      break;
-                    }
-
-                    console.log(`📤 [Time Automations] Enviando mensagem para ${contact.phone}`);
-
-                    // Chamar test-send-msg (mesma função usada em check-message-automations)
+                    // Chamar test-send-msg com os campos corretos
                     const { error: sendError } = await supabase.functions.invoke('test-send-msg', {
                       body: {
-                        connectionId: conversation.connection_id,
-                        phone: contact.phone,
-                        message: messageText
+                        conversation_id: card.conversation_id,
+                        content: messageText,
+                        message_type: 'text'
                       }
                     });
 
