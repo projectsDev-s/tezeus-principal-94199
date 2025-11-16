@@ -836,6 +836,50 @@ export const useWhatsAppConversations = () => {
           });
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `workspace_id=eq.${workspaceId}`
+        },
+        async (payload) => {
+          console.log('💬 [REALTIME Messages] ✅ NOVA MENSAGEM:', {
+            messageId: payload.new.id,
+            conversationId: payload.new.conversation_id,
+            timestamp: new Date().toISOString()
+          });
+
+          const newMessage = payload.new as any;
+
+          // Atualizar a conversa com a nova mensagem
+          setConversations(prev => {
+            const index = prev.findIndex(c => c.id === newMessage.conversation_id);
+            
+            if (index === -1) {
+              console.log('⚠️ Conversa não encontrada para a mensagem');
+              return prev;
+            }
+
+            const updatedConversation = {
+              ...prev[index],
+              last_message: [{
+                content: newMessage.content,
+                message_type: newMessage.message_type,
+                sender_type: newMessage.sender_type,
+                created_at: newMessage.created_at
+              }],
+              last_activity_at: newMessage.created_at,
+              _updated_at: Date.now()
+            };
+
+            const updatedList = [...prev];
+            updatedList[index] = updatedConversation;
+            return sortConversationsByActivity(updatedList);
+          });
+        }
+      )
       .subscribe((status) => {
         console.log('📡 [REALTIME Conversations] STATUS:', {
           status,
