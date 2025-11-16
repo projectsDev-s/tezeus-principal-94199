@@ -11,6 +11,7 @@ interface QuickDocument {
   file_name: string;
   file_type: string;
   file_size?: number;
+  caption?: string;
   workspace_id: string;
   created_at: string;
   updated_at: string;
@@ -51,7 +52,7 @@ export const useQuickDocuments = () => {
     }
   };
 
-  const createDocument = async (title: string, file: File) => {
+  const createDocument = async (title: string, file: File, caption?: string) => {
     if (!selectedWorkspace?.workspace_id || !user) {
       toast({
         title: 'Erro',
@@ -87,6 +88,7 @@ export const useQuickDocuments = () => {
           file_name: file.name,
           file_type: file.type,
           file_size: file.size,
+          caption: caption || null,
           workspace_id: selectedWorkspace.workspace_id,
         })
         .select()
@@ -110,9 +112,9 @@ export const useQuickDocuments = () => {
     }
   };
 
-  const updateDocument = async (id: string, title: string, file?: File) => {
+  const updateDocument = async (id: string, title: string, file?: File, caption?: string) => {
     try {
-      let updateData: any = { title };
+      let updateData: any = { title, caption: caption || null };
 
       if (file && selectedWorkspace?.workspace_id) {
         // Upload novo arquivo se fornecido
