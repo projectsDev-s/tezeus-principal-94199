@@ -1817,7 +1817,7 @@ export function DealDetailsModal({
                 
                 {/* Filtro de eventos */}
                 <Select value={historyFilter} onValueChange={setHistoryFilter}>
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-[220px]">
                     <SelectValue placeholder="Filtrar por tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1826,11 +1826,16 @@ export function DealDetailsModal({
                     <SelectItem value="user_assigned">Conversa Vinculada</SelectItem>
                     <SelectItem value="queue_transfer">Transferência de Fila</SelectItem>
                     <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
-                    <SelectItem value="activity_lembrete">Lembrete</SelectItem>
-                    <SelectItem value="activity_mensagem">Mensagem</SelectItem>
-                    <SelectItem value="activity_ligacao">Ligação</SelectItem>
-                    <SelectItem value="activity_reuniao">Reunião</SelectItem>
-                    <SelectItem value="activity_agendamento">Agendamento</SelectItem>
+                    <SelectItem value="activity_lembrete_created">Lembretes Criados</SelectItem>
+                    <SelectItem value="activity_lembrete_completed">Lembretes Concluídos</SelectItem>
+                    <SelectItem value="activity_mensagem_created">Mensagens Criadas</SelectItem>
+                    <SelectItem value="activity_mensagem_completed">Mensagens Concluídas</SelectItem>
+                    <SelectItem value="activity_ligacao_created">Ligações Criadas</SelectItem>
+                    <SelectItem value="activity_ligacao_completed">Ligações Concluídas</SelectItem>
+                    <SelectItem value="activity_reuniao_created">Reuniões Criadas</SelectItem>
+                    <SelectItem value="activity_reuniao_completed">Reuniões Concluídas</SelectItem>
+                    <SelectItem value="activity_agendamento_created">Agendamentos Criados</SelectItem>
+                    <SelectItem value="activity_agendamento_completed">Agendamentos Concluídos</SelectItem>
                     <SelectItem value="tag">Tag</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1845,7 +1850,19 @@ export function DealDetailsModal({
                 </div>
               ) : fullHistory.length > 0 ? (
                 (() => {
-                  const filteredHistory = fullHistory.filter(event => historyFilter === "todos" || event.type === historyFilter);
+                  const filteredHistory = fullHistory.filter(event => {
+                    if (historyFilter === "todos") return true;
+                    
+                    // Para filtros de atividades com ação específica (created/completed)
+                    if (historyFilter.includes('_created') || historyFilter.includes('_completed')) {
+                      const [activityType, action] = historyFilter.split('_').slice(-2);
+                      const typePrefix = historyFilter.replace(`_${action}`, '');
+                      return event.type === typePrefix && event.action === action;
+                    }
+                    
+                    // Para outros filtros
+                    return event.type === historyFilter;
+                  });
                   
                   return (
                     <div className="space-y-0">
