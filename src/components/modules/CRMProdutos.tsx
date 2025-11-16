@@ -206,7 +206,7 @@ export function CRMProdutos() {
         
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length}
+            {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} de {filteredProducts.length}
           </span>
           
           <Pagination>
