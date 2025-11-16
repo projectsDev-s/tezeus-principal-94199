@@ -219,8 +219,14 @@ export function ColumnAutomationsTab({
     try {
       const headers = getHeaders();
       
-    const { data: newStatus, error } = await supabase
-      .rpc('toggle_column_automation', { p_automation_id: automation.id });
+      // Configurar contexto do usuário antes da chamada RPC
+      await supabase.rpc('set_current_user_context', {
+        user_id: headers['x-system-user-id'],
+        user_email: headers['x-system-user-email']
+      });
+      
+      const { data: newStatus, error } = await supabase
+        .rpc('toggle_column_automation', { p_automation_id: automation.id });
 
       if (error) throw error;
 
@@ -247,8 +253,14 @@ export function ColumnAutomationsTab({
     try {
       const headers = getHeaders();
       
-    const { error } = await supabase
-      .rpc('delete_column_automation', { p_automation_id: automationId });
+      // Configurar contexto do usuário antes da chamada RPC
+      await supabase.rpc('set_current_user_context', {
+        user_id: headers['x-system-user-id'],
+        user_email: headers['x-system-user-email']
+      });
+      
+      const { error } = await supabase
+        .rpc('delete_column_automation', { p_automation_id: automationId });
 
       if (error) throw error;
 

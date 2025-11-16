@@ -448,6 +448,12 @@ export function AutomationModal({
       setIsLoading(true);
       const headers = getHeaders();
 
+      // Configurar contexto do usuário antes das chamadas RPC
+      await supabase.rpc('set_current_user_context', {
+        user_id: headers['x-system-user-id'],
+        user_email: headers['x-system-user-email']
+      });
+
       if (automation?.id) {
         // Atualizar automação existente usando função SQL
         const triggersJson = triggers.map(t => ({
