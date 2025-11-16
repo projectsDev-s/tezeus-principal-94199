@@ -105,13 +105,35 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       
       return { previousConversation };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Registrar no histórico de agentes
+      try {
+        const { data: agentData } = await supabase
+          .from('ai_agents')
+          .select('name')
+          .eq('id', selectedAgentId)
+          .single();
+
+        await supabase
+          .from('conversation_agent_history')
+          .insert({
+            conversation_id: conversationId,
+            action: 'activated',
+            agent_id: selectedAgentId,
+            agent_name: agentData?.name || 'Agente IA',
+            changed_by: (await supabase.auth.getUser()).data.user?.id || null
+          });
+      } catch (error) {
+        console.error('Erro ao registrar histórico do agente:', error);
+      }
+
       toast({
         title: 'Agente ativado',
         description: 'Agente IA ativado para esta conversa',
       });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['card-history', conversationId] });
       onOpenChange(false);
     },
     onError: (error, variables, context) => {
@@ -159,13 +181,35 @@ export const SelectAgentModal = ({ open, onOpenChange, conversationId }: SelectA
       
       return { previousConversation };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Registrar no histórico de agentes
+      try {
+        const { data: agentData } = await supabase
+          .from('ai_agents')
+          .select('name')
+          .eq('id', conversation?.agent_active_id)
+          .single();
+
+        await supabase
+          .from('conversation_agent_history')
+          .insert({
+            conversation_id: conversationId,
+            action: 'deactivated',
+            agent_id: conversation?.agent_active_id,
+            agent_name: agentData?.name || 'Agente IA',
+            changed_by: (await supabase.auth.getUser()).data.user?.id || null
+          });
+      } catch (error) {
+        console.error('Erro ao registrar histórico do agente:', error);
+      }
+
       toast({
         title: 'Agente Desativado',
         description: 'O agente não irá mais interagir nessa conversa',
       });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['card-history', conversationId] });
       onOpenChange(false);
     },
     onError: (error, variables, context) => {
