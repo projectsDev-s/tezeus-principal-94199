@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useToast } from '@/hooks/use-toast';
@@ -28,15 +28,18 @@ export function ChangeAgentModal({
 }: ChangeAgentModalProps) {
   const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isChanging, setIsChanging] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(currentAgentId || null);
 
-  // Atualizar selectedAgentId quando o modal abre ou currentAgentId muda
+  // Refresh e atualizar selectedAgentId quando o modal abre
   useEffect(() => {
     if (open) {
+      console.log('🔄 Modal de agente aberto - Atualizando lista de agentes');
       setSelectedAgentId(currentAgentId || null);
+      queryClient.invalidateQueries({ queryKey: ['workspace-agents', selectedWorkspace?.workspace_id] });
     }
-  }, [open, currentAgentId]);
+  }, [open, currentAgentId, selectedWorkspace?.workspace_id, queryClient]);
 
   // Buscar agentes ativos do workspace
   const { data: agents, isLoading } = useQuery({
@@ -184,10 +187,12 @@ export function ChangeAgentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5 text-primary" />
-            Trocar Agente de IA
+            {currentAgentId ? 'Trocar Agente de IA' : 'Ativar Agente de IA'}
           </DialogTitle>
           <DialogDescription>
-            Selecione um novo agente para esta conversa. O agente permanecerá ativo.
+            {currentAgentId 
+              ? 'Selecione um novo agente para esta conversa. O agente permanecerá ativo.'
+              : 'Selecione um agente para ativar nesta conversa.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -319,7 +324,7 @@ export function ChangeAgentModal({
               ) : (
                 <>
                   <Check className="w-4 h-4 mr-2" />
-                  Trocar Agente
+                  {currentAgentId ? 'Trocar Agente' : 'Ativar Agente'}
                 </>
               )}
             </Button>
