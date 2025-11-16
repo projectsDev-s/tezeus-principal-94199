@@ -2308,7 +2308,30 @@ serve(async (req) => {
             } finally {
               console.log(`🤖 ========== FIM DA EXECUÇÃO DE AUTOMAÇÕES ==========\n`);
             }
-          }
+            }
+
+            // 🔄 Buscar card final APÓS automações para retornar estado atualizado
+            let finalCardForResponse = card;
+            if (body.column_id !== undefined) {
+              const { data: updatedCard } = (await supabaseClient
+                .from('pipeline_cards')
+                .select(`
+                  *,
+                  conversation:conversations(id, contact_id, connection_id, workspace_id),
+                  contact:contacts(id, phone, name),
+                  pipelines:pipelines!inner(id, workspace_id, name)
+                `)
+                .eq('id', cardId)
+                .single()) as any;
+              
+              if (updatedCard) {
+                finalCardForResponse = updatedCard;
+                console.log('✅ Card final atualizado após automações:', {
+                  id: finalCardForResponse.id,
+                  column_id: finalCardForResponse.column_id
+                });
+              }
+            }
 
             // 📡 Enviar broadcast APÓS automações para garantir coluna correta
             try {
@@ -2390,7 +2413,7 @@ serve(async (req) => {
               }
             }
             
-            return new Response(JSON.stringify(card), {
+            return new Response(JSON.stringify(finalCardForResponse), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           } catch (error) {
