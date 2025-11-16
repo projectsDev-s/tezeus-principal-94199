@@ -134,11 +134,11 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             let description = '';
             
             if (event.action === 'activated') {
-              description = `Agente de IA foi desabilitado para esse contato`;
+              description = `Agente "${event.agent_name}" foi ativado para esse Negócio`;
             } else if (event.action === 'deactivated') {
-              description = `Agente de IA foi habilitado para esse contato`;
+              description = `Agente "${event.agent_name}" foi desativado para esse Negócio`;
             } else if (event.action === 'changed') {
-              description = `Agente alterado: ${event.agent_name}`;
+              description = `Agente "${event.agent_name}" foi alterado para esse Negócio`;
             }
 
             allEvents.push({
