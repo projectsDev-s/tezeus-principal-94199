@@ -1094,10 +1094,10 @@ function CRMNegociosContent({
       </div>;
   }
   return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
-      <main className="p-6 space-y-4 min-h-screen">
+      <main className="h-screen flex flex-col w-full overflow-hidden">
         
         {/* CARD DE FILTROS */}
-        <div className="sticky top-0 z-10 flex-shrink-0">
+        <div className="sticky top-0 z-10 px-4 py-2 flex-shrink-0">
           <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Settings Button */}
@@ -1207,8 +1207,9 @@ function CRMNegociosContent({
         </div>
 
         {/* CONTAINER DO PIPELINE */}
-        <div className="overflow-x-auto -mx-6 px-6">
-          {isLoading ? <div className="flex gap-1.5 sm:gap-3 min-w-max">
+        <div className="flex-1 min-h-0">
+          <div className="h-full overflow-x-auto px-4">
+            {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                     <div className="p-4 pb-3">
@@ -1244,7 +1245,7 @@ function CRMNegociosContent({
               </div>
               </div> : isLoadingColumns ?
           // Skeleton loading para colunas
-          <div className="flex gap-1.5 sm:gap-3 min-w-max">
+          <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
                     <div className="p-4 pb-3 flex-shrink-0">
@@ -1282,7 +1283,7 @@ function CRMNegociosContent({
                     </div>
                   </div>
                 </div>)}
-              </div> : <div className="flex gap-1.5 sm:gap-3 min-w-max">
+              </div> : <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
                 {columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
@@ -1502,6 +1503,7 @@ function CRMNegociosContent({
                    </DroppableColumn>;
           })}
             </div>}
+          </div>
         </div>
 
         <DragOverlay>
