@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 export interface CardHistoryEvent {
   id: string;
-  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned';
+  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned' | 'activity' | 'tag' | 'message';
   action: string;
   description: string;
   timestamp: string;
@@ -93,6 +93,35 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             const record = payload.new as any;
             if (record?.contact_id === contactId || record?.pipeline_card_id === cardId) {
               console.log('✅ Evento válido, invalidando cache');
+              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'contact_tags',
+            filter: `contact_id=eq.${contactId}`
+          },
+          (payload) => {
+            console.log('🔄 Realtime: contact_tags changed', payload);
+            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages'
+          },
+          (payload) => {
+            console.log('🔄 Realtime: messages changed', payload);
+            const record = payload.new as any;
+            if (conversationIds.includes(record?.conversation_id)) {
+              console.log('✅ Nova mensagem, invalidando cache');
               queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
             }
           }
@@ -271,6 +300,113 @@ export const useCardHistory = (cardId: string, contactId: string) => {
               description,
               timestamp: event.changed_at,
               user_name: changedByName,
+            });
+          }
+        }
+      }
+
+      // 3. Buscar atividades do card
+      const { data: activities } = await supabase
+        .from('activities')
+        .select(`
+          id,
+          type,
+          subject,
+          scheduled_for,
+          is_completed,
+          created_at,
+          responsible_id,
+          system_users:responsible_id(name)
+        `)
+        .eq('pipeline_card_id', cardId)
+        .order('created_at', { ascending: false });
+
+      if (activities) {
+        for (const activity of activities) {
+          const description = `Atividade "${activity.subject}" ${activity.is_completed ? 'foi concluída' : 'foi criada'}`;
+          
+          allEvents.push({
+            id: activity.id,
+            type: 'activity' as any,
+            action: activity.is_completed ? 'completed' : 'created',
+            description,
+            timestamp: activity.created_at,
+            user_name: (activity.system_users as any)?.name,
+            metadata: {
+              activity_type: activity.type,
+              scheduled_for: activity.scheduled_for,
+              subject: activity.subject
+            }
+          });
+        }
+      }
+
+      // 4. Buscar tags adicionadas ao contato
+      const { data: contactTags } = await supabase
+        .from('contact_tags')
+        .select(`
+          id,
+          created_at,
+          created_by,
+          tags:tag_id(name, color),
+          system_users:created_by(name)
+        `)
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: false });
+
+      if (contactTags) {
+        for (const tagEvent of contactTags) {
+          const tagData = tagEvent.tags as any;
+          const description = `Tag "${tagData?.name}" foi adicionada ao contato`;
+          
+          allEvents.push({
+            id: tagEvent.id,
+            type: 'tag' as any,
+            action: 'tag_added',
+            description,
+            timestamp: tagEvent.created_at,
+            user_name: (tagEvent.system_users as any)?.name,
+            metadata: {
+              tag_name: tagData?.name,
+              tag_color: tagData?.color
+            }
+          });
+        }
+      }
+
+      // 5. Buscar mensagens importantes (apenas do contato, para não ficar muito grande)
+      if (conversations && conversations.length > 0) {
+        const conversationIds = conversations.map(c => c.id);
+        
+        const { data: messages } = await supabase
+          .from('messages')
+          .select('id, content, created_at, sender_type, message_type')
+          .in('conversation_id', conversationIds)
+          .eq('sender_type', 'contact')
+          .order('created_at', { ascending: false })
+          .limit(50); // Limitar para não trazer muitas mensagens
+
+        if (messages) {
+          for (const message of messages) {
+            let description = '';
+            if (message.message_type === 'text') {
+              const preview = message.content.length > 50 
+                ? message.content.substring(0, 50) + '...' 
+                : message.content;
+              description = `Mensagem do contato: "${preview}"`;
+            } else {
+              description = `Contato enviou ${message.message_type}`;
+            }
+            
+            allEvents.push({
+              id: message.id,
+              type: 'message' as any,
+              action: 'message_received',
+              description,
+              timestamp: message.created_at,
+              metadata: {
+                message_type: message.message_type
+              }
             });
           }
         }

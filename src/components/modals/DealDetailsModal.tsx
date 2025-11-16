@@ -1864,6 +1864,15 @@ export function DealDetailsModal({
                     } else if (event.type === 'column_transfer') {
                       Icon = ArrowRightLeft;
                       iconBgColor = "bg-yellow-400";
+                    } else if (event.type === 'activity') {
+                      Icon = Clock;
+                      iconBgColor = "bg-blue-400";
+                    } else if (event.type === 'tag') {
+                      Icon = TagIcon;
+                      iconBgColor = "bg-purple-400";
+                    } else if (event.type === 'message') {
+                      Icon = MessageSquare;
+                      iconBgColor = "bg-green-400";
                     }
 
                     return (
