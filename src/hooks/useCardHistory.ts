@@ -22,7 +22,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
     if (!cardId || !contactId) return;
 
     const channel = supabase
-      .channel('card-history-changes')
+      .channel(`card-history-${cardId}`)
       .on(
         'postgres_changes',
         {
@@ -30,8 +30,8 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           schema: 'public',
           table: 'conversation_agent_history'
         },
-        () => {
-          // Invalidar a query quando houver mudanças
+        (payload) => {
+          console.log('🔄 Realtime: conversation_agent_history changed', payload);
           queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
         }
       )
@@ -42,7 +42,8 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           schema: 'public',
           table: 'conversation_assignments'
         },
-        () => {
+        (payload) => {
+          console.log('🔄 Realtime: conversation_assignments changed', payload);
           queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
         }
       )
@@ -54,13 +55,29 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           table: 'pipeline_card_history',
           filter: `card_id=eq.${cardId}`
         },
-        () => {
+        (payload) => {
+          console.log('🔄 Realtime: pipeline_card_history changed', payload);
           queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activities'
+        },
+        (payload) => {
+          console.log('🔄 Realtime: activities changed', payload);
+          queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔌 Realtime connection status:', status);
+      });
 
     return () => {
+      console.log('🔌 Desconectando realtime do histórico');
       supabase.removeChannel(channel);
     };
   }, [cardId, contactId, queryClient]);
