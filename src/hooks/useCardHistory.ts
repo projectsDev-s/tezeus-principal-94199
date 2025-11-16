@@ -363,13 +363,29 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           is_completed,
           created_at,
           completed_at,
-          responsible_id,
-          system_users:responsible_id(name)
+          responsible_id
         `)
         .eq('pipeline_card_id', cardId)
         .order('created_at', { ascending: false });
 
       if (activities) {
+        // Buscar nomes dos usuários responsáveis
+        const responsibleIds = activities
+          .map(a => a.responsible_id)
+          .filter(Boolean) as string[];
+        
+        const usersMap = new Map<string, string>();
+        if (responsibleIds.length > 0) {
+          const { data: users } = await supabase
+            .from('system_users')
+            .select('id, name')
+            .in('id', [...new Set(responsibleIds)]);
+          
+          users?.forEach(user => {
+            usersMap.set(user.id, user.name);
+          });
+        }
+
         for (const activity of activities) {
           // Criar evento para criação da atividade
           const activityTypeMap: Record<string, CardHistoryEvent['type']> = {
@@ -390,7 +406,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             action: 'created',
             description: `${activityTypeName} "${activity.subject}" foi criada`,
             timestamp: activity.created_at,
-            user_name: (activity.system_users as any)?.name,
+            user_name: activity.responsible_id ? usersMap.get(activity.responsible_id) : undefined,
             metadata: {
               activity_type: activity.type,
               scheduled_for: activity.scheduled_for,
@@ -407,7 +423,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
               action: 'completed',
               description: `${activityTypeName} "${activity.subject}" foi concluída`,
               timestamp: activity.completed_at,
-              user_name: (activity.system_users as any)?.name,
+              user_name: activity.responsible_id ? usersMap.get(activity.responsible_id) : undefined,
               metadata: {
                 activity_type: activity.type,
                 scheduled_for: activity.scheduled_for,
