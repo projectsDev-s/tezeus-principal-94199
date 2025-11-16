@@ -123,8 +123,7 @@ serve(async (req) => {
             column_id,
             title,
             moved_to_column_at,
-            pipeline_id,
-            workspace_id
+            pipeline_id
           `)
           .eq('column_id', automation.column_id)
           .lt('moved_to_column_at', timeThreshold.toISOString())
@@ -168,7 +167,7 @@ serve(async (req) => {
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${supabaseKey}`,
-                'x-workspace-id': card.workspace_id
+                'x-workspace-id': automation.workspace_id
               },
               body: JSON.stringify({
                 card_id: card.id,
