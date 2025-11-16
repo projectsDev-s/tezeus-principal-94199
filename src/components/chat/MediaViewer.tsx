@@ -18,6 +18,7 @@ interface MediaViewerProps {
   senderName?: string;
   messageStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   timestamp?: string;
+  caption?: string;
   metadata?: {
     waveform?: Record<string, number>;
     duration_seconds?: number;
@@ -34,6 +35,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   senderName,
   messageStatus,
   timestamp,
+  caption,
   metadata,
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -142,6 +144,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
             </div>
           )}
         </div>
+        {caption && (
+          <p className="text-sm mt-1 break-words">{caption}</p>
+        )}
       </div>
     );
   }
@@ -178,6 +183,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
             </div>
           )}
         </div>
+        {caption && (
+          <p className="text-sm mt-1 break-words">{caption}</p>
+        )}
       </div>
     );
   }
@@ -214,6 +222,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
             </div>
           )}
         </div>
+        {caption && (
+          <p className="text-sm mt-1 break-words">{caption}</p>
+        )}
       </div>
     );
   }
@@ -254,6 +265,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
             </div>
           )}
         </div>
+        {caption && (
+          <p className="text-sm mt-1 break-words">{caption}</p>
+        )}
         <PdfModal
           isOpen={isPdfModalOpen}
           onClose={() => setIsPdfModalOpen(false)}
@@ -337,6 +351,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           imageUrl={fileUrl}
           fileName={fileName}
         />
+        {caption && (
+          <p className="text-sm mt-1 break-words">{caption}</p>
+        )}
       </div>
     );
   }
@@ -377,6 +394,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           videoUrl={fileUrl}
           fileName={fileName}
         />
+        {caption && (
+          <p className="text-sm mt-1 break-words">{caption}</p>
+        )}
       </div>
     );
   }
@@ -431,6 +451,9 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           </div>
         )}
       </div>
+      {caption && (
+        <p className="text-sm mt-1 break-words">{caption}</p>
+      )}
     </div>
   );
 };
