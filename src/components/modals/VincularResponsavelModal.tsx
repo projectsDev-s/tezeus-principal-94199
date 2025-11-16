@@ -46,6 +46,13 @@ export function VincularResponsavelModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Atualizar selectedUserId quando o modal abre ou currentResponsibleId muda
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedUserId(currentResponsibleId || null);
+    }
+  }, [isOpen, currentResponsibleId]);
+
   useEffect(() => {
     if (isOpen && selectedWorkspace) {
       loadWorkspaceUsers();
