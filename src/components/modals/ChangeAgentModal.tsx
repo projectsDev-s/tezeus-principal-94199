@@ -141,6 +141,10 @@ export function ChangeAgentModal({
         description: `Agora usando: ${newAgentData?.name || 'Novo agente'}`,
       });
 
+      // Atualizar dados do modal
+      queryClient.invalidateQueries({ queryKey: ['workspace-agents', selectedWorkspace?.workspace_id] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-agent', conversationId] });
+
       onAgentChanged?.();
       onOpenChange(false);
     } catch (error) {
@@ -191,6 +195,10 @@ export function ChangeAgentModal({
         title: "✅ Agente desativado",
         description: "O agente foi desativado com sucesso",
       });
+
+      // Atualizar dados do modal
+      queryClient.invalidateQueries({ queryKey: ['workspace-agents', selectedWorkspace?.workspace_id] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-agent', conversationId] });
 
       onAgentChanged?.();
       onOpenChange(false);
