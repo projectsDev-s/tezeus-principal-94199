@@ -56,12 +56,12 @@ export function SetValueModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-left">Valor</DialogTitle>
+          <DialogTitle className="text-left">Preço</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="value">Valor do negócio</Label>
+            <Label htmlFor="value">Preço do negócio</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                 R$

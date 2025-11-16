@@ -155,10 +155,10 @@ export function VincularProdutoModal({
           {selectedProduct && (
             <div className="space-y-2 p-4 bg-accent/30 rounded-lg">
               <Label htmlFor="customValue">
-                Valor personalizado (opcional)
+                Preço personalizado (opcional)
               </Label>
               <p className="text-xs text-muted-foreground mb-2">
-                Valor padrão: {formatCurrency(selectedProduct.value)}
+                Preço padrão: {formatCurrency(selectedProduct.value)}
               </p>
               <Input
                 id="customValue"

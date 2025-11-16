@@ -278,10 +278,10 @@ export function CriarNegocioModal({
             </Select>
           </div>
 
-          {/* Campo de valor */}
+          {/* Campo de preço */}
           <div>
             <Label htmlFor="value" className="text-sm text-muted-foreground">
-              Valor (Opcional)
+              Preço (Opcional)
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">

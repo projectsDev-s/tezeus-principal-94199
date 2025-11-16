@@ -153,7 +153,7 @@ export function CRMProdutos() {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="font-semibold">Nome</TableHead>
-              <TableHead className="font-semibold text-right">Valor</TableHead>
+              <TableHead className="font-semibold text-right">Preço</TableHead>
               <TableHead className="font-semibold text-center w-24">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -244,7 +244,7 @@ export function CRMProdutos() {
               />
             </div>
             <div>
-              <Label className="text-sm text-muted-foreground">Valor</Label>
+              <Label className="text-sm text-muted-foreground">Preço</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                   R$
@@ -293,7 +293,7 @@ export function CRMProdutos() {
               />
             </div>
             <div>
-              <Label className="text-sm text-muted-foreground">Valor</Label>
+              <Label className="text-sm text-muted-foreground">Preço</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                   R$
