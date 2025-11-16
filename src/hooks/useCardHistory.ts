@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 export interface CardHistoryEvent {
   id: string;
-  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned' | 'activity' | 'tag';
+  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned' | 'activity_lembrete' | 'activity_mensagem' | 'activity_ligacao' | 'activity_reuniao' | 'activity_agendamento' | 'tag';
   action: string;
   description: string;
   timestamp: string;
@@ -362,6 +362,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           scheduled_for,
           is_completed,
           created_at,
+          completed_at,
           responsible_id,
           system_users:responsible_id(name)
         `)
@@ -370,21 +371,51 @@ export const useCardHistory = (cardId: string, contactId: string) => {
 
       if (activities) {
         for (const activity of activities) {
-          const description = `Atividade "${activity.subject}" ${activity.is_completed ? 'foi concluída' : 'foi criada'}`;
-          
+          // Criar evento para criação da atividade
+          const activityTypeMap: Record<string, CardHistoryEvent['type']> = {
+            'Lembrete': 'activity_lembrete',
+            'Mensagem': 'activity_mensagem',
+            'Ligação': 'activity_ligacao',
+            'Reunião': 'activity_reuniao',
+            'Agendamento': 'activity_agendamento'
+          };
+
+          const eventType = activityTypeMap[activity.type] || 'activity_lembrete';
+          const activityTypeName = activity.type || 'Atividade';
+
+          // Evento de criação
           allEvents.push({
-            id: activity.id,
-            type: 'activity' as any,
-            action: activity.is_completed ? 'completed' : 'created',
-            description,
+            id: `${activity.id}_created`,
+            type: eventType,
+            action: 'created',
+            description: `${activityTypeName} "${activity.subject}" foi criada`,
             timestamp: activity.created_at,
             user_name: (activity.system_users as any)?.name,
             metadata: {
               activity_type: activity.type,
               scheduled_for: activity.scheduled_for,
-              subject: activity.subject
+              subject: activity.subject,
+              status: 'created'
             }
           });
+
+          // Evento de conclusão (se foi concluída)
+          if (activity.is_completed && activity.completed_at) {
+            allEvents.push({
+              id: `${activity.id}_completed`,
+              type: eventType,
+              action: 'completed',
+              description: `${activityTypeName} "${activity.subject}" foi concluída`,
+              timestamp: activity.completed_at,
+              user_name: (activity.system_users as any)?.name,
+              metadata: {
+                activity_type: activity.type,
+                scheduled_for: activity.scheduled_for,
+                subject: activity.subject,
+                status: 'completed'
+              }
+            });
+          }
         }
       }
 
