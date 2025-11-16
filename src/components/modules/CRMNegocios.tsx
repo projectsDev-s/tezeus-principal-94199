@@ -1207,8 +1207,8 @@ function CRMNegociosContent({
         </div>
 
         {/* CONTAINER DO PIPELINE */}
-        <div className="flex-1 overflow-x-auto px-4 min-h-0">
-          {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
+        <div className="flex-1 px-4 min-h-0 overflow-hidden">
+          {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full overflow-x-auto">
               {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                     <div className="p-4 pb-3">
@@ -1244,7 +1244,7 @@ function CRMNegociosContent({
               </div>
             </div> : isLoadingColumns ?
         // Skeleton loading para colunas
-        <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
+        <div className="flex gap-1.5 sm:gap-3 h-full min-w-full overflow-x-auto">
               {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
                     <div className="p-4 pb-3 flex-shrink-0">
@@ -1282,7 +1282,7 @@ function CRMNegociosContent({
                     </div>
                   </div>
                 </div>)}
-            </div> : <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
+            </div> : <div className="flex gap-1.5 sm:gap-3 h-full min-w-full overflow-x-auto">
               {columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
