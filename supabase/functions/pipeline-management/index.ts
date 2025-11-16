@@ -878,7 +878,12 @@ async function executeAutomationAction(
           let messagePayload: any = null;
           
           // Buscar item de acordo com o tipo
-          switch (step.type) {
+          // Normalizar tipo para aceitar tanto singular em inglês quanto plural em português
+          const normalizedType = step.type.toLowerCase();
+          
+          switch (normalizedType) {
+            case 'message':
+            case 'messages':
             case 'mensagens': {
               const { data: message } = await supabaseClient
                 .from('quick_messages')
@@ -899,6 +904,7 @@ async function executeAutomationAction(
               break;
             }
             
+            case 'audio':
             case 'audios': {
               const { data: audio, error: audioError } = await supabaseClient
                 .from('quick_audios')
@@ -923,6 +929,7 @@ async function executeAutomationAction(
               break;
             }
             
+            case 'media':
             case 'midias': {
               const { data: media, error: mediaError } = await supabaseClient
                 .from('quick_media')
@@ -960,7 +967,9 @@ async function executeAutomationAction(
               break;
             }
             
-            case 'document': {
+            case 'document':
+            case 'documents':
+            case 'documentos': {
               const { data: document, error: docError } = await supabaseClient
                 .from('quick_documents')
                 .select('*')
@@ -985,11 +994,16 @@ async function executeAutomationAction(
             }
             
             default:
-              console.warn(`⚠️ Tipo de step desconhecido: ${step.type}`);
+              console.error(`❌ Tipo de step não reconhecido: "${step.type}"`);
+              console.error(`   Tipos aceitos: message/messages/mensagens, audio/audios, media/midias, document/documents/documentos`);
+              console.error(`   Step completo:`, JSON.stringify(step, null, 2));
           }
           
           if (!messagePayload) {
-            console.warn(`⚠️ Não foi possível criar payload para step ${i + 1} (tipo: ${step.type}, item_id: ${step.item_id})`);
+            console.error(`❌ Falha ao criar payload para step ${i + 1}`);
+            console.error(`   Tipo recebido: "${step.type}"`);
+            console.error(`   Item ID: ${step.item_id}`);
+            console.error(`   Verifique se o item existe na tabela correspondente`);
             continue;
           }
           
