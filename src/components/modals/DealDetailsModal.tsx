@@ -29,6 +29,8 @@ import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { useUsersCache } from "@/hooks/useUsersCache";
 import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
+import { useCardHistory } from "@/hooks/useCardHistory";
+import { Bot, UserCheck, Users, ArrowRightLeft } from "lucide-react";
 interface Tag {
   id: string;
   name: string;
@@ -335,6 +337,9 @@ export function DealDetailsModal({
   
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
+  
+  // Hook para histórico completo do card
+  const { data: fullHistory = [], isLoading: isLoadingHistory } = useCardHistory(selectedCardId, contactId);
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
@@ -1767,76 +1772,120 @@ export function DealDetailsModal({
               </div>
             </div>}
 
-          {isInitialLoading ? null : activeTab === "historico" && <div className="space-y-4">
+          {isInitialLoading ? null : activeTab === "historico" && <div className="space-y-6">
               <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
                 Histórico Completo
               </h3>
               
-              {/* Histórico de eventos do card */}
-              {cardHistory.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className={cn("text-md font-medium", isDarkMode ? "text-gray-200" : "text-gray-800")}>
-                    Eventos do Ticket
-                  </h4>
-                  {cardHistory.map(event => (
-                    <div key={event.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
-                          {event.action === 'agent_enabled' && '🤖 Agente Ativado'}
-                          {event.action === 'agent_disabled' && '🔴 Agente Desativado'}
-                          {event.action === 'agent_changed' && '🔄 Agente Trocado'}
-                          {event.action === 'card_assigned' && '👤 Ticket Atribuído'}
-                          {event.action === 'card_transferred' && '📤 Ticket Transferido'}
-                          {event.action === 'column_changed' && '📋 Coluna Alterada'}
-                          {event.action === 'status_changed' && '🔔 Status Alterado'}
-                        </Badge>
-                        {event.users?.name && (
-                          <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            por {event.users.name}
-                          </span>
+              {/* Timeline de eventos */}
+              {isLoadingHistory ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : fullHistory.length > 0 ? (
+                <div className="space-y-0">
+                  {fullHistory.map((event, index) => {
+                    // Ícone baseado no tipo de evento
+                    let Icon = MessageSquare;
+                    let iconBgColor = "bg-yellow-400";
+                    let iconColor = "text-gray-900";
+                    
+                    if (event.type === 'agent_activity') {
+                      Icon = Bot;
+                      iconBgColor = "bg-yellow-400";
+                    } else if (event.type === 'user_assigned') {
+                      Icon = UserCheck;
+                      iconBgColor = "bg-yellow-400";
+                    } else if (event.type === 'queue_transfer') {
+                      Icon = Users;
+                      iconBgColor = "bg-yellow-400";
+                    } else if (event.type === 'column_transfer') {
+                      Icon = ArrowRightLeft;
+                      iconBgColor = "bg-yellow-400";
+                    }
+
+                    return (
+                      <div key={event.id} className="relative">
+                        {/* Linha vertical conectando os eventos */}
+                        {index < fullHistory.length - 1 && (
+                          <div 
+                            className={cn(
+                              "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
+                              isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                            )}
+                          />
                         )}
-                      </div>
-                      
-                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        {format(new Date(event.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </p>
-                      
-                      {/* Detalhes específicos de cada tipo de evento */}
-                      {event.metadata && (
-                        <div className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                          {event.action === 'agent_enabled' && (
-                            <p>Agente <strong>{event.metadata.agent_name}</strong> foi ativado</p>
-                          )}
-                          {event.action === 'agent_disabled' && (
-                            <p>Agente <strong>{event.metadata.agent_name}</strong> foi desativado</p>
-                          )}
-                          {event.action === 'agent_changed' && (
-                            <p>
-                              Agente alterado de <strong>{event.metadata.old_agent_name || 'N/A'}</strong> para <strong>{event.metadata.new_agent_name}</strong>
+                        
+                        <div className="flex gap-3 pb-4">
+                          {/* Ícone circular */}
+                          <div className={cn(
+                            "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center z-10",
+                            iconBgColor
+                          )}>
+                            <Icon className={cn("w-5 h-5", iconColor)} />
+                          </div>
+                          
+                          {/* Conteúdo do evento */}
+                          <div className={cn(
+                            "flex-1 rounded-lg p-4 border",
+                            isDarkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-gray-50 border-gray-200"
+                          )}>
+                            {/* Título do evento */}
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <h4 className={cn(
+                                "font-medium text-sm",
+                                isDarkMode ? "text-white" : "text-gray-900"
+                              )}>
+                                {event.type === 'agent_activity' && 'Agente de IA'}
+                                {event.type === 'user_assigned' && 'Conversa Vinculada'}
+                                {event.type === 'queue_transfer' && 'Transferência de Fila'}
+                                {event.type === 'column_transfer' && 'Transferência de Etapa'}
+                              </h4>
+                            </div>
+                            
+                            {/* Descrição */}
+                            <p className={cn(
+                              "text-sm mb-2",
+                              isDarkMode ? "text-gray-300" : "text-gray-700"
+                            )}>
+                              {event.description}
                             </p>
-                          )}
-                          {event.action === 'card_assigned' && (
-                            <p>
-                              Ticket atribuído {event.metadata.old_responsible_name ? `de ${event.metadata.old_responsible_name} ` : ''}
-                              para <strong>{event.metadata.new_responsible_name}</strong>
-                            </p>
-                          )}
-                          {event.action === 'column_changed' && (
-                            <p>
-                              Movido de <strong>{event.metadata.old_column_name || 'N/A'}</strong> para <strong>{event.metadata.new_column_name}</strong>
-                            </p>
-                          )}
+                            
+                            {/* Data e hora */}
+                            <div className="flex items-center gap-2">
+                              <Clock className={cn(
+                                "w-3 h-3",
+                                isDarkMode ? "text-gray-500" : "text-gray-400"
+                              )} />
+                              <span className={cn(
+                                "text-xs",
+                                isDarkMode ? "text-gray-500" : "text-gray-500"
+                              )}>
+                                {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={cn(
+                  "text-center py-8 rounded-lg border",
+                  isDarkMode ? "bg-[#1f1f1f] border-gray-700 text-gray-400" : "bg-gray-50 border-gray-200 text-gray-600"
+                )}>
+                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-40" />
+                  <p>Nenhum histórico encontrado</p>
                 </div>
               )}
               
               {/* Histórico de atividades concluídas */}
               {completedActivities.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className={cn("text-md font-medium mt-6", isDarkMode ? "text-gray-200" : "text-gray-800")}>
+                <div className="space-y-3 mt-8">
+                  <h4 className={cn("text-md font-medium", isDarkMode ? "text-gray-200" : "text-gray-800")}>
                     Atividades Concluídas
                   </h4>
                   {completedActivities.map(activity => (
@@ -1884,104 +1933,6 @@ export function DealDetailsModal({
                       )}
                     </div>
                   ))}
-                </div>
-              )}
-
-              {/* Histórico de transferências de agente */}
-              {agentHistory.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className={cn("text-md font-medium mt-6", isDarkMode ? "text-gray-200" : "text-gray-800")}>
-                    Transferências de Agente IA
-                  </h4>
-                  {agentHistory.map(event => (
-                    <div key={event.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
-                          {event.action === 'agent_enabled' && '🤖 Agente Ativado'}
-                          {event.action === 'agent_disabled' && '🔴 Agente Desativado'}
-                          {event.action === 'agent_changed' && '🔄 Agente Trocado'}
-                        </Badge>
-                        {event.users?.name && (
-                          <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            por {event.users.name}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </p>
-                      
-                      <div className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        {event.action === 'agent_enabled' && (
-                          <p>Agente <strong>{event.agent_name}</strong> foi ativado na conversa</p>
-                        )}
-                        {event.action === 'agent_disabled' && (
-                          <p>Agente <strong>{event.agent_name}</strong> foi desativado na conversa</p>
-                        )}
-                        {event.action === 'agent_changed' && event.metadata && (
-                          <p>
-                            Agente alterado {event.metadata.old_agent_name ? `de <strong>${event.metadata.old_agent_name}</strong> ` : ''}
-                            para <strong>{event.agent_name}</strong>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Histórico de atribuições de responsável */}
-              {assignmentHistory.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className={cn("text-md font-medium mt-6", isDarkMode ? "text-gray-200" : "text-gray-800")}>
-                    Transferências de Responsável
-                  </h4>
-                  {assignmentHistory.map(event => (
-                    <div key={event.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
-                          {event.action === 'assign' && '👤 Atribuído'}
-                          {event.action === 'reassign' && '🔄 Reatribuído'}
-                          {event.action === 'unassign' && '❌ Desatribuído'}
-                        </Badge>
-                        {event.changed_by_user?.name && (
-                          <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            por {event.changed_by_user.name}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        {format(new Date(event.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </p>
-                      
-                      <div className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        {event.action === 'assign' && (
-                          <p>
-                            Conversa atribuída para <strong>{event.to_user?.name || 'Usuário'}</strong>
-                          </p>
-                        )}
-                        {event.action === 'reassign' && (
-                          <p>
-                            Conversa transferida de <strong>{event.from_user?.name || 'N/A'}</strong> para <strong>{event.to_user?.name || 'Usuário'}</strong>
-                          </p>
-                        )}
-                        {event.action === 'unassign' && (
-                          <p>
-                            Conversa desatribuída de <strong>{event.from_user?.name || 'Usuário'}</strong>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Mensagem quando não há histórico */}
-              {cardHistory.length === 0 && completedActivities.length === 0 && agentHistory.length === 0 && assignmentHistory.length === 0 && (
-                <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-                  <p>Nenhum evento ou atividade concluída encontrada</p>
                 </div>
               )}
             </div>}
