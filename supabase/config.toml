@@ -1,5 +1,12 @@
 project_id = "zldeaozqxjwvzgrblyrh"
 
+[realtime]
+enabled = true
+ip_version = "ipv4"
+max_connections = 100
+max_channels_per_client = 100
+max_joins_per_second = 500
+
 [functions.get-queue-users]
 verify_jwt = false
 

@@ -805,51 +805,6 @@ export const useWhatsAppConversations = () => {
           table: 'messages',
           filter: `workspace_id=eq.${workspaceId}`
         },
-        (payload) => {
-          const newMessage = payload.new as any;
-
-          if (!newMessage) {
-            return;
-          }
-
-          setConversations(prev => {
-            const index = prev.findIndex(conv => conv.id === newMessage.conversation_id);
-            if (index === -1) {
-              return prev;
-            }
-
-            const currentConversation = prev[index];
-            const isContactMessage = newMessage.sender_type === 'contact';
-
-            const updatedConversation: WhatsAppConversation = {
-              ...currentConversation,
-              last_message: [{
-                content: newMessage.content || '',
-                message_type: newMessage.message_type || 'text',
-                sender_type: newMessage.sender_type || 'contact',
-                created_at: newMessage.created_at
-              }],
-              last_activity_at: newMessage.created_at || currentConversation.last_activity_at,
-              unread_count: isContactMessage
-                ? (currentConversation.unread_count || 0) + 1
-                : currentConversation.unread_count,
-              _updated_at: Date.now()
-            };
-
-            const updatedList = [...prev];
-            updatedList[index] = updatedConversation;
-            return sortConversationsByActivity(updatedList);
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `workspace_id=eq.${workspaceId}`
-        },
         async (payload) => {
           console.log('💬 [REALTIME Messages] ✅ NOVA MENSAGEM:', {
             messageId: payload.new.id,
