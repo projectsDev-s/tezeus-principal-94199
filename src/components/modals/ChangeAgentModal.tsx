@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -30,6 +30,13 @@ export function ChangeAgentModal({
   const { toast } = useToast();
   const [isChanging, setIsChanging] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(currentAgentId || null);
+
+  // Atualizar selectedAgentId quando o modal abre ou currentAgentId muda
+  useEffect(() => {
+    if (open) {
+      setSelectedAgentId(currentAgentId || null);
+    }
+  }, [open, currentAgentId]);
 
   // Buscar agentes ativos do workspace
   const { data: agents, isLoading } = useQuery({

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,13 @@ export function SetValueModal({
   isDarkMode = false
 }: SetValueModalProps) {
   const [value, setValue] = useState(currentValue.toString());
+
+  // Atualizar o valor quando o modal abre ou currentValue muda
+  useEffect(() => {
+    if (isOpen) {
+      setValue(currentValue.toString());
+    }
+  }, [isOpen, currentValue]);
 
   const handleSave = () => {
     const numericValue = parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
