@@ -277,11 +277,13 @@ serve(async (req) => {
                     const messageText = actionConfig?.message;
                     if (!messageText) {
                       console.warn('⚠️ [Time Automations] send_message sem mensagem configurada');
+                      actionSuccess = false;
                       break;
                     }
 
                     if (!card.conversation_id) {
                       console.error('❌ [Time Automations] Conversa não encontrada no card');
+                      actionSuccess = false;
                       break;
                     }
 
@@ -298,6 +300,7 @@ serve(async (req) => {
 
                     if (sendError) {
                       console.error('❌ [Time Automations] Erro ao enviar mensagem:', sendError);
+                      actionSuccess = false;
                     } else {
                       console.log('✅ [Time Automations] Mensagem enviada com sucesso');
                     }
