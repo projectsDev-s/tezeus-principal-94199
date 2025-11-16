@@ -635,10 +635,12 @@ export const useWhatsAppConversations = () => {
 
   // ===== REALTIME SUBSCRIPTION =====
   useEffect(() => {
+    const startTime = Date.now();
     console.log('🔍 [Realtime Conversations] useEffect EXECUTADO:', {
       hasSelectedWorkspace: !!selectedWorkspace,
       workspaceId: selectedWorkspace?.workspace_id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      startTime
     });
 
     if (!selectedWorkspace?.workspace_id) {
@@ -647,7 +649,7 @@ export const useWhatsAppConversations = () => {
     }
 
     const workspaceId = selectedWorkspace.workspace_id;
-    const channelName = `conversations-${workspaceId}`;
+    const channelName = `conversations-${workspaceId}-${startTime}`;
     
     console.log('🔌 [Realtime Conversations] INICIANDO subscription:', {
       channelName,
