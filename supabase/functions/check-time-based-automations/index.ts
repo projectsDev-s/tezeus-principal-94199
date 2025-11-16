@@ -116,6 +116,9 @@ serve(async (req) => {
         const timeThreshold = new Date();
         timeThreshold.setMinutes(timeThreshold.getMinutes() - timeInMinutes);
 
+        console.log(`🔍 [Time Automations] Time threshold: ${timeThreshold.toISOString()} (NOW - ${timeInMinutes.toFixed(4)} min)`);
+        console.log(`🔍 [Time Automations] Looking for cards in column ${automation.column_id} moved before ${timeThreshold.toISOString()}`);
+
         const { data: eligibleCards, error: cardsError } = await supabase
           .from('pipeline_cards')
           .select(`
@@ -128,6 +131,8 @@ serve(async (req) => {
           .eq('column_id', automation.column_id)
           .lt('moved_to_column_at', timeThreshold.toISOString())
           .eq('status', 'aberto');
+
+        console.log(`🔍 [Time Automations] Query result: ${eligibleCards?.length || 0} cards found, error: ${cardsError ? JSON.stringify(cardsError) : 'none'}`);
 
         if (cardsError) {
           console.error(`❌ [Time Automations] Error fetching cards for automation ${automation.id}:`, cardsError);
