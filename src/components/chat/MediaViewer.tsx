@@ -55,15 +55,20 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     }
   });
 
-  // Detectar tipos de arquivos - PRIORIZAR messageType
+  // Detectar tipos de arquivos - PRIORIZAR messageType e extensões específicas
   const isAudioFile = messageType === 'audio' ||
                       (messageType !== 'document' && messageType !== 'image' && messageType !== 'video' && 
                        /\.(mp3|wav|ogg|aac|flac|webm|m4a|opus)$/i.test(fileName || fileUrl || ''));
-                       
-  const isPdfFile = messageType === 'document' || 
-                    (messageType !== 'audio' && messageType !== 'image' && messageType !== 'video' &&
-                     (/\.pdf$/i.test(fileName || '') || /\.pdf$/i.test(fileUrl) || 
-                      fileName?.toLowerCase().includes('pdf') || fileUrl?.toLowerCase().includes('pdf')));
+  
+  // Verificar tipos específicos de documentos PRIMEIRO (antes do PDF genérico)
+  const isExcelFile = /\.(xlsx|xls)$/i.test(fileName || '') || /\.(xlsx|xls)$/i.test(fileUrl);
+  const isWordFile = /\.(docx|doc)$/i.test(fileName || '') || /\.(docx|doc)$/i.test(fileUrl);
+  const isPowerPointFile = /\.(pptx|ppt)$/i.test(fileName || '') || /\.(pptx|ppt)$/i.test(fileUrl);
+                      
+  // PDF só se for realmente PDF (não todos os documentos)
+  const isPdfFile = !isExcelFile && !isWordFile && !isPowerPointFile && 
+                    (/\.pdf$/i.test(fileName || '') || /\.pdf$/i.test(fileUrl) || 
+                     (messageType === 'document' && (fileName?.toLowerCase().includes('pdf') || fileUrl?.toLowerCase().includes('pdf'))));
                       
   const isImageFile = messageType === 'image' ||
                       (messageType !== 'audio' && messageType !== 'document' && messageType !== 'video' &&
@@ -72,10 +77,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   const isVideoFile = messageType === 'video' ||
                       (messageType !== 'audio' && messageType !== 'document' && messageType !== 'image' &&
                        /\.(mp4|avi|mov|wmv|flv|webm)$/i.test(fileName || fileUrl || ''));
-                       
-  const isExcelFile = /\.(xlsx|xls)$/i.test(fileName || '') || /\.(xlsx|xls)$/i.test(fileUrl);
-  const isWordFile = /\.(docx|doc)$/i.test(fileName || '') || /\.(docx|doc)$/i.test(fileUrl);
-  const isPowerPointFile = /\.(pptx|ppt)$/i.test(fileName || '') || /\.(pptx|ppt)$/i.test(fileUrl);
 
   // Log específico para detecções
   console.log('🔍 DETECÇÃO FINAL:', {
@@ -107,7 +108,117 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     setIsLoading(false);
   }, [fileUrl]);
 
-  // PRIMEIRA VERIFICAÇÃO: PDF
+  // VERIFICAÇÕES POR PRIORIDADE: ESPECÍFICOS ANTES DO GENÉRICO
+  
+  // PRIMEIRA VERIFICAÇÃO: Excel (específico)
+  if (isExcelFile) {
+    return (
+      <div className={className}>
+        <div className="relative inline-block">
+          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+               onClick={handleDownload}>
+            <div className="relative">
+              <FileText className="h-10 w-10 text-green-600" />
+              <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs px-1 rounded font-medium">
+                XLS
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {fileName || 'Planilha Excel'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique para baixar
+              </p>
+            </div>
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </div>
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // SEGUNDA VERIFICAÇÃO: Word (específico)
+  if (isWordFile) {
+    return (
+      <div className={className}>
+        <div className="relative inline-block">
+          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+               onClick={handleDownload}>
+            <div className="relative">
+              <FileText className="h-10 w-10 text-primary" />
+              <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-1 rounded font-medium">
+                DOC
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {fileName || 'Documento Word'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique para baixar
+              </p>
+            </div>
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </div>
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // TERCEIRA VERIFICAÇÃO: PowerPoint (específico)
+  if (isPowerPointFile) {
+    return (
+      <div className={className}>
+        <div className="relative inline-block">
+          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
+               onClick={handleDownload}>
+            <div className="relative">
+              <FileText className="h-10 w-10 text-orange-600" />
+              <div className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs px-1 rounded font-medium">
+                PPT
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {fileName || 'Apresentação PowerPoint'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique para baixar
+              </p>
+            </div>
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </div>
+          {timestamp && (
+            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+              {new Date(timestamp).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // QUARTA VERIFICAÇÃO: PDF (genérico para documentos)
   if (isPdfFile) {
     console.log('🔴 RENDERIZANDO PDF:', { fileName, fileUrl, messageType, extension: fileName?.split('.').pop()?.toLowerCase() });
     return (
@@ -153,7 +264,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     );
   }
 
-  // SEGUNDA VERIFICAÇÃO: IMAGEM
+  // QUINTA VERIFICAÇÃO: IMAGEM
   if (isImageFile || messageType === 'image') {
     console.log('📸 Renderizando imagem:', { fileName, fileUrl, isLoading });
     
@@ -230,7 +341,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     );
   }
 
-  // TERCEIRA VERIFICAÇÃO: VÍDEO
+  // SEXTA VERIFICAÇÃO: VÍDEO
   if (isVideoFile || messageType === 'video') {
     return (
       <div className={className}>
@@ -270,7 +381,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     );
   }
 
-  // QUARTA VERIFICAÇÃO: ÁUDIO
+  // SÉTIMA VERIFICAÇÃO: ÁUDIO
   if (isAudioFile || messageType === 'audio') {
     return (
       <div className={className}>
@@ -285,112 +396,6 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           onDownload={handleDownload}
           metadata={metadata}
         />
-      </div>
-    );
-  }
-
-  // QUINTA VERIFICAÇÃO: OUTROS ARQUIVOS
-  if (isExcelFile) {
-    return (
-      <div className={className}>
-        <div className="relative inline-block">
-          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
-               onClick={handleDownload}>
-            <div className="relative">
-              <FileText className="h-10 w-10 text-green-600" />
-              <div className="absolute -top-1 -right-1 bg-green-600 text-white text-xs px-1 rounded font-medium">
-                XLS
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">
-                {fileName || 'Planilha Excel'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Clique para baixar
-              </p>
-            </div>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </div>
-          {timestamp && (
-            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-              {new Date(timestamp).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (isWordFile) {
-    return (
-      <div className={className}>
-        <div className="relative inline-block">
-          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
-               onClick={handleDownload}>
-            <div className="relative">
-              <FileText className="h-10 w-10 text-primary" />
-              <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs px-1 rounded font-medium">
-                DOC
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">
-                {fileName || 'Documento Word'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Clique para baixar
-              </p>
-            </div>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </div>
-          {timestamp && (
-            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-              {new Date(timestamp).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (isPowerPointFile) {
-    return (
-      <div className={className}>
-        <div className="relative inline-block">
-          <div className="flex items-center gap-3 p-2 bg-muted rounded-lg max-w-[300px] cursor-pointer hover:bg-muted/80 transition-colors border border-border" 
-               onClick={handleDownload}>
-            <div className="relative">
-              <FileText className="h-10 w-10 text-orange-600" />
-              <div className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs px-1 rounded font-medium">
-                PPT
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">
-                {fileName || 'Apresentação PowerPoint'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Clique para baixar
-              </p>
-            </div>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </div>
-          {timestamp && (
-            <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-              {new Date(timestamp).toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-          )}
-        </div>
       </div>
     );
   }
