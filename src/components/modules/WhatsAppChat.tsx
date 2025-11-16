@@ -2163,8 +2163,8 @@ export function WhatsAppChat({
                            : message.message_type === 'image' || message.message_type === 'video' 
                              ? "bg-transparent" 
                              : "bg-muted px-2 py-1.5"
-                       // Mensagens do agente
-                       : message.sender_type === 'ia'
+                       // Mensagens do agente IA (origem_resposta: automatica)
+                       : message.origem_resposta === 'automatica'
                          ? message.message_type === 'audio'
                            ? ""
                            : message.message_type === 'image' || message.message_type === 'video'
@@ -2219,14 +2219,14 @@ export function WhatsAppChat({
                         <div className="flex items-end justify-between gap-2 min-w-0">
                     <p className={cn(
                       "text-sm break-words flex-1",
-                      message.sender_type === 'ia' && "text-green-900 dark:text-green-100"
+                      message.origem_resposta === 'automatica' && "text-green-900 dark:text-green-100"
                     )}>{message.content}</p>
                     
                     <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
                       <span className={cn(
                         isContactMessage 
                           ? "text-muted-foreground"
-                          : message.sender_type === 'ia'
+                          : message.origem_resposta === 'automatica'
                             ? "text-green-700 dark:text-green-300"
                             : "text-primary-foreground/70"
                       )}>
