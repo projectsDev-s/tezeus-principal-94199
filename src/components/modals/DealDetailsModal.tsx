@@ -31,7 +31,7 @@ import { useUsersCache } from "@/hooks/useUsersCache";
 import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 import { useCardHistory } from "@/hooks/useCardHistory";
-import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon, Filter } from "lucide-react";
+import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon } from "lucide-react";
 interface Tag {
   id: string;
   name: string;
@@ -1816,92 +1816,21 @@ export function DealDetailsModal({
                 </h3>
                 
                 {/* Filtro de eventos */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <Filter className="w-4 h-4" />
-                      {historyFilter === "todos" ? "Todos" : 
-                       historyFilter === "agent_activity" ? "Agente IA" :
-                       historyFilter === "user_assigned" ? "Conversa Vinculada" :
-                       historyFilter === "queue_transfer" ? "Transferência de Fila" :
-                       historyFilter === "column_transfer" ? "Transferência de Etapa" :
-                       historyFilter === "activity" ? "Atividade" :
-                       historyFilter === "tag" ? "Tag" : "Mensagem"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2" align="end">
-                    <div className="space-y-1">
-                      <Button
-                        variant={historyFilter === "todos" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("todos")}
-                      >
-                        <LayoutGrid className="w-4 h-4" />
-                        <span>Todos</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "agent_activity" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("agent_activity")}
-                      >
-                        <Bot className="w-4 h-4" />
-                        <span>Evento de Agente IA</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "user_assigned" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("user_assigned")}
-                      >
-                        <UserCheck className="w-4 h-4" />
-                        <span>Conversa Vinculada</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "queue_transfer" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("queue_transfer")}
-                      >
-                        <Users className="w-4 h-4" />
-                        <span>Transferência de Fila</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "column_transfer" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("column_transfer")}
-                      >
-                        <ArrowRightLeft className="w-4 h-4" />
-                        <span>Transferência de Etapa</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "activity" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("activity")}
-                      >
-                        <Calendar className="w-4 h-4" />
-                        <span>Atividade</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "tag" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("tag")}
-                      >
-                        <TagIcon className="w-4 h-4" />
-                        <span>Tag</span>
-                      </Button>
-                      <Button
-                        variant={historyFilter === "message" ? "secondary" : "ghost"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => setHistoryFilter("message")}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>Mensagem</span>
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filtrar por tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="agent_activity">Evento de Agente IA</SelectItem>
+                    <SelectItem value="user_assigned">Conversa Vinculada</SelectItem>
+                    <SelectItem value="queue_transfer">Transferência de Fila</SelectItem>
+                    <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
+                    <SelectItem value="activity">Atividade</SelectItem>
+                    <SelectItem value="tag">Tag</SelectItem>
+                    <SelectItem value="message">Mensagem</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               {/* Timeline de eventos */}
