@@ -1246,7 +1246,7 @@ function CRMNegociosContent({
         // Skeleton loading para colunas
         <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0">
-                  <div className="bg-card rounded-lg border border-t-4 h-[600px] max-h-[80vh] flex flex-col">
+                  <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
                     <div className="p-4 pb-3 flex-shrink-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1298,7 +1298,7 @@ function CRMNegociosContent({
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
                     <div className="w-60 sm:w-72 flex-shrink-0">
-                       <div className={cn("bg-card rounded-lg border border-t-4 h-[600px] max-h-[80vh] flex flex-col border-b-2 border-b-primary", `border-t-[${column.color}]`)} style={{
+                       <div className={cn("bg-card rounded-lg border border-t-4 h-full flex flex-col border-b-2 border-b-primary", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color
                 }}>
                         {/* Cabeçalho da coluna - fundo branco/claro */}
