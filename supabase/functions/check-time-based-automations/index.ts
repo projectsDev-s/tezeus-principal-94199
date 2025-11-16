@@ -6,6 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Função helper para converter qualquer unidade de tempo para minutos
+function convertToMinutes(value: number, unit: string): number {
+  switch (unit) {
+    case 'seconds':
+      return value / 60;
+    case 'minutes':
+      return value;
+    case 'hours':
+      return value * 60;
+    case 'days':
+      return value * 1440;
+    default:
+      console.warn(`⚠️ Unknown time unit: ${unit}, treating as minutes`);
+      return value;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -64,14 +81,34 @@ serve(async (req) => {
           ? JSON.parse(trigger.trigger_config) 
           : trigger.trigger_config;
 
-        const timeInMinutes = triggerConfig?.time_in_minutes || 0;
-        
-        if (timeInMinutes <= 0) {
-          console.warn(`⚠️ [Time Automations] Invalid time config for automation ${automation.id}`);
+        // Suportar tanto configuração nova (time_unit + time_value) quanto antiga (time_in_minutes)
+        let timeInMinutes: number;
+        let originalValue: number;
+        let originalUnit: string;
+
+        if (triggerConfig?.time_unit && triggerConfig?.time_value) {
+          // Nova configuração com unidade
+          originalValue = parseFloat(triggerConfig.time_value);
+          originalUnit = triggerConfig.time_unit;
+          timeInMinutes = convertToMinutes(originalValue, originalUnit);
+          
+          console.log(`🔍 [Time Automations] Automation "${automation.name}": ${originalValue} ${originalUnit} = ${timeInMinutes.toFixed(4)} minutes`);
+        } else if (triggerConfig?.time_in_minutes) {
+          // Configuração antiga em minutos
+          timeInMinutes = triggerConfig.time_in_minutes;
+          originalValue = timeInMinutes;
+          originalUnit = 'minutes';
+          
+          console.log(`🔍 [Time Automations] Automation "${automation.name}": ${timeInMinutes} minutes (legacy format)`);
+        } else {
+          console.warn(`⚠️ [Time Automations] Invalid time config for automation ${automation.id}:`, triggerConfig);
           continue;
         }
-
-        console.log(`🔍 [Time Automations] Checking automation "${automation.name}" (${timeInMinutes} minutes)`);
+        
+        if (timeInMinutes <= 0) {
+          console.warn(`⚠️ [Time Automations] Invalid time value (${timeInMinutes} minutes) for automation ${automation.id}`);
+          continue;
+        }
 
         // Buscar cards que estão na coluna há mais tempo que o configurado
         // e que ainda não tiveram essa automação executada
@@ -150,6 +187,8 @@ serve(async (req) => {
                   execution_type: 'tempo_na_coluna',
                   metadata: {
                     time_in_minutes: timeInMinutes,
+                    original_value: originalValue,
+                    original_unit: originalUnit,
                     moved_to_column_at: card.moved_to_column_at
                   }
                 });
