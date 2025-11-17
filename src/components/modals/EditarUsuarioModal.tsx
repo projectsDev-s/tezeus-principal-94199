@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Eye, X, Camera, EyeOff, ChevronDown } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 import { useInstances } from "@/hooks/useInstances";
 import { useInstanceAssignments } from "@/hooks/useInstanceAssignments";
@@ -35,10 +36,69 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
   const [showPassword, setShowPassword] = useState(false);
   const [selectedCargos, setSelectedCargos] = useState<string[]>([]);
   const [showCargoDropdown, setShowCargoDropdown] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { channels } = useChannels();
   const { listCargos, loading: cargosLoading } = useCargos();
   const { updateUser, loading } = useSystemUsers();
   const [cargos, setCargos] = useState<any[]>([]);
+  
+  const uploadAvatar = async (file: File, userId: string): Promise<string | null> => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      return null;
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Arquivo muito grande",
+          description: "O tamanho máximo é 5MB"
+        });
+        return;
+      }
+      
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+    setFormData(prev => ({ ...prev, avatar: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -48,6 +108,13 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
     queues: "",
     defaultChannel: "",
     defaultPhone: "",
+    avatar: ""
+  });
+    temporaryPassword: false,
+    queues: "",
+    defaultChannel: "",
+    defaultPhone: "",
+    avatar: ""
   });
 
   const [focusedFields, setFocusedFields] = useState({
@@ -86,13 +153,25 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
         queues: "",
         defaultChannel: user.default_channel || "",
         defaultPhone: "",
+        avatar: user.avatar || ""
       });
+      setAvatarPreview(user.avatar || '');
       setSelectedCargos(user.cargo_ids || []);
     }
   }, [user]);
 
   const handleSubmit = async () => {
     if (!user) return;
+    
+    let avatarUrl = formData.avatar;
+
+    // Upload new avatar if provided
+    if (avatarFile) {
+      const uploadedUrl = await uploadAvatar(avatarFile, user.id);
+      if (uploadedUrl) {
+        avatarUrl = uploadedUrl;
+      }
+    }
     
     // Update user data
     const updateData: any = {
@@ -103,6 +182,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
       status: user.status,
       default_channel: formData.defaultChannel || null,
       cargo_ids: selectedCargos,
+      avatar: avatarUrl
     };
 
     // Only include password if provided

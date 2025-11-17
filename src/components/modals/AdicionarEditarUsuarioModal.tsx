@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { User, Eye, EyeOff, Plus, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { User, Eye, EyeOff, Plus, X, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,6 +39,9 @@ export function AdicionarEditarUsuarioModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -47,13 +50,68 @@ export function AdicionarEditarUsuarioModal({
     profile: 'user',
     senha: '',
     default_channel: '',
-    phone: ''
+    phone: '',
+    avatar: ''
   });
 
   const { toast } = useToast();
   const { workspaces, isLoading: workspacesLoading } = useWorkspaces();
   const { connections, isLoading: connectionsLoading } = useWorkspaceConnections(selectedWorkspaceId);
   const { createUser, updateUser } = useSystemUsers();
+  
+  const uploadAvatar = async (file: File, userId: string): Promise<string | null> => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      return null;
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Arquivo muito grande",
+          description: "O tamanho máximo é 5MB"
+        });
+        return;
+      }
+      
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+    setFormData(prev => ({ ...prev, avatar: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // Reset form when modal opens/closes or editing user changes
   useEffect(() => {
@@ -66,8 +124,10 @@ export function AdicionarEditarUsuarioModal({
           profile: editingUser.profile || 'user',
           senha: '', // Never populate password for security
           default_channel: editingUser.default_channel || '',
-          phone: '' // Phone not available in SystemUser type
+          phone: '', // Phone not available in SystemUser type
+          avatar: editingUser.avatar || ''
         });
+        setAvatarPreview(editingUser.avatar || '');
         
         // Get workspace from user's workspaces (first one if multiple)
         if (editingUser.workspaces && editingUser.workspaces.length > 0) {
@@ -81,9 +141,12 @@ export function AdicionarEditarUsuarioModal({
           profile: 'user',
           senha: '',
           default_channel: '',
-          phone: ''
+          phone: '',
+          avatar: ''
         });
         setSelectedWorkspaceId('');
+        setAvatarFile(null);
+        setAvatarPreview('');
       }
     }
   }, [open, editingUser]);
@@ -172,9 +235,12 @@ export function AdicionarEditarUsuarioModal({
         profile: 'user',
         senha: '',
         default_channel: '',
-        phone: ''
+        phone: '',
+        avatar: ''
       });
       setSelectedWorkspaceId('');
+      setAvatarFile(null);
+      setAvatarPreview('');
       onOpenChange(false);
       
       // Call success callback if provided
@@ -200,9 +266,12 @@ export function AdicionarEditarUsuarioModal({
       profile: 'user',
       senha: '',
       default_channel: '',
-      phone: ''
+      phone: '',
+      avatar: ''
     });
     setSelectedWorkspaceId('');
+    setAvatarFile(null);
+    setAvatarPreview('');
     onOpenChange(false);
   };
 
@@ -222,6 +291,48 @@ export function AdicionarEditarUsuarioModal({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Avatar Upload */}
+          <div className="flex items-center gap-4 pb-4 border-b">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-10 w-10 text-muted-foreground" />
+                )}
+              </div>
+              {avatarPreview && (
+                <button
+                  onClick={handleRemoveAvatar}
+                  className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                {avatarPreview ? 'Alterar Foto' : 'Adicionar Foto'}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                JPG, PNG ou GIF (máx. 5MB)
+              </p>
+            </div>
+          </div>
+
           {/* Dados Básicos */}
           <div className="space-y-4">
             <h3 className="font-medium text-sm text-muted-foreground">Dados Básicos</h3>
