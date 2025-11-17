@@ -194,20 +194,17 @@ serve(async (req) => {
                     console.log(`🔍 [Time Automations] Target column ID: ${targetColumnId}`);
                     
                     if (targetColumnId) {
+                      // Usar RPC para mover card e disparar eventos Realtime
                       const { data: updateResult, error: updateError } = await supabase
-                        .from('pipeline_cards')
-                        .update({ 
-                          column_id: targetColumnId,
-                          moved_to_column_at: new Date().toISOString(),
-                          updated_at: new Date().toISOString()
-                        })
-                        .eq('id', card.id)
-                        .select();
+                        .rpc('move_pipeline_card', {
+                          p_card_id: card.id,
+                          p_new_column_id: targetColumnId
+                        });
                       
                       if (updateError) {
                         console.error(`❌ [Time Automations] Erro ao mover card:`, updateError);
                       } else {
-                        console.log(`✅ [Time Automations] Card ${card.id} movido para coluna ${targetColumnId}`, updateResult);
+                        console.log(`✅ [Time Automations] Card ${card.id} movido via RPC para coluna ${targetColumnId}`, updateResult);
                       }
                     } else {
                       console.error(`❌ [Time Automations] column_id não encontrado no actionConfig`);
