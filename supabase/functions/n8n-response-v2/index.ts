@@ -730,6 +730,25 @@ serve(async (req) => {
       quoted_message_id: reply_to_message_id || 'none'
     });
 
+    // Se mensagem é de contato, verificar automações
+    if (direction === 'incoming') {
+      console.log(`🔍 [${requestId}] Verificando automações para contato ${contactId}, conversa ${conversationId}`);
+      
+      try {
+        await supabase.functions.invoke('check-message-automations', {
+          body: {
+            contactId,
+            conversationId,
+            workspaceId: workspace_id,
+            messageId: newMessage.id
+          }
+        });
+      } catch (automationError) {
+        console.error(`⚠️ [${requestId}] Erro ao verificar automações:`, automationError);
+        // Não falhar a request se automações falharem
+      }
+    }
+
     // Update conversation timestamp (triggers will handle unread_count)
     const { error: conversationUpdateError } = await supabase
       .from('conversations')
