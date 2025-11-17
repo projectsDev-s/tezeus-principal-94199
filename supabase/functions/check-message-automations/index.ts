@@ -212,7 +212,7 @@ serve(async (req) => {
         if (actions && actions.length > 0) {
           for (const action of actions) {
             try {
-              await executeAction(action, card, supabase);
+              await executeAction(action, card, supabase, workspaceId);
             } catch (actionError) {
               console.error(`❌ Erro ao executar ação:`, actionError);
             }
@@ -255,7 +255,7 @@ serve(async (req) => {
   }
 });
 
-async function executeAction(action: any, card: any, supabaseClient: any) {
+async function executeAction(action: any, card: any, supabaseClient: any, workspaceId: string) {
   console.log(`🎬 Executando ação: ${action.action_type}`);
 
   // Normalizar action_config
@@ -277,7 +277,12 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
         return;
       }
 
-      // Buscar contato e conversa
+      if (!card.conversation_id) {
+        console.error('❌ Card sem conversation_id');
+        return;
+      }
+
+      // Buscar contato
       const { data: contact } = await supabaseClient
         .from('contacts')
         .select('phone')
@@ -289,65 +294,14 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
         return;
       }
 
-      // Buscar workspace_id e connection
-      const { data: cardData } = await supabaseClient
-        .from('pipeline_cards')
-        .select('workspace_id, conversation_id')
-        .eq('id', card.id)
+      // Buscar connection_id da conversa
+      const { data: conversation } = await supabaseClient
+        .from('conversations')
+        .select('connection_id')
+        .eq('id', card.conversation_id)
         .single();
 
-      if (!cardData) {
-        console.error('❌ Card não encontrado no banco');
-        return;
-      }
-
-      let conversationId = cardData.conversation_id;
-      let connectionId = null;
-
-      // Se o card não tiver conversation_id, buscar pela contact_id
-      if (!conversationId) {
-        console.log('⚠️ Card sem conversation_id, buscando conversa pelo contact_id...');
-        const { data: conv } = await supabaseClient
-          .from('conversations')
-          .select('id, connection_id')
-          .eq('contact_id', card.contact_id)
-          .eq('workspace_id', cardData.workspace_id)
-          .order('last_activity_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (!conv) {
-          console.error('❌ Nenhuma conversa encontrada para o contato');
-          return;
-        }
-        
-        conversationId = conv.id;
-        connectionId = conv.connection_id;
-        
-        // Atualizar o card com o conversation_id
-        await supabaseClient
-          .from('pipeline_cards')
-          .update({ conversation_id: conversationId })
-          .eq('id', card.id);
-        
-        console.log(`✅ Conversa encontrada e vinculada ao card: ${conversationId}`);
-      } else {
-        // Buscar connection_id da conversa
-        const { data: conversation } = await supabaseClient
-          .from('conversations')
-          .select('connection_id')
-          .eq('id', conversationId)
-          .single();
-
-        if (!conversation) {
-          console.error('❌ Conversa não encontrada no banco');
-          return;
-        }
-
-        connectionId = conversation.connection_id;
-      }
-
-      if (!connectionId) {
+      if (!conversation?.connection_id) {
         console.error('❌ Connection não encontrada');
         return;
       }
@@ -357,7 +311,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
       // Chamar test-send-msg
       const { error: sendError } = await supabaseClient.functions.invoke('test-send-msg', {
         body: {
-          connectionId: connectionId,
+          connectionId: conversation.connection_id,
           phone: contact.phone,
           message: messageText
         }
@@ -378,6 +332,11 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
         return;
       }
 
+      if (!card.conversation_id) {
+        console.error('❌ Card sem conversation_id');
+        return;
+      }
+
       // Buscar funil
       const { data: funnel } = await supabaseClient
         .from('quick_funnels')
@@ -392,71 +351,21 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
       console.log(`📊 Enviando funil: ${funnel.title}`);
 
-      // Buscar contato e conversa
+      // Buscar contato
       const { data: contact } = await supabaseClient
         .from('contacts')
         .select('phone')
         .eq('id', card.contact_id)
         .single();
 
-      const { data: cardData } = await supabaseClient
-        .from('pipeline_cards')
-        .select('workspace_id, conversation_id')
-        .eq('id', card.id)
+      // Buscar connection_id da conversa
+      const { data: conversation } = await supabaseClient
+        .from('conversations')
+        .select('connection_id')
+        .eq('id', card.conversation_id)
         .single();
 
-      if (!cardData) {
-        console.error('❌ Card não encontrado');
-        return;
-      }
-
-      let conversationId = cardData.conversation_id;
-      let connectionId = null;
-
-      // Se o card não tiver conversation_id, buscar pela contact_id
-      if (!conversationId) {
-        console.log('⚠️ Card sem conversation_id, buscando conversa pelo contact_id...');
-        const { data: conv } = await supabaseClient
-          .from('conversations')
-          .select('id, connection_id')
-          .eq('contact_id', card.contact_id)
-          .eq('workspace_id', cardData.workspace_id)
-          .order('last_activity_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (!conv) {
-          console.error('❌ Nenhuma conversa encontrada para o contato');
-          return;
-        }
-        
-        conversationId = conv.id;
-        connectionId = conv.connection_id;
-        
-        // Atualizar o card com o conversation_id
-        await supabaseClient
-          .from('pipeline_cards')
-          .update({ conversation_id: conversationId })
-          .eq('id', card.id);
-        
-        console.log(`✅ Conversa encontrada e vinculada ao card: ${conversationId}`);
-      } else {
-        // Buscar connection_id da conversa
-        const { data: conversation } = await supabaseClient
-          .from('conversations')
-          .select('connection_id')
-          .eq('id', conversationId)
-          .single();
-
-        if (!conversation) {
-          console.error('❌ Conversa não encontrada no banco');
-          return;
-        }
-
-        connectionId = conversation.connection_id;
-      }
-
-      if (!contact || !connectionId) {
+      if (!contact || !conversation?.connection_id) {
         console.error('❌ Dados insuficientes para enviar funil');
         return;
       }
@@ -492,7 +401,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
             if (message) {
               messagePayload = {
-                connectionId: connectionId,
+                connectionId: conversation.connection_id,
                 phone: contact.phone,
                 message: message.content
               };
@@ -510,7 +419,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
             if (audio) {
               messagePayload = {
-                connectionId: connectionId,
+                connectionId: conversation.connection_id,
                 phone: contact.phone,
                 type: 'audio',
                 file_url: audio.file_url,
@@ -533,7 +442,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
                              media.file_url?.match(/\.(mp4|mov|avi|mkv)$/i);
               
               messagePayload = {
-                connectionId: connectionId,
+                connectionId: conversation.connection_id,
                 phone: contact.phone,
                 type: isVideo ? 'video' : 'image',
                 file_url: media.file_url,
@@ -553,7 +462,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
             if (document) {
               messagePayload = {
-                connectionId: connectionId,
+                connectionId: conversation.connection_id,
                 phone: contact.phone,
                 type: 'document',
                 file_url: document.file_url,
