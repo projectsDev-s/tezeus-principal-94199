@@ -29,7 +29,6 @@ interface CriarAgenteModalProps {
 interface FormData {
   workspace_id: string;
   name: string;
-  agent_type: string;
   api_key: string;
   model: string;
   system_instructions: string;
@@ -59,7 +58,6 @@ export function CriarAgenteModal({
   const [formData, setFormData] = useState<FormData>({
     workspace_id: '',
     name: '',
-    agent_type: 'conversational',
     api_key: '',
     model: 'gpt-4o-mini',
     system_instructions: '',
@@ -218,7 +216,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
           id: agentId,
           workspace_id: formData.workspace_id,
           name: formData.name,
-          agent_type: formData.agent_type,
           api_key_encrypted: formData.api_key,
           model: formData.model,
           system_instructions: formData.system_instructions,
@@ -252,7 +249,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
       setFormData({
         workspace_id: '',
         name: '',
-        agent_type: 'conversational',
         api_key: '',
         model: 'gpt-4o-mini',
         system_instructions: '',
@@ -372,21 +368,8 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
             </div>
           </div>
 
-          {/* Tipo e Modelo */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="agent_type">Tipo de Agente</Label>
-              <Select value={formData.agent_type} onValueChange={(value) => setFormData({ ...formData, agent_type: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="conversational">Conversacional</SelectItem>
-                  <SelectItem value="transactional">Transacional</SelectItem>
-                  <SelectItem value="informational">Informacional</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Modelo */}
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
               <Label htmlFor="model">Modelo OpenAI</Label>
               <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
