@@ -423,10 +423,10 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
             if (audio) {
               messagePayload = {
                 conversation_id: card.conversation_id,
-                content: audio.file_url,
+                content: '',
                 message_type: 'audio',
-                file_name: audio.title || 'audio.mp3',
-                mime_type: 'audio/mpeg'
+                file_url: audio.file_url,
+                file_name: audio.file_name || audio.title || 'audio.mp3'
               };
             }
             break;
@@ -441,22 +441,31 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
               .single();
 
             if (media) {
-              const isVideo = media.file_type?.includes('video') || 
-                             media.file_url?.match(/\.(mp4|mov|avi|mkv)$/i);
+              // Determinar tipo baseado no file_type ou URL
+              let mediaType = 'image';
+              if (media.file_type?.startsWith('video/')) {
+                mediaType = 'video';
+              } else if (media.file_url) {
+                const url = media.file_url.toLowerCase();
+                if (url.includes('.mp4') || url.includes('.mov') || url.includes('.avi')) {
+                  mediaType = 'video';
+                }
+              }
               
               messagePayload = {
                 conversation_id: card.conversation_id,
-                content: media.file_url,
-                message_type: isVideo ? 'video' : 'image',
-                file_name: media.title || (isVideo ? 'video.mp4' : 'image.jpg'),
-                mime_type: isVideo ? 'video/mp4' : 'image/jpeg'
+                content: media.title || '',
+                message_type: mediaType,
+                file_url: media.file_url,
+                file_name: media.file_name || media.title || `media.${mediaType === 'video' ? 'mp4' : 'jpg'}`
               };
             }
             break;
           }
 
           case 'document':
-          case 'documents': {
+          case 'documents':
+          case 'documentos': {
             const { data: document } = await supabaseClient
               .from('quick_documents')
               .select('*')
@@ -466,10 +475,10 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
             if (document) {
               messagePayload = {
                 conversation_id: card.conversation_id,
-                content: document.file_url,
+                content: document.title || '',
                 message_type: 'document',
-                file_name: document.title || 'document.pdf',
-                mime_type: 'application/pdf'
+                file_url: document.file_url,
+                file_name: document.file_name || document.title || 'document.pdf'
               };
             }
             break;
