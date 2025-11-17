@@ -179,24 +179,27 @@ serve(async (req) => {
           continue;
         }
 
-        // 🔒 Verificar quantas vezes já foi executada para este card nesta coluna
+        // 🔒 Verificar quantas vezes já foi executada NESTA entrada na coluna
+        // Só conta execuções que foram feitas DEPOIS da última entrada na coluna
         const { data: existingExecutions, error: execError } = await supabase
           .from('automation_executions')
-          .select('id')
+          .select('id, executed_at')
           .eq('card_id', card.id)
           .eq('column_id', card.column_id)
           .eq('automation_id', automation.id)
-          .eq('trigger_type', 'message_received');
+          .eq('trigger_type', 'message_received')
+          .gte('executed_at', columnEntryDate); // ✅ APENAS execuções após entrada atual
 
         const executionCount = existingExecutions?.length || 0;
         
         // Calcular quantas vezes a automação DEVERIA ter sido executada
         const expectedExecutions = Math.floor(messageCount / requiredMessageCount);
         
-        console.log(`📊 Execuções: ${executionCount} realizadas, ${expectedExecutions} esperadas`);
+        console.log(`📊 Execuções nesta entrada: ${executionCount} realizadas, ${expectedExecutions} esperadas`);
+        console.log(`📅 Contando apenas execuções após: ${columnEntryDate}`);
 
         if (executionCount >= expectedExecutions) {
-          console.log(`🚫 Automação "${automation.name}" já foi executada ${executionCount}x - aguardando mais mensagens`);
+          console.log(`🚫 Automação "${automation.name}" já foi executada ${executionCount}x nesta entrada - aguardando mais mensagens`);
           continue;
         }
 
