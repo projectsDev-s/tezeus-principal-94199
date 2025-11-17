@@ -146,7 +146,6 @@ export type Database = {
       }
       ai_agents: {
         Row: {
-          agent_type: string
           api_key_encrypted: string | null
           api_provider: string
           assign_responsible: boolean | null
@@ -179,7 +178,6 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
-          agent_type?: string
           api_key_encrypted?: string | null
           api_provider?: string
           assign_responsible?: boolean | null
@@ -212,7 +210,6 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
-          agent_type?: string
           api_key_encrypted?: string | null
           api_provider?: string
           assign_responsible?: boolean | null
