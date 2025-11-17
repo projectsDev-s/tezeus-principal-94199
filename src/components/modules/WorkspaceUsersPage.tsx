@@ -88,6 +88,60 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
     return null;
   }
 
+  // Avatar functions
+  const uploadAvatar = async (file: File, userId: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      return null;
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Arquivo muito grande",
+          description: "O tamanho máximo é 5MB"
+        });
+        return;
+      }
+      
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+    setFormData(prev => ({ ...prev, avatar: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // Fetch default instance when showing add user form
   useEffect(() => {
     if (showAddUser && workspaceId && !defaultInstance) {
@@ -352,6 +406,48 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
           <h4 className="font-medium text-lg">
             {editingUser ? 'Editar Usuário' : 'Criar Novo Usuário'}
           </h4>
+          
+          {/* Avatar Upload */}
+          <div className="flex items-center gap-4 pb-4 border-b">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-10 w-10 text-muted-foreground" />
+                )}
+              </div>
+              {avatarPreview && (
+                <button
+                  onClick={handleRemoveAvatar}
+                  className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                {avatarPreview ? 'Alterar Foto' : 'Adicionar Foto'}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                JPG, PNG ou GIF (máx. 5MB)
+              </p>
+            </div>
+          </div>
           
           {/* Dados Básicos */}
           <div className="space-y-4">

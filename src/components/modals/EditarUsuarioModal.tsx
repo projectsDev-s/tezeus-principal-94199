@@ -110,12 +110,6 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
     defaultPhone: "",
     avatar: ""
   });
-    temporaryPassword: false,
-    queues: "",
-    defaultChannel: "",
-    defaultPhone: "",
-    avatar: ""
-  });
 
   const [focusedFields, setFocusedFields] = useState({
     name: false,
@@ -216,6 +210,7 @@ export function EditarUsuarioModal({ isOpen, onClose, onEditUser, user }: Editar
       queues: "",
       defaultChannel: "",
       defaultPhone: "",
+      avatar: ""
     });
     setShowPassword(false);
     setShowCargoDropdown(false);
