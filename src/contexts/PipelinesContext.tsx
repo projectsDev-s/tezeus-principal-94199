@@ -1084,7 +1084,14 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
   // Buscar pipelines quando o workspace mudar
   useEffect(() => {
+    console.log('🔍 [PipelinesContext] useEffect triggered:', {
+      hasWorkspace: !!selectedWorkspace?.workspace_id,
+      hasHeaders: !!getHeaders,
+      workspaceId: selectedWorkspace?.workspace_id
+    });
+    
     if (selectedWorkspace?.workspace_id && getHeaders) {
+      console.log('✅ [PipelinesContext] Conditions met, fetching pipelines...');
       // Workspace changed - clearing and fetching pipelines
       // Limpar dados anteriores imediatamente para mostrar loading
       setColumns([]);
@@ -1094,6 +1101,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       // Buscar novos pipelines e forçar seleção do primeiro
       fetchPipelines(true);
     } else {
+      console.log('⚠️ [PipelinesContext] Conditions not met, clearing pipelines');
       setPipelines([]);
       setSelectedPipeline(null);
       setColumns([]);
