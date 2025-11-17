@@ -700,8 +700,8 @@ export function AutomationModal({
           <div className="space-y-2">
             <Label>Coluna de destino</Label>
             <Select
-              value={action.action_config?.target_column_id || ''}
-              onValueChange={(value) => updateActionConfig(action.id, 'target_column_id', value)}
+              value={action.action_config?.column_id || ''}
+              onValueChange={(value) => updateActionConfig(action.id, 'column_id', value)}
               onOpenChange={(open) => {
                 if (open && columns.length === 0 && !columnsLoading) {
                   loadColumns();
