@@ -102,7 +102,7 @@ export function DSAgente() {
         <div className="flex items-center gap-3">
           <Bot className="w-8 h-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">DS Agente</h1>
+            <h1 className="text-2xl font-bold">Agentes de IA</h1>
             <p className="text-muted-foreground">Configure e gerencie seus agentes de IA</p>
           </div>
         </div>
