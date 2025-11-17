@@ -242,7 +242,7 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
               </div>
 
               <div className="space-y-2">
-                <Label>DS Agente</Label>
+                <Label>Agentes de IA</Label>
                 <Select value={agenteId} onValueChange={setAgenteId}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione um agente" />

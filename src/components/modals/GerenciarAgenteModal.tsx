@@ -60,7 +60,7 @@ export function GerenciarAgenteModal({
 
           <div className="text-center text-sm text-muted-foreground">
             <p>Para configurações avançadas do agente, acesse:</p>
-            <p className="font-medium text-primary">Automações → DS Agente</p>
+            <p className="font-medium text-primary">Automações → Agentes de IA</p>
           </div>
         </div>
 

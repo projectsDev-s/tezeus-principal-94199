@@ -1749,7 +1749,7 @@ export function WhatsAppChat({
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          <p className="text-xs font-semibold">{conversation.agente_ativo ? 'DS AGENTE' : 'ATIVO'}</p>
+                          <p className="text-xs font-semibold">{conversation.agente_ativo ? 'AGENTE IA' : 'ATIVO'}</p>
                           <p className="text-[10px] text-muted-foreground">Sem conexão vinculada</p>
                         </div>
                       )}
