@@ -25,14 +25,8 @@ interface AIAgent {
   is_active: boolean;
 }
 const distributionOptions = [{
-  value: "aleatoria",
-  label: "Aleatória"
-}, {
   value: "sequencial",
   label: "Sequencial"
-}, {
-  value: "ordenada",
-  label: "Ordenada"
 }, {
   value: "nao_distribuir",
   label: "Não distribuir"
