@@ -30,7 +30,7 @@ import { TagSelectorModal } from "./TagSelectorModal";
 import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
 import { QueueSelectorModal } from "./QueueSelectorModal";
 import { ConnectionSelectorModal } from "./ConnectionSelectorModal";
-import { QuickFunnelsModal } from "./QuickFunnelsModal";
+import { FunnelSelectorModal } from "./FunnelSelectorModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -274,8 +274,8 @@ export function PromptEditorModal({
     setPendingActionType(null);
   };
 
-  const handleFunnelSelected = (funnel: any) => {
-    const actionText = `\n[ADD_ACTION]: [funnel_id: ${funnel.id}], [funnel_title: ${funnel.title}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+  const handleFunnelSelected = (funnelId: string, funnelTitle: string) => {
+    const actionText = `\n[ADD_ACTION]: [funnel_id: ${funnelId}], [funnel_title: ${funnelTitle}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
     editorRef.current?.insertText(actionText);
     setShowFunnelSelector(false);
     setPendingActionType(null);
@@ -368,10 +368,10 @@ export function PromptEditorModal({
         workspaceId={workspaceId}
       />
 
-      <QuickFunnelsModal
+      <FunnelSelectorModal
         open={showFunnelSelector}
         onOpenChange={setShowFunnelSelector}
-        onSendFunnel={handleFunnelSelected}
+        onFunnelSelected={handleFunnelSelected}
       />
     </Dialog>
   );
