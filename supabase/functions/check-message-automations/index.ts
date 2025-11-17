@@ -186,7 +186,7 @@ serve(async (req) => {
 
         // 🔒 Verificar se já foi executada NESTA entrada na coluna
         // A automação só pode ser executada UMA VEZ por entrada na coluna
-        const { data: existingExecutions, error: execError } = await supabase
+        const { data: existingExecutions, error: existingExecError } = await supabase
           .from('automation_executions')
           .select('id, executed_at')
           .eq('card_id', card.id)
@@ -208,7 +208,23 @@ serve(async (req) => {
 
         console.log(`✅ Condições atendidas! Executando automação "${automation.name}" pela primeira vez nesta entrada`);
 
+        // ✅ Registrar execução ANTES de executar ações (evita duplicatas)
+        const { error: execError } = await supabase
+          .from('automation_executions')
+          .insert({
+            card_id: card.id,
+            column_id: card.column_id,
+            automation_id: automation.id,
+            trigger_type: 'message_received',
+            workspace_id: workspaceId
+          });
 
+        if (execError) {
+          console.error(`❌ Erro ao registrar execução:`, execError);
+          continue; // Pula para próxima automação se não conseguir registrar
+        }
+        
+        console.log(`📝 Execução registrada para automação "${automation.name}"`);
         console.log(`🎬 Executando ${actions?.length || 0} ação(ões)...`);
 
         // 4. Executar ações
@@ -219,23 +235,6 @@ serve(async (req) => {
             } catch (actionError) {
               console.error(`❌ Erro ao executar ação:`, actionError);
             }
-          }
-
-          // ✅ Registrar execução após sucesso
-          const { error: execError } = await supabase
-            .from('automation_executions')
-            .insert({
-              card_id: card.id,
-              column_id: card.column_id,
-              automation_id: automation.id,
-              trigger_type: 'message_received',
-              workspace_id: workspaceId
-            });
-
-          if (execError) {
-            console.error(`❌ Erro ao registrar execução:`, execError);
-          } else {
-            console.log(`📝 Execução registrada para automação "${automation.name}"`);
           }
         }
       }
