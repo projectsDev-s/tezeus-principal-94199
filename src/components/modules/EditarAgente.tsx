@@ -17,7 +17,6 @@ interface AIAgent {
   id: string;
   name: string;
   description: string;
-  agent_type: string;
   api_provider: string;
   model: string;
   system_instructions: string;
@@ -75,7 +74,6 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
     id: '',
     name: '',
     description: '',
-    agent_type: 'conversational',
     api_provider: 'openai',
     model: 'gpt-4o-mini',
     system_instructions: '',
@@ -320,7 +318,7 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
               <CardDescription>Informações básicas do agente</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome do Agente</Label>
                   <Input
@@ -329,20 +327,6 @@ export function EditarAgente({ agentId }: EditarAgenteProps) {
                     onChange={(e) => setAgent({ ...agent, name: e.target.value })}
                     placeholder="Nome do agente"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select value={agent.agent_type} onValueChange={(value) => setAgent({ ...agent, agent_type: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="conversational">Conversacional</SelectItem>
-                      <SelectItem value="support">Suporte</SelectItem>
-                      <SelectItem value="sales">Vendas</SelectItem>
-                      <SelectItem value="assistant">Assistente</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
