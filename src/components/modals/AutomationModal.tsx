@@ -985,6 +985,28 @@ export function AutomationModal({
                         Executa apenas uma vez quando o card atinge o tempo configurado na coluna
                       </p>
                     )}
+                    
+                    {trigger.trigger_type === 'message_received' && (
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Label htmlFor={`message-count-${trigger.id}`}>Qtd. de mensagens *</Label>
+                            <Input
+                              id={`message-count-${trigger.id}`}
+                              type="number"
+                              placeholder="Ex: 3"
+                              min="1"
+                              value={trigger.trigger_config?.message_count || ''}
+                              onChange={(e) => updateTriggerConfig(trigger.id, 'message_count', parseInt(e.target.value) || 1)}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-start gap-2">
+                          <span className="text-blue-500">ℹ</span>
+                          Executa quando o contato enviar o número de mensagens especificado
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
