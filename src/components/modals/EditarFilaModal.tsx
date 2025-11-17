@@ -246,7 +246,6 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
                 <Select value={agenteId} onValueChange={setAgenteId}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione um agente" />
-                    <ChevronDown className="w-4 h-4" />
                   </SelectTrigger>
                   <SelectContent>
                     {aiAgents.map((agent) => (
