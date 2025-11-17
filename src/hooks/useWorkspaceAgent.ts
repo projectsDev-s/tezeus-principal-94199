@@ -38,7 +38,7 @@ export const useWorkspaceAgent = (conversationId?: string) => {
       // Agora busca os dados do agente
       const { data: agentData, error: agentError } = await supabase
         .from('ai_agents')
-        .select('id, name, is_active, agent_type')
+        .select('id, name, is_active')
         .eq('id', conversation.agent_active_id)
         .maybeSingle();
       

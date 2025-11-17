@@ -12,7 +12,6 @@ interface AIAgent {
   id: string;
   name: string;
   description?: string;
-  agent_type: string;
   max_tokens: number;
   is_active: boolean;
   created_at: string;
@@ -125,7 +124,6 @@ export function DSAgenteMaster() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Máximo Tokens Resposta</TableHead>
                   <TableHead>Status</TableHead>
@@ -141,11 +139,6 @@ export function DSAgenteMaster() {
                             {agent.description}
                           </div>}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {agent.agent_type === 'conversational' ? 'Conversacional' : agent.agent_type === 'assistant' ? 'Assistente' : agent.agent_type}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       {agent.workspace && <span className="text-sm">{agent.workspace.name}</span>}

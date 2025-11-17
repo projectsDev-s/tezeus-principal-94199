@@ -12,7 +12,6 @@ interface AIAgent {
   id: string;
   name: string;
   description?: string;
-  agent_type: string;
   max_tokens: number;
   is_active: boolean;
   created_at: string;
