@@ -30,9 +30,17 @@ serve(async (req) => {
     // 1. Buscar card ativo do contato
     const { data: cards, error: cardsError } = await supabase
       .from('pipeline_cards')
-      .select('id, column_id, pipeline_id, title, conversation_id, contact_id')
+      .select(`
+        id, 
+        column_id, 
+        pipeline_id, 
+        title, 
+        conversation_id, 
+        contact_id,
+        pipelines!inner(workspace_id)
+      `)
       .eq('contact_id', contactId)
-      .eq('workspace_id', workspaceId)
+      .eq('pipelines.workspace_id', workspaceId)
       .eq('status', 'aberto')
       .order('created_at', { ascending: false });
 
