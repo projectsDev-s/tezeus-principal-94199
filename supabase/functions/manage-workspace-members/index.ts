@@ -196,7 +196,7 @@ serve(async (req) => {
         // Fetch user details separately 
         const { data: users, error: usersError } = await supabase
           .from('system_users')
-          .select('id, name, email, profile, phone, status')
+          .select('id, name, email, profile, phone, status, avatar')
           .in('id', userIds)
 
         if (usersError) {
@@ -232,6 +232,7 @@ serve(async (req) => {
               profile: user.profile,
               phone: user.phone,
               status: user.status,
+              avatar: user.avatar,
               cargo_names: cargos.map(c => {
                 const cargo = Array.isArray(c.cargos) ? c.cargos[0] : c.cargos;
                 return cargo?.nome;
