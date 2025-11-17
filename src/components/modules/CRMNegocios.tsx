@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useParams } from 'react-router-dom';
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap } from "lucide-react";
+import { Settings, Search, Plus, ListFilter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
@@ -33,7 +33,6 @@ import { usePipelinesContext, PipelinesProvider } from "@/contexts/PipelinesCont
 import { usePipelineActiveUsers } from "@/hooks/usePipelineActiveUsers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
-import { ActiveUsersAvatars } from "@/components/pipeline/ActiveUsersAvatars";
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -49,6 +48,8 @@ import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
 import { getInitials as getAvatarInitials } from "@/lib/avatarUtils";
+
+type ResponsibleFilterValue = 'ALL' | 'UNASSIGNED' | (string & {});
 
 // Componente de Badge do Agente
 function AgentBadge({ conversationId }: { conversationId: string }) {
@@ -645,6 +646,7 @@ function CRMNegociosContent({
       to: Date;
     };
   } | null>(null);
+  const [responsibleFilter, setResponsibleFilter] = useState<ResponsibleFilterValue>('ALL');
   const [isTransferirModalOpen, setIsTransferirModalOpen] = useState(false);
   const [selectedColumnForAction, setSelectedColumnForAction] = useState<string | null>(null);
   const [isSetValueModalOpen, setIsSetValueModalOpen] = useState(false);
@@ -658,6 +660,12 @@ function CRMNegociosContent({
     id: string;
     value: number;
   } | null>(null);
+  const unassignedCount = useMemo(() => cards.filter(card => !card.responsible_user_id).length, [cards]);
+  const responsibleOptions = useMemo(() => activeUsers.map(user => ({
+    id: user.id,
+    name: user.name,
+    dealCount: user.dealCount ?? 0
+  })), [activeUsers]);
   const [isVincularResponsavelModalOpen, setIsVincularResponsavelModalOpen] = useState(false);
   const [selectedCardForResponsavel, setSelectedCardForResponsavel] = useState<{
     cardId: string;
@@ -670,11 +678,14 @@ function CRMNegociosContent({
     id: string;
     name: string;
   } | null>(null);
-  const [selectedResponsibleIds, setSelectedResponsibleIds] = useState<string[]>([]);
   const [agentModalOpen, setAgentModalOpen] = useState(false);
   const [selectedConversationForAgent, setSelectedConversationForAgent] = useState<string | null>(null);
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [columnAutomationCounts, setColumnAutomationCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setResponsibleFilter('ALL');
+  }, [selectedPipeline?.id]);
 
   // Buscar agent_active_id quando selectedConversationForAgent mudar
   useEffect(() => {
@@ -765,11 +776,13 @@ function CRMNegociosContent({
       );
     }
 
-    // 🎯 FILTRAR POR RESPONSÁVEIS SELECIONADOS
-    if (selectedResponsibleIds.length > 0) {
+    // 🎯 FILTRAR POR RESPONSÁVEL SELECIONADO
+    if (responsibleFilter !== 'ALL') {
       columnCards = columnCards.filter(card => {
-        // Verificar se o card tem responsible_user_id nos responsáveis selecionados
-        return card.responsible_user_id && selectedResponsibleIds.includes(card.responsible_user_id);
+        if (responsibleFilter === 'UNASSIGNED') {
+          return !card.responsible_user_id;
+        }
+        return card.responsible_user_id === responsibleFilter;
       });
     }
 
@@ -1154,7 +1167,7 @@ function CRMNegociosContent({
                   </Button>
                 )}
                 <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
-                  <Filter className="w-4 h-4 mr-2" />
+                  <ListFilter className="w-4 h-4 mr-2" />
                   Filtrar
                   {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
                       {(appliedFilters?.tags?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
@@ -1171,38 +1184,52 @@ function CRMNegociosContent({
                 <Input placeholder="Buscar negócios..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={cn("pl-10 h-10 border-gray-300 bg-transparent", isDarkMode ? "border-gray-600 text-white placeholder:text-gray-400" : "")} />
               </div>
               
-              {/* Avatar Group - Usuários com conversas ativas */}
-              <ActiveUsersAvatars 
-                users={activeUsers} 
-                isLoading={isLoadingActiveUsers} 
-                maxVisible={5} 
-                className="ml-2 flex-shrink-0"
-                selectedUserIds={selectedResponsibleIds}
-                onUserClick={(userId) => {
-                  setSelectedResponsibleIds(prev => {
-                    if (prev.includes(userId)) {
-                      // Remove do filtro se já estiver selecionado
-                      return prev.filter(id => id !== userId);
-                    } else {
-                      // Adiciona ao filtro
-                      return [...prev, userId];
-                    }
-                  });
-                }}
-              />
-              
-              {/* Botão Apagar Filtros - aparece quando há filtros ativos */}
-              {selectedResponsibleIds.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedResponsibleIds([])}
-                  className="ml-2 flex-shrink-0 text-xs"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Apagar filtros
-                </Button>
-              )}
+              {/* Filtro por responsável */}
+              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                <div className="w-[220px]">
+                  <Select
+                    value={responsibleFilter}
+                    onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Filtrar responsável" />
+                    </SelectTrigger>
+                    <SelectContent align="end" className="min-w-[220px]">
+                      <SelectItem value="ALL">Todos os responsáveis</SelectItem>
+                      <SelectItem value="UNASSIGNED">
+                        Sem responsável ({unassignedCount})
+                      </SelectItem>
+                      {isLoadingActiveUsers ? (
+                        <SelectItem value="__loading" disabled>
+                          Carregando responsáveis...
+                        </SelectItem>
+                      ) : responsibleOptions.length > 0 ? (
+                        responsibleOptions.map(option => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.name}{option.dealCount ? ` (${option.dealCount})` : ""}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="__empty" disabled>
+                          Nenhum responsável encontrado
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {responsibleFilter !== 'ALL' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setResponsibleFilter('ALL')}
+                    className="flex-shrink-0 text-xs"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
             </div>
             
             {/* + Coluna Button - Only show if pipeline exists and user can manage columns */}

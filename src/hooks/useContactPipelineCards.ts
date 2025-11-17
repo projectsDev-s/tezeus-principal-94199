@@ -38,7 +38,8 @@ export function useContactPipelineCards(contactId: string | null) {
       console.log('[useContactPipelineCards] Buscando cards para contactId:', contactId, 'workspace:', selectedWorkspace.workspace_id);
       
       // Tentativa 1: Query com joins (ideal)
-      const { data: joinData, error: joinError } = await supabase
+
+      const { data: cardsData, error: cardsError } = await supabase
         .from('pipeline_cards')
         .select(`
           id,
@@ -48,66 +49,18 @@ export function useContactPipelineCards(contactId: string | null) {
           value,
           title,
           description,
-          pipelines(id, name, workspace_id),
-          pipeline_columns(id, name)
+          pipelines:pipelines!inner(id, name, workspace_id),
+          pipeline_columns:pipeline_columns!inner(id, name)
         `)
-        .eq('contact_id', contactId);
+        .eq('contact_id', contactId)
+        .eq('pipelines.workspace_id', selectedWorkspace.workspace_id);
 
-      let cardsData = joinData;
-      
-      // Se o join retornou dados nulos (problema de RLS), usar fallback
-      if (!joinError && joinData?.some(card => !card.pipelines || !card.pipeline_columns)) {
-        console.warn('[useContactPipelineCards] Join retornou dados nulos, usando fallback...');
-        
-        // Buscar cards sem joins
-        const { data: cardsOnly, error: cardsOnlyError } = await supabase
-          .from('pipeline_cards')
-          .select('id, pipeline_id, column_id, status, value, title, description')
-          .eq('contact_id', contactId);
-        
-        if (cardsOnlyError) throw cardsOnlyError;
-        
-        if (cardsOnly && cardsOnly.length > 0) {
-          // Buscar pipelines e colunas manualmente
-          const pipelineIds = [...new Set(cardsOnly.map(c => c.pipeline_id))];
-          const columnIds = [...new Set(cardsOnly.map(c => c.column_id))];
-          
-          const { data: pipelines } = await supabase
-            .from('pipelines')
-            .select('id, name, workspace_id')
-            .in('id', pipelineIds);
-          
-          const { data: columns } = await supabase
-            .from('pipeline_columns')
-            .select('id, name')
-            .in('id', columnIds);
-          
-          // Reconstruir dados com joins manuais
-          cardsData = cardsOnly.map(card => ({
-            ...card,
-            pipelines: pipelines?.find(p => p.id === card.pipeline_id) || null,
-            pipeline_columns: columns?.find(c => c.id === card.column_id) || null
-          }));
-          
-          console.log('[useContactPipelineCards] Fallback concluído:', cardsData);
-        }
+      if (cardsError) {
+        console.error('[useContactPipelineCards] Erro na query:', cardsError);
+        throw cardsError;
       }
 
-      console.log('[useContactPipelineCards] Resultado da query:', { cardsData, joinError });
-
-      if (joinError) {
-        console.error('[useContactPipelineCards] Erro na query:', joinError);
-        throw joinError;
-      }
-
-      // Filtrar cards que pertencem ao workspace correto
-      const workspaceCards = cardsData?.filter(card => 
-        (card.pipelines as any)?.workspace_id === selectedWorkspace.workspace_id
-      ) || [];
-
-      console.log('[useContactPipelineCards] Cards após filtro de workspace:', workspaceCards);
-
-      const formattedCards = workspaceCards.map(card => ({
+      const formattedCards = (cardsData || []).map(card => ({
         id: card.id,
         pipeline_id: card.pipeline_id,
         pipeline_name: (card.pipelines as any)?.name || 'Pipeline não encontrado',
@@ -136,11 +89,6 @@ export function useContactPipelineCards(contactId: string | null) {
 
     } catch (error) {
       console.error('Error fetching contact cards:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar cards do contato",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }

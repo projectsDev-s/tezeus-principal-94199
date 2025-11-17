@@ -681,6 +681,16 @@ export const useWhatsAppConversations = () => {
           }
           
           // Buscar dados completos
+          if (!selectedWorkspace?.workspace_id) {
+            console.warn('⚠️ [REALTIME Conversations] Workspace não definido ao buscar conversa atualizada');
+            return;
+          }
+
+          if (!selectedWorkspace?.workspace_id) {
+            console.warn('⚠️ [REALTIME Conversations] Workspace não definido ao buscar nova conversa');
+            return;
+          }
+
           const { data: conversationData, error: convError } = await supabase
             .from('conversations')
             .select(`
@@ -711,7 +721,8 @@ export const useWhatsAppConversations = () => {
               )
             `)
             .eq('id', newConv.id)
-            .single();
+            .eq('workspace_id', selectedWorkspace.workspace_id)
+            .maybeSingle();
 
           if (convError || !conversationData) {
             console.error('❌ Erro ao buscar conversa completa:', convError);
@@ -780,7 +791,8 @@ export const useWhatsAppConversations = () => {
               )
             `)
             .eq('id', updatedConv.id)
-            .single();
+            .eq('workspace_id', selectedWorkspace.workspace_id)
+            .maybeSingle();
 
           if (convError || !conversationData) {
             console.error('❌ Erro ao buscar conversa atualizada:', convError);
