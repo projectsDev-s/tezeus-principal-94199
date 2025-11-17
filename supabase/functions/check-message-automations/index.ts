@@ -122,30 +122,35 @@ serve(async (req) => {
         console.log(`📊 Mensagens necessárias: ${requiredMessageCount}`);
 
         // Buscar quando o card entrou na coluna atual
-        const { data: cardHistory, error: historyError } = await supabase
+        // Primeiro tenta buscar histórico de entrada na coluna
+        const { data: cardHistory } = await supabase
           .from('pipeline_card_history')
-          .select('changed_at')
+          .select('changed_at, metadata')
           .eq('card_id', card.id)
-          .eq('action', 'moved_to_column')
-          .or(`metadata->new_column_id.eq.${card.column_id},metadata->>new_column_id.eq.${card.column_id}`)
-          .order('changed_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .order('changed_at', { ascending: false });
 
         let columnEntryDate: string;
         
-        if (historyError || !cardHistory) {
-          // Se não encontrar histórico, usar a data de criação do card
-          console.log('⚠️ Histórico não encontrado, usando created_at do card');
+        // Procurar o último registro onde o card foi movido para a coluna atual
+        const columnEntry = cardHistory?.find((h: any) => {
+          const metadata = h.metadata || {};
+          const newColumnId = metadata.new_column_id || metadata.newColumnId;
+          return newColumnId === card.column_id;
+        });
+
+        if (columnEntry) {
+          columnEntryDate = columnEntry.changed_at;
+          console.log('✅ Histórico encontrado - card entrou na coluna em:', columnEntryDate);
+        } else {
+          // Se não encontrar histórico, usar updated_at do card (última modificação)
+          console.log('⚠️ Histórico não encontrado, usando updated_at do card');
           const { data: cardData } = await supabase
             .from('pipeline_cards')
-            .select('created_at')
+            .select('updated_at')
             .eq('id', card.id)
             .single();
           
-          columnEntryDate = cardData?.created_at || new Date().toISOString();
-        } else {
-          columnEntryDate = cardHistory.changed_at;
+          columnEntryDate = cardData?.updated_at || new Date().toISOString();
         }
 
         console.log(`📅 Card entrou na coluna em: ${columnEntryDate}`);
