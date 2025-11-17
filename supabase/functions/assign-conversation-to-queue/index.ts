@@ -74,7 +74,7 @@ serve(async (req) => {
     // 3️⃣ Buscar configurações da fila
     const { data: queue, error: queueError } = await supabase
       .from('queues')
-      .select('id, name, distribution_type, last_assigned_user_index, workspace_id, ai_agent_id')
+      .select('id, name, distribution_type, last_assigned_user_index, workspace_id, ai_agent_id, description')
       .eq('id', targetQueueId)
       .eq('is_active', true)
       .single();
@@ -247,6 +247,29 @@ serve(async (req) => {
         .eq('conversation_id', conversation_id);
       
       console.log(`🎯 ${pipelineCards.length} pipeline card(s) atualizado(s) com responsável`);
+    }
+
+    // 9️⃣ Enviar mensagem de saudação se configurada
+    if (queue.description && queue.description.trim()) {
+      console.log(`💬 Enviando mensagem de saudação da fila: "${queue.description}"`);
+      
+      try {
+        const { error: sendError } = await supabase.functions.invoke('test-send-msg', {
+          body: {
+            conversation_id: conversation_id,
+            content: queue.description,
+            message_type: 'text'
+          }
+        });
+
+        if (sendError) {
+          console.error('⚠️ Erro ao enviar mensagem de saudação (não-bloqueante):', sendError);
+        } else {
+          console.log('✅ Mensagem de saudação enviada com sucesso');
+        }
+      } catch (greetingError) {
+        console.error('⚠️ Exceção ao enviar mensagem de saudação (não-bloqueante):', greetingError);
+      }
     }
 
     console.log(`✅ Conversa ${conversation_id} atribuída para usuário ${selectedUserId} via fila ${queue.name}`);
