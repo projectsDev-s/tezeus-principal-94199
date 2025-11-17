@@ -26,7 +26,7 @@ interface ColumnAutomation {
 interface AutomationTrigger {
   id: string;
   automation_id: string;
-  trigger_type: 'enter_column' | 'leave_column' | 'time_in_column' | 'recurring' | 'message_received';
+  trigger_type: 'enter_column' | 'leave_column' | 'time_in_column' | 'message_received';
   trigger_config: any;
 }
 
