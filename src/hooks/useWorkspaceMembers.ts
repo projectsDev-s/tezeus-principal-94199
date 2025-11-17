@@ -18,6 +18,7 @@ export interface WorkspaceMember {
     phone?: string;
     status?: string;
     cargo_names?: string[];
+    avatar?: string;
   };
 }
 

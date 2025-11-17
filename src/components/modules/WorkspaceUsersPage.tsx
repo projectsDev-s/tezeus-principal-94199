@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, User, UserPlus, Edit, Trash, Eye, EyeOff } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { ArrowLeft, User, UserPlus, Edit, Trash, Eye, EyeOff, Camera, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,8 +67,13 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
     profile: 'user',
     senha: '',
     default_channel: '',
-    phone: ''
+    phone: '',
+    avatar: ''
   });
+  
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const workspace = workspaces.find(w => w.workspace_id === workspaceId);
   const { members, isLoading, createUserAndAddToWorkspace, updateMember, updateUser, removeMember } = useWorkspaceMembers(workspaceId || '');
@@ -184,7 +189,8 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
         profile: 'user',
         senha: '',
         default_channel: '',
-        phone: ''
+        phone: '',
+        avatar: ''
       });
       setSelectedRole('user');
       setShowAddUser(false);
@@ -208,12 +214,15 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
       profile: 'user',
       senha: '',
       default_channel: '',
-      phone: ''
+      phone: '',
+      avatar: ''
     });
     setSelectedRole('user');
     setShowAddUser(false);
     setEditingUser(null);
     setDefaultInstance(null);
+    setAvatarFile(null);
+    setAvatarPreview('');
   };
 
   const handleUpdateRole = async (memberId: string, newRole: 'user' | 'admin' | 'master') => {
@@ -235,8 +244,10 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
       profile: member.user.profile || 'user',
       senha: '', // Always empty for security
       phone: member.user.phone || '',
-      default_channel: '' // We'll keep this empty for now
+      default_channel: '', // We'll keep this empty for now
+      avatar: member.user.avatar || ''
     });
+    setAvatarPreview(member.user.avatar || '');
     setSelectedRole(member.role);
     setShowAddUser(true);
   };
