@@ -404,9 +404,9 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
 
             if (message) {
               messagePayload = {
-                connectionId: conversation.connection_id,
-                phone: contact.phone,
-                message: message.content
+                conversation_id: card.conversation_id,
+                content: message.content,
+                message_type: 'text'
               };
             }
             break;
@@ -422,11 +422,11 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
 
             if (audio) {
               messagePayload = {
-                connectionId: conversation.connection_id,
-                phone: contact.phone,
-                type: 'audio',
-                file_url: audio.file_url,
-                caption: audio.title || ''
+                conversation_id: card.conversation_id,
+                content: audio.file_url,
+                message_type: 'audio',
+                file_name: audio.title || 'audio.mp3',
+                mime_type: 'audio/mpeg'
               };
             }
             break;
@@ -445,11 +445,11 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
                              media.file_url?.match(/\.(mp4|mov|avi|mkv)$/i);
               
               messagePayload = {
-                connectionId: conversation.connection_id,
-                phone: contact.phone,
-                type: isVideo ? 'video' : 'image',
-                file_url: media.file_url,
-                caption: media.title || ''
+                conversation_id: card.conversation_id,
+                content: media.file_url,
+                message_type: isVideo ? 'video' : 'image',
+                file_name: media.title || (isVideo ? 'video.mp4' : 'image.jpg'),
+                mime_type: isVideo ? 'video/mp4' : 'image/jpeg'
               };
             }
             break;
@@ -465,11 +465,11 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
 
             if (document) {
               messagePayload = {
-                connectionId: conversation.connection_id,
-                phone: contact.phone,
-                type: 'document',
-                file_url: document.file_url,
-                caption: document.title || ''
+                conversation_id: card.conversation_id,
+                content: document.file_url,
+                message_type: 'document',
+                file_name: document.title || 'document.pdf',
+                mime_type: 'application/pdf'
               };
             }
             break;
