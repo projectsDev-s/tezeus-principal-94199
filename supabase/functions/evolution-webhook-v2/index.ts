@@ -778,10 +778,12 @@ serve(async (req) => {
                 .select('id')
                 .eq('contact_id', contact.id)
                 .eq('workspace_id', workspaceId)
-                .eq('status', 'open')
+                .eq('status', 'active')
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
+              
+              console.log(`🔍 [${requestId}] Verificando automações para contato ${contact.id}, conversa ${conversation?.id}`);
               
               const { error } = await supabase.functions.invoke('check-message-automations', {
                 body: {
