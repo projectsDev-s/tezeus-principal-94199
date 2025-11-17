@@ -179,8 +179,8 @@ serve(async (req) => {
           continue;
         }
 
-        // 🔒 Verificar quantas vezes já foi executada NESTA entrada na coluna
-        // Só conta execuções que foram feitas DEPOIS da última entrada na coluna
+        // 🔒 Verificar se já foi executada NESTA entrada na coluna
+        // A automação só pode ser executada UMA VEZ por entrada na coluna
         const { data: existingExecutions, error: execError } = await supabase
           .from('automation_executions')
           .select('id, executed_at')
@@ -192,18 +192,16 @@ serve(async (req) => {
 
         const executionCount = existingExecutions?.length || 0;
         
-        // Calcular quantas vezes a automação DEVERIA ter sido executada
-        const expectedExecutions = Math.floor(messageCount / requiredMessageCount);
-        
-        console.log(`📊 Execuções nesta entrada: ${executionCount} realizadas, ${expectedExecutions} esperadas`);
+        console.log(`📊 Execuções nesta entrada: ${executionCount}`);
         console.log(`📅 Contando apenas execuções após: ${columnEntryDate}`);
 
-        if (executionCount >= expectedExecutions) {
-          console.log(`🚫 Automação "${automation.name}" já foi executada ${executionCount}x nesta entrada - aguardando mais mensagens`);
+        // Apenas uma execução permitida por entrada na coluna
+        if (executionCount > 0) {
+          console.log(`🚫 Automação "${automation.name}" já foi executada nesta entrada na coluna`);
           continue;
         }
 
-        console.log(`✅ Condições atendidas! Executando automação "${automation.name}" (${executionCount + 1}/${expectedExecutions})`);
+        console.log(`✅ Condições atendidas! Executando automação "${automation.name}" pela primeira vez nesta entrada`);
 
 
         console.log(`🎬 Executando ${actions?.length || 0} ação(ões)...`);
