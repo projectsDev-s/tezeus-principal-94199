@@ -560,11 +560,21 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
         return;
       }
 
-      console.log(`🤖 Ativando agente IA na conversa ${card.conversation_id}`);
+      const agentId = actionConfig.agent_id;
+      if (!agentId) {
+        console.warn('⚠️ add_agent sem agent_id configurado');
+        return;
+      }
+
+      console.log(`🤖 Ativando agente ${agentId} na conversa ${card.conversation_id}`);
 
       const { error: agentError } = await supabaseClient
         .from('conversations')
-        .update({ agente_ativo: true })
+        .update({
+          agente_ativo: true,
+          agent_active_id: agentId,
+          status: 'open'
+        })
         .eq('id', card.conversation_id);
 
       if (agentError) {
@@ -585,7 +595,10 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
 
       const { error: agentError } = await supabaseClient
         .from('conversations')
-        .update({ agente_ativo: false })
+        .update({
+          agente_ativo: false,
+          agent_active_id: null
+        })
         .eq('id', card.conversation_id);
 
       if (agentError) {
