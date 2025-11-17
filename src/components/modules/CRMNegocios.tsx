@@ -84,6 +84,7 @@ interface Deal {
   stage: string;
   responsible: string;
   responsible_user_id?: string;
+  responsible_avatar?: string;
   tags: string[];
   priority: 'low' | 'medium' | 'high';
   product?: string;
@@ -512,7 +513,13 @@ function DraggableDeal({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-blue-100 hover:text-blue-600" onClick={e => e.stopPropagation()}>
-                    <User className="w-3 h-3" />
+                    {deal.responsible_avatar ? (
+                      <div className="w-5 h-5 rounded-full overflow-hidden border border-border">
+                        <img src={deal.responsible_avatar} alt={deal.responsible} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <User className="w-3 h-3" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -1449,6 +1456,7 @@ function CRMNegociosContent({
                             stage: column.name,
                             responsible: card.responsible_user?.name || (card.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
                             responsible_user_id: card.responsible_user_id,
+                            responsible_avatar: card.responsible_user?.avatar,
                             tags: Array.isArray(card.tags) ? card.tags : [],
                             priority: 'medium',
                             created_at: card.created_at,
@@ -1521,6 +1529,7 @@ function CRMNegociosContent({
               value: activeCard.value || 0,
               stage: activeColumn?.name || "",
               responsible: activeCard.responsible_user?.name || (activeCard.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
+              responsible_avatar: activeCard.responsible_user?.avatar,
               tags: Array.isArray(activeCard.tags) ? activeCard.tags : [],
               priority: 'medium',
               created_at: activeCard.created_at,

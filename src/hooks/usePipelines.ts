@@ -41,6 +41,7 @@ export interface PipelineCard {
   responsible_user?: {
     id: string;
     name: string;
+    avatar?: string;
   };
   contact?: any;
   conversation?: any;
