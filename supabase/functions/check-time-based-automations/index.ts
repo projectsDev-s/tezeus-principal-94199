@@ -128,7 +128,8 @@ serve(async (req) => {
             moved_to_column_at,
             pipeline_id,
             contact_id,
-            conversation_id
+            conversation_id,
+            pipelines!inner(workspace_id)
           `)
           .eq('column_id', automation.column_id)
           .lt('moved_to_column_at', timeThreshold.toISOString())
@@ -304,6 +305,219 @@ serve(async (req) => {
                     } else {
                       console.log('✅ [Time Automations] Mensagem enviada com sucesso');
                     }
+                    break;
+                  }
+
+                  case 'send_funnel': {
+                    console.log(`🎯 [Time Automations] ========== EXECUTANDO AÇÃO: ENVIAR FUNIL ==========`);
+                    
+                    const funnelId = actionConfig?.funnel_id;
+                    
+                    if (!funnelId) {
+                      console.warn(`⚠️ [Time Automations] Ação send_funnel não tem funnel_id configurado.`);
+                      actionSuccess = false;
+                      break;
+                    }
+                    
+                    // Buscar conversa do card
+                    let conversationId = card.conversation_id;
+                    
+                    // Se não tem conversa, tentar buscar por contact_id
+                    if (!conversationId && card.contact_id) {
+                      const workspaceId = (card as any).pipelines?.workspace_id;
+                      
+                      if (workspaceId) {
+                        const { data: existingConversation } = await supabase
+                          .from('conversations')
+                          .select('id, connection_id, workspace_id')
+                          .eq('contact_id', card.contact_id)
+                          .eq('workspace_id', workspaceId)
+                          .not('connection_id', 'is', null)
+                          .order('created_at', { ascending: false })
+                          .limit(1)
+                          .maybeSingle();
+                        
+                        if (existingConversation) {
+                          conversationId = existingConversation.id;
+                        }
+                      }
+                    }
+                    
+                    if (!conversationId) {
+                      console.warn(`⚠️ [Time Automations] Card não tem conversa associada. Não é possível enviar funil. Card ID: ${card.id}, Contact ID: ${card.contact_id}`);
+                      actionSuccess = false;
+                      break;
+                    }
+                    
+                    // Buscar o funil
+                    console.log(`🔍 [Time Automations] Buscando funil: ${funnelId}`);
+                    const { data: funnel, error: funnelError } = await supabase
+                      .from('quick_funnels')
+                      .select('*')
+                      .eq('id', funnelId)
+                      .single();
+                    
+                    if (funnelError || !funnel) {
+                      console.error(`❌ [Time Automations] Erro ao buscar funil:`, funnelError);
+                      actionSuccess = false;
+                      break;
+                    }
+                    
+                    console.log(`✅ [Time Automations] Funil encontrado: "${funnel.title}" com ${funnel.steps?.length || 0} steps`);
+                    
+                    if (!funnel.steps || funnel.steps.length === 0) {
+                      console.warn(`⚠️ [Time Automations] Funil ${funnelId} não tem steps configurados.`);
+                      actionSuccess = false;
+                      break;
+                    }
+                    
+                    // Ordenar steps por order
+                    const sortedSteps = [...funnel.steps].sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+                    
+                    console.log(`📤 [Time Automations] Iniciando envio de ${sortedSteps.length} mensagens do funil...`);
+                    
+                    // Processar cada step
+                    for (let i = 0; i < sortedSteps.length; i++) {
+                      const step = sortedSteps[i];
+                      console.log(`\n📨 [Time Automations] Processando step ${i + 1}/${sortedSteps.length}:`, {
+                        type: step.type,
+                        item_id: step.item_id,
+                        delay_seconds: step.delay_seconds
+                      });
+                      
+                      try {
+                        let messagePayload: any = null;
+                        
+                        // Buscar item de acordo com o tipo
+                        const normalizedType = step.type.toLowerCase();
+                        
+                        switch (normalizedType) {
+                          case 'message':
+                          case 'messages':
+                          case 'mensagens': {
+                            const { data: message } = await supabase
+                              .from('quick_messages')
+                              .select('*')
+                              .eq('id', step.item_id)
+                              .single();
+                            
+                            if (message) {
+                              messagePayload = {
+                                conversation_id: conversationId,
+                                content: message.content,
+                                message_type: 'text'
+                              };
+                            }
+                            break;
+                          }
+                          
+                          case 'audio':
+                          case 'audios': {
+                            const { data: audio } = await supabase
+                              .from('quick_audios')
+                              .select('*')
+                              .eq('id', step.item_id)
+                              .single();
+                            
+                            if (audio) {
+                              messagePayload = {
+                                conversation_id: conversationId,
+                                content: '',
+                                message_type: 'audio',
+                                file_url: audio.file_url,
+                                file_name: audio.file_name || audio.title || 'audio.mp3'
+                              };
+                            }
+                            break;
+                          }
+                          
+                          case 'media':
+                          case 'midias': {
+                            const { data: media } = await supabase
+                              .from('quick_media')
+                              .select('*')
+                              .eq('id', step.item_id)
+                              .single();
+                            
+                            if (media) {
+                              // Determinar tipo baseado no file_type ou URL
+                              let mediaType = 'image';
+                              if (media.file_type?.startsWith('video/')) {
+                                mediaType = 'video';
+                              } else if (media.file_url) {
+                                const url = media.file_url.toLowerCase();
+                                if (url.includes('.mp4') || url.includes('.mov') || url.includes('.avi')) {
+                                  mediaType = 'video';
+                                }
+                              }
+                              
+                              messagePayload = {
+                                conversation_id: conversationId,
+                                content: media.title || '',
+                                message_type: mediaType,
+                                file_url: media.file_url,
+                                file_name: media.file_name || media.title || `media.${mediaType === 'video' ? 'mp4' : 'jpg'}`
+                              };
+                            }
+                            break;
+                          }
+                          
+                          case 'document':
+                          case 'documents':
+                          case 'documentos': {
+                            const { data: document } = await supabase
+                              .from('quick_documents')
+                              .select('*')
+                              .eq('id', step.item_id)
+                              .single();
+                            
+                            if (document) {
+                              messagePayload = {
+                                conversation_id: conversationId,
+                                content: document.title || '',
+                                message_type: 'document',
+                                file_url: document.file_url,
+                                file_name: document.file_name || document.title || 'document.pdf'
+                              };
+                            }
+                            break;
+                          }
+                          
+                          default:
+                            console.error(`❌ [Time Automations] Tipo de step não reconhecido: "${step.type}"`);
+                        }
+                        
+                        if (!messagePayload) {
+                          console.error(`❌ [Time Automations] Falha ao criar payload para step ${i + 1}`);
+                          continue;
+                        }
+                        
+                        console.log(`📦 [Time Automations] Enviando mensagem ${i + 1}/${sortedSteps.length}...`);
+                        
+                        // Enviar mensagem
+                        const { error: stepError } = await supabase.functions.invoke('test-send-msg', {
+                          body: messagePayload
+                        });
+                        
+                        if (stepError) {
+                          console.error(`❌ [Time Automations] Erro ao enviar step ${i + 1}:`, stepError);
+                          continue;
+                        }
+                        
+                        console.log(`✅ [Time Automations] Mensagem ${i + 1}/${sortedSteps.length} enviada com sucesso`);
+                        
+                        // Aguardar delay antes do próximo step (se houver)
+                        if (step.delay_seconds && step.delay_seconds > 0 && i < sortedSteps.length - 1) {
+                          console.log(`⏳ [Time Automations] Aguardando ${step.delay_seconds} segundos antes do próximo step...`);
+                          await new Promise(resolve => setTimeout(resolve, step.delay_seconds * 1000));
+                        }
+                        
+                      } catch (stepError) {
+                        console.error(`❌ [Time Automations] Erro ao processar step ${i + 1}:`, stepError);
+                      }
+                    }
+                    
+                    console.log(`✅ [Time Automations] ========== FUNIL ENVIADO COM SUCESSO ==========`);
                     break;
                   }
 
