@@ -179,22 +179,28 @@ serve(async (req) => {
           continue;
         }
 
-        // 🔒 Verificar se já foi executada para este card nesta coluna
-        const { data: existingExecution } = await supabase
+        // 🔒 Verificar quantas vezes já foi executada para este card nesta coluna
+        const { data: existingExecutions, error: execError } = await supabase
           .from('automation_executions')
           .select('id')
           .eq('card_id', card.id)
           .eq('column_id', card.column_id)
           .eq('automation_id', automation.id)
-          .eq('trigger_type', 'message_received')
-          .maybeSingle();
+          .eq('trigger_type', 'message_received');
 
-        if (existingExecution) {
-          console.log(`🚫 Automação "${automation.name}" já foi executada para este card nesta coluna - pulando`);
+        const executionCount = existingExecutions?.length || 0;
+        
+        // Calcular quantas vezes a automação DEVERIA ter sido executada
+        const expectedExecutions = Math.floor(messageCount / requiredMessageCount);
+        
+        console.log(`📊 Execuções: ${executionCount} realizadas, ${expectedExecutions} esperadas`);
+
+        if (executionCount >= expectedExecutions) {
+          console.log(`🚫 Automação "${automation.name}" já foi executada ${executionCount}x - aguardando mais mensagens`);
           continue;
         }
 
-        console.log(`✅ Condições atendidas! Executando automação "${automation.name}"`);
+        console.log(`✅ Condições atendidas! Executando automação "${automation.name}" (${executionCount + 1}/${expectedExecutions})`);
 
 
         console.log(`🎬 Executando ${actions?.length || 0} ação(ões)...`);
