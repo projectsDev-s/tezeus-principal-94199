@@ -209,26 +209,21 @@ serve(async (req) => {
                       } else {
                         console.log(`✅ [Time Automations] Card ${card.id} movido para coluna ${targetColumnId}`, updateResult);
                         
-                        // Enviar broadcast para atualização em tempo real
-                        try {
-                          const channelName = `pipeline-${card.pipeline_id}`;
-                          console.log(`📡 [Time Automations] Enviando broadcast para ${channelName}`);
-                          
-                          const broadcastResult = await supabase
-                            .channel(channelName)
-                            .send({
+                        // Enviar broadcast
+                        const channelName = `pipeline-${card.pipeline_id}`;
+                        const channel = supabase.channel(channelName);
+                        
+                        await channel.subscribe(async (status) => {
+                          if (status === 'SUBSCRIBED') {
+                            await channel.send({
                               type: 'broadcast',
                               event: 'pipeline-card-moved',
-                              payload: {
-                                cardId: card.id,
-                                newColumnId: targetColumnId
-                              }
+                              payload: { cardId: card.id, newColumnId: targetColumnId }
                             });
-                          
-                          console.log(`✅ [Time Automations] Broadcast enviado:`, broadcastResult);
-                        } catch (broadcastError) {
-                          console.error(`❌ [Time Automations] Erro ao enviar broadcast:`, broadcastError);
-                        }
+                            console.log(`📡 Broadcast enviado para ${channelName}`);
+                            await supabase.removeChannel(channel);
+                          }
+                        });
                       }
                     } else {
                       console.error(`❌ [Time Automations] column_id não encontrado no actionConfig`);
