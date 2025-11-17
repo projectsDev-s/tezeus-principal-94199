@@ -16,7 +16,8 @@ import {
   ArrowRight, 
   Database, 
   Link2, 
-  Shuffle 
+  Shuffle,
+  ListFilter
 } from "lucide-react";
 import {
   ContextMenu,
@@ -29,6 +30,7 @@ import { TagSelectorModal } from "./TagSelectorModal";
 import { PipelineColumnSelectorModal } from "./PipelineColumnSelectorModal";
 import { QueueSelectorModal } from "./QueueSelectorModal";
 import { ConnectionSelectorModal } from "./ConnectionSelectorModal";
+import { QuickFunnelsModal } from "./QuickFunnelsModal";
 
 interface PromptEditorModalProps {
   open: boolean;
@@ -81,6 +83,12 @@ const actionButtons: ActionButton[] = [
     label: "Salvar informações adicionais",
     icon: <Database className="w-4 h-4" />,
     tag: '[ADD_ACTION]: [workspace_id: WORKSPACE_ID], [contact_id: CONTACT_ID], [field_name: FIELD_NAME], [field_value: FIELD_VALUE]',
+  },
+  {
+    id: "send-funnel",
+    label: "Enviar Funil",
+    icon: <ListFilter className="w-4 h-4" />,
+    tag: '[Enviar Funil: NOME_DO_FUNIL]',
   },
 ];
 
@@ -177,6 +185,7 @@ export function PromptEditorModal({
   const [showQueueSelector, setShowQueueSelector] = useState(false);
   const [showConnectionSelector, setShowConnectionSelector] = useState(false);
   const [showPipelineColumnSelector, setShowPipelineColumnSelector] = useState(false);
+  const [showFunnelSelector, setShowFunnelSelector] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<string | null>(null);
   const editorRef = useRef<PromptEditorRef>(null);
 
@@ -210,6 +219,12 @@ export function PromptEditorModal({
     if (action.id === "transfer-crm-column" || action.id === "create-crm-card") {
       setPendingActionType(action.id);
       setShowPipelineColumnSelector(true);
+      return;
+    }
+
+    if (action.id === "send-funnel") {
+      setPendingActionType(action.id);
+      setShowFunnelSelector(true);
       return;
     }
 
@@ -256,6 +271,13 @@ export function PromptEditorModal({
     
     editorRef.current?.insertText(actionText);
     setShowPipelineColumnSelector(false);
+    setPendingActionType(null);
+  };
+
+  const handleFunnelSelected = (funnel: any) => {
+    const actionText = `\n[ADD_ACTION]: [funnel_id: ${funnel.id}], [funnel_title: ${funnel.title}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+    editorRef.current?.insertText(actionText);
+    setShowFunnelSelector(false);
     setPendingActionType(null);
   };
 
@@ -344,6 +366,12 @@ export function PromptEditorModal({
         onOpenChange={setShowPipelineColumnSelector}
         onColumnSelected={handlePipelineColumnSelected}
         workspaceId={workspaceId}
+      />
+
+      <QuickFunnelsModal
+        open={showFunnelSelector}
+        onOpenChange={setShowFunnelSelector}
+        onSendFunnel={handleFunnelSelected}
       />
     </Dialog>
   );
