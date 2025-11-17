@@ -189,16 +189,28 @@ serve(async (req) => {
                 switch (action.action_type) {
                   case 'mover_coluna':
                   case 'move_to_column': {
-                    const targetColumnId = actionConfig?.column_id || actionConfig?.target_column_id;
+                    const targetColumnId = actionConfig?.column_id;
+                    console.log(`🔍 [Time Automations] Move action config:`, actionConfig);
+                    console.log(`🔍 [Time Automations] Target column ID: ${targetColumnId}`);
+                    
                     if (targetColumnId) {
-                      await supabase
+                      const { data: updateResult, error: updateError } = await supabase
                         .from('pipeline_cards')
                         .update({ 
                           column_id: targetColumnId,
-                          moved_to_column_at: new Date().toISOString()
+                          moved_to_column_at: new Date().toISOString(),
+                          updated_at: new Date().toISOString()
                         })
-                        .eq('id', card.id);
-                      console.log(`✅ [Time Automations] Card movido para coluna ${targetColumnId}`);
+                        .eq('id', card.id)
+                        .select();
+                      
+                      if (updateError) {
+                        console.error(`❌ [Time Automations] Erro ao mover card:`, updateError);
+                      } else {
+                        console.log(`✅ [Time Automations] Card ${card.id} movido para coluna ${targetColumnId}`, updateResult);
+                      }
+                    } else {
+                      console.error(`❌ [Time Automations] column_id não encontrado no actionConfig`);
                     }
                     break;
                   }
