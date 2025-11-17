@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -39,12 +39,9 @@ export function VincularResponsavelModal({
   const { selectedWorkspace } = useWorkspace();
   const { assignConversation } = useConversationAssign();
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<WorkspaceUser[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(currentResponsibleId || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Atualizar selectedUserId quando o modal abre ou currentResponsibleId muda
   useEffect(() => {
@@ -59,17 +56,6 @@ export function VincularResponsavelModal({
     }
   }, [isOpen, selectedWorkspace]);
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = users.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(users);
-    }
-  }, [searchTerm, users]);
 
   const loadWorkspaceUsers = async () => {
     if (!selectedWorkspace) return;
@@ -93,7 +79,6 @@ export function VincularResponsavelModal({
       if (!data?.success || !data?.data) {
         console.warn('⚠️ Resposta inválida da edge function');
         setUsers([]);
-        setFilteredUsers([]);
         return;
       }
 
@@ -116,7 +101,6 @@ export function VincularResponsavelModal({
       console.log('🎯 Usuários filtrados para o workspace:', workspaceUsers);
 
       setUsers(workspaceUsers);
-      setFilteredUsers(workspaceUsers);
     } catch (error) {
       console.error('❌ Erro geral ao carregar usuários:', error);
       toast({
@@ -224,9 +208,7 @@ export function VincularResponsavelModal({
   };
 
   const handleClose = () => {
-    setSearchTerm("");
     setSelectedUserId(currentResponsibleId || null);
-    setIsDropdownOpen(false);
     onClose();
   };
 
@@ -234,87 +216,57 @@ export function VincularResponsavelModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-warning">
-            Selecione o responsável
-          </DialogTitle>
+          <DialogTitle>Selecione o responsável</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="relative">
-            <Input
-              placeholder="Buscar usuário"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={() => setIsDropdownOpen(true)}
-              className="border-warning focus:border-warning focus:ring-warning cursor-pointer"
-              readOnly={!isDropdownOpen}
-            />
-
-            {isDropdownOpen && (
-              <>
-                {/* Overlay para fechar o dropdown ao clicar fora */}
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    setSearchTerm("");
-                  }}
-                />
-                
-                {/* Dropdown lista de usuários */}
-                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-warning/50 rounded-lg shadow-lg z-20 max-h-[300px] overflow-y-auto">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : filteredUsers.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-4">
-                      <p className="font-medium">Nenhum usuário encontrado</p>
-                      {users.length === 0 && (
-                        <p className="text-xs mt-1">Não há usuários cadastrados neste workspace</p>
-                      )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Responsável</label>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8 border rounded-md">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Select
+                value={selectedUserId || ""}
+                onValueChange={(value) => setSelectedUserId(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um usuário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-4 px-2">
+                      <p className="text-sm">Nenhum usuário encontrado</p>
+                      <p className="text-xs mt-1">Não há usuários cadastrados neste workspace</p>
                     </div>
                   ) : (
-                    <div className="py-1">
-                      {filteredUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          onClick={() => {
-                            setSelectedUserId(user.id);
-                            setSearchTerm(user.name);
-                            setIsDropdownOpen(false);
-                          }}
-                          className={`px-3 py-2 cursor-pointer transition-colors ${
-                            selectedUserId === user.id
-                              ? 'bg-warning/20 text-warning font-medium border-l-2 border-warning'
-                              : 'hover:bg-accent'
-                          }`}
-                        >
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                    users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.name}</span>
+                          <span className="text-xs text-muted-foreground">{user.email}</span>
                         </div>
-                      ))}
-                    </div>
+                      </SelectItem>
+                    ))
                   )}
-                </div>
-              </>
+                </SelectContent>
+              </Select>
             )}
           </div>
         </div>
 
         <div className="flex justify-end gap-3">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={handleClose}
             disabled={isSaving}
-            className="text-destructive hover:text-destructive"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={isSaving || !selectedUserId}
-            className="bg-warning hover:bg-warning/90 text-black"
           >
             {isSaving ? (
               <>
