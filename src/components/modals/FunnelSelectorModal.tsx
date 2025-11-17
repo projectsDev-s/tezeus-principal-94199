@@ -8,14 +8,16 @@ interface FunnelSelectorModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFunnelSelected: (funnelId: string, funnelTitle: string) => void;
+  workspaceId?: string;
 }
 
 export function FunnelSelectorModal({
   open,
   onOpenChange,
   onFunnelSelected,
+  workspaceId,
 }: FunnelSelectorModalProps) {
-  const { funnels, loading } = useQuickFunnels();
+  const { funnels, loading } = useQuickFunnels(workspaceId);
 
   const handleSelect = (funnelId: string, funnelTitle: string) => {
     onFunnelSelected(funnelId, funnelTitle);

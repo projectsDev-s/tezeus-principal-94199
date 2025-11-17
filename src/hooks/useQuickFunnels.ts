@@ -20,21 +20,23 @@ export interface Funnel {
   created_at: string;
 }
 
-export function useQuickFunnels() {
+export function useQuickFunnels(workspaceIdProp?: string) {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const { selectedWorkspace } = useWorkspace();
 
+  const workspaceId = workspaceIdProp || selectedWorkspace?.workspace_id;
+
   useEffect(() => {
-    if (selectedWorkspace?.workspace_id && user) {
+    if (workspaceId && user) {
       fetchFunnels();
     }
-  }, [selectedWorkspace?.workspace_id, user]);
+  }, [workspaceId, user]);
 
   const fetchFunnels = async () => {
-    if (!selectedWorkspace?.workspace_id || !user) {
+    if (!workspaceId || !user) {
       setFunnels([]);
       setLoading(false);
       return;
@@ -45,7 +47,7 @@ export function useQuickFunnels() {
       const { data, error } = await (supabase as any)
         .from('quick_funnels')
         .select('*')
-        .eq('workspace_id', selectedWorkspace.workspace_id)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -63,7 +65,7 @@ export function useQuickFunnels() {
   };
 
   const createFunnel = async (title: string, steps: FunnelStep[]) => {
-    if (!selectedWorkspace?.workspace_id || !user) {
+    if (!workspaceId || !user) {
       toast({
         title: 'Erro',
         description: 'Usuário não autenticado',
@@ -78,7 +80,7 @@ export function useQuickFunnels() {
         .insert({
           title,
           steps,
-          workspace_id: selectedWorkspace.workspace_id,
+          workspace_id: workspaceId,
         })
         .select()
         .single();

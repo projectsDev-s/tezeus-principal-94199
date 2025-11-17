@@ -372,6 +372,7 @@ export function PromptEditorModal({
         open={showFunnelSelector}
         onOpenChange={setShowFunnelSelector}
         onFunnelSelected={handleFunnelSelected}
+        workspaceId={workspaceId}
       />
     </Dialog>
   );
