@@ -5,7 +5,7 @@ import { useAgentHistory } from "@/hooks/useAgentHistory";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { UserCircle, ArrowRight, UserPlus, Clock, Bot, Power, PowerOff, ArrowRightLeft, User } from "lucide-react";
+import { UserCircle, ArrowRight, UserPlus, Clock, Bot, Power, PowerOff, ArrowRightLeft, User, UserMinus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,22 +15,31 @@ interface AssignmentHistoryModalProps {
   conversationId: string;
 }
 
-const assignmentActionIcons = {
-  assigned: <UserPlus className="h-4 w-4 text-blue-500" />,
-  transferred: <ArrowRight className="h-4 w-4 text-orange-500" />,
-  reassigned: <ArrowRightLeft className="h-4 w-4 text-purple-500" />,
-};
-
-const assignmentActionLabels = {
-  assigned: 'Atribuído',
-  transferred: 'Transferido',
-  reassigned: 'Reatribuído',
-};
-
-const assignmentActionColors = {
-  assigned: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-  transferred: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
-  reassigned: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
+const assignmentActionConfig: Record<string, {
+  icon: React.ReactNode;
+  label: string;
+  badgeClass: string;
+}> = {
+  accept: {
+    icon: <UserPlus className="h-4 w-4 text-blue-500" />,
+    label: 'Aceito manualmente',
+    badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  },
+  assign: {
+    icon: <UserPlus className="h-4 w-4 text-blue-500" />,
+    label: 'Atribuído',
+    badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  },
+  transfer: {
+    icon: <ArrowRight className="h-4 w-4 text-orange-500" />,
+    label: 'Transferido',
+    badgeClass: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  },
+  unassign: {
+    icon: <UserMinus className="h-4 w-4 text-red-500" />,
+    label: 'Responsável removido',
+    badgeClass: 'bg-red-500/10 text-red-700 dark:text-red-400',
+  },
 };
 
 const agentActionIcons = {
@@ -108,26 +117,38 @@ export function AssignmentHistoryModal({
               {combinedHistory.map((entry, index) => {
                 if (entry.type === 'assignment') {
                   const assignment = entry.data;
+                  const assignmentConfig = assignmentActionConfig[assignment.action] ?? {
+                    icon: <UserCircle className="h-4 w-4 text-muted-foreground" />,
+                    label: assignment.action ?? 'Ação desconhecida',
+                    badgeClass: 'bg-muted text-foreground',
+                  };
                   return (
                     <div
                       key={`assignment-${assignment.id}`}
                       className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                     >
                       <div className="mt-1">
-                        {assignmentActionIcons[assignment.action as keyof typeof assignmentActionIcons]}
+                        {assignmentConfig.icon}
                       </div>
                       
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={assignmentActionColors[assignment.action as keyof typeof assignmentActionColors]}>
-                            {assignmentActionLabels[assignment.action as keyof typeof assignmentActionLabels]}
+                          <Badge variant="outline" className={assignmentConfig.badgeClass}>
+                            {assignmentConfig.label}
                           </Badge>
                           
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            {assignment.action === 'assigned' ? (
+                            {assignment.action === 'accept' || assignment.action === 'assign' ? (
                               <>
                                 <User className="h-3 w-3" />
                                 <span>para <span className="font-medium text-foreground">{assignment.to_user_name || 'Usuário desconhecido'}</span></span>
+                              </>
+                            ) : assignment.action === 'unassign' ? (
+                              <>
+                                <User className="h-3 w-3" />
+                                <span>de <span className="font-medium text-foreground">{assignment.from_user_name || 'Usuário desconhecido'}</span></span>
+                                <ArrowRight className="h-3 w-3 mx-1" />
+                                <span>para <span className="font-medium text-foreground">Não atribuído</span></span>
                               </>
                             ) : (
                               <>
