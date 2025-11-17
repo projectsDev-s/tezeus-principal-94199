@@ -3719,6 +3719,18 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      move_pipeline_card: {
+        Args: { p_card_id: string; p_new_column_id: string }
+        Returns: {
+          column_id: string
+          contact_id: string
+          id: string
+          moved_to_column_at: string
+          pipeline_id: string
+          title: string
+          updated_at: string
+        }[]
+      }
       set_current_user_context: {
         Args: { user_email?: string; user_id: string }
         Returns: undefined
