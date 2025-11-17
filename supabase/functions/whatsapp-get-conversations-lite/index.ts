@@ -202,15 +202,12 @@ serve(async (req) => {
     }
 
     // Buscar última mensagem e nome do usuário responsável para cada conversa
-    const supabaseService = createClient(
-      supabaseUrl,
-      supabaseServiceRoleKey
-    );
-
-    const userCache = new Map<string, { name: string | null; avatar: string | null }>();
-
     const conversationsWithMessages = await Promise.all(
       (conversations || []).map(async (conv) => {
+        const supabaseService = createClient(
+          supabaseUrl,
+          supabaseServiceRoleKey
+        );
 
         // ✅ Garantir connection data de forma explícita
         // Normalize joined data (Supabase may return arrays for joins)
@@ -239,26 +236,14 @@ serve(async (req) => {
 
         // Buscar nome do usuário responsável se existe assigned_user_id
         let assignedUserName: string | null = null;
-        let assignedUserAvatar: string | null = null;
         if (conv.assigned_user_id) {
-          if (userCache.has(conv.assigned_user_id)) {
-            const cached = userCache.get(conv.assigned_user_id)!;
-            assignedUserName = cached.name;
-            assignedUserAvatar = cached.avatar;
-          } else {
-            const { data: userData } = await supabaseService
-              .from('system_users')
-              .select('name, avatar')
-              .eq('id', conv.assigned_user_id)
-              .single();
-            
-            assignedUserName = userData?.name || null;
-            assignedUserAvatar = userData?.avatar || null;
-            userCache.set(conv.assigned_user_id, {
-              name: assignedUserName,
-              avatar: assignedUserAvatar
-            });
-          }
+          const { data: userData } = await supabaseService
+            .from('system_users')
+            .select('name')
+            .eq('id', conv.assigned_user_id)
+            .single();
+          
+          assignedUserName = userData?.name || null;
         }
 
         // Extrair conversation_tags ANTES do spread para não perder
@@ -270,7 +255,6 @@ serve(async (req) => {
           connection: connectionData || null, // ✅ Garantido
           last_message: lastMessage || [],
           assigned_user_name: assignedUserName,
-          assigned_user_avatar: assignedUserAvatar,
           conversation_tags: conversationTags // ✅ Preservar tags explicitamente
         };
       })

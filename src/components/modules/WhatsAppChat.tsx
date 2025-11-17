@@ -17,6 +17,7 @@ import { useTags } from "@/hooks/useTags";
 import { useProfileImages } from "@/hooks/useProfileImages";
 import { useInstanceAssignments } from "@/hooks/useInstanceAssignments";
 import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
+import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { useQueues } from "@/hooks/useQueues";
@@ -133,6 +134,20 @@ export function WhatsAppChat({
   const {
     selectedWorkspace
   } = useWorkspace();
+  const { members: workspaceMembers } = useWorkspaceMembers(selectedWorkspace?.workspace_id);
+  const assignedUsersMap = useMemo(() => {
+    const map = new Map<string, { name?: string | null; avatar?: string | null }>();
+    workspaceMembers.forEach(member => {
+      const userId = member.user?.id || member.user_id;
+      if (userId) {
+        map.set(userId, {
+          name: member.user?.name,
+          avatar: member.user?.avatar || null
+        });
+      }
+    });
+    return map;
+  }, [workspaceMembers]);
   const {
     updateConversationAgentStatus
   } = usePipelinesContext();
@@ -1866,20 +1881,23 @@ export function WhatsAppChat({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Avatar className="w-6 h-6 rounded-full">
-                            {conversation.assigned_user_avatar ? (
+                            {conversation.assigned_user_id && assignedUsersMap.get(conversation.assigned_user_id)?.avatar ? (
                               <AvatarImage
-                                src={conversation.assigned_user_avatar}
-                                alt={conversation.assigned_user_name || 'Responsável'}
+                                src={assignedUsersMap.get(conversation.assigned_user_id)!.avatar || ''}
+                                alt={conversation.assigned_user_name || assignedUsersMap.get(conversation.assigned_user_id)?.name || 'Responsável'}
                                 className="object-cover"
                               />
                             ) : null}
                             <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
-                              {conversation.assigned_user_name ? conversation.assigned_user_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '?'}
+                              {(() => {
+                                const displayName = conversation.assigned_user_name || assignedUsersMap.get(conversation.assigned_user_id || '')?.name;
+                                return displayName ? displayName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+                              })()}
                             </AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{conversation.assigned_user_name?.split(' ')[0] || 'Não atribuído'}</p>
+                          <p>{(conversation.assigned_user_name || assignedUsersMap.get(conversation.assigned_user_id || '')?.name)?.split(' ')[0] || 'Não atribuído'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
