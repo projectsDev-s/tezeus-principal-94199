@@ -296,7 +296,12 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
         .eq('id', card.id)
         .single();
 
-      let conversationId = cardData?.conversation_id;
+      if (!cardData) {
+        console.error('❌ Card não encontrado no banco');
+        return;
+      }
+
+      let conversationId = cardData.conversation_id;
       let connectionId = null;
 
       // Se o card não tiver conversation_id, buscar pela contact_id
