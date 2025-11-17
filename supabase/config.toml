@@ -39,3 +39,6 @@ verify_jwt = false
 
 [functions.update-zapi-message-status-from-n8n]
 verify_jwt = false
+
+[functions.check-message-automations]
+verify_jwt = false
