@@ -234,6 +234,15 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
     
     setIsSubmitting(true);
     try {
+      // Upload avatar if there's a file
+      if (avatarFile) {
+        const tempUserId = crypto.randomUUID();
+        const uploadedUrl = await uploadAvatar(avatarFile, tempUserId);
+        if (uploadedUrl) {
+          finalFormData.avatar = uploadedUrl;
+        }
+      }
+      
       await createUserAndAddToWorkspace(finalFormData, selectedRole);
       
       // Reset form
@@ -311,6 +320,15 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
     
     setIsSubmitting(true);
     try {
+      // Upload avatar if there's a new file
+      let avatarUrl = editingUser.user.avatar;
+      if (avatarFile) {
+        const uploadedUrl = await uploadAvatar(avatarFile, editingUser.user.id);
+        if (uploadedUrl) {
+          avatarUrl = uploadedUrl;
+        }
+      }
+      
       // Update user data
       const userData: any = {
         name: formData.name,
@@ -318,6 +336,11 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
         profile: formData.profile,
         phone: formData.phone,
       };
+
+      // Include avatar if changed
+      if (avatarUrl !== editingUser.user.avatar) {
+        userData.avatar = avatarUrl;
+      }
 
       // Only include password if it's provided
       if (formData.senha.trim()) {
@@ -328,6 +351,7 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
       if (formData.default_channel) {
         userData.default_channel = formData.default_channel;
       }
+
 
       await updateUser(editingUser.user.id, userData);
 
