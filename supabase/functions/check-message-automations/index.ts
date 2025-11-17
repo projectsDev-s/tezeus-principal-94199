@@ -400,13 +400,58 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
         .eq('id', card.id)
         .single();
 
-      const { data: conversation } = await supabaseClient
-        .from('conversations')
-        .select('connection_id')
-        .eq('id', cardData.conversation_id)
-        .single();
+      if (!cardData) {
+        console.error('❌ Card não encontrado');
+        return;
+      }
 
-      if (!contact || !conversation?.connection_id) {
+      let conversationId = cardData.conversation_id;
+      let connectionId = null;
+
+      // Se o card não tiver conversation_id, buscar pela contact_id
+      if (!conversationId) {
+        console.log('⚠️ Card sem conversation_id, buscando conversa pelo contact_id...');
+        const { data: conv } = await supabaseClient
+          .from('conversations')
+          .select('id, connection_id')
+          .eq('contact_id', card.contact_id)
+          .eq('workspace_id', cardData.workspace_id)
+          .order('last_activity_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (!conv) {
+          console.error('❌ Nenhuma conversa encontrada para o contato');
+          return;
+        }
+        
+        conversationId = conv.id;
+        connectionId = conv.connection_id;
+        
+        // Atualizar o card com o conversation_id
+        await supabaseClient
+          .from('pipeline_cards')
+          .update({ conversation_id: conversationId })
+          .eq('id', card.id);
+        
+        console.log(`✅ Conversa encontrada e vinculada ao card: ${conversationId}`);
+      } else {
+        // Buscar connection_id da conversa
+        const { data: conversation } = await supabaseClient
+          .from('conversations')
+          .select('connection_id')
+          .eq('id', conversationId)
+          .single();
+
+        if (!conversation) {
+          console.error('❌ Conversa não encontrada no banco');
+          return;
+        }
+
+        connectionId = conversation.connection_id;
+      }
+
+      if (!contact || !connectionId) {
         console.error('❌ Dados insuficientes para enviar funil');
         return;
       }
@@ -442,7 +487,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
             if (message) {
               messagePayload = {
-                connectionId: conversation.connection_id,
+                connectionId: connectionId,
                 phone: contact.phone,
                 message: message.content
               };
@@ -460,7 +505,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
             if (audio) {
               messagePayload = {
-                connectionId: conversation.connection_id,
+                connectionId: connectionId,
                 phone: contact.phone,
                 type: 'audio',
                 file_url: audio.file_url,
@@ -483,7 +528,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
                              media.file_url?.match(/\.(mp4|mov|avi|mkv)$/i);
               
               messagePayload = {
-                connectionId: conversation.connection_id,
+                connectionId: connectionId,
                 phone: contact.phone,
                 type: isVideo ? 'video' : 'image',
                 file_url: media.file_url,
@@ -503,7 +548,7 @@ async function executeAction(action: any, card: any, supabaseClient: any) {
 
             if (document) {
               messagePayload = {
-                connectionId: conversation.connection_id,
+                connectionId: connectionId,
                 phone: contact.phone,
                 type: 'document',
                 file_url: document.file_url,
