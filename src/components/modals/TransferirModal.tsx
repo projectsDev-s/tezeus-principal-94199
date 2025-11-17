@@ -8,6 +8,8 @@ import { usePipelinesContext } from "@/contexts/PipelinesContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
+import { useQueues } from "@/hooks/useQueues";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface TransferirModalProps {
   isOpen: boolean;
@@ -31,11 +33,23 @@ export function TransferirModal({
   const [targetPipelineId, setTargetPipelineId] = useState("");
   const [targetColumnId, setTargetColumnId] = useState("");
   const [targetColumns, setTargetColumns] = useState<any[]>([]);
+  const [targetQueueId, setTargetQueueId] = useState<string>("");
+  const [targetResponsibleId, setTargetResponsibleId] = useState<string>("");
+  const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   const { pipelines } = usePipelinesContext();
   const { toast } = useToast();
   const { getHeaders } = useWorkspaceHeaders();
+  const { selectedWorkspace } = useWorkspace();
+  const { queues } = useQueues();
+
+  // Fetch workspace users
+  useEffect(() => {
+    if (isOpen && selectedWorkspace?.workspace_id) {
+      fetchWorkspaceUsers();
+    }
+  }, [isOpen, selectedWorkspace?.workspace_id]);
 
   // Fetch columns when pipeline changes
   useEffect(() => {
@@ -46,6 +60,32 @@ export function TransferirModal({
       setTargetColumnId("");
     }
   }, [targetPipelineId]);
+
+  const fetchWorkspaceUsers = async () => {
+    try {
+      const headers = getHeaders();
+      const { data, error } = await supabase.functions.invoke(
+        'get-system-user',
+        {
+          method: 'GET',
+          headers
+        }
+      );
+
+      if (error) throw error;
+      
+      // Filter only users from current workspace
+      const users = data?.filter((user: any) => 
+        user.workspace_members?.some((member: any) => 
+          member.workspace_id === selectedWorkspace?.workspace_id
+        )
+      ) || [];
+      
+      setWorkspaceUsers(users);
+    } catch (error) {
+      console.error('Error fetching workspace users:', error);
+    }
+  };
 
   const fetchColumns = async (pipelineId: string) => {
     try {
@@ -91,15 +131,25 @@ export function TransferirModal({
       // Transfer each selected card
       for (const cardId of selectedCards) {
         try {
+          const updateBody: any = {
+            pipeline_id: targetPipelineId,
+            column_id: targetColumnId,
+          };
+
+          // Add optional fields if they are selected (empty string means clear the field)
+          if (targetQueueId) {
+            updateBody.queue_id = targetQueueId;
+          }
+          if (targetResponsibleId) {
+            updateBody.responsible_user_id = targetResponsibleId;
+          }
+
           const { error } = await supabase.functions.invoke(
             `pipeline-management/cards?id=${cardId}`,
             {
               method: 'PUT',
               headers,
-              body: {
-                pipeline_id: targetPipelineId,
-                column_id: targetColumnId,
-              },
+              body: updateBody,
             }
           );
 
@@ -274,6 +324,110 @@ export function TransferirModal({
                     )}
                   >
                     {column.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Fila (Opcional) */}
+          <div>
+            <Label className={cn(
+              "text-sm font-medium",
+              isDarkMode ? "text-gray-200" : "text-gray-700"
+            )}>
+              Fila (Opcional)
+            </Label>
+            <Select 
+              value={targetQueueId} 
+              onValueChange={(value) => setTargetQueueId(value === "clear" ? "" : value)}
+            >
+              <SelectTrigger className={cn(
+                "mt-1",
+                isDarkMode 
+                  ? "bg-gray-700 border-gray-600 text-white" 
+                  : "bg-white border-gray-300 text-gray-900"
+              )}>
+                <SelectValue placeholder="Sem fila" />
+              </SelectTrigger>
+              <SelectContent className={cn(
+                isDarkMode 
+                  ? "bg-gray-700 border-gray-600" 
+                  : "bg-white border-gray-300"
+              )}>
+                <SelectItem 
+                  value="clear"
+                  className={cn(
+                    isDarkMode 
+                      ? "text-white hover:bg-gray-600" 
+                      : "text-gray-900 hover:bg-gray-100"
+                  )}
+                >
+                  Sem fila
+                </SelectItem>
+                {queues.map(queue => (
+                  <SelectItem 
+                    key={queue.id} 
+                    value={queue.id}
+                    className={cn(
+                      isDarkMode 
+                        ? "text-white hover:bg-gray-600" 
+                        : "text-gray-900 hover:bg-gray-100"
+                    )}
+                  >
+                    {queue.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Responsável (Opcional) */}
+          <div>
+            <Label className={cn(
+              "text-sm font-medium",
+              isDarkMode ? "text-gray-200" : "text-gray-700"
+            )}>
+              Responsável (Opcional)
+            </Label>
+            <Select 
+              value={targetResponsibleId} 
+              onValueChange={(value) => setTargetResponsibleId(value === "clear" ? "" : value)}
+            >
+              <SelectTrigger className={cn(
+                "mt-1",
+                isDarkMode 
+                  ? "bg-gray-700 border-gray-600 text-white" 
+                  : "bg-white border-gray-300 text-gray-900"
+              )}>
+                <SelectValue placeholder="Sem responsável" />
+              </SelectTrigger>
+              <SelectContent className={cn(
+                isDarkMode 
+                  ? "bg-gray-700 border-gray-600" 
+                  : "bg-white border-gray-300"
+              )}>
+                <SelectItem 
+                  value="clear"
+                  className={cn(
+                    isDarkMode 
+                      ? "text-white hover:bg-gray-600" 
+                      : "text-gray-900 hover:bg-gray-100"
+                  )}
+                >
+                  Sem responsável
+                </SelectItem>
+                {workspaceUsers.map(user => (
+                  <SelectItem 
+                    key={user.id} 
+                    value={user.id}
+                    className={cn(
+                      isDarkMode 
+                        ? "text-white hover:bg-gray-600" 
+                        : "text-gray-900 hover:bg-gray-100"
+                    )}
+                  >
+                    {user.nome || user.email}
                   </SelectItem>
                 ))}
               </SelectContent>
