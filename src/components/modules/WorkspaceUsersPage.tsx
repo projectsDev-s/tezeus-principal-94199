@@ -639,6 +639,7 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Avatar</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Perfil</TableHead>
@@ -662,6 +663,15 @@ export function WorkspaceUsersPage({ workspaceId: propWorkspaceId }: WorkspaceUs
             ) : (
               members.map((member) => (
                 <TableRow key={member.id}>
+                  <TableCell>
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border">
+                      {member.user?.avatar ? (
+                        <img src={member.user.avatar} alt={member.user.name || 'Avatar'} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{member.user?.name || 'N/A'}</TableCell>
                   <TableCell>{member.user?.email || 'N/A'}</TableCell>
                   <TableCell>
