@@ -39,7 +39,7 @@ interface AutomationModalProps {
 
 interface Trigger {
   id: string;
-  trigger_type: 'enter_column' | 'leave_column' | 'time_in_column' | 'recurring' | 'message_received' | '';
+  trigger_type: 'enter_column' | 'leave_column' | 'time_in_column' | 'message_received' | '';
   trigger_config: any;
 }
 
@@ -54,7 +54,6 @@ const TRIGGER_TYPES = [
   { value: 'enter_column', label: 'Entrada na coluna' },
   { value: 'leave_column', label: 'Saída da coluna' },
   { value: 'time_in_column', label: 'Tempo na coluna' },
-  { value: 'recurring', label: 'Execução recorrente' },
   { value: 'message_received', label: 'Mensagens recebidas' },
 ];
 
