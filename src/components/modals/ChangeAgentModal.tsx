@@ -74,7 +74,7 @@ export function ChangeAgentModal({
       
       const { data, error } = await supabase
         .from('ai_agents')
-        .select('id, name, description, agent_type, is_active')
+        .select('id, name, description, is_active')
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .eq('is_active', true)
         .order('name');
@@ -283,11 +283,6 @@ export function ChangeAgentModal({
                           <p className="text-xs text-muted-foreground line-clamp-2">
                             {agent.description}
                           </p>
-                        )}
-                        {agent.agent_type && (
-                          <Badge variant="outline" className="mt-2 text-[10px]">
-                            {agent.agent_type}
-                          </Badge>
                         )}
                         {isCurrentAgent && (
                           <p className="text-xs text-muted-foreground mt-2 italic">
