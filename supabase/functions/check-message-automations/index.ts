@@ -308,12 +308,12 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
 
       console.log(`📤 Enviando mensagem para ${contact.phone}`);
 
-      // Chamar test-send-msg
+      // Chamar test-send-msg com os campos corretos
       const { error: sendError } = await supabaseClient.functions.invoke('test-send-msg', {
         body: {
-          connectionId: conversation.connection_id,
-          phone: contact.phone,
-          message: messageText
+          conversation_id: card.conversation_id,
+          content: messageText,
+          message_type: 'text'
         }
       });
 
