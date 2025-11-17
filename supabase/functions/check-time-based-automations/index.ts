@@ -208,6 +208,19 @@ serve(async (req) => {
                         console.error(`❌ [Time Automations] Erro ao mover card:`, updateError);
                       } else {
                         console.log(`✅ [Time Automations] Card ${card.id} movido para coluna ${targetColumnId}`, updateResult);
+                        
+                        // Broadcast manual para atualização em tempo real
+                        await supabase
+                          .channel(`pipeline-${card.pipeline_id}`)
+                          .send({
+                            type: 'broadcast',
+                            event: 'pipeline-card-moved',
+                            payload: {
+                              cardId: card.id,
+                              newColumnId: targetColumnId
+                            }
+                          });
+                        console.log(`📡 [Time Automations] Broadcast enviado para pipeline-${card.pipeline_id}`);
                       }
                     } else {
                       console.error(`❌ [Time Automations] column_id não encontrado no actionConfig`);
