@@ -152,12 +152,6 @@ export function DSAgente() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {agent.agent_type === 'conversational' ? 'Conversacional' : 
-                         agent.agent_type === 'assistant' ? 'Assistente' : agent.agent_type}
-                      </Badge>
-                    </TableCell>
                     <TableCell>{agent.max_tokens}</TableCell>
                     <TableCell>
                       <Badge variant={agent.is_active ? "default" : "secondary"}>
