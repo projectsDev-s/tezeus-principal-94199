@@ -1927,61 +1927,46 @@ serve(async (req) => {
             console.log('🔍 body.column_id !== undefined:', body.column_id !== undefined);
             console.log('🔍 typeof body.column_id:', typeof body.column_id);
 
-            // ✅ Buscar card atual ANTES da atualização para verificar mudança de coluna
+            // ✅ Buscar card atual ANTES da atualização para registrar informações
+            console.log(`📋 ========== BUSCANDO CARD ATUAL ==========`);
             let previousColumnId: string | null = null;
-            
-            if (body.column_id !== undefined) {
-              console.log(`📋 ========== BUSCANDO COLUNA ATUAL DO CARD ==========`);
-              console.log(`📋 Card ID: ${cardId}`);
-              
-              try {
-                const { data: currentCard, error: fetchError } = await supabaseClient
-                  .from('pipeline_cards')
-                  .select('column_id, conversation_id, contact_id')
-                  .eq('id', cardId)
-                  .single();
-                
-                if (fetchError) {
-                  console.error(`❌ Erro ao buscar card atual:`, {
-                    error: fetchError,
-                    message: fetchError.message,
-                    code: fetchError.code
-                  });
-                  previousColumnId = null;
-                } else if (currentCard) {
-                  previousColumnId = (currentCard as any)?.column_id || null;
-                  console.log(`📋 ✅ Coluna anterior do card: ${previousColumnId}`);
-                  console.log(`📋 ✅ Nova coluna sendo definida: ${body.column_id}`);
-                } else {
-                  console.warn(`⚠️ Card atual não encontrado`);
-                  previousColumnId = null;
-                }
-              } catch (fetchErr) {
-                console.error(`❌ Exception ao buscar card atual:`, fetchErr);
-                previousColumnId = null;
-              }
-            } else {
-              console.log(`ℹ️ column_id não está sendo atualizado (undefined), pulando verificação de mudança`);
-            }
-
-            console.log('📋 ========== ATUALIZANDO CARD NO BANCO ==========');
-            
-            // ✅ Buscar conversation_id ANTES da atualização para garantir que temos
             let conversationIdFromCard: string | null = null;
-            if (body.column_id !== undefined) {
-              const { data: cardBeforeUpdate } = await supabaseClient
+            let previousResponsibleId: string | null = null;
+            
+            try {
+              const { data: currentCard, error: fetchError } = await supabaseClient
                 .from('pipeline_cards')
-                .select('conversation_id')
+                .select('column_id, conversation_id, contact_id, responsible_user_id')
                 .eq('id', cardId)
                 .single();
               
-              if ((cardBeforeUpdate as any)?.conversation_id) {
-                conversationIdFromCard = (cardBeforeUpdate as any).conversation_id;
-                console.log(`✅ [Pre-Update] conversation_id encontrado: ${conversationIdFromCard}`);
+              if (fetchError) {
+                console.error(`❌ Erro ao buscar card atual:`, {
+                  error: fetchError,
+                  message: fetchError.message,
+                  code: fetchError.code
+                });
+              } else if (currentCard) {
+                previousColumnId = (currentCard as any)?.column_id || null;
+                conversationIdFromCard = (currentCard as any)?.conversation_id || null;
+                previousResponsibleId = (currentCard as any)?.responsible_user_id || null;
+                
+                console.log(`📋 ✅ Dados atuais do card:`);
+                console.log(`    • Coluna atual: ${previousColumnId}`);
+                console.log(`    • conversation_id atual: ${conversationIdFromCard}`);
+                console.log(`    • responsável atual: ${previousResponsibleId}`);
+                
+                if (body.column_id !== undefined) {
+                  console.log(`📋 ✅ Nova coluna sendo definida: ${body.column_id}`);
+                }
               } else {
-                console.warn(`⚠️ [Pre-Update] Card não tem conversation_id`);
+                console.warn(`⚠️ Card atual não encontrado antes da atualização`);
               }
+            } catch (fetchErr) {
+              console.error(`❌ Exception ao buscar card atual:`, fetchErr);
             }
+
+            console.log('📋 ========== ATUALIZANDO CARD NO BANCO ==========');
             
             // Fazer update sem select para evitar erro de workspace_id
             const { error: updateError } = (await (supabaseClient
@@ -2400,51 +2385,54 @@ serve(async (req) => {
               console.error('❌ [EF pipeline-management] Erro ao enviar broadcast:', bfErr);
             }
             
-            // ✅ Se o responsável foi atualizado E o card tem conversa associada, sincronizar
-            if (body.responsible_user_id !== undefined && card.conversation_id) {
-              console.log(`🔄 Syncing conversation ${card.conversation_id} with responsible user ${body.responsible_user_id}`);
+            // ✅ Se o responsável foi atualizado e há conversa vinculada, sincronizar e logar auditoria
+            const finalConversationId = card.conversation_id || conversationIdFromCard;
+            if (body.responsible_user_id !== undefined && finalConversationId) {
+              const newResponsibleId = body.responsible_user_id || null;
               
-              // Buscar estado atual da conversa
-              const { data: currentConversation } = (await supabaseClient
-                .from('conversations')
-                .select('assigned_user_id, workspace_id')
-                .eq('id', card.conversation_id)
-                .single()) as any;
-              
-              if (currentConversation) {
-                // Atualizar a conversa com o novo responsável
-                const { error: convUpdateError } = (await (supabaseClient
-                  .from('conversations') as any)
-                  .update({
-                    assigned_user_id: body.responsible_user_id,
-                    assigned_at: new Date().toISOString(),
-                    status: 'open'
-                  })
-                  .eq('id', card.conversation_id)) as any;
+              if (previousResponsibleId !== newResponsibleId) {
+                console.log(`🔄 Syncing conversation ${finalConversationId} com novo responsável ${newResponsibleId}`);
                 
-                if (convUpdateError) {
-                  console.error('❌ Error updating conversation:', convUpdateError);
-                } else {
-                  // Determinar se é aceite ou transferência
-                  const action = currentConversation.assigned_user_id ? 'transfer' : 'accept';
+                const { data: currentConversation } = (await supabaseClient
+                  .from('conversations')
+                  .select('assigned_user_id, workspace_id')
+                  .eq('id', finalConversationId)
+                  .single()) as any;
+                
+                if (currentConversation) {
+                  const { error: convUpdateError } = (await (supabaseClient
+                    .from('conversations') as any)
+                    .update({
+                      assigned_user_id: newResponsibleId,
+                      assigned_at: new Date().toISOString(),
+                      status: 'open'
+                    })
+                    .eq('id', finalConversationId)) as any;
                   
-                  // Registrar no log de auditoria
-                  const { error: logError } = await supabaseClient
-                    .from('conversation_assignments')
-                    .insert({
-                      conversation_id: card.conversation_id,
-                      from_assigned_user_id: currentConversation.assigned_user_id,
-                      to_assigned_user_id: body.responsible_user_id,
-                      changed_by: userId,
-                      action: action
-                    } as any);
-                  
-                  if (logError) {
-                    console.error('❌ Error logging assignment:', logError);
+                  if (convUpdateError) {
+                    console.error('❌ Error updating conversation:', convUpdateError);
+                  } else {
+                    const action = previousResponsibleId ? 'transfer' : 'accept';
+                    
+                    const { error: logError } = await supabaseClient
+                      .from('conversation_assignments')
+                      .insert({
+                        conversation_id: finalConversationId,
+                        from_assigned_user_id: previousResponsibleId,
+                        to_assigned_user_id: newResponsibleId,
+                        changed_by: userId,
+                        action
+                      } as any);
+                    
+                    if (logError) {
+                      console.error('❌ Error logging assignment:', logError);
+                    } else {
+                      console.log(`✅ Registro de histórico criado: ${action} ${previousResponsibleId || 'null'} -> ${newResponsibleId}`);
+                    }
                   }
-                  
-                  console.log(`✅ Conversa ${action === 'accept' ? 'aceita' : 'transferida'} automaticamente para ${body.responsible_user_id}`);
                 }
+              } else {
+                console.log('ℹ️ Responsável informado é igual ao atual; nenhuma atualização de histórico necessária');
               }
             }
             

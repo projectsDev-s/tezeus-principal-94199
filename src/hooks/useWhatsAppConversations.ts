@@ -36,6 +36,7 @@ export interface WhatsAppConversation {
   evolution_instance?: string | null;
   assigned_user_id?: string | null;
   assigned_user_name?: string | null;
+  assigned_user_avatar?: string | null;
   assigned_at?: string | null;
   connection_id?: string;
   connection?: {
@@ -129,6 +130,7 @@ export const useWhatsAppConversations = () => {
       evolution_instance: raw.evolution_instance ?? previous?.evolution_instance ?? null,
       assigned_user_id: raw.assigned_user_id ?? previous?.assigned_user_id ?? null,
       assigned_user_name: raw.assigned_user_name ?? previous?.assigned_user_name ?? null,
+      assigned_user_avatar: raw.assigned_user_avatar ?? previous?.assigned_user_avatar ?? null,
       assigned_at: raw.assigned_at ?? previous?.assigned_at ?? null,
       connection_id: raw.connection_id ?? previous?.connection_id,
       connection,
@@ -233,6 +235,9 @@ export const useWhatsAppConversations = () => {
           created_at: item.created_at || item.last_activity_at,
           assigned_user_id: item.assigned_user_id,
           assigned_user_name: item.assigned_user_name,
+          assigned_user_avatar: item.assigned_user_avatar,
+          assigned_user_name: item.assigned_user_name,
+          assigned_user_avatar: item.assigned_user_avatar,
           connection_id: item.connection_id,
           connection: item.connection,
           workspace_id: selectedWorkspace.workspace_id,
@@ -301,7 +306,8 @@ export const useWhatsAppConversations = () => {
             ? { 
                 ...conv, 
                 assigned_user_id: currentUserData.id,
-                assigned_user_name: currentUserData.name || null 
+                assigned_user_name: currentUserData.name || null,
+                assigned_user_avatar: currentUserData.avatar || null
               }
             : conv
         )
