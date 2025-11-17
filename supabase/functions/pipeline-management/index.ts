@@ -1627,7 +1627,7 @@ serve(async (req) => {
                     )
                   )
                 ),
-                responsible_user:system_users!responsible_user_id(id, name)
+                responsible_user:system_users!responsible_user_id(id, name, avatar)
               `)
               .eq('id', cardId)
               .maybeSingle();
@@ -1678,7 +1678,7 @@ serve(async (req) => {
                   )
                 )
               ),
-              responsible_user:system_users!responsible_user_id(id, name)
+              responsible_user:system_users!responsible_user_id(id, name, avatar)
             `)
             .eq('pipeline_id', pipelineId)
             .order('created_at', { ascending: false });
@@ -1851,7 +1851,7 @@ serve(async (req) => {
                     metadata
                   )
                 ),
-                responsible_user:system_users!responsible_user_id(id, name)
+                responsible_user:system_users!responsible_user_id(id, name, avatar)
               `)
               .single();
 
