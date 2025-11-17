@@ -6,7 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useConversationAssign } from "@/hooks/useConversationAssign";
+import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 
 interface VincularResponsavelModalProps {
   isOpen: boolean;
@@ -38,6 +40,8 @@ export function VincularResponsavelModal({
   const { toast } = useToast();
   const { selectedWorkspace } = useWorkspace();
   const { assignConversation } = useConversationAssign();
+  const { getHeaders } = useWorkspaceHeaders();
+  const queryClient = useQueryClient();
   const [users, setUsers] = useState<WorkspaceUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(currentResponsibleId || null);
   const [isLoading, setIsLoading] = useState(false);
@@ -156,35 +160,52 @@ export function VincularResponsavelModal({
         }
       }
 
-      // ✅ Atualizar PRIMEIRO o card diretamente
-      console.log('📝 Atualizando card com responsible_user_id:', selectedUserId);
-      const { error: cardUpdateError } = await supabase
-        .from('pipeline_cards')
-        .update({ 
-          responsible_user_id: selectedUserId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', cardId);
+      // ✅ Atualizar card via Edge Function para garantir auditoria e sincronização
+      console.log('📝 Atualizando card via pipeline-management com responsible_user_id:', selectedUserId);
+      const headers = getHeaders();
+
+      const { data: updatedCard, error: cardUpdateError } = await supabase.functions.invoke(
+        `pipeline-management/cards?id=${cardId}`,
+        {
+          method: 'PUT',
+          headers,
+          body: {
+            responsible_user_id: selectedUserId
+          }
+        }
+      );
 
       if (cardUpdateError) {
-        console.error('❌ Erro ao atualizar card:', cardUpdateError);
+        console.error('❌ Erro ao atualizar card via Edge Function:', cardUpdateError);
         throw cardUpdateError;
       }
-      console.log('✅ Card atualizado com sucesso');
 
-      // ✅ Se tiver conversa, atualizar também
-      if (targetConversationId) {
-        console.log('🔄 Atualizando conversa também:', targetConversationId);
+      const updatedCardData = updatedCard as any;
+      const pipelineConversationId = updatedCardData?.conversation?.id ?? updatedCardData?.conversation_id ?? null;
+
+      console.log('✅ Card atualizado com sucesso via Edge Function:', {
+        cardId,
+        responsible_user_id: selectedUserId,
+        pipelineConversationId
+      });
+
+      // ✅ Fallback: se o card não estiver vinculado à conversa, usar assign-conversation
+      if (!pipelineConversationId && targetConversationId) {
+        console.log('ℹ️ Card sem conversation_id após atualização. Usando assign-conversation como fallback:', targetConversationId);
         const result = await assignConversation(targetConversationId, selectedUserId);
         
         if (!result.success) {
-          console.error('⚠️ Erro ao atribuir conversa (mas card foi atualizado):', result.error);
-          // Não falhar aqui - card já foi atualizado com sucesso
+          console.error('⚠️ Erro ao atribuir conversa via fallback (card já foi atualizado):', result.error);
         } else {
-          console.log('✅ Conversa atribuída:', result.action);
+          console.log('✅ Conversa atribuída via fallback:', result.action);
         }
-      } else {
-        console.log('ℹ️ Sem conversa para atualizar');
+      } else if (!pipelineConversationId) {
+        console.log('ℹ️ Nenhuma conversa vinculada ao card e nenhum fallback disponível');
+      }
+
+      const conversationToInvalidate = pipelineConversationId || targetConversationId;
+      if (conversationToInvalidate) {
+        queryClient.invalidateQueries({ queryKey: ['conversation-assignments', conversationToInvalidate] });
       }
 
       toast({

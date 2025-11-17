@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, User, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap } from "lucide-react";
+import { Settings, Search, Plus, Filter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap } from "lucide-react";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
@@ -38,7 +38,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { ChangeAgentModal } from "@/components/modals/ChangeAgentModal";
 import { useWorkspaceAgent } from "@/hooks/useWorkspaceAgent";
+import { getInitials as getAvatarInitials } from "@/lib/avatarUtils";
 
 // Componente de Badge do Agente
 function AgentBadge({ conversationId }: { conversationId: string }) {
@@ -218,16 +219,12 @@ function DraggableDeal({
     }).format(value);
   };
 
-  // Gerar iniciais do responsável para o avatar
-  const getInitials = (name: string) => {
-    return name.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
-  };
-
   // Formatar tempo relativo de criação
   const formatTimeAgo = (createdAt?: string) => {
     if (!createdAt) return 'Data indisponível';
     const createdDate = new Date(createdAt);
     const hoursAgo = differenceInHours(new Date(), createdDate);
+
     if (hoursAgo < 24) {
       return formatDistanceToNow(createdDate, {
         addSuffix: true,
@@ -238,6 +235,9 @@ function DraggableDeal({
       return `há ${daysAgo} ${daysAgo === 1 ? 'dia' : 'dias'}`;
     }
   };
+
+  const responsibleName = deal.responsible?.trim() || "";
+  const responsibleInitials = responsibleName ? getAvatarInitials(responsibleName) : "?";
   return <Card ref={setNodeRef} style={{
     ...style,
     borderLeftColor: columnColor
@@ -312,7 +312,7 @@ function DraggableDeal({
             if (fallback) fallback.style.display = 'flex';
           }} /> : null}
             <div className={cn("w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
-              {getInitials(deal.contact?.name || deal.name)}
+              {getAvatarInitials(deal.contact?.name || deal.name || "Contato")}
             </div>
           </div>
           
@@ -512,18 +512,17 @@ function DraggableDeal({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-blue-100 hover:text-blue-600" onClick={e => e.stopPropagation()}>
-                    {deal.responsible_avatar ? (
-                      <div className="w-5 h-5 rounded-full overflow-hidden border border-border">
-                        <img src={deal.responsible_avatar} alt={deal.responsible} className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <User className="w-3 h-3" />
-                    )}
+                  <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600" onClick={e => e.stopPropagation()}>
+                    <Avatar className="w-6 h-6">
+                      {deal.responsible_avatar ? <AvatarImage src={deal.responsible_avatar} alt={responsibleName || "Responsável"} /> : null}
+                      <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
+                        {responsibleInitials}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{deal.responsible?.split(' ')[0] || 'Sem responsável'}</p>
+                  <p>{responsibleName ? responsibleName.split(' ')[0] : 'Sem responsável'}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

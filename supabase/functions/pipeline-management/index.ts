@@ -2012,9 +2012,24 @@ serve(async (req) => {
             }
             
             // ✅ Garantir que conversation_id está presente (pode não vir no select se for null)
-            if (!card.conversation_id && conversationIdFromCard) {
-              card.conversation_id = conversationIdFromCard;
-              console.log(`✅ [Post-Update] conversation_id restaurado: ${card.conversation_id}`);
+            if (!card.conversation_id) {
+              if (conversationIdFromCard) {
+                card.conversation_id = conversationIdFromCard;
+                console.log(`✅ [Post-Update] conversation_id restaurado do cache pre-update: ${card.conversation_id}`);
+              } else {
+                const { data: cardConversation } = await supabaseClient
+                  .from('pipeline_cards')
+                  .select('conversation_id')
+                  .eq('id', cardId)
+                  .single() as any;
+                
+                if (cardConversation?.conversation_id) {
+                  card.conversation_id = cardConversation.conversation_id;
+                  console.log(`✅ [Post-Update] conversation_id carregado diretamente: ${card.conversation_id}`);
+                } else {
+                  console.warn(`⚠️ [Post-Update] conversation_id ainda ausente para card ${cardId}`);
+                }
+              }
             }
             
             console.log('✅ Card updated successfully:', {
