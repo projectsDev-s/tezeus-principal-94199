@@ -12,7 +12,6 @@ export interface ContactPipelineCard {
   column_name: string;
   status: string;
   value?: number;
-  title: string;
   description?: string;
 }
 
@@ -47,10 +46,9 @@ export function useContactPipelineCards(contactId: string | null) {
           column_id,
           status,
           value,
-          title,
           description,
-          pipelines:pipelines!inner(id, name, workspace_id),
-          pipeline_columns:pipeline_columns!inner(id, name)
+          pipelines!inner(id, name, workspace_id),
+          pipeline_columns!inner(id, name)
         `)
         .eq('contact_id', contactId)
         .eq('pipelines.workspace_id', selectedWorkspace.workspace_id);
@@ -63,7 +61,7 @@ export function useContactPipelineCards(contactId: string | null) {
         
         const { data: cardsOnly, error: cardsOnlyError } = await supabase
           .from('pipeline_cards')
-          .select('id, pipeline_id, column_id, status, value, title, description')
+          .select('id, pipeline_id, column_id, status, value, description')
           .eq('contact_id', contactId);
         
         if (cardsOnlyError) throw cardsOnlyError;
@@ -110,7 +108,6 @@ export function useContactPipelineCards(contactId: string | null) {
         column_name: (card.pipeline_columns as any)?.name || 'Coluna não encontrada',
         status: card.status,
         value: card.value,
-        title: card.title,
         description: card.description,
       }));
 

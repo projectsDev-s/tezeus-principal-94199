@@ -120,50 +120,50 @@ export const useWorkspaceAnalytics = () => {
         return;
       }
 
-      // ETAPA 3: Buscar cards via edge function para cada pipeline
-      let allCards: any[] = [];
-      
-      for (const pipelineId of pipelineIds) {
-        const { data: cardsData, error: cardsError } = await supabase.functions.invoke(
-          `pipeline-management/cards?pipeline_id=${pipelineId}`,
-          {
-            method: 'GET',
-            headers
-          }
-        );
+      // ETAPA 3: Buscar cards e colunas em paralelo (otimizado)
+      const [cardsResults, columnsResults] = await Promise.all([
+        // Buscar cards de todos os pipelines em paralelo
+        Promise.all(pipelineIds.map(pipelineId => 
+          supabase.functions.invoke(
+            `pipeline-management/cards?pipeline_id=${pipelineId}`,
+            { method: 'GET', headers }
+          ).then(({ data, error }) => {
+            if (error) {
+              console.error(`❌ Cards error for pipeline ${pipelineId}`, error);
+              return [];
+            }
+            return Array.isArray(data) ? data : [];
+          })
+        )),
+        // Buscar colunas de todos os pipelines em paralelo
+        Promise.all(pipelineIds.map(pipelineId =>
+          supabase.functions.invoke(
+            `pipeline-management/columns?pipeline_id=${pipelineId}`,
+            { method: 'GET', headers }
+          ).then(({ data, error }) => {
+            if (error) {
+              console.error(`❌ Columns error for pipeline ${pipelineId}`, error);
+              return [];
+            }
+            return Array.isArray(data) ? data : [];
+          })
+        ))
+      ]);
 
-        if (cardsError) {
-          console.error(`❌ Analytics: Cards error for pipeline ${pipelineId}`, cardsError);
-          continue; // Pula este pipeline mas continua com os outros
-        }
+      // Combinar todos os cards e colunas
+      const allCards = cardsResults.flat();
+      const columnsMap = new Map();
+      columnsResults.flat().forEach((col: any) => columnsMap.set(col.id, col));
 
-        if (cardsData && Array.isArray(cardsData)) {
-          allCards = [...allCards, ...cardsData];
-        }
-      }
+      console.log('✅ Analytics: Data loaded in parallel', { 
+        totalCards: allCards.length,
+        totalColumns: columnsMap.size 
+      });
 
-      console.log('✅ Analytics: Cards loaded', { totalCards: allCards.length });
-
-      // Processar cards - buscar informações das colunas
+      // Processar cards
       let completedDealsCount = 0;
       let lostDealsCount = 0;
       let dealsInProgressCount = 0;
-
-      // Buscar todas as colunas dos pipelines
-      const columnsMap = new Map();
-      for (const pipelineId of pipelineIds) {
-        const { data: columnsData } = await supabase.functions.invoke(
-          `pipeline-management/columns?pipeline_id=${pipelineId}`,
-          {
-            method: 'GET',
-            headers
-          }
-        );
-        
-        if (columnsData && Array.isArray(columnsData)) {
-          columnsData.forEach((col: any) => columnsMap.set(col.id, col));
-        }
-      }
 
       allCards.forEach(card => {
         const column = columnsMap.get(card.column_id);

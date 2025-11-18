@@ -1603,7 +1603,7 @@ function CRMNegociosContent({
       refreshActiveUsers();
     }} />
 
-      {selectedCard && <DealDetailsModal isOpen={isDealDetailsModalOpen} onClose={() => setIsDealDetailsModalOpen(false)} dealName={selectedCard.title || ""} contactNumber={selectedCard.contact?.phone || ""} isDarkMode={isDarkMode} cardId={selectedCard.id} currentColumnId={selectedCard.column_id} currentPipelineId={selectedCard.pipeline_id} contactData={selectedCard.contact} />}
+      {selectedCard && <DealDetailsModal isOpen={isDealDetailsModalOpen} onClose={() => setIsDealDetailsModalOpen(false)} dealName={selectedCard.description || "Negócio"} contactNumber={selectedCard.contact?.phone || ""} isDarkMode={isDarkMode} cardId={selectedCard.id} currentColumnId={selectedCard.column_id} currentPipelineId={selectedCard.pipeline_id} contactData={selectedCard.contact} />}
 
       <ChatModal isOpen={isChatModalOpen} onClose={() => {
       console.log('🔽 Fechando ChatModal');

@@ -132,7 +132,7 @@ export function ContactSidePanel({
   );
   const deals: Deal[] = contactCards.map(card => ({
     id: card.id,
-    title: card.title,
+    title: card.description || 'Sem descrição',
     description: card.description,
     value: card.value || 0,
     status: card.status,
@@ -359,12 +359,12 @@ export function ContactSidePanel({
       const {
         error
       } = await supabase.from('pipeline_cards').update({
-        title: editingDealTitle
+        description: editingDealTitle
       }).eq('id', dealId);
       if (error) throw error;
       toast({
         title: "Sucesso",
-        description: "Título atualizado"
+        description: "Descrição atualizada"
       });
     } catch (error) {
       console.error('Erro ao salvar título:', error);

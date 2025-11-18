@@ -818,7 +818,7 @@ export function DealDetailsModal({
       .from('pipeline_cards')
       .select(`
         id,
-        title,
+        description,
         column_id,
         pipeline_id,
         contact_id,
