@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from './useAuth';
 import { useNotificationSound } from './useNotificationSound';
+import { useWorkspaceRole } from './useWorkspaceRole';
 
 export interface NotificationMessage {
   id: string;
@@ -21,6 +22,7 @@ export function useNotifications() {
   const { selectedWorkspace } = useWorkspace();
   const { user } = useAuth();
   const { playNotificationSound } = useNotificationSound();
+  const { isUser } = useWorkspaceRole();
 
   // Buscar notificações
   const fetchNotifications = async () => {
@@ -30,13 +32,24 @@ export function useNotifications() {
     }
 
     try {
-      const { data, error } = await supabase
+      // Buscar notificações com join em conversations para filtrar por assigned_user_id
+      let query = supabase
         .from('notifications')
-        .select('*')
+        .select(`
+          *,
+          conversations!inner(assigned_user_id)
+        `)
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .eq('user_id', user.id)
-        .eq('status', 'unread')
-        .order('created_at', { ascending: false });
+        .eq('status', 'unread');
+
+      // Se for usuário de nível 'user', aplicar filtro de atribuição
+      if (isUser(selectedWorkspace.workspace_id)) {
+        console.log('🔒 [useNotifications] Aplicando filtro de role "user"');
+        query = query.or(`conversations.assigned_user_id.is.null,conversations.assigned_user_id.eq.${user.id}`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
