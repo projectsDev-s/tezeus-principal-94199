@@ -32,7 +32,116 @@ interface WhatsAppMessage {
     file_name?: string;
     external_id?: string;
   };
+  evolution_key_id?: string | null;
 }
+
+const isPlainObject = (value: unknown): value is Record<string, any> => {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
+
+const normalizeLinkId = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    return value.trim() || null;
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return null;
+};
+
+const getProviderLinkedIds = (message: WhatsAppMessage): string[] => {
+  const metadata = isPlainObject(message.metadata) ? message.metadata : {};
+  const candidates = [
+    normalizeLinkId(metadata.provider_msg_id),
+    normalizeLinkId(metadata.provider_message_id),
+    normalizeLinkId(message.evolution_key_id)
+  ];
+
+  return candidates.filter((id): id is string => !!id);
+};
+
+const mergeMessageRecords = (
+  existing: WhatsAppMessage,
+  incoming: WhatsAppMessage
+): WhatsAppMessage => {
+  const existingMetadata = isPlainObject(existing.metadata) ? existing.metadata : {};
+  const incomingMetadata = isPlainObject(incoming.metadata) ? incoming.metadata : {};
+  const mergedMetadata = { ...existingMetadata, ...incomingMetadata };
+
+  return {
+    ...existing,
+    ...incoming,
+    metadata: Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined
+  };
+};
+
+const dedupeAndSortMessages = (messages: WhatsAppMessage[]): WhatsAppMessage[] => {
+  const accumulator: WhatsAppMessage[] = [];
+
+  for (const message of messages) {
+    const normalizedExternal = normalizeLinkId(message.external_id);
+
+    // 1. Verificar duplicação por ID
+    const indexById = accumulator.findIndex(existing => existing.id === message.id);
+    if (indexById !== -1) {
+      accumulator[indexById] = mergeMessageRecords(accumulator[indexById], message);
+      continue;
+    }
+
+    // 2. Verificar duplicação por external_id
+    if (normalizedExternal) {
+      const indexByExternal = accumulator.findIndex(
+        existing => normalizeLinkId(existing.external_id) === normalizedExternal
+      );
+      if (indexByExternal !== -1) {
+        accumulator[indexByExternal] = mergeMessageRecords(
+          accumulator[indexByExternal],
+          message
+        );
+        continue;
+      }
+    }
+
+    // 3. Verificar duplicação por provider_msg_id / evolution_key_id
+    const incomingProviderIds = getProviderLinkedIds(message);
+    const providerMatchIndex = accumulator.findIndex(existing => {
+      const existingProviderIds = getProviderLinkedIds(existing);
+      const existingExternal = normalizeLinkId(existing.external_id);
+
+      if (
+        normalizedExternal &&
+        existingProviderIds.some(providerId => providerId === normalizedExternal)
+      ) {
+        return true;
+      }
+
+      if (
+        existingExternal &&
+        incomingProviderIds.some(providerId => providerId === existingExternal)
+      ) {
+        return true;
+      }
+
+      return existingProviderIds.some(providerId =>
+        incomingProviderIds.includes(providerId)
+      );
+    });
+
+    if (providerMatchIndex !== -1) {
+      accumulator[providerMatchIndex] = mergeMessageRecords(
+        accumulator[providerMatchIndex],
+        message
+      );
+      continue;
+    }
+
+    accumulator.push(message);
+  }
+
+  return [...accumulator].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+};
 
 interface UseConversationMessagesReturn {
   messages: WhatsAppMessage[];
@@ -124,14 +233,15 @@ export function useConversationMessages(): UseConversationMessagesReturn {
       }
 
       const newMessages = data?.items || [];
-      console.log(`✅ [useConversationMessages] Carregadas ${newMessages.length} mensagens para conversa ${conversationId}`);
+      const normalizedMessages = dedupeAndSortMessages(newMessages);
+      console.log(`✅ [useConversationMessages] Carregadas ${normalizedMessages.length} mensagens para conversa ${conversationId}`);
 
-      setMessages(newMessages);
+      setMessages(normalizedMessages);
       setHasMore(!!data?.nextBefore);
       setCursorBefore(data?.nextBefore || null);
 
       cacheRef.current.set(cacheKey, {
-        messages: newMessages,
+        messages: normalizedMessages,
         timestamp: Date.now()
       });
 
@@ -185,14 +295,18 @@ export function useConversationMessages(): UseConversationMessagesReturn {
         return;
       }
 
-      setMessages(prevMessages => [...olderMessages, ...prevMessages]);
+      let nextMessagesState: WhatsAppMessage[] = [];
+      setMessages(prevMessages => {
+        nextMessagesState = dedupeAndSortMessages([...olderMessages, ...prevMessages]);
+        return nextMessagesState;
+      });
       setHasMore(!!data?.nextBefore);
       setCursorBefore(data?.nextBefore || null);
 
       if (selectedWorkspace?.workspace_id) {
         const cacheKey = `${selectedWorkspace.workspace_id}:${currentConversationId}`;
         cacheRef.current.set(cacheKey, {
-          messages: [...olderMessages, ...messages],
+          messages: nextMessagesState,
           timestamp: Date.now()
         });
       }
@@ -207,7 +321,7 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     } finally {
       setLoadingMore(false);
     }
-  }, [currentConversationId, cursorBefore, messages, selectedWorkspace?.workspace_id]); // ✅ SEM getHeaders e toast
+  }, [currentConversationId, cursorBefore, selectedWorkspace?.workspace_id]); // ✅ SEM getHeaders e toast
 
   const addMessage = useCallback((message: WhatsAppMessage) => {
     console.log('➕ [useConversationMessages] addMessage chamado:', {
@@ -218,25 +332,34 @@ export function useConversationMessages(): UseConversationMessagesReturn {
     });
 
     setMessages(prev => {
-      // ✅ Verificar duplicata por ID ou external_id
       const existsById = prev.some(m => m.id === message.id);
-      const existsByExternalId = message.external_id && prev.some(m => m.external_id === message.external_id);
-      
-      if (existsById || existsByExternalId) {
+      const existsByExternalId =
+        message.external_id && prev.some(m => m.external_id === message.external_id);
+      const providerMatchIndex = prev.findIndex(existing => {
+        const existingProviderIds = getProviderLinkedIds(existing);
+        const incomingProviderIds = getProviderLinkedIds(message);
+        const matchesIncomingExternal =
+          message.external_id && existingProviderIds.includes(message.external_id);
+        const matchesExistingExternal =
+          existing.external_id && incomingProviderIds.includes(existing.external_id);
+        const sharedProviderId = existingProviderIds.some(providerId =>
+          incomingProviderIds.includes(providerId)
+        );
+        return matchesIncomingExternal || matchesExistingExternal || sharedProviderId;
+      });
+
+      if (existsById || existsByExternalId || providerMatchIndex !== -1) {
         console.log('⚠️ [useConversationMessages] Mensagem duplicada ignorada:', {
           id: message.id,
           external_id: message.external_id,
           existsById,
-          existsByExternalId
+          existsByExternalId,
+          providerMatchIndex
         });
-        return prev;
+        return dedupeAndSortMessages([...prev, message]);
       }
-      
-      const newMessages = [...prev, message];
-      newMessages.sort((a, b) => 
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
-      return newMessages;
+
+      return dedupeAndSortMessages([...prev, message]);
     });
     
     const workspaceId = selectedWorkspace?.workspace_id;
@@ -385,53 +508,58 @@ export function useConversationMessages(): UseConversationMessagesReturn {
           });
           
           const newMessage = payload.new as WhatsAppMessage;
-          
-          // ✅ Verificar se existe mensagem otimista com mesmo external_id e substituir
           setMessages(prev => {
-            // Buscar mensagem otimista pelo external_id
-            const optimisticIndex = newMessage.external_id 
-              ? prev.findIndex(m => m.external_id === newMessage.external_id && m.id !== newMessage.id)
-              : -1;
-            
+            const optimisticIndex =
+              newMessage.external_id
+                ? prev.findIndex(
+                    m => m.external_id === newMessage.external_id && m.id !== newMessage.id
+                  )
+                : -1;
+
             if (optimisticIndex !== -1) {
-              // ✅ Substituir mensagem otimista pela real
               console.log('🔄 [REALTIME] Substituindo mensagem otimista pela real:', {
                 optimisticId: prev[optimisticIndex].id,
                 realId: newMessage.id,
                 external_id: newMessage.external_id
               });
-              
-              const newMessages = [...prev];
-              newMessages[optimisticIndex] = newMessage;
-              
-              // Ordenar por data
-              newMessages.sort((a, b) => 
-                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-              );
-              
-              return newMessages;
             }
-            
-            // ✅ Verificar se já existe mensagem com mesmo ID ou external_id
+
             const existsById = prev.some(m => m.id === newMessage.id);
-            const existsByExternalId = newMessage.external_id && prev.some(m => m.external_id === newMessage.external_id);
-            
+            const existsByExternalId =
+              newMessage.external_id && prev.some(m => m.external_id === newMessage.external_id);
+
+            const providerMatchIndex = prev.findIndex(existing => {
+              const existingProviderIds = getProviderLinkedIds(existing);
+              const incomingProviderIds = getProviderLinkedIds(newMessage);
+              const matchesIncomingExternal =
+                newMessage.external_id && existingProviderIds.includes(newMessage.external_id);
+              const matchesExistingExternal =
+                existing.external_id && incomingProviderIds.includes(existing.external_id);
+              const sharedProviderId = existingProviderIds.some(providerId =>
+                incomingProviderIds.includes(providerId)
+              );
+              return matchesIncomingExternal || matchesExistingExternal || sharedProviderId;
+            });
+
+            if (providerMatchIndex !== -1 && optimisticIndex === -1) {
+              console.log('🔗 [REALTIME] Mesclando mensagem com provider_msg_id correspondente:', {
+                providerMatchIndex,
+                provider_external: newMessage.external_id,
+                existing_provider_ids: getProviderLinkedIds(prev[providerMatchIndex])
+              });
+            }
+
             if (existsById || existsByExternalId) {
-              console.log('⚠️ [REALTIME] Mensagem duplicada ignorada:', {
+              console.log('⚠️ [REALTIME] Mensagem duplicada recebida:', {
                 id: newMessage.id,
                 external_id: newMessage.external_id,
                 existsById,
-                existsByExternalId
+                existsByExternalId,
+                providerMatchIndex
               });
-              return prev;
             }
-            
-            // ✅ Se não existe, adicionar normalmente
-            const updatedMessages = [...prev, newMessage];
-            updatedMessages.sort((a, b) => 
-              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-            return updatedMessages;
+
+            return dedupeAndSortMessages([...prev, newMessage]);
           });
           
           // Invalidar cache
