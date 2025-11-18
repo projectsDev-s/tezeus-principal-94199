@@ -1568,7 +1568,7 @@ export type Database = {
       }
       messages: {
         Row: {
-          content: string
+          content: string | null
           conversation_id: string
           created_at: string
           delivered_at: string | null
@@ -1591,7 +1591,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
-          content: string
+          content?: string | null
           conversation_id: string
           created_at?: string
           delivered_at?: string | null
@@ -1614,7 +1614,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
-          content?: string
+          content?: string | null
           conversation_id?: string
           created_at?: string
           delivered_at?: string | null
@@ -3771,6 +3771,10 @@ export type Database = {
       }
       update_fixed_phone_numbers: { Args: never; Returns: number }
       update_my_password: { Args: { new_password: string }; Returns: boolean }
+      update_user_password: {
+        Args: { new_password: string; user_email: string }
+        Returns: boolean
+      }
       verify_password: {
         Args: { hash: string; password: string }
         Returns: boolean
