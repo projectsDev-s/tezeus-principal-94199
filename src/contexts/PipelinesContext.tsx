@@ -200,7 +200,30 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      setCards(cardsData);
+      const sanitizedCards = (cardsData || []).filter(card => {
+        if (userRole !== 'user') return true;
+
+        const userData = localStorage.getItem('currentUser');
+        const currentUserData = userData ? JSON.parse(userData) : null;
+        const currentUserId = currentUserData?.id;
+        const responsibleId = (card as any).responsible_user_id || (card as any).responsible_user?.id || null;
+        const isUnassigned = !responsibleId;
+        const isAssignedToCurrentUser = responsibleId === currentUserId;
+
+        if (!isUnassigned && !isAssignedToCurrentUser) {
+          console.log('🚫 [fetchCards] Removendo card por permissão de usuário:', {
+            cardId: card.id,
+            responsible_user_id: (card as any).responsible_user_id,
+            responsible_user: (card as any).responsible_user,
+            currentUserId
+          });
+          return false;
+        }
+
+        return true;
+      });
+
+      setCards(sanitizedCards);
     } catch (error) {
       console.error('❌ [fetchCards] Erro ao buscar cards:', error);
       
@@ -619,10 +642,18 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         // Usuários só podem ver:
         // 1. Cards não atribuídos (responsible_user_id é null/undefined)
         // 2. Cards atribuídos a eles mesmos
-        const isUnassigned = !card.responsible_user_id;
-        const isAssignedToCurrentUser = card.responsible_user_id === currentUserId;
+        const responsibleId = card.responsible_user_id || (card.responsible_user as any)?.id || null;
+        const isUnassigned = !responsibleId;
+        const isAssignedToCurrentUser = responsibleId === currentUserId;
         
         if (!isUnassigned && !isAssignedToCurrentUser) {
+          console.log('🚫 [getCardsByColumn] Ocultando card para usuário comum:', {
+            cardId: card.id,
+            columnId,
+            responsible_user_id: card.responsible_user_id,
+            responsible_user: card.responsible_user,
+            currentUserId
+          });
           return false;
         }
       }
