@@ -51,12 +51,9 @@ export function Dashboard({ isDarkMode }: { isDarkMode?: boolean }) {
           Relatório de Atividades
         </h1>
         <p className="text-sm text-muted-foreground">
-          {isMasterRole 
+          {isMasterRole
             ? "Visualização global de todas as empresas"
-            : isUserRole 
-              ? "Seus indicadores pessoais de performance"
-              : `Relatório consolidado de ${selectedWorkspace.name}`
-          }
+            : `Indicadores consolidados de ${selectedWorkspace.name}`}
         </p>
       </div>
 

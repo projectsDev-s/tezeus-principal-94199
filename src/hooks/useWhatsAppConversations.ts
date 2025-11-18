@@ -44,6 +44,7 @@ export interface WhatsAppConversation {
     phone_number?: string;
     status: string;
   };
+  queue_id?: string | null;
   workspace_id?: string;
   conversation_tags?: Array<{
     id: string;
@@ -132,6 +133,7 @@ export const useWhatsAppConversations = () => {
       assigned_at: raw.assigned_at ?? previous?.assigned_at ?? null,
       connection_id: raw.connection_id ?? previous?.connection_id,
       connection,
+      queue_id: raw.queue_id ?? previous?.queue_id ?? null,
       workspace_id: raw.workspace_id ?? previous?.workspace_id,
       conversation_tags: raw.conversation_tags ?? previous?.conversation_tags ?? [],
       last_message: raw.last_message ?? previous?.last_message ?? [],
@@ -201,6 +203,7 @@ export const useWhatsAppConversations = () => {
                 assigned_user_name: item.assigned_user_name,
                 connection_id: item.connection_id,
                 connection: item.connection,
+          queue_id: item.queue_id || null,
                 workspace_id: selectedWorkspace.workspace_id,
                 conversation_tags: item.conversation_tags || [],
                 last_message: item.last_message || [],
@@ -235,6 +238,7 @@ export const useWhatsAppConversations = () => {
           assigned_user_name: item.assigned_user_name,
           connection_id: item.connection_id,
           connection: item.connection,
+          queue_id: item.queue_id || null,
           workspace_id: selectedWorkspace.workspace_id,
           conversation_tags: item.conversation_tags || [],
           last_message: item.last_message || [],

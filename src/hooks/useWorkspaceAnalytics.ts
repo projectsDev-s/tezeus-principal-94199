@@ -59,17 +59,10 @@ export const useWorkspaceAnalytics = () => {
       }
 
       // ETAPA 2: Buscar conversas e pipelines
-      let conversationQuery = supabase
+      const { data: conversations, error: conversationsError } = await supabase
         .from('conversations')
         .select('id, status, created_at, assigned_user_id')
         .eq('workspace_id', workspaceId);
-
-      // ✅ Para users: mostrar conversas atribuídas a eles OU não atribuídas (NULL)
-      if (isUser) {
-        conversationQuery = conversationQuery.or(`assigned_user_id.eq.${user.id},assigned_user_id.is.null`);
-      }
-
-      const { data: conversations, error: conversationsError } = await conversationQuery;
       
       if (conversationsError) {
         console.error('❌ Analytics: Conversations error', conversationsError);

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-interface AssignmentEntry {
+export interface AssignmentEntry {
   id: string;
   action: string;
   changed_at: string;
@@ -19,44 +19,24 @@ export const useConversationAssignments = (conversationId?: string) => {
     queryFn: async () => {
       if (!conversationId) return [];
 
-      const { data, error } = await supabase
-        .from('conversation_assignments')
-        .select(`
-          id,
-          action,
-          changed_at,
-          changed_by,
-          from_assigned_user_id,
-          to_assigned_user_id
-        `)
-        .eq('conversation_id', conversationId)
-        .order('changed_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('conversation-assignments-history', {
+        body: { conversation_id: conversationId }
+      });
 
       if (error) {
         console.error('❌ Erro ao buscar histórico de atribuições:', error);
         throw error;
       }
 
-      // Buscar nomes dos usuários
-      const userIds = new Set<string>();
-      data?.forEach(entry => {
-        if (entry.from_assigned_user_id) userIds.add(entry.from_assigned_user_id);
-        if (entry.to_assigned_user_id) userIds.add(entry.to_assigned_user_id);
-        if (entry.changed_by) userIds.add(entry.changed_by);
-      });
+      if (!data?.success) {
+        throw new Error(data?.error || 'Falha ao carregar histórico de atribuições');
+      }
 
-      const { data: users } = await supabase
-        .from('system_users')
-        .select('id, name')
-        .in('id', Array.from(userIds));
-
-      const userMap = new Map(users?.map(u => [u.id, u.name]) || []);
-
-      return (data || []).map(entry => ({
+      return (data.items || []).map((entry: any) => ({
         ...entry,
-        from_user_name: entry.from_assigned_user_id ? userMap.get(entry.from_assigned_user_id) : null,
-        to_user_name: entry.to_assigned_user_id ? userMap.get(entry.to_assigned_user_id) : null,
-        changed_by_name: entry.changed_by ? userMap.get(entry.changed_by) : null,
+        from_user_name: entry.from_user_name ?? null,
+        to_user_name: entry.to_user_name ?? null,
+        changed_by_name: entry.changed_by_name ?? null,
       })) as AssignmentEntry[];
     },
     enabled: !!conversationId,

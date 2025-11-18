@@ -60,6 +60,28 @@ const agentActionColors = {
   changed: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
 };
 
+type AgentActionKey = keyof typeof agentActionLabels;
+
+const normalizeAgentId = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    return value.trim() || null;
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return value ? String(value) : null;
+};
+
+const resolveAgentDisplayAction = (agent: any): AgentActionKey => {
+  if (agent?.action === 'changed') {
+    const previousAgentId = normalizeAgentId(agent?.metadata?.old_agent_id);
+    if (!previousAgentId) {
+      return 'activated';
+    }
+  }
+  return (agent?.action ?? 'activated') as AgentActionKey;
+};
+
 export function AssignmentHistoryModal({
   isOpen,
   onOpenChange,
@@ -122,6 +144,8 @@ export function AssignmentHistoryModal({
                     label: assignment.action ?? 'Ação desconhecida',
                     badgeClass: 'bg-muted text-foreground',
                   };
+                  const fromUserName = assignment.from_user_name || 'Não atribuído';
+                  const toUserName = assignment.to_user_name || 'Não atribuído';
                   return (
                     <div
                       key={`assignment-${assignment.id}`}
@@ -138,26 +162,20 @@ export function AssignmentHistoryModal({
                           </Badge>
                           
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            {assignment.action === 'accept' || assignment.action === 'assign' ? (
-                              <>
-                                <User className="h-3 w-3" />
-                                <span>para <span className="font-medium text-foreground">{assignment.to_user_name || 'Usuário desconhecido'}</span></span>
-                              </>
-                            ) : assignment.action === 'unassign' ? (
-                              <>
-                                <User className="h-3 w-3" />
-                                <span>de <span className="font-medium text-foreground">{assignment.from_user_name || 'Usuário desconhecido'}</span></span>
-                                <ArrowRight className="h-3 w-3 mx-1" />
-                                <span>para <span className="font-medium text-foreground">Não atribuído</span></span>
-                              </>
-                            ) : (
-                              <>
-                                <User className="h-3 w-3" />
-                                <span>de <span className="font-medium text-foreground">{assignment.from_user_name || 'Não atribuído'}</span></span>
-                                <ArrowRightLeft className="h-3 w-3 mx-1" />
-                                <span>para <span className="font-medium text-foreground">{assignment.to_user_name || 'Não atribuído'}</span></span>
-                              </>
-                            )}
+                            <User className="h-3 w-3" />
+                            <span>
+                              de{' '}
+                              <span className="font-medium text-foreground">
+                                {fromUserName}
+                              </span>
+                            </span>
+                            <ArrowRight className="h-3 w-3 mx-1" />
+                            <span>
+                              para{' '}
+                              <span className="font-medium text-foreground">
+                                {toUserName}
+                              </span>
+                            </span>
                           </div>
                         </div>
 
@@ -188,19 +206,20 @@ export function AssignmentHistoryModal({
                   );
                 } else {
                   const agent = entry.data;
+                  const displayAction = resolveAgentDisplayAction(agent);
                   return (
                     <div
                       key={`agent-${agent.id}`}
                       className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                     >
                       <div className="mt-1">
-                        {agentActionIcons[agent.action as keyof typeof agentActionIcons]}
+                        {agentActionIcons[displayAction]}
                       </div>
                       
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={agentActionColors[agent.action as keyof typeof agentActionColors]}>
-                            {agentActionLabels[agent.action as keyof typeof agentActionLabels]}
+                          <Badge variant="outline" className={agentActionColors[displayAction]}>
+                            {agentActionLabels[displayAction]}
                           </Badge>
                           
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">

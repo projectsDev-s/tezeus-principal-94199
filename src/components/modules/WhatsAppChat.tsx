@@ -32,6 +32,7 @@ import { QuotedMessagePreview } from "@/components/chat/QuotedMessagePreview";
 import { PeekConversationModal } from "@/components/modals/PeekConversationModal";
 import { AcceptConversationButton } from "@/components/chat/AcceptConversationButton";
 import { EndConversationButton } from "@/components/chat/EndConversationButton";
+import { TransferConversationModal } from "@/components/modals/TransferConversationModal";
 import { AddTagButton } from "@/components/chat/AddTagButton";
 import { ContactSidePanel } from "@/components/ContactSidePanel";
 import { ContactTags } from "@/components/chat/ContactTags";
@@ -49,6 +50,22 @@ import { FloatingDateIndicator } from "@/components/chat/FloatingDateIndicator";
 import { useFloatingDate, groupMessagesByDate, formatMessageDate } from "@/hooks/useFloatingDate";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Search, Send, Bot, Phone, MoreVertical, Circle, MessageCircle, ArrowRight, Settings, Users, Trash2, ChevronDown, Filter, Eye, RefreshCw, Mic, Square, X, Check, PanelLeft, UserCircle, UserX, UsersRound, Tag, Plus, Loader2, Workflow, Clock } from "lucide-react";
 import { WhatsAppChatSkeleton } from "@/components/chat/WhatsAppChatSkeleton";
 import { Switch } from "@/components/ui/switch";
@@ -183,6 +200,9 @@ export function WhatsAppChat({
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [changeAgentModalOpen, setChangeAgentModalOpen] = useState(false);
   const [assignmentHistoryModalOpen, setAssignmentHistoryModalOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
 
   // Verificar se há agente ativo na conversa selecionada
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent(selectedConversation?.id);
@@ -416,6 +436,102 @@ export function WhatsAppChat({
 
   // Agrupar mensagens por data
   const messagesByDate = useMemo(() => groupMessagesByDate(messages), [messages]);
+
+  const handleTransferSuccess = useCallback(
+    async ({
+      conversationId,
+      assignedUserId,
+      assignedUserName,
+      connectionId,
+      queueId,
+    }: {
+      conversationId: string;
+      assignedUserId: string;
+      assignedUserName?: string | null;
+      connectionId: string;
+      queueId?: string | null;
+    }) => {
+      await fetchConversations();
+      setSelectedConversation((prev) => {
+        if (!prev || prev.id !== conversationId) {
+          return prev;
+        }
+
+        const connectionInfo = workspaceConnections.find(
+          (connection) => connection.id === connectionId
+        );
+
+        return {
+          ...prev,
+          assigned_user_id: assignedUserId,
+          assigned_user_name: assignedUserName ?? prev.assigned_user_name,
+          connection_id: connectionId,
+          connection: connectionInfo
+            ? {
+                id: connectionInfo.id,
+                instance_name: connectionInfo.instance_name,
+                phone_number: connectionInfo.phone_number,
+                status: connectionInfo.status,
+              }
+            : prev.connection,
+          queue_id: queueId ?? null,
+        };
+      });
+    },
+    [fetchConversations, workspaceConnections]
+  );
+
+  const handleDeleteConversation = useCallback(async () => {
+    if (!selectedConversation) return;
+
+    try {
+      setIsDeletingConversation(true);
+      const conversationId = selectedConversation.id;
+
+      const { error: messagesError } = await supabase
+        .from("messages")
+        .delete()
+        .eq("conversation_id", conversationId);
+
+      if (messagesError) {
+        throw messagesError;
+      }
+
+      const { error: conversationError } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("id", conversationId);
+
+      if (conversationError) {
+        throw conversationError;
+      }
+
+      toast({
+        title: "Atendimento deletado",
+        description: "O atendimento foi removido com sucesso.",
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedConversation(null);
+      clearMessages();
+      await fetchConversations();
+    } catch (error: any) {
+      console.error("Erro ao deletar atendimento:", error);
+      toast({
+        title: "Erro ao deletar atendimento",
+        description:
+          error?.message || "Não foi possível concluir a exclusão.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingConversation(false);
+    }
+  }, [
+    clearMessages,
+    fetchConversations,
+    selectedConversation,
+    toast,
+  ]);
 
   // Estados para controle de carregamento manual
   const isInitialLoadRef = useRef(true);
@@ -2083,6 +2199,40 @@ export function WhatsAppChat({
                   clearMessages();
                 }
               }} className="h-8 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md" />
+                  
+                  {selectedConversation && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 p-0"
+                          title="Mais ações"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            setTransferModalOpen(true);
+                          }}
+                        >
+                          Transferir
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          Deletar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
             </div>
@@ -2497,6 +2647,49 @@ export function WhatsAppChat({
         onOpenChange={setAssignmentHistoryModalOpen}
         conversationId={selectedConversation?.id || ''}
       />
+
+      <TransferConversationModal
+        open={transferModalOpen}
+        onOpenChange={setTransferModalOpen}
+        conversation={selectedConversation}
+        users={workspaceMembers}
+        queues={queues}
+        connections={workspaceConnections}
+        isLoadingConnections={connectionsLoading}
+        isLoadingQueues={queuesLoading}
+        onTransferSuccess={handleTransferSuccess}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar atendimento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá remover o atendimento e todas as mensagens
+              associadas. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingConversation}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConversation}
+              disabled={isDeletingConversation}
+              className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+            >
+              {isDeletingConversation ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deletando...
+                </span>
+              ) : (
+                "Deletar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
 
       {/* ✅ Listener para recarregar mensagens quando a página fica visível novamente */}
