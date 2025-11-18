@@ -233,7 +233,6 @@ export const useWhatsAppConversations = () => {
           created_at: item.created_at || item.last_activity_at,
           assigned_user_id: item.assigned_user_id,
           assigned_user_name: item.assigned_user_name,
-          assigned_user_name: item.assigned_user_name,
           connection_id: item.connection_id,
           connection: item.connection,
           workspace_id: selectedWorkspace.workspace_id,

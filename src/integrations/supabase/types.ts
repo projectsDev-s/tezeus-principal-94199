@@ -1906,7 +1906,6 @@ export type Database = {
           responsible_user_id: string | null
           status: string
           tags: Json | null
-          title: string
           updated_at: string
           value: number | null
         }
@@ -1922,7 +1921,6 @@ export type Database = {
           responsible_user_id?: string | null
           status?: string
           tags?: Json | null
-          title: string
           updated_at?: string
           value?: number | null
         }
@@ -1938,7 +1936,6 @@ export type Database = {
           responsible_user_id?: string | null
           status?: string
           tags?: Json | null
-          title?: string
           updated_at?: string
           value?: number | null
         }
