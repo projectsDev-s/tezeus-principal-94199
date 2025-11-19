@@ -266,23 +266,25 @@ export function TransferirModal({
                     }
                   }
                 } else {
-                  // Sem fila selecionada - remover fila e responsável da conversa
+                  // Sem fila selecionada - remover fila, responsável e agente da conversa
                   console.log(`🗑️ Removendo fila e responsável da conversa ${cardData.conversation_id}`);
                   
-                  const { error: clearError } = await supabase
-                    .from('conversations')
-                    .update({
-                      queue_id: null,
-                      assigned_user_id: null,
-                      agent_active_id: null,
-                      agente_ativo: false
-                    })
-                    .eq('id', cardData.conversation_id);
+                  const { data: clearResult, error: clearError } = await supabase.functions.invoke(
+                    'update-conversation-queue',
+                    {
+                      body: {
+                        conversation_id: cardData.conversation_id,
+                        queue_id: null,
+                        assigned_user_id: targetResponsibleId || null,
+                        activate_queue_agent: false
+                      }
+                    }
+                  );
 
                   if (clearError) {
                     console.error('❌ Erro ao remover fila da conversa:', clearError);
                   } else {
-                    console.log('✅ Fila e responsável removidos da conversa');
+                    console.log('✅ Fila e agente removidos da conversa:', clearResult);
                   }
                 }
               } catch (convErr) {
