@@ -343,6 +343,7 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
       <AdicionarUsuarioFilaModal
         open={showAddUserModal}
         onOpenChange={setShowAddUserModal}
+        workspaceId={fila?.workspace_id}
         onAddUsers={addUsersToQueue}
         excludeUserIds={queueUsers.map(qu => qu.user_id)}
       />
