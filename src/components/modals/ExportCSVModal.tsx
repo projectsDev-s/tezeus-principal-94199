@@ -198,17 +198,20 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
     // Criar linhas de dados
     const rows = cards.map(card => {
       return selectedFieldsArray.map(key => {
-        const value = getFieldValue(card, key);
-        // Escapar aspas e envolver em aspas se contiver vírgula ou quebra de linha
-        const escaped = value.replace(/"/g, '""');
-        return `"${escaped}"`;
+        let value = getFieldValue(card, key);
+        // Remover quebras de linha e caracteres de controle
+        value = value.replace(/[\r\n\t]+/g, " ").trim();
+        // Escapar aspas duplas duplicando-as
+        value = value.replace(/"/g, '""');
+        // Sempre envolver em aspas para segurança
+        return `"${value}"`;
       });
     });
 
     // BOM para UTF-8 (para Excel reconhecer acentuação)
     const BOM = "\uFEFF";
     const csvContent = BOM + [
-      headers.map(h => `"${h}"`).join(","),
+      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
       ...rows.map(row => row.join(","))
     ].join("\n");
 
