@@ -550,6 +550,14 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
         }
       } else {
         console.log('✅ Tag adicionada com sucesso');
+        
+        // 📡 Emitir broadcast para atualizar cards em tempo real
+        try {
+          // O usePipelineRealtime escuta mudanças em contact_tags e atualiza os cards
+          console.log('📡 [Broadcast] Tag adicionada, realtime Postgres enviará o evento');
+        } catch (err) {
+          console.warn('⚠️ [Broadcast] Erro ao processar broadcast:', err);
+        }
       }
       break;
     }
@@ -581,6 +589,13 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
         console.error('❌ Erro ao ativar agente:', agentError);
       } else {
         console.log('✅ Agente ativado com sucesso');
+        
+        // 📡 Emitir broadcast para atualizar cards em tempo real
+        try {
+          console.log('📡 [Broadcast] Agente ativado, realtime Postgres enviará o evento');
+        } catch (err) {
+          console.warn('⚠️ [Broadcast] Erro ao processar broadcast:', err);
+        }
       }
       break;
     }
@@ -605,6 +620,13 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
         console.error('❌ Erro ao desativar agente:', agentError);
       } else {
         console.log('✅ Agente desativado com sucesso');
+        
+        // 📡 Emitir broadcast para atualizar cards em tempo real
+        try {
+          console.log('📡 [Broadcast] Agente desativado, realtime Postgres enviará o evento');
+        } catch (err) {
+          console.warn('⚠️ [Broadcast] Erro ao processar broadcast:', err);
+        }
       }
       break;
     }
@@ -630,6 +652,13 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
         console.error('❌ Erro ao mover card:', moveError);
       } else {
         console.log('✅ Card movido com sucesso');
+        
+        // 📡 Emitir broadcast para atualizar cards em tempo real
+        try {
+          console.log('📡 [Broadcast] Card movido, realtime Postgres enviará o evento de UPDATE');
+        } catch (err) {
+          console.warn('⚠️ [Broadcast] Erro ao processar broadcast:', err);
+        }
       }
       break;
     }
