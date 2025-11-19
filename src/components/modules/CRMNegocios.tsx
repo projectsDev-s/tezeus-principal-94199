@@ -641,6 +641,7 @@ function CRMNegociosContent({
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [appliedFilters, setAppliedFilters] = useState<{
     tags: string[];
+    queues: string[];
     selectedDate?: Date;
     dateRange?: {
       from: Date;
@@ -800,6 +801,15 @@ function CRMNegociosContent({
         const contactTags = card.contact?.contact_tags || [];
         const hasContactTag = appliedFilters.tags.some(filterTag => contactTags.some(contactTag => contactTag.tags?.id === filterTag || contactTag.tags?.name === filterTag));
         return hasCardTag || hasContactTag;
+      });
+    }
+
+    // Filtrar por filas selecionadas
+    if (appliedFilters?.queues && appliedFilters.queues.length > 0) {
+      columnCards = columnCards.filter(card => {
+        // Verificar se o card tem uma conversa associada com queue_id
+        const conversationQueueId = card.conversation?.queue_id;
+        return conversationQueueId && appliedFilters.queues.includes(conversationQueueId);
       });
     }
 
@@ -1169,11 +1179,11 @@ function CRMNegociosContent({
                     <Plus className="w-5 h-5" />
                   </Button>
                 )}
-                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
+                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
                   <ListFilter className="w-4 h-4 mr-2" />
                   Filtrar
-                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
-                      {(appliedFilters?.tags?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
+                      {(appliedFilters?.tags?.length || 0) + (appliedFilters?.queues?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
                     </Badge>}
                 </Button>
               </div>
@@ -1575,6 +1585,7 @@ function CRMNegociosContent({
       <FilterModal open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen} onApplyFilters={filters => {
       setAppliedFilters({
         tags: filters.tags,
+        queues: filters.queues,
         selectedDate: filters.selectedDate,
         dateRange: filters.dateRange
       });
