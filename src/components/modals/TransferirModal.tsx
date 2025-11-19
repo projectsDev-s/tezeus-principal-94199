@@ -42,7 +42,8 @@ export function TransferirModal({
   const { toast } = useToast();
   const { getHeaders } = useWorkspaceHeaders();
   const { selectedWorkspace } = useWorkspace();
-  const { queues } = useQueues();
+  // Incluir todas as filas do workspace (ativas e inativas)
+  const { queues } = useQueues(selectedWorkspace?.workspace_id, true);
 
   // Fetch workspace users
   useEffect(() => {
@@ -144,9 +145,29 @@ export function TransferirModal({
       let errorCount = 0;
       const errors: string[] = [];
 
+      // Buscar detalhes da fila se selecionada, para aplicar suas regras
+      let queueDetails = null;
+      if (targetQueueId) {
+        const { data: queueData } = await supabase
+          .from('queues')
+          .select('*, ai_agent:ai_agents(id, name)')
+          .eq('id', targetQueueId)
+          .single();
+        
+        queueDetails = queueData;
+        console.log('🔍 Detalhes da fila selecionada:', queueDetails);
+      }
+
       // Transfer each selected card
       for (const cardId of selectedCards) {
         try {
+          // Buscar o card para obter conversation_id
+          const { data: cardData } = await supabase
+            .from('pipeline_cards')
+            .select('conversation_id')
+            .eq('id', cardId)
+            .single();
+
           const updateBody: any = {
             pipeline_id: targetPipelineId,
             column_id: targetColumnId,
@@ -179,6 +200,62 @@ export function TransferirModal({
             }
           } else {
             successCount++;
+
+            // Aplicar regras da fila à conversa se houver conversation_id
+            if (cardData?.conversation_id && targetQueueId) {
+              try {
+                const conversationUpdateBody: any = {
+                  queue_id: targetQueueId,
+                };
+
+                // Ativar agente de IA da fila, se houver
+                if (queueDetails?.ai_agent_id) {
+                  conversationUpdateBody.agent_active_id = queueDetails.ai_agent_id;
+                  conversationUpdateBody.agente_ativo = true;
+                  console.log(`✅ Agente de IA da fila (${queueDetails.ai_agent?.name}) será ativado`);
+                }
+
+                // Se não definiu responsável, aplicar distribuição da fila
+                if (!targetResponsibleId) {
+                  console.log('🔄 Nenhum responsável definido - aplicando distribuição da fila');
+                  
+                  // Chamar a função de distribuição de fila
+                  const { data: distributionData, error: distributionError } = await supabase.functions.invoke(
+                    'assign-conversation-to-queue',
+                    {
+                      body: {
+                        conversation_id: cardData.conversation_id,
+                        queue_id: targetQueueId,
+                      },
+                      headers
+                    }
+                  );
+
+                  if (distributionError) {
+                    console.error('❌ Erro ao distribuir conversa:', distributionError);
+                  } else {
+                    console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
+                  }
+                } else {
+                  // Se definiu responsável, atualizar conversa diretamente
+                  conversationUpdateBody.assigned_user_id = targetResponsibleId;
+                  conversationUpdateBody.assigned_at = new Date().toISOString();
+
+                  const { error: convError } = await supabase
+                    .from('conversations')
+                    .update(conversationUpdateBody)
+                    .eq('id', cardData.conversation_id);
+
+                  if (convError) {
+                    console.error('❌ Erro ao atualizar conversa:', convError);
+                  } else {
+                    console.log('✅ Conversa atualizada com novo responsável e agente da fila');
+                  }
+                }
+              } catch (convErr) {
+                console.error('❌ Erro ao aplicar regras da fila à conversa:', convErr);
+              }
+            }
           }
         } catch (err) {
           console.error('Error transferring card:', cardId, err);
