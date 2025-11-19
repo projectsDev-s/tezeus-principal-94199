@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id, x-system-user-id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id, x-system-user-id, x-force-queue-history',
 };
 
 serve(async (req) => {
@@ -61,6 +61,12 @@ serve(async (req) => {
 
     const previousQueueId = currentConversation?.queue_id;
     const previousUserId = currentConversation?.assigned_user_id;
+    
+    console.log(`📋 Estado atual da conversa:`);
+    console.log(`   • previousQueueId: ${previousQueueId}`);
+    console.log(`   • previousUserId: ${previousUserId}`);
+    console.log(`   • novo queue_id: ${queue_id}`);
+    console.log(`   • novo assigned_user_id: ${assigned_user_id}`);
 
     const updateData: any = {};
 
@@ -132,10 +138,18 @@ serve(async (req) => {
 
     // Obter current_system_user_id do header ou usar null
     const systemUserId = req.headers.get('x-system-user-id') || null;
+    const forceQueueHistory = req.headers.get('x-force-queue-history') === 'true';
 
-    // Registrar histórico de transferência de fila se queue_id mudou
-    if (queue_id !== undefined && previousQueueId !== queue_id) {
-      console.log(`📝 Registrando transferência de fila: ${previousQueueId} → ${queue_id}`);
+    // Registrar histórico de transferência de fila se queue_id mudou OU se forçado
+    console.log(`🔍 Verificando se deve registrar histórico de fila:`);
+    console.log(`   • queue_id !== undefined: ${queue_id !== undefined}`);
+    console.log(`   • previousQueueId: ${previousQueueId}`);
+    console.log(`   • queue_id: ${queue_id}`);
+    console.log(`   • previousQueueId !== queue_id: ${previousQueueId !== queue_id}`);
+    console.log(`   • forceQueueHistory: ${forceQueueHistory}`);
+    
+    if (queue_id !== undefined && (previousQueueId !== queue_id || forceQueueHistory)) {
+      console.log(`📝 ✅ Registrando transferência de fila: ${previousQueueId} → ${queue_id}`);
       
       const { error: queueHistoryError } = await supabase
         .from('conversation_assignments')
@@ -151,8 +165,10 @@ serve(async (req) => {
       if (queueHistoryError) {
         console.error('⚠️ Erro ao registrar histórico de fila (não-bloqueante):', queueHistoryError);
       } else {
-        console.log('✅ Histórico de transferência de fila registrado');
+        console.log('✅ Histórico de transferência de fila registrado com sucesso');
       }
+    } else {
+      console.log(`⏭️ Não registrar histórico de fila (condição não satisfeita)`);
     }
 
     // Registrar histórico de mudança de responsável se assigned_user_id mudou
