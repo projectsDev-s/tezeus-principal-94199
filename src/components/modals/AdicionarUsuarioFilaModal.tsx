@@ -97,6 +97,7 @@ export function AdicionarUsuarioFilaModal({
                     />
                     
                     <Avatar className="w-8 h-8">
+                      <AvatarImage src={user.avatar || undefined} />
                       <AvatarFallback>
                         {user.name?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
