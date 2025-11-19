@@ -6,6 +6,7 @@ interface WorkspaceUser {
   id: string;
   name: string;
   profile: string;
+  avatar?: string;
 }
 
 export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user' | 'admin' | 'master')[]) {
@@ -97,7 +98,8 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
           .map((member: any) => ({
             id: member.user.id,
             name: member.user.name,
-            profile: member.user.profile
+            profile: member.user.profile,
+            avatar: member.user.avatar
           }));
 
         const filteredUsers = filterProfiles
