@@ -1169,9 +1169,10 @@ serve(async (req) => {
           // 2. Para cada card, verificar se há automações de tempo
           for (const card of (cards || []) as any[]) {
             const columnId = (card as any).column_id;
-            const cardUpdatedAt = new Date((card as any).updated_at);
+            const movedToColumnAtRaw = (card as any).moved_to_column_at || (card as any).updated_at || (card as any).created_at;
+            const cardMovedAt = movedToColumnAtRaw ? new Date(movedToColumnAtRaw) : new Date((card as any).updated_at);
             const now = new Date();
-            const timeInColumnMs = now.getTime() - cardUpdatedAt.getTime();
+            const timeInColumnMs = now.getTime() - cardMovedAt.getTime();
             const timeInColumnMinutes = Math.floor(timeInColumnMs / (1000 * 60));
 
             console.log(`\n🔍 Verificando card ${(card as any).id} (${(card as any).title})`);
@@ -1213,7 +1214,9 @@ serve(async (req) => {
                 .order('action_order', { ascending: true }) as { data: any[] | null };
 
               // Verificar se tem trigger time_in_column
-              const timeInColumnTrigger = (triggers || []).find((t: any) => t.trigger_type === 'time_in_column') as any;
+              const timeInColumnTrigger = (triggers || []).find(
+                (t: any) => t.trigger_type === 'time_in_column' || t.trigger_type === 'tempo_na_coluna'
+              ) as any;
               
               if (!timeInColumnTrigger) {
                 continue;

@@ -1,17 +1,31 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export interface CardHistoryEvent {
   id: string;
-  type: 'agent_activity' | 'queue_transfer' | 'column_transfer' | 'user_assigned' | 'activity_lembrete' | 'activity_mensagem' | 'activity_ligacao' | 'activity_reuniao' | 'activity_agendamento' | 'tag';
+  type:
+    | 'agent_activity'
+    | 'queue_transfer'
+    | 'column_transfer'
+    | 'pipeline_transfer'
+    | 'user_assigned'
+    | 'activity_lembrete'
+    | 'activity_mensagem'
+    | 'activity_ligacao'
+    | 'activity_reuniao'
+    | 'activity_agendamento'
+    | 'tag';
   action: string;
   description: string;
   timestamp: string;
   user_name?: string;
   metadata?: any;
 }
+
+export const cardHistoryQueryKey = (cardId: string, contactId?: string | null) =>
+  ['card-history', cardId, contactId || 'no-contact'] as const;
 
 export const useCardHistory = (cardId: string, contactId?: string) => {
   const { getHeaders } = useWorkspaceHeaders();
@@ -41,6 +55,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
   }, [cardId, contactId, resolvedContactId]);
 
   const effectiveContactId = contactId || resolvedContactId;
+  const queryKey = useMemo(() => cardHistoryQueryKey(cardId, effectiveContactId), [cardId, effectiveContactId]);
 
   // Adicionar realtime listener para atualizar automaticamente
   useEffect(() => {
@@ -73,7 +88,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             const record = payload.new as any;
             if (conversationIds.includes(record?.conversation_id)) {
               console.log('✅ Evento válido, invalidando cache');
-              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+              queryClient.invalidateQueries({ queryKey });
             }
           }
         )
@@ -89,7 +104,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             const record = payload.new as any;
             if (conversationIds.includes(record?.conversation_id)) {
               console.log('✅ Evento válido, invalidando cache');
-              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+              queryClient.invalidateQueries({ queryKey });
             }
           }
         )
@@ -103,7 +118,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
           },
           (payload) => {
             console.log('🔄 Realtime: pipeline_card_history changed', payload);
-            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            queryClient.invalidateQueries({ queryKey });
           }
         )
         .on(
@@ -118,7 +133,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             const record = payload.new as any;
             if (record?.contact_id === contactId || record?.pipeline_card_id === cardId) {
               console.log('✅ Evento válido, invalidando cache');
-              queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+              queryClient.invalidateQueries({ queryKey });
             }
           }
         )
@@ -130,9 +145,59 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             table: 'contact_tags',
             filter: `contact_id=eq.${effectiveContactId}`
           },
-          (payload) => {
+          async (payload) => {
             console.log('🔄 Realtime: Tag adicionada', payload);
-            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            const newRecord = payload.new as any;
+            if (newRecord) {
+              const { data: cardData } = await supabase
+                .from('pipeline_cards')
+                .select('pipeline_id')
+                .eq('id', cardId)
+                .maybeSingle();
+
+              if (cardData) {
+                const [{ data: pipelineData }, { data: tagInfo }] = await Promise.all([
+                  supabase
+                    .from('pipelines')
+                    .select('workspace_id')
+                    .eq('id', cardData.pipeline_id)
+                    .maybeSingle(),
+                  supabase
+                    .from('tags')
+                    .select('name, color')
+                    .eq('id', newRecord.tag_id)
+                    .maybeSingle(),
+                ]);
+
+                let createdByName: string | undefined;
+                if (newRecord.created_by) {
+                  const { data: createdByUser } = await supabase
+                    .from('system_users')
+                    .select('name')
+                    .eq('id', newRecord.created_by)
+                    .maybeSingle();
+                  createdByName = createdByUser?.name || undefined;
+                }
+
+                if (pipelineData && tagInfo) {
+                  await supabase.from('pipeline_card_history').insert({
+                    card_id: cardId,
+                    action: 'tag_added',
+                    workspace_id: pipelineData.workspace_id,
+                    metadata: {
+                      tag_id: newRecord.tag_id,
+                      tag_name: tagInfo.name,
+                      tag_color: tagInfo.color,
+                      added_at: new Date().toISOString(),
+                      added_by: newRecord.created_by,
+                      changed_by_name: createdByName,
+                    },
+                  });
+                }
+              }
+            }
+
+            queryClient.invalidateQueries({ queryKey });
           }
         )
         .on(
@@ -169,6 +234,16 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
                   .eq('id', oldRecord.tag_id)
                   .maybeSingle();
 
+                let removedByName: string | undefined;
+                if (oldRecord.created_by) {
+                  const { data: createdByUser } = await supabase
+                    .from('system_users')
+                    .select('name')
+                    .eq('id', oldRecord.created_by)
+                    .maybeSingle();
+                  removedByName = createdByUser?.name || undefined;
+                }
+
                 if (tagInfo && pipelineData) {
                   // Salvar evento de remoção no pipeline_card_history
                   await supabase
@@ -181,13 +256,15 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
                         tag_id: oldRecord.tag_id,
                         tag_name: tagInfo.name,
                         tag_color: tagInfo.color,
-                        removed_at: new Date().toISOString()
+                        removed_at: new Date().toISOString(),
+                        removed_by: oldRecord.created_by,
+                        changed_by_name: removedByName,
                       }
                     });
                 }
               }
             }
-            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, effectiveContactId] });
+            queryClient.invalidateQueries({ queryKey });
           }
         )
         .subscribe((status) => {
@@ -207,10 +284,10 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
         }
       });
     };
-  }, [cardId, effectiveContactId, queryClient]);
+  }, [cardId, effectiveContactId, queryClient, queryKey]);
 
   return useQuery({
-    queryKey: ['card-history', cardId, effectiveContactId],
+    queryKey,
     queryFn: async (): Promise<CardHistoryEvent[]> => {
       if (!effectiveContactId) {
         console.log('⚠️ ContactId não disponível ainda, retornando vazio');
@@ -219,6 +296,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
 
       const headers = getHeaders();
       const allEvents: CardHistoryEvent[] = [];
+      const recordedTagAdditions = new Set<string>();
 
       // 1. Buscar histórico de mudanças de coluna do card
       const { data: cardHistory } = await supabase
@@ -229,25 +307,42 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
 
       if (cardHistory) {
         for (const event of cardHistory) {
+          const metadata = (event.metadata as any) || {};
           let description = '';
-          const metadata = event.metadata as any;
-          
-          if (event.action === 'column_changed' && metadata) {
-            const fromColumn = metadata.old_column_name || 'Desconhecida';
-            const toColumn = metadata.new_column_name || 'Desconhecida';
-            description = `Negócio movido: ${fromColumn} → ${toColumn}`;
-          } else if (event.action === 'created') {
-            description = 'Negócio iniciado por mensagem';
-          } else if (event.action === 'status_changed' && metadata) {
-            description = `Status alterado para: ${metadata.new_status}`;
-          } else if (event.action === 'tag_removed' && metadata) {
-            description = `Tag "${metadata.tag_name}" foi removida do contato`;
-          }
-
-          // Determinar o tipo de evento correto
           let eventType: CardHistoryEvent['type'] = 'column_transfer';
-          if (event.action === 'tag_removed') {
+          let eventTitle: string | undefined;
+
+          if (event.action === 'column_changed') {
+            const fromColumn = metadata.old_column_name || 'Etapa desconhecida';
+            const toColumn = metadata.new_column_name || 'Etapa desconhecida';
+            description = `Negócio movido: ${fromColumn} → ${toColumn}`;
+            eventTitle = 'Transferência de Etapa';
+          } else if (event.action === 'pipeline_changed') {
+            const fromPipeline = metadata.old_pipeline_name || 'Pipeline desconhecido';
+            const toPipeline = metadata.new_pipeline_name || 'Pipeline desconhecido';
+            description = `Pipeline alterado: ${fromPipeline} → ${toPipeline}`;
+            eventType = 'pipeline_transfer';
+            eventTitle = 'Transferência de Pipeline';
+          } else if (event.action === 'created') {
+            description = 'Negócio criado';
+            eventTitle = 'Criação do Negócio';
+          } else if (event.action === 'status_changed') {
+            const newStatus = metadata.new_status || 'Status desconhecido';
+            description = `Status alterado para: ${newStatus}`;
+            eventTitle = 'Status Atualizado';
+          } else if (event.action === 'tag_removed') {
+            description = `Tag "${metadata.tag_name || 'sem nome'}" foi removida do contato`;
             eventType = 'tag';
+            eventTitle = 'Tag Removida';
+          } else if (event.action === 'tag_added') {
+            description = `Tag "${metadata.tag_name || 'sem nome'}" foi atribuída ao contato`;
+            eventType = 'tag';
+            eventTitle = 'Tag Atribuída';
+            if (metadata.tag_id) {
+              recordedTagAdditions.add(metadata.tag_id);
+            }
+          } else if (!metadata.description && event.description) {
+            description = event.description;
           }
 
           allEvents.push({
@@ -257,7 +352,10 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             description,
             timestamp: event.changed_at,
             user_name: metadata?.changed_by_name,
-            metadata: event.metadata
+            metadata: {
+              ...metadata,
+              event_title: eventTitle,
+            },
           });
         }
       }
@@ -326,64 +424,71 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
           .in('conversation_id', conversationIds)
           .order('changed_at', { ascending: false });
 
-        if (assignmentHistory) {
-          for (const event of assignmentHistory) {
+        if (assignmentHistory && assignmentHistory.length > 0) {
+          const userIdsToLoad = new Set<string>();
+          const queueIdsToLoad = new Set<string>();
+
+          assignmentHistory.forEach((event) => {
+            if (event.from_assigned_user_id) userIdsToLoad.add(event.from_assigned_user_id);
+            if (event.to_assigned_user_id) userIdsToLoad.add(event.to_assigned_user_id);
+            if (event.changed_by) userIdsToLoad.add(event.changed_by);
+            if (event.from_queue_id) queueIdsToLoad.add(event.from_queue_id);
+            if (event.to_queue_id) queueIdsToLoad.add(event.to_queue_id);
+          });
+
+          const usersMap = new Map<string, string>();
+          if (userIdsToLoad.size > 0) {
+            const { data: users } = await supabase
+              .from('system_users')
+              .select('id, name')
+              .in('id', Array.from(userIdsToLoad));
+
+            users?.forEach((user) => {
+              usersMap.set(user.id, user.name);
+            });
+          }
+
+          const queuesMap = new Map<string, string>();
+          if (queueIdsToLoad.size > 0) {
+            const { data: queues } = await supabase
+              .from('queues')
+              .select('id, name')
+              .in('id', Array.from(queueIdsToLoad));
+
+            queues?.forEach((queue) => {
+              queuesMap.set(queue.id, queue.name);
+            });
+          }
+
+          const formatUserName = (userId?: string | null) =>
+            userId ? usersMap.get(userId) || 'Sem responsável' : 'Sem responsável';
+
+          assignmentHistory.forEach((event) => {
             let description = '';
             let eventType: 'queue_transfer' | 'user_assigned' = 'user_assigned';
-            let changedByName: string | undefined;
+            let eventTitle = 'Conversa Atualizada';
 
-            // Buscar nome do usuário que fez a mudança
-            if (event.changed_by) {
-              const { data: changedByUser } = await supabase
-                .from('system_users')
-                .select('name')
-                .eq('id', event.changed_by)
-                .maybeSingle();
-              changedByName = changedByUser?.name;
-            }
+            const fromUserName = formatUserName(event.from_assigned_user_id);
+            const toUserName = formatUserName(event.to_assigned_user_id);
+            const changedByName = event.changed_by ? usersMap.get(event.changed_by) : undefined;
 
-            if (event.action === 'transfer') {
-              // Buscar nomes dos usuários
-              const userIds = [event.from_assigned_user_id, event.to_assigned_user_id].filter(Boolean);
-              if (userIds.length > 0) {
-                const { data: users } = await supabase
-                  .from('system_users')
-                  .select('id, name')
-                  .in('id', userIds);
-
-                const fromUser = users?.find(u => u.id === event.from_assigned_user_id);
-                const toUser = users?.find(u => u.id === event.to_assigned_user_id);
-                
-                description = `Conversa transferida de ${fromUser?.name || 'Ninguém'} para ${toUser?.name || 'Ninguém'}`;
-              }
-              eventType = 'user_assigned';
+            if (event.action === 'transfer' || (event.action === 'assign' && event.from_assigned_user_id && event.to_assigned_user_id && event.from_assigned_user_id !== event.to_assigned_user_id)) {
+              description = `Conversa transferida de ${fromUserName} para ${toUserName}`;
+              eventTitle = 'Conversa Transferida';
             } else if (event.action === 'assign' && event.to_assigned_user_id) {
-              // Buscar nome do usuário atribuído
-              const { data: toUser } = await supabase
-                .from('system_users')
-                .select('name')
-                .eq('id', event.to_assigned_user_id)
-                .maybeSingle();
-
-              description = `Conversa vinculada ao responsável: ${toUser?.name || 'Desconhecido'}`;
-              eventType = 'user_assigned';
+              description = `Conversa vinculada ao responsável ${toUserName}`;
+              eventTitle = 'Conversa Vinculada';
+            } else if (event.action === 'assign' && !event.to_assigned_user_id && event.from_assigned_user_id) {
+              description = `Conversa desvinculada do responsável ${fromUserName}`;
+              eventTitle = 'Conversa Desvinculada';
             } else if (event.action === 'queue_transfer') {
-              // Buscar nomes das filas
-              const queueIds = [event.from_queue_id, event.to_queue_id].filter(Boolean) as string[];
-              if (queueIds.length > 0) {
-                const { data: queues } = await supabase
-                  .from('queues')
-                  .select('id, name')
-                  .in('id', queueIds);
-
-                const fromQueue = queues?.find(q => q.id === event.from_queue_id);
-                const toQueue = queues?.find(q => q.id === event.to_queue_id);
-                
-                description = `Conversa transferida de fila: ${fromQueue?.name || 'Nenhuma'} → ${toQueue?.name || 'Nenhuma'}`;
-              } else {
-                description = 'Conversa transferida de fila';
-              }
+              const fromQueue = event.from_queue_id ? queuesMap.get(event.from_queue_id) || 'Sem fila' : 'Sem fila';
+              const toQueue = event.to_queue_id ? queuesMap.get(event.to_queue_id) || 'Sem fila' : 'Sem fila';
+              description = `Conversa transferida de fila: ${fromQueue} → ${toQueue}`;
               eventType = 'queue_transfer';
+              eventTitle = 'Transferência de Fila';
+            } else if (!event.to_assigned_user_id && !event.from_assigned_user_id) {
+              description = 'Conversa atualizada';
             }
 
             allEvents.push({
@@ -393,8 +498,16 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
               description,
               timestamp: event.changed_at,
               user_name: changedByName,
+              metadata: {
+                event_title: eventTitle,
+                from_user_name: fromUserName,
+                to_user_name: toUserName,
+                changed_by_name: changedByName,
+                from_queue_name: eventType === 'queue_transfer' ? (event.from_queue_id ? queuesMap.get(event.from_queue_id) : undefined) : undefined,
+                to_queue_name: eventType === 'queue_transfer' ? (event.to_queue_id ? queuesMap.get(event.to_queue_id) : undefined) : undefined,
+              },
             });
-          }
+          });
         }
       }
 
@@ -487,6 +600,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
         .from('contact_tags')
         .select(`
           id,
+          tag_id,
           created_at,
           created_by,
           tags:tag_id(name, color),
@@ -497,6 +611,9 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
 
       if (contactTags) {
         for (const tagEvent of contactTags) {
+          if (tagEvent.tag_id && recordedTagAdditions.has(tagEvent.tag_id)) {
+            continue;
+          }
           const tagData = tagEvent.tags as any;
           const description = `Tag "${tagData?.name}" foi atribuída ao contato`;
           
@@ -508,9 +625,12 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             timestamp: tagEvent.created_at,
             user_name: (tagEvent.system_users as any)?.name,
             metadata: {
+              tag_id: tagEvent.tag_id,
               tag_name: tagData?.name,
               tag_color: tagData?.color,
-              action: 'added'
+              action: 'added',
+              event_title: 'Tag Atribuída',
+              changed_by_name: (tagEvent.system_users as any)?.name,
             }
           });
         }
@@ -520,7 +640,14 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
       // Como não temos uma tabela de audit, vamos registrar quando detectarmos remoções via realtime
 
       // Ordenar todos os eventos por data (mais recentes primeiro)
-      allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      allEvents.sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        if (aTime !== bTime) {
+          return aTime - bTime;
+        }
+        return a.id.localeCompare(b.id);
+      });
 
       return allEvents;
     },

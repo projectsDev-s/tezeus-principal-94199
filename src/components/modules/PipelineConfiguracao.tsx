@@ -1098,7 +1098,7 @@ export default function PipelineConfiguracao({
                         Coluna de Destino
                       </th>
                       <th className={cn("text-left p-2 text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        Estado do Negócio
+                        Status do Negócio
                       </th>
                       <th className={cn("text-left p-2 text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                         Ações

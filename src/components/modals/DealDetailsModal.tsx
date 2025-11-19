@@ -30,7 +30,7 @@ import { usePipelineColumns } from "@/hooks/usePipelineColumns";
 import { useUsersCache } from "@/hooks/useUsersCache";
 import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
-import { useCardHistory } from "@/hooks/useCardHistory";
+import { cardHistoryQueryKey, useCardHistory } from "@/hooks/useCardHistory";
 import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon, CalendarClock, Calendar as CalendarIconLucide } from "lucide-react";
 interface Tag {
   id: string;
@@ -340,18 +340,31 @@ export function DealDetailsModal({
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
   
   // Hook para histórico completo do card - usar cardId direto pois selectedCardId pode estar vazio no início
-  const { data: fullHistory = [], isLoading: isLoadingHistory } = useCardHistory(cardId, contactId);
+  const { data: fullHistory = [], isLoading: isLoadingHistory, refetch: refetchHistory } = useCardHistory(cardId, contactId);
   
   // Estado para filtro de histórico
   const [historyFilter, setHistoryFilter] = useState<string>("todos");
 
   // Refresh dos dados do histórico quando o modal abrir
   useEffect(() => {
-    if (isOpen && cardId && contactId) {
+    if (isOpen && cardId) {
       console.log('🔄 Modal aberto - Atualizando histórico do card');
-      queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+      const historyKey = cardHistoryQueryKey(cardId, contactId || null);
+      queryClient.invalidateQueries({ queryKey: historyKey });
+      queryClient.refetchQueries({ queryKey: historyKey });
+      refetchHistory();
     }
-  }, [isOpen, cardId, contactId, queryClient]);
+  }, [isOpen, cardId, contactId, queryClient, refetchHistory]);
+
+  useEffect(() => {
+    if (activeTab === "historico" && cardId) {
+      console.log('🔄 Aba Histórico selecionada - Recarregando histórico do card');
+      const historyKey = cardHistoryQueryKey(cardId, contactId || null);
+      queryClient.invalidateQueries({ queryKey: historyKey });
+      queryClient.refetchQueries({ queryKey: historyKey });
+      refetchHistory();
+    }
+  }, [activeTab, cardId, contactId, queryClient, refetchHistory]);
   // A aba "negócio" sempre deve aparecer quando o modal é aberto via card
   const tabs = [{
     id: "negocios",
@@ -1753,6 +1766,7 @@ export function DealDetailsModal({
                     <SelectItem value="agent_activity">Evento de Agente IA</SelectItem>
                     <SelectItem value="user_assigned">Conversa Vinculada</SelectItem>
                     <SelectItem value="queue_transfer">Transferência de Fila</SelectItem>
+                  <SelectItem value="pipeline_transfer">Transferência de Pipeline</SelectItem>
                     <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
                     <SelectItem value="activity_lembrete_created">Lembretes Criados</SelectItem>
                     <SelectItem value="activity_lembrete_completed">Lembretes Concluídos</SelectItem>
@@ -1791,10 +1805,38 @@ export function DealDetailsModal({
                     // Para outros filtros
                     return event.type === historyFilter;
                   });
+                  const orderedHistory = filteredHistory
+                    .slice()
+                    .sort((a, b) => {
+                      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                      if (aTime !== bTime) {
+                        return bTime - aTime;
+                      }
+                      return a.id.localeCompare(b.id);
+                    });
                   
                   return (
                     <div className="space-y-0">
-                      {filteredHistory.map((event, index) => {
+                      {orderedHistory.map((event, index) => {
+                    const eventMetadata = (event.metadata as any) || {};
+                    const eventTitle =
+                      eventMetadata.event_title ||
+                      (event.type === 'agent_activity'
+                        ? 'Agente de IA'
+                        : event.type === 'user_assigned'
+                          ? event.action === 'queue_transfer'
+                            ? 'Transferência de Fila'
+                            : event.action === 'transfer'
+                              ? 'Conversa Transferida'
+                              : 'Conversa Vinculada'
+                          : event.type === 'queue_transfer'
+                            ? 'Transferência de Fila'
+                            : event.type === 'pipeline_transfer'
+                              ? 'Transferência de Pipeline'
+                              : event.type === 'column_transfer'
+                                ? 'Transferência de Etapa'
+                                : 'Evento');
                     // Ícone baseado no tipo de evento
                     let Icon = MessageSquare;
                     let iconBgColor = "bg-yellow-400";
@@ -1803,6 +1845,9 @@ export function DealDetailsModal({
                     if (event.type === 'agent_activity') {
                       Icon = Bot;
                       iconBgColor = "bg-yellow-400";
+                    } else if (event.type === 'pipeline_transfer') {
+                      Icon = ArrowRightLeft;
+                      iconBgColor = "bg-amber-500";
                     } else if (event.type === 'user_assigned') {
                       Icon = UserCheck;
                       iconBgColor = "bg-yellow-400";
@@ -1835,7 +1880,7 @@ export function DealDetailsModal({
                     return (
                       <div key={event.id} className="relative">
                         {/* Linha vertical conectando os eventos */}
-                        {index < filteredHistory.length - 1 && (
+                        {index < orderedHistory.length - 1 && (
                           <div 
                             className={cn(
                               "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
@@ -1864,10 +1909,7 @@ export function DealDetailsModal({
                                 "font-medium text-sm",
                                 isDarkMode ? "text-white" : "text-gray-900"
                               )}>
-                                {event.type === 'agent_activity' && 'Agente de IA'}
-                                {event.type === 'user_assigned' && 'Conversa Vinculada'}
-                                {event.type === 'queue_transfer' && 'Transferência de Fila'}
-                                {event.type === 'column_transfer' && 'Transferência de Etapa'}
+                                {eventTitle}
                               </h4>
                             </div>
                             
@@ -1897,6 +1939,15 @@ export function DealDetailsModal({
                                 {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                               </span>
                             </div>
+
+                            {(event.user_name || eventMetadata.changed_by_name) && (
+                              <div className={cn(
+                                "mt-2 text-xs",
+                                isDarkMode ? "text-gray-500" : "text-gray-500"
+                              )}>
+                                Atualizado por: {eventMetadata.changed_by_name || event.user_name}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -995,20 +995,69 @@ export function CRMContatos() {
       return;
     }
 
-    const headers = ["Nome", "Telefone", "Email", "Data de Criação"];
+    const baseHeaders = ["Nome", "Telefone", "Email", "Data de Criação"];
+    const workspaceFieldNames = workspaceFields.map((field) => field.field_name);
+    const extraInfoKeySet = new Set<string>();
+
+    contacts.forEach((contact) => {
+      const extraInfo = contact.extra_info;
+      if (extraInfo && typeof extraInfo === "object" && !Array.isArray(extraInfo)) {
+        Object.keys(extraInfo).forEach((key) => {
+          if (key) {
+            extraInfoKeySet.add(key);
+          }
+        });
+      }
+    });
+
+    workspaceFieldNames.forEach((key) => {
+      if (key) {
+        extraInfoKeySet.add(key);
+      }
+    });
+
+    const orderedWorkspaceKeys = workspaceFieldNames.filter((key) => extraInfoKeySet.has(key));
+    const otherExtraKeys = Array.from(extraInfoKeySet).filter((key) => !workspaceFieldNames.includes(key)).sort();
+    const extraInfoHeaders = [...orderedWorkspaceKeys, ...otherExtraKeys];
+    const headers = [...baseHeaders, ...extraInfoHeaders, "Tags"];
+
+    const normalizeValue = (value: unknown) => {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "object") {
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return "";
+        }
+      }
+      return String(value);
+    };
+
+    const escapeCSVValue = (value: unknown) => {
+      const normalized = normalizeValue(value);
+      const escaped = normalized.replace(/"/g, '""');
+      return `"${escaped}"`;
+    };
+
     const csvContent = [
-      headers.join(","),
+      headers.map((header) => escapeCSVValue(header)).join(","),
       ...contacts.map((contact) => {
-        const createdAtFormatted = contact.created_at 
-          ? format(new Date(contact.created_at), "dd/MM/yyyy HH:mm")
-          : "";
-        
-        return [
-          `"${contact.name}"`,
-          `"${contact.phone || ""}"`,
-          `"${contact.email || ""}"`,
-          `"${createdAtFormatted}"`,
-        ].join(",");
+        const createdAtFormatted = contact.created_at ? format(new Date(contact.created_at), "dd/MM/yyyy HH:mm") : "";
+        const extraInfo = contact.extra_info && typeof contact.extra_info === "object" && !Array.isArray(contact.extra_info)
+          ? (contact.extra_info as Record<string, unknown>)
+          : {};
+        const tagsAsString = (contact.tags || []).map((tag) => tag.name).filter(Boolean).join("; ");
+
+        const rowValues = [
+          escapeCSVValue(contact.name),
+          escapeCSVValue(contact.phone || ""),
+          escapeCSVValue(contact.email || ""),
+          escapeCSVValue(createdAtFormatted),
+          ...extraInfoHeaders.map((key) => escapeCSVValue(extraInfo[key] ?? "")),
+          escapeCSVValue(tagsAsString),
+        ];
+
+        return rowValues.join(",");
       }),
     ].join("\n");
 

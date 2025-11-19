@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,69 +29,127 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
   const { toast } = useToast();
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
 
-  const sections: ExportSection[] = [
-    {
-      title: "Informações Básicas",
-      key: "basic",
-      fields: [
-        { key: "id", label: "ID do Negócio", available: true },
-        { key: "pipeline", label: "Pipeline", available: cards.some(c => c.pipeline_id) },
-        { key: "value", label: "Valor", available: true },
-        { key: "status", label: "Status", available: true },
-        { key: "created_at", label: "Data de Criação", available: true },
-        { key: "updated_at", label: "Última Atualização", available: true },
-        { key: "moved_at", label: "Última Movimentação", available: cards.some(c => c.moved_at) },
-        { key: "won_at", label: "Data de Ganho", available: cards.some(c => c.won_at) },
-      ],
-    },
-    {
-      title: "Informações do Contato",
-      key: "contact",
-      fields: [
-        { key: "contact_name", label: "Nome do Contato", available: true },
-        { key: "contact_phone", label: "Telefone do Contato", available: true },
-        { key: "contact_email", label: "E-mail do Contato", available: true },
-      ],
-    },
-    {
-      title: "Informações Comerciais",
-      key: "commercial",
-      fields: [
-        { key: "product", label: "Produtos", available: cards.some(c => c.product_id) },
-        { key: "sales_stage", label: "Etapa de Venda", available: true },
-        { key: "tags", label: "Tags", available: cards.some(c => c.contact?.contact_tags?.length > 0) },
-        { key: "queue", label: "Filas", available: cards.some(c => c.conversation?.queue) },
-      ],
-    },
-    {
-      title: "Responsáveis",
-      key: "responsible",
-      fields: [
-        { key: "responsible_user", label: "Usuário Responsável", available: true },
-        { key: "sales_responsible", label: "Responsável pela Venda", available: cards.some(c => c.responsible_user) },
-      ],
-    },
-    {
-      title: "Atividades",
-      key: "activities",
-      fields: [
-        { key: "activities_count", label: "Total de Atividades", available: cards.some(c => c.activities?.length > 0) },
-        { key: "pending_activities", label: "Atividades Pendentes", available: cards.some(c => c.activities?.length > 0) },
-        { key: "completed_activities", label: "Atividades Concluídas", available: cards.some(c => c.activities?.length > 0) },
-        { key: "next_activity", label: "Próxima Atividade", available: cards.some(c => c.activities?.length > 0) },
-      ],
-    },
-  ];
+  const contactExtraInfoKeys = useMemo(() => {
+    const keys = new Set<string>();
+
+    const collectKeysFromSource = (source: any) => {
+      if (!source) return;
+      if (Array.isArray(source)) {
+        source.forEach((item) => {
+          const key = item?.field_name || item?.key;
+          if (key) keys.add(key);
+        });
+        return;
+      }
+      if (typeof source === "object") {
+        Object.keys(source).forEach((key) => {
+          if (key) keys.add(key);
+        });
+      }
+    };
+
+    cards.forEach((card) => {
+      collectKeysFromSource(card?.contact?.extra_info);
+      collectKeysFromSource(card?.contact?.additional_info);
+      collectKeysFromSource(card?.contact?.custom_fields);
+    });
+
+    return Array.from(keys).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [cards]);
+
+  const extraInfoFields: ExportField[] = useMemo(
+    () =>
+      contactExtraInfoKeys.map((key) => ({
+        key: `contact_extra__${key}`,
+        label: key,
+        available: true,
+      })),
+    [contactExtraInfoKeys],
+  );
+
+  const sections: ExportSection[] = useMemo(() => {
+    const baseSections: ExportSection[] = [
+      {
+        title: "Informações Básicas",
+        key: "basic",
+        fields: [
+          { key: "id", label: "ID do Negócio", available: true },
+          { key: "pipeline", label: "Pipeline", available: cards.some((c) => c.pipeline_id) },
+          { key: "value", label: "Preço", available: true },
+          { key: "status", label: "Status", available: true },
+          { key: "created_at", label: "Data de Criação", available: true },
+          { key: "updated_at", label: "Última Atualização", available: true },
+          { key: "moved_at", label: "Última Movimentação", available: cards.some((c) => c.moved_at) },
+          { key: "won_at", label: "Data de Ganho", available: cards.some((c) => c.won_at) },
+        ],
+      },
+      {
+        title: "Informações do Contato",
+        key: "contact",
+        fields: [
+          { key: "contact_name", label: "Nome do Contato", available: true },
+          { key: "contact_phone", label: "Telefone do Contato", available: true },
+          { key: "contact_email", label: "E-mail do Contato", available: true },
+        ],
+      },
+      {
+        title: "Informações Comerciais",
+        key: "commercial",
+        fields: [
+          { key: "product", label: "Produtos", available: cards.some((c) => c.product_id) },
+          { key: "sales_stage", label: "Coluna Pipeline", available: true },
+          {
+            key: "tags",
+            label: "Tags",
+            available: cards.some(
+              (c) =>
+                (Array.isArray(c.tags) && c.tags.length > 0) ||
+                (Array.isArray(c.contact?.contact_tags) && c.contact?.contact_tags?.length > 0),
+            ),
+          },
+          { key: "queue", label: "Filas", available: cards.some((c) => c.conversation?.queue) },
+        ],
+      },
+      {
+        title: "Responsáveis",
+        key: "responsible",
+        fields: [
+          { key: "responsible_user", label: "Usuário Responsável", available: true },
+          { key: "sales_responsible", label: "Responsável pela Venda", available: cards.some((c) => c.responsible_user) },
+        ],
+      },
+      {
+        title: "Atividades",
+        key: "activities",
+        fields: [
+          { key: "activities_count", label: "Total de Atividades", available: cards.some((c) => c.activities?.length > 0) },
+          { key: "pending_activities", label: "Atividades Pendentes", available: cards.some((c) => c.activities?.length > 0) },
+          { key: "completed_activities", label: "Atividades Concluídas", available: cards.some((c) => c.activities?.length > 0) },
+          { key: "next_activity", label: "Próxima Atividade", available: cards.some((c) => c.activities?.length > 0) },
+        ],
+      },
+    ];
+
+    if (extraInfoFields.length > 0) {
+      baseSections.push({
+        title: "Informações Adicionais do Contato",
+        key: "contact_extra",
+        fields: extraInfoFields,
+      });
+    }
+
+    return baseSections;
+  }, [cards, extraInfoFields]);
 
   // Inicializar com todos os campos disponíveis selecionados
   useEffect(() => {
     if (isOpen) {
-      const availableFields = sections.flatMap(section =>
-        section.fields.filter(f => f.available).map(f => f.key)
+      const availableFields = sections.flatMap((section) =>
+        section.fields.filter((f) => f.available).map((f) => f.key),
       );
       setSelectedFields(new Set(availableFields));
     }
-  }, [isOpen]);
+  }, [isOpen, sections]);
 
   const toggleField = (fieldKey: string) => {
     setSelectedFields(prev => {
@@ -166,8 +224,28 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
         return card.product?.value || card.product_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.product?.value || card.product_value) : "R$ 0,00";
       case "sales_stage":
         return columnName;
-      case "tags":
-        return card.contact?.contact_tags?.map((ct: any) => ct.tags?.name).filter(Boolean).join(", ") || "";
+      case "tags": {
+        const contactTags = Array.isArray(card.contact?.contact_tags)
+          ? card.contact.contact_tags.map((ct: any) => ct?.tags?.name).filter(Boolean)
+          : [];
+        const dealTags = Array.isArray(card.tags)
+          ? card.tags
+              .map((tag: any) => {
+                if (!tag) return null;
+                if (typeof tag === "string") return tag;
+                if (typeof tag === "object") {
+                  if (tag?.name) return tag.name;
+                  if (tag?.label) return tag.label;
+                  if (tag?.tag?.name) return tag.tag.name;
+                  if (tag?.tags?.name) return tag.tags.name;
+                }
+                return null;
+              })
+              .filter(Boolean)
+          : [];
+        const uniqueTags = Array.from(new Set([...contactTags, ...dealTags]));
+        return uniqueTags.join(", ");
+      }
       case "queue":
         return card.conversation?.queue?.name || "";
       case "responsible_user":
@@ -185,8 +263,59 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
           ?.filter((a: any) => !a.is_completed && a.scheduled_for)
           ?.sort((a: any, b: any) => new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime())[0];
         return nextActivity ? `${nextActivity.subject} - ${format(new Date(nextActivity.scheduled_for), "dd/MM/yyyy HH:mm")}` : "";
-      default:
+      default: {
+        if (fieldKey.startsWith("contact_extra__")) {
+          const extraKey = fieldKey.replace("contact_extra__", "");
+
+          const extractValue = (source: any): string => {
+            if (!source) return "";
+            if (Array.isArray(source)) {
+              const match = source.find(
+                (entry) => entry?.field_name === extraKey || entry?.key === extraKey,
+              );
+              const value = match?.field_value ?? match?.value;
+              if (value === null || value === undefined) return "";
+              if (typeof value === "object") {
+                try {
+                  return JSON.stringify(value);
+                } catch {
+                  return "";
+                }
+              }
+              return String(value);
+            }
+            if (typeof source === "object") {
+              const value = source[extraKey];
+              if (value === null || value === undefined) return "";
+              if (typeof value === "object") {
+                try {
+                  return JSON.stringify(value);
+                } catch {
+                  return "";
+                }
+              }
+              return String(value);
+            }
+            return "";
+          };
+
+          const sources = [
+            card.contact?.extra_info,
+            card.contact?.additional_info,
+            card.contact?.custom_fields,
+          ];
+
+          for (const source of sources) {
+            const extracted = extractValue(source);
+            if (extracted) {
+              return extracted;
+            }
+          }
+
+          return "";
+        }
         return "";
+      }
     }
   };
 
