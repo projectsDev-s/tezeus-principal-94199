@@ -55,6 +55,8 @@ serve(async (req) => {
       });
     }
 
+    const previousQueueId = conversation.queue_id; // Salvar para histórico
+
     // Se já está atribuída, não precisa distribuir
     if (conversation.assigned_user_id) {
       console.log(`⏭️ Conversa ${conversation_id} já atribuída ao usuário ${conversation.assigned_user_id}`);
@@ -130,6 +132,20 @@ serve(async (req) => {
         .update({ queue_id: queue.id })
         .eq('id', conversation_id);
 
+      // Registrar mudança de fila se houve
+      if (previousQueueId !== queue.id) {
+        await supabase
+          .from('conversation_assignments')
+          .insert({
+            conversation_id: conversation_id,
+            action: 'queue_transfer',
+            from_queue_id: previousQueueId,
+            to_queue_id: queue.id,
+            changed_by: null,
+            changed_at: new Date().toISOString()
+          });
+      }
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Fila sem usuários ativos',
@@ -179,6 +195,20 @@ serve(async (req) => {
           .update({ queue_id: queue.id })
           .eq('id', conversation_id);
 
+        // Registrar mudança de fila se houve
+        if (previousQueueId !== queue.id) {
+          await supabase
+            .from('conversation_assignments')
+            .insert({
+              conversation_id: conversation_id,
+              action: 'queue_transfer',
+              from_queue_id: previousQueueId,
+              to_queue_id: queue.id,
+              changed_by: null,
+              changed_at: new Date().toISOString()
+            });
+        }
+
         return new Response(JSON.stringify({
           success: true,
           message: 'Fila configurada para não distribuir',
@@ -211,15 +241,30 @@ serve(async (req) => {
         throw updateError;
       }
 
-      // Registrar atribuição
+      // Registrar atribuição de responsável
       await supabase
         .from('conversation_assignments')
         .insert({
           conversation_id: conversation_id,
           to_assigned_user_id: selectedUserId,
-          action: 'assigned',
+          from_assigned_user_id: conversation.assigned_user_id || null,
+          action: 'assign',
           changed_by: selectedUserId
         });
+
+      // Registrar mudança de fila se houve
+      if (previousQueueId !== queue.id) {
+        await supabase
+          .from('conversation_assignments')
+          .insert({
+            conversation_id: conversation_id,
+            action: 'queue_transfer',
+            from_queue_id: previousQueueId,
+            to_queue_id: queue.id,
+            changed_by: null,
+            changed_at: new Date().toISOString()
+          });
+      }
 
       console.log(`✅ Conversa ${conversation_id} atribuída ao usuário ${selectedUserId} via fila ${queue.name}`);
 
@@ -240,6 +285,20 @@ serve(async (req) => {
       .from('conversations')
       .update({ queue_id: queue.id })
       .eq('id', conversation_id);
+
+    // Registrar mudança de fila se houve
+    if (previousQueueId !== queue.id) {
+      await supabase
+        .from('conversation_assignments')
+        .insert({
+          conversation_id: conversation_id,
+          action: 'queue_transfer',
+          from_queue_id: previousQueueId,
+          to_queue_id: queue.id,
+          changed_by: null,
+          changed_at: new Date().toISOString()
+        });
+    }
 
     return new Response(JSON.stringify({
       success: true,

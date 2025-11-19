@@ -44,6 +44,24 @@ serve(async (req) => {
     console.log(`👤 Assigned User: ${assigned_user_id || 'não especificado'}`);
     console.log(`🤖 Ativar agente da fila? ${activate_queue_agent}`);
 
+    // Buscar estado atual da conversa para registrar histórico
+    const { data: currentConversation, error: fetchError } = await supabase
+      .from('conversations')
+      .select('queue_id, assigned_user_id')
+      .eq('id', conversation_id)
+      .single();
+
+    if (fetchError) {
+      console.error('❌ Erro ao buscar conversa atual:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar conversa', details: fetchError }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const previousQueueId = currentConversation?.queue_id;
+    const previousUserId = currentConversation?.assigned_user_id;
+
     const updateData: any = {};
 
     // Atualizar queue_id (inclusive null para remover)
@@ -111,6 +129,54 @@ serve(async (req) => {
     }
 
     console.log('✅ Conversa atualizada com sucesso:', updatedConversation);
+
+    // Obter current_system_user_id do header ou usar null
+    const systemUserId = req.headers.get('x-system-user-id') || null;
+
+    // Registrar histórico de transferência de fila se queue_id mudou
+    if (queue_id !== undefined && previousQueueId !== queue_id) {
+      console.log(`📝 Registrando transferência de fila: ${previousQueueId} → ${queue_id}`);
+      
+      const { error: queueHistoryError } = await supabase
+        .from('conversation_assignments')
+        .insert({
+          conversation_id: conversation_id,
+          action: 'queue_transfer',
+          from_queue_id: previousQueueId,
+          to_queue_id: queue_id,
+          changed_by: systemUserId,
+          changed_at: new Date().toISOString()
+        });
+
+      if (queueHistoryError) {
+        console.error('⚠️ Erro ao registrar histórico de fila (não-bloqueante):', queueHistoryError);
+      } else {
+        console.log('✅ Histórico de transferência de fila registrado');
+      }
+    }
+
+    // Registrar histórico de mudança de responsável se assigned_user_id mudou
+    if (assigned_user_id !== undefined && previousUserId !== assigned_user_id) {
+      console.log(`📝 Registrando mudança de responsável: ${previousUserId} → ${assigned_user_id}`);
+      
+      const action = previousUserId ? 'transfer' : 'assign';
+      const { error: userHistoryError } = await supabase
+        .from('conversation_assignments')
+        .insert({
+          conversation_id: conversation_id,
+          action: action,
+          from_assigned_user_id: previousUserId,
+          to_assigned_user_id: assigned_user_id,
+          changed_by: systemUserId,
+          changed_at: new Date().toISOString()
+        });
+
+      if (userHistoryError) {
+        console.error('⚠️ Erro ao registrar histórico de responsável (não-bloqueante):', userHistoryError);
+      } else {
+        console.log('✅ Histórico de mudança de responsável registrado');
+      }
+    }
 
     // Registrar no histórico de agente se mudou
     if (updateData.agent_active_id) {
