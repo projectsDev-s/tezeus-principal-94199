@@ -204,6 +204,9 @@ export function TransferirModal({
             // Aplicar regras da fila à conversa se houver conversation_id
             if (cardData?.conversation_id && targetQueueId) {
               try {
+                console.log(`🔧 Aplicando regras da fila "${queueDetails?.name}" à conversa ${cardData.conversation_id}`);
+                
+                // SEMPRE atualizar queue_id e agente, independente da distribuição
                 const conversationUpdateBody: any = {
                   queue_id: targetQueueId,
                 };
@@ -213,31 +216,57 @@ export function TransferirModal({
                   conversationUpdateBody.agent_active_id = queueDetails.ai_agent_id;
                   conversationUpdateBody.agente_ativo = true;
                   console.log(`✅ Agente de IA da fila (${queueDetails.ai_agent?.name}) será ativado`);
+                } else {
+                  // Se a fila não tem agente, desativar o agente atual
+                  conversationUpdateBody.agente_ativo = false;
+                  conversationUpdateBody.agent_active_id = null;
+                  console.log(`⚠️ Fila não tem agente - desativando agente atual`);
                 }
 
                 // Se não definiu responsável, aplicar distribuição da fila
                 if (!targetResponsibleId) {
                   console.log('🔄 Nenhum responsável definido - aplicando distribuição da fila');
                   
-                  // Chamar a função de distribuição de fila
-                  const { data: distributionData, error: distributionError } = await supabase.functions.invoke(
-                    'assign-conversation-to-queue',
-                    {
-                      body: {
-                        conversation_id: cardData.conversation_id,
-                        queue_id: targetQueueId,
-                      },
-                      headers
-                    }
-                  );
+                  // Primeiro atualizar a fila e o agente
+                  const { error: queueUpdateError } = await supabase
+                    .from('conversations')
+                    .update(conversationUpdateBody)
+                    .eq('id', cardData.conversation_id);
 
-                  if (distributionError) {
-                    console.error('❌ Erro ao distribuir conversa:', distributionError);
+                  if (queueUpdateError) {
+                    console.error('❌ Erro ao atualizar fila e agente da conversa:', queueUpdateError);
                   } else {
-                    console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
+                    console.log('✅ Fila e agente atualizados com sucesso');
+                  }
+                  
+                  // Depois tentar distribuir conforme regras da fila
+                  try {
+                    const { data: distributionData, error: distributionError } = await supabase.functions.invoke(
+                      'assign-conversation-to-queue',
+                      {
+                        body: {
+                          conversation_id: cardData.conversation_id,
+                          queue_id: targetQueueId,
+                        },
+                        headers
+                      }
+                    );
+
+                    if (distributionError) {
+                      console.error('❌ Erro ao distribuir conversa (agente já foi ativado):', distributionError);
+                      toast({
+                        title: "Aviso",
+                        description: "Fila e agente foram atualizados, mas a distribuição automática falhou",
+                        variant: "default",
+                      });
+                    } else {
+                      console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
+                    }
+                  } catch (distError) {
+                    console.error('❌ Exceção ao distribuir conversa (agente já foi ativado):', distError);
                   }
                 } else {
-                  // Se definiu responsável, atualizar conversa diretamente
+                  // Se definiu responsável, atualizar conversa com responsável E agente
                   conversationUpdateBody.assigned_user_id = targetResponsibleId;
                   conversationUpdateBody.assigned_at = new Date().toISOString();
 
