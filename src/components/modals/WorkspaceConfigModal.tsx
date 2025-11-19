@@ -62,7 +62,7 @@ export function WorkspaceConfigModal({
         .single();
 
       if (error) throw error;
-      setDefaultPipelineId(data?.default_pipeline_id || "");
+      setDefaultPipelineId(data?.default_pipeline_id || "none");
     } catch (error) {
       console.error('Erro ao carregar pipeline padrão:', error);
     }
@@ -79,7 +79,7 @@ export function WorkspaceConfigModal({
           action: 'update',
           workspaceId,
           name: workspaceName,
-          defaultPipelineId: defaultPipelineId || null
+          defaultPipelineId: defaultPipelineId === "none" ? null : defaultPipelineId
         },
         headers
       });
@@ -126,7 +126,7 @@ export function WorkspaceConfigModal({
                     <SelectValue placeholder="Selecione uma pipeline" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma (última criada primeiro)</SelectItem>
+                    <SelectItem value="none">Nenhuma (última criada primeiro)</SelectItem>
                     {pipelines.map((pipeline) => (
                       <SelectItem key={pipeline.id} value={pipeline.id}>
                         {pipeline.name}
