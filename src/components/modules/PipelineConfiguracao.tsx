@@ -946,63 +946,50 @@ export default function PipelineConfiguracao({
                   >
                     Salvar
                   </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!selectedPipeline?.id || !selectedWorkspace?.workspace_id) return;
+                      
+                      try {
+                        const { error } = await supabase.functions.invoke('manage-workspaces', {
+                          body: {
+                            action: 'update',
+                            workspaceId: selectedWorkspace.workspace_id,
+                            name: selectedWorkspace.name,
+                            defaultPipelineId: selectedPipeline.id
+                          },
+                          headers: getHeaders()
+                        });
+
+                        if (error) throw error;
+
+                        toast({
+                          title: "Sucesso",
+                          description: "Pipeline definido como padrão com sucesso!",
+                        });
+
+                        // Atualizar contexto se necessário
+                        if (refreshCurrentPipeline) {
+                          await refreshCurrentPipeline();
+                        }
+                      } catch (error) {
+                        console.error('Erro ao definir pipeline padrão:', error);
+                        toast({
+                          title: "Erro",
+                          description: "Erro ao definir pipeline padrão",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    variant="outline"
+                  >
+                    Definir como padrão
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Definir como Pipeline Padrão */}
-          <Card className={cn("border-border", isDarkMode && "bg-card border-border")}>
-            <CardHeader>
-              <CardTitle className={cn("text-lg", isDarkMode && "text-white")}>
-                Pipeline Padrão
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-600")}>
-                Defina este pipeline como padrão para aparecer primeiro na lista de pipelines e ser selecionado automaticamente ao acessar o CRM.
-              </p>
-              <Button
-                onClick={async () => {
-                  if (!selectedPipeline?.id || !selectedWorkspace?.workspace_id) return;
-                  
-                  try {
-                    const { error } = await supabase.functions.invoke('manage-workspaces', {
-                      body: {
-                        action: 'update',
-                        workspaceId: selectedWorkspace.workspace_id,
-                        name: selectedWorkspace.name,
-                        defaultPipelineId: selectedPipeline.id
-                      },
-                      headers: getHeaders()
-                    });
-
-                    if (error) throw error;
-
-                    toast({
-                      title: "Sucesso",
-                      description: "Pipeline definido como padrão com sucesso!",
-                    });
-
-                    // Atualizar contexto se necessário
-                    if (refreshCurrentPipeline) {
-                      await refreshCurrentPipeline();
-                    }
-                  } catch (error) {
-                    console.error('Erro ao definir pipeline padrão:', error);
-                    toast({
-                      title: "Erro",
-                      description: "Erro ao definir pipeline padrão",
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                Definir como Pipeline Padrão
-              </Button>
-            </CardContent>
-          </Card>
 
           {/* Seção de Exclusão - Zona de Perigo */}
           <Card className="border-red-200">
