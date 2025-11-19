@@ -27,6 +27,7 @@ interface Fila {
   ai_agent_id?: string;
   greeting_message?: string;
   workspace_id?: string;
+  workspaces?: { name: string };
 }
 
 interface EditarFilaModalProps {
@@ -113,8 +114,11 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
       setAgenteId(fila.ai_agent_id || "");
       setMensagemSaudacao(fila.greeting_message || "");
       
-      // Buscar nome do workspace
-      if (fila.workspace_id) {
+      // Se a fila já vem com o workspace, usar diretamente
+      if (fila.workspaces?.name) {
+        setWorkspaceName(fila.workspaces.name);
+      } else if (fila.workspace_id) {
+        // Fallback: buscar nome do workspace
         try {
           const { data, error } = await supabase
             .from('workspaces')
