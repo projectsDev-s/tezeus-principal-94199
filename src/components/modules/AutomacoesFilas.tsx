@@ -45,21 +45,29 @@ export function AutomacoesFilas() {
 
       if (queuesError) throw queuesError;
 
-      // Buscar contagem de usuários para cada fila
+      // Buscar contagem de usuários para cada fila usando a edge function
       const filasComContagem = await Promise.all(
         (queuesData || []).map(async (fila) => {
-          const { count, error: countError } = await supabase
-            .from('queue_users')
-            .select('*', { count: 'exact', head: true })
-            .eq('queue_id', fila.id);
+          try {
+            const { data: usersData, error: usersError } = await supabase.functions.invoke(
+              'manage-queue-users',
+              {
+                body: { action: 'list', queueId: fila.id }
+              }
+            );
 
-          if (countError) {
-            console.error(`❌ Erro ao contar usuários da fila ${fila.name}:`, countError);
+            if (usersError) {
+              console.error(`❌ Erro ao buscar usuários da fila ${fila.name}:`, usersError);
+              return { ...fila, user_count: 0 };
+            }
+
+            const userCount = usersData?.users?.length || 0;
+            console.log(`📊 Fila "${fila.name}" (${fila.id}): ${userCount} usuários`);
+            return { ...fila, user_count: userCount };
+          } catch (err) {
+            console.error(`❌ Erro ao processar fila ${fila.name}:`, err);
             return { ...fila, user_count: 0 };
           }
-
-          console.log(`📊 Fila "${fila.name}" (${fila.id}): ${count} usuários`);
-          return { ...fila, user_count: count || 0 };
         })
       );
 
