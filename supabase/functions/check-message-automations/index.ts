@@ -34,7 +34,7 @@ serve(async (req) => {
         id, 
         column_id, 
         pipeline_id, 
-        title, 
+        description, 
         conversation_id, 
         contact_id,
         pipelines!inner(workspace_id)
