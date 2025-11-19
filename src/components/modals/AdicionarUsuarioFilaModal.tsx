@@ -13,6 +13,7 @@ interface AdicionarUsuarioFilaModalProps {
   onOpenChange: (open: boolean) => void;
   onAddUsers: (userIds: string[]) => Promise<void>;
   excludeUserIds?: string[];
+  workspaceId?: string;
 }
 
 export function AdicionarUsuarioFilaModal({
@@ -20,12 +21,14 @@ export function AdicionarUsuarioFilaModal({
   onOpenChange,
   onAddUsers,
   excludeUserIds = [],
+  workspaceId,
 }: AdicionarUsuarioFilaModalProps) {
   const { selectedWorkspace } = useWorkspace();
   
   // Estabilizar a referência do array de filtros para evitar loops infinitos
   const filterProfiles = useMemo<('user' | 'admin' | 'master')[]>(() => ['admin', 'user'], []);
-  const { users, isLoading } = useWorkspaceUsers(selectedWorkspace?.workspace_id, filterProfiles);
+  const effectiveWorkspaceId = workspaceId || selectedWorkspace?.workspace_id;
+  const { users, isLoading } = useWorkspaceUsers(effectiveWorkspaceId, filterProfiles);
   
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);

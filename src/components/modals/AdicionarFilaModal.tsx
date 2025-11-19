@@ -8,11 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Palette, ChevronDown, Plus } from "lucide-react";
+import { Palette, ChevronDown, Plus, Building2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AdicionarUsuarioFilaModal } from "./AdicionarUsuarioFilaModal";
 import { QueueUsersList } from "./QueueUsersList";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AdicionarFilaModalProps {
   open: boolean;
@@ -38,6 +40,8 @@ export function AdicionarFilaModal({
   onSuccess
 }: AdicionarFilaModalProps) {
   const { selectedWorkspace } = useWorkspace();
+  const { user } = useAuth();
+  const { workspaces } = useWorkspaces();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
@@ -65,6 +69,7 @@ export function AdicionarFilaModal({
   const [distribuicao, setDistribuicao] = useState("");
   const [agenteId, setAgenteId] = useState("");
   const [mensagemSaudacao, setMensagemSaudacao] = useState("");
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const loadAIAgents = async () => {
     try {
       const {
@@ -84,6 +89,7 @@ export function AdicionarFilaModal({
     setDistribuicao("");
     setAgenteId("");
     setMensagemSaudacao("");
+    setSelectedWorkspaceId("");
     setActiveTab("dados");
     setShowError(false);
     setQueueUsers([]);
@@ -95,8 +101,10 @@ export function AdicionarFilaModal({
       return;
     }
 
-    if (!selectedWorkspace?.workspace_id) {
-      toast.error("Nenhum workspace selecionado");
+    const workspaceToUse = selectedWorkspaceId || selectedWorkspace?.workspace_id;
+    
+    if (!workspaceToUse) {
+      toast.error("Selecione uma empresa");
       return;
     }
 
@@ -113,7 +121,7 @@ export function AdicionarFilaModal({
           distribution_type: distribuicao || 'aleatoria',
           ai_agent_id: agenteId || null,
           greeting_message: mensagemSaudacao.trim() || null,
-          workspace_id: selectedWorkspace.workspace_id,
+          workspace_id: workspaceToUse,
           is_active: true
         })
         .select()
@@ -152,10 +160,14 @@ export function AdicionarFilaModal({
   useEffect(() => {
     if (open) {
       loadAIAgents();
+      // Se há um workspace selecionado no contexto, pré-selecionar
+      if (selectedWorkspace?.workspace_id) {
+        setSelectedWorkspaceId(selectedWorkspace.workspace_id);
+      }
     } else {
       resetForm();
     }
-  }, [open]);
+  }, [open, selectedWorkspace?.workspace_id]);
   
   return (
     <>
@@ -191,6 +203,31 @@ export function AdicionarFilaModal({
                 />
                 {showError && <span className="text-xs text-red-500">Nome é obrigatório</span>}
               </div>
+
+              {user?.profile === 'master' && (
+                <div className="space-y-2">
+                  <Label htmlFor="workspace">
+                    Empresa <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
+                    <SelectTrigger id="workspace" className="w-full">
+                      <SelectValue placeholder="Selecione a empresa">
+                        {selectedWorkspaceId && workspaces.find(w => w.workspace_id === selectedWorkspaceId)?.name}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workspaces.map((workspace) => (
+                        <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                            {workspace.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Cor</Label>
@@ -288,6 +325,7 @@ export function AdicionarFilaModal({
     <AdicionarUsuarioFilaModal
       open={showAddUserModal}
       onOpenChange={setShowAddUserModal}
+      workspaceId={selectedWorkspaceId || selectedWorkspace?.workspace_id}
       onAddUsers={async (userIds) => {
         // Buscar os dados dos usuários do workspace
         const { data: usersData } = await supabase
