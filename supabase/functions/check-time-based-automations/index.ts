@@ -94,6 +94,14 @@ serve(async (req) => {
           
           console.log(`🔍 [Time Automations] Trigger type found: "${trigger.trigger_type}"`);
           console.log(`🔍 [Time Automations] Automation "${automation.name}": ${originalValue} ${originalUnit} = ${timeInMinutes.toFixed(4)} minutes`);
+        } else if (triggerConfig?.time_value) {
+          // Configuração com time_value apenas (assume minutos)
+          originalValue = parseFloat(triggerConfig.time_value);
+          originalUnit = 'minutes';
+          timeInMinutes = originalValue;
+          
+          console.log(`🔍 [Time Automations] Trigger type found: "${trigger.trigger_type}"`);
+          console.log(`🔍 [Time Automations] Automation "${automation.name}": ${originalValue} minutes (time_value only)`);
         } else if (triggerConfig?.time_in_minutes) {
           // Configuração antiga em minutos
           timeInMinutes = triggerConfig.time_in_minutes;
