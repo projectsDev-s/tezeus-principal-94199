@@ -38,6 +38,10 @@ export function TransferirModal({
   const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Lógica de desabilitação: se fila selecionada, desabilitar responsável e vice-versa
+  const isQueueDisabled = !!targetResponsibleId;
+  const isResponsibleDisabled = !!targetQueueId;
+  
   const { pipelines } = usePipelinesContext();
   const { toast } = useToast();
   const { getHeaders } = useWorkspaceHeaders();
@@ -173,9 +177,13 @@ export function TransferirModal({
             column_id: targetColumnId,
           };
 
-          // Sempre aplicar queue_id e responsible_user_id (null se não selecionado)
-          updateBody.queue_id = targetQueueId || null;
-          updateBody.responsible_user_id = targetResponsibleId || null;
+          // Somente aplicar queue_id e responsible_user_id se foram selecionados (não vazios)
+          if (targetQueueId && targetQueueId !== "") {
+            updateBody.queue_id = targetQueueId;
+          }
+          if (targetResponsibleId && targetResponsibleId !== "") {
+            updateBody.responsible_user_id = targetResponsibleId;
+          }
 
           const { error } = await supabase.functions.invoke(
             `pipeline-management/cards?id=${cardId}`,
@@ -268,26 +276,24 @@ export function TransferirModal({
                       }
                     }
                   }
-                } else {
-                  // Sem fila selecionada - remover fila, responsável e agente da conversa
-                  console.log(`🗑️ Removendo fila e responsável da conversa ${cardData.conversation_id}`);
+                } else if (targetResponsibleId && targetResponsibleId !== "") {
+                  // Tem responsável selecionado mas não tem fila - apenas atualizar responsável
+                  console.log(`👤 Atualizando apenas responsável da conversa ${cardData.conversation_id}`);
                   
-                  const { data: clearResult, error: clearError } = await supabase.functions.invoke(
+                  const { data: updateUserResult, error: updateUserError } = await supabase.functions.invoke(
                     'update-conversation-queue',
                     {
                       body: {
                         conversation_id: cardData.conversation_id,
-                        queue_id: null,
-                        assigned_user_id: targetResponsibleId || null,
-                        activate_queue_agent: false
+                        assigned_user_id: targetResponsibleId
                       }
                     }
                   );
 
-                  if (clearError) {
-                    console.error('❌ Erro ao remover fila da conversa:', clearError);
+                  if (updateUserError) {
+                    console.error('❌ Erro ao atualizar responsável da conversa:', updateUserError);
                   } else {
-                    console.log('✅ Fila e agente removidos da conversa:', clearResult);
+                    console.log('✅ Responsável atualizado na conversa:', updateUserResult);
                   }
                 }
               } catch (convErr) {
@@ -472,6 +478,7 @@ export function TransferirModal({
             <Select 
               value={targetQueueId} 
               onValueChange={(value) => setTargetQueueId(value === "clear" ? "" : value)}
+              disabled={!!targetResponsibleId}
             >
               <SelectTrigger className={cn(
                 "mt-1",
@@ -524,6 +531,7 @@ export function TransferirModal({
             <Select 
               value={targetResponsibleId} 
               onValueChange={(value) => setTargetResponsibleId(value === "clear" ? "" : value)}
+              disabled={!!targetQueueId}
             >
               <SelectTrigger className={cn(
                 "mt-1",
