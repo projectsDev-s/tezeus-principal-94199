@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface CardHistoryEvent {
   id: string;
@@ -13,13 +13,38 @@ export interface CardHistoryEvent {
   metadata?: any;
 }
 
-export const useCardHistory = (cardId: string, contactId: string) => {
+export const useCardHistory = (cardId: string, contactId?: string) => {
   const { getHeaders } = useWorkspaceHeaders();
   const queryClient = useQueryClient();
+  const [resolvedContactId, setResolvedContactId] = useState<string | null>(contactId || null);
+
+  // Buscar contactId se não for fornecido
+  useEffect(() => {
+    if (cardId && !contactId && !resolvedContactId) {
+      const fetchContactId = async () => {
+        const { data: card } = await supabase
+          .from('pipeline_cards')
+          .select('contact_id')
+          .eq('id', cardId)
+          .maybeSingle();
+        
+        if (card?.contact_id) {
+          console.log('✅ ContactId resolvido internamente no hook:', card.contact_id);
+          setResolvedContactId(card.contact_id);
+        }
+      };
+      
+      fetchContactId();
+    } else if (contactId) {
+      setResolvedContactId(contactId);
+    }
+  }, [cardId, contactId, resolvedContactId]);
+
+  const effectiveContactId = contactId || resolvedContactId;
 
   // Adicionar realtime listener para atualizar automaticamente
   useEffect(() => {
-    if (!cardId || !contactId) return;
+    if (!cardId || !effectiveContactId) return;
 
     console.log('🔌 Configurando realtime para histórico do card:', cardId);
 
@@ -28,7 +53,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
       const { data: conversations } = await supabase
         .from('conversations')
         .select('id')
-        .eq('contact_id', contactId);
+        .eq('contact_id', effectiveContactId);
 
       const conversationIds = conversations?.map(c => c.id) || [];
       console.log('📋 Conversas encontradas para realtime:', conversationIds);
@@ -103,7 +128,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             event: 'INSERT',
             schema: 'public',
             table: 'contact_tags',
-            filter: `contact_id=eq.${contactId}`
+            filter: `contact_id=eq.${effectiveContactId}`
           },
           (payload) => {
             console.log('🔄 Realtime: Tag adicionada', payload);
@@ -116,7 +141,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
             event: 'DELETE',
             schema: 'public',
             table: 'contact_tags',
-            filter: `contact_id=eq.${contactId}`
+            filter: `contact_id=eq.${effectiveContactId}`
           },
           async (payload) => {
             console.log('🔄 Realtime: Tag removida', payload);
@@ -162,7 +187,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
                 }
               }
             }
-            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, contactId] });
+            queryClient.invalidateQueries({ queryKey: ['card-history', cardId, effectiveContactId] });
           }
         )
         .subscribe((status) => {
@@ -182,11 +207,16 @@ export const useCardHistory = (cardId: string, contactId: string) => {
         }
       });
     };
-  }, [cardId, contactId, queryClient]);
+  }, [cardId, effectiveContactId, queryClient]);
 
   return useQuery({
-    queryKey: ['card-history', cardId, contactId],
+    queryKey: ['card-history', cardId, effectiveContactId],
     queryFn: async (): Promise<CardHistoryEvent[]> => {
+      if (!effectiveContactId) {
+        console.log('⚠️ ContactId não disponível ainda, retornando vazio');
+        return [];
+      }
+
       const headers = getHeaders();
       const allEvents: CardHistoryEvent[] = [];
 
@@ -236,7 +266,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
       const { data: conversations } = await supabase
         .from('conversations')
         .select('id')
-        .eq('contact_id', contactId);
+        .eq('contact_id', effectiveContactId);
 
       if (conversations && conversations.length > 0) {
         const conversationIds = conversations.map(c => c.id);
@@ -446,7 +476,7 @@ export const useCardHistory = (cardId: string, contactId: string) => {
           tags:tag_id(name, color),
           system_users:created_by(name)
         `)
-        .eq('contact_id', contactId)
+        .eq('contact_id', effectiveContactId)
         .order('created_at', { ascending: false });
 
       if (contactTags) {
@@ -478,6 +508,8 @@ export const useCardHistory = (cardId: string, contactId: string) => {
 
       return allEvents;
     },
-    enabled: !!cardId && !!contactId,
+    enabled: !!cardId, // Só precisa de cardId, o contactId é resolvido internamente
+    staleTime: 0, // Sempre refetch para garantir dados atualizados
+    refetchOnMount: true,
   });
 };

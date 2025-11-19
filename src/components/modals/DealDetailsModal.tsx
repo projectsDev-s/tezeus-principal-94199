@@ -277,9 +277,8 @@ export function DealDetailsModal({
   const [workspaceId, setWorkspaceId] = useState<string>("");
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [cardHistory, setCardHistory] = useState<CardHistoryEvent[]>([]);
-  const [agentHistory, setAgentHistory] = useState<any[]>([]);
-  const [assignmentHistory, setAssignmentHistory] = useState<any[]>([]);
+  // Estado cardHistory removido - agora usamos fullHistory do useCardHistory
+  // Estados removidos - agora usamos apenas useCardHistory que já busca tudo
   const [showAddTagModal, setShowAddTagModal] = useState(false);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   const [confirmLossAction, setConfirmLossAction] = useState<any>(null);
@@ -723,11 +722,10 @@ export function DealDetailsModal({
             profile_image_url: fullContact.profile_image_url
           });
           
-          // Carregar tags e atividades em paralelo
+          // Carregar tags e atividades em paralelo (histórico carregado automaticamente)
           await Promise.all([
             fetchContactTags(initialContactData.id),
-            fetchActivities(initialContactData.id),
-            fetchCardHistory(cardId)
+            fetchActivities(initialContactData.id)
           ]);
         }
       } else {
@@ -739,11 +737,7 @@ export function DealDetailsModal({
       // Armazenar conversation_id se disponível
       if (conversationIdFromCard) {
         setConversationId(conversationIdFromCard);
-        // Buscar históricos de agente e atribuições
-        await Promise.all([
-          fetchAgentHistory(conversationIdFromCard),
-          fetchAssignmentHistory(conversationIdFromCard)
-        ]);
+        // Históricos já são buscados automaticamente pelo useCardHistory
       }
       
       // SEMPRE buscar os pipelines do contato (independente do fluxo acima)
@@ -899,11 +893,10 @@ export function DealDetailsModal({
         setPipelineCardsCount(allCards.length);
       }
 
-      // Carregar tags e atividades em paralelo
+      // Carregar tags e atividades em paralelo (histórico carregado automaticamente)
       await Promise.all([
         fetchContactTags(contact.id),
-        fetchActivities(contact.id),
-        fetchCardHistory(cardId)
+        fetchActivities(contact.id)
       ]);
     }
   };
@@ -1010,74 +1003,9 @@ export function DealDetailsModal({
     }
   };
 
-  const fetchCardHistory = async (cardId: string) => {
-    // Função preparada para buscar histórico do card
-    // A tabela pipeline_card_history será criada via SQL
-    try {
-      console.log('📋 Preparado para buscar histórico do card:', cardId);
-      // Por enquanto, retorna vazio até a tabela ser criada
-      setCardHistory([]);
-    } catch (error) {
-      console.error('Erro ao buscar histórico do card:', error);
-      setCardHistory([]);
-    }
-  };
-
-  const fetchAgentHistory = async (conversationId: string) => {
-    try {
-      console.log('🤖 Buscando histórico de agentes para conversa:', conversationId);
-      
-      const { data, error } = await supabase
-        .from('conversation_agent_history')
-        .select(`
-          *,
-          users:changed_by (
-            name
-          )
-        `)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      console.log('✅ Histórico de agentes carregado:', data?.length || 0, 'eventos');
-      setAgentHistory(data || []);
-    } catch (error) {
-      console.error('❌ Erro ao buscar histórico de agentes:', error);
-      setAgentHistory([]);
-    }
-  };
-
-  const fetchAssignmentHistory = async (conversationId: string) => {
-    try {
-      console.log('👤 Buscando histórico de atribuições para conversa:', conversationId);
-      
-      const { data, error } = await supabase
-        .from('conversation_assignments')
-        .select(`
-          *,
-          changed_by_user:system_users!conversation_assignments_changed_by_fkey (
-            name
-          ),
-          from_user:system_users!conversation_assignments_from_assigned_user_id_fkey (
-            name
-          ),
-          to_user:system_users!conversation_assignments_to_assigned_user_id_fkey (
-            name
-          )
-        `)
-        .eq('conversation_id', conversationId)
-        .order('changed_at', { ascending: false });
-
-      if (error) throw error;
-
-      console.log('✅ Histórico de atribuições carregado:', data?.length || 0, 'eventos');
-      setAssignmentHistory(data || []);
-    } catch (error) {
-      console.error('❌ Erro ao buscar histórico de atribuições:', error);
-      setAssignmentHistory([]);
-    }
-  };
+  // Função fetchCardHistory removida - agora usamos useCardHistory hook
+  
+  // Funções de histórico removidas - agora usamos apenas useCardHistory que busca tudo de forma unificada
   const handleTagAdded = (tag: Tag) => {
     setContactTags(prev => [...prev, tag]);
   };
