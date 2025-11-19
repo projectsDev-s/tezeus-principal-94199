@@ -223,7 +223,10 @@ export function TransferirModal({
                   const { data: updateResult, error: updateError } = await supabase.functions.invoke(
                     'update-conversation-queue',
                     {
-                      body: updateBody
+                      body: updateBody,
+                      headers: {
+                        'x-force-queue-history': 'true'  // Forçar registro mesmo se fila não mudou na conversa
+                      }
                     }
                   );
                   
