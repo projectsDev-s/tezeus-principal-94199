@@ -54,15 +54,20 @@ export function AutomacoesFilas() {
             .eq('queue_id', fila.id);
 
           if (countError) {
-            console.error('Erro ao contar usuários da fila:', countError);
+            console.error(`❌ Erro ao contar usuários da fila ${fila.name}:`, countError);
             return { ...fila, user_count: 0 };
           }
 
+          console.log(`📊 Fila "${fila.name}" (${fila.id}): ${count} usuários`);
           return { ...fila, user_count: count || 0 };
         })
       );
 
-      console.log('✅ Filas carregadas com contagem:', filasComContagem);
+      console.log('✅ Filas carregadas com contagem:', filasComContagem.map(f => ({ 
+        name: f.name, 
+        id: f.id.substring(0, 8), 
+        user_count: f.user_count 
+      })));
       setFilas(filasComContagem);
     } catch (error) {
       console.error('Erro ao carregar filas:', error);
