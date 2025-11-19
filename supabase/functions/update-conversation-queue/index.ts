@@ -46,41 +46,52 @@ serve(async (req) => {
 
     const updateData: any = {};
 
-    // Atualizar queue_id se fornecido
-    if (queue_id) {
+    // Atualizar queue_id (inclusive null para remover)
+    if (queue_id !== undefined) {
       updateData.queue_id = queue_id;
 
-      // Buscar detalhes da fila para obter o agente
-      if (activate_queue_agent) {
-        const { data: queueData, error: queueError } = await supabase
-          .from('queues')
-          .select('ai_agent_id, name')
-          .eq('id', queue_id)
-          .single();
+      if (queue_id) {
+        // Buscar detalhes da fila para obter o agente
+        if (activate_queue_agent) {
+          const { data: queueData, error: queueError } = await supabase
+            .from('queues')
+            .select('ai_agent_id, name')
+            .eq('id', queue_id)
+            .single();
 
-        if (queueError) {
-          console.error('❌ Erro ao buscar fila:', queueError);
-        } else if (queueData) {
-          console.log(`✅ Fila encontrada: ${queueData.name}`);
-          
-          if (queueData.ai_agent_id) {
-            updateData.agent_active_id = queueData.ai_agent_id;
-            updateData.agente_ativo = true;
-            console.log(`🤖 Ativando agente da fila: ${queueData.ai_agent_id}`);
-          } else {
-            updateData.agente_ativo = false;
-            updateData.agent_active_id = null;
-            console.log(`⚠️ Fila não tem agente - desativando agente atual`);
+          if (queueError) {
+            console.error('❌ Erro ao buscar fila:', queueError);
+          } else if (queueData) {
+            console.log(`✅ Fila encontrada: ${queueData.name}`);
+            
+            if (queueData.ai_agent_id) {
+              updateData.agent_active_id = queueData.ai_agent_id;
+              updateData.agente_ativo = true;
+              console.log(`🤖 Ativando agente da fila: ${queueData.ai_agent_id}`);
+            } else {
+              updateData.agente_ativo = false;
+              updateData.agent_active_id = null;
+              console.log(`⚠️ Fila não tem agente - desativando agente atual`);
+            }
           }
         }
+      } else {
+        // queue_id é null - remover fila e desativar agente
+        updateData.agent_active_id = null;
+        updateData.agente_ativo = false;
+        console.log(`🗑️ Removendo fila e desativando agente`);
       }
     }
 
-    // Atualizar assigned_user_id se fornecido
-    if (assigned_user_id) {
+    // Atualizar assigned_user_id (inclusive null para remover)
+    if (assigned_user_id !== undefined) {
       updateData.assigned_user_id = assigned_user_id;
-      updateData.assigned_at = new Date().toISOString();
-      console.log(`👤 Atribuindo responsável: ${assigned_user_id}`);
+      if (assigned_user_id) {
+        updateData.assigned_at = new Date().toISOString();
+        console.log(`👤 Atribuindo responsável: ${assigned_user_id}`);
+      } else {
+        console.log(`🗑️ Removendo responsável`);
+      }
     }
 
     // Executar atualização
