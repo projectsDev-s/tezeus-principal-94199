@@ -10,13 +10,13 @@ interface ActiveUser {
   dealIds: string[];
 }
 
-export function usePipelineActiveUsers(pipelineId?: string) {
+export function usePipelineActiveUsers(pipelineId?: string, workspaceId?: string) {
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
   const fetchActiveUsers = useCallback(async () => {
-    if (!pipelineId) {
+    if (!pipelineId || !workspaceId) {
       setActiveUsers([]);
       return;
     }
@@ -25,20 +25,31 @@ export function usePipelineActiveUsers(pipelineId?: string) {
     setIsLoading(true);
     
     try {
-      // Buscar lista de usuários via Edge Function
-      const { data: usersResponse, error: usersError } = await supabase.functions.invoke('manage-system-user', {
+      // Buscar membros do workspace via Edge Function
+      const { data: membersResponse, error: membersError } = await supabase.functions.invoke('manage-workspace-members', {
         body: {
           action: 'list',
-          userData: {}
+          workspaceId
         }
       });
 
-      if (usersError) {
-        console.error('Error fetching users via Edge Function:', usersError);
+      if (membersError) {
+        console.error('Error fetching workspace members:', membersError);
         return;
       }
 
-      const allUsers = usersResponse?.data || [];
+      if (!membersResponse?.success) {
+        console.error('Failed to fetch workspace members:', membersResponse);
+        return;
+      }
+
+      const members = membersResponse.members || [];
+      const allUsers = members
+        .filter((member: any) => member.user)
+        .map((member: any) => member.user);
+      
+      console.log(`👥 Encontrados ${allUsers.length} usuários do workspace`);
+
       const currentUser = allUsers.find((u: any) => u.email === user?.email);
 
       if (!currentUser) {
@@ -131,7 +142,7 @@ export function usePipelineActiveUsers(pipelineId?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [pipelineId, user?.email]);
+  }, [pipelineId, workspaceId, user?.email]);
 
   useEffect(() => {
     fetchActiveUsers();
