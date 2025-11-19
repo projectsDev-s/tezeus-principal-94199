@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTags } from "@/hooks/useTags";
+import { useQueues } from "@/hooks/useQueues";
 
 interface FilterModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface FilterModalProps {
 
 interface FilterData {
   tags: string[];
+  queues: string[];
   selectedDate?: Date;
   dateRange?: { from: Date; to: Date };
 }
@@ -32,7 +34,9 @@ interface Tag {
 
 export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalProps) {
   const { tags: availableTags, isLoading: tagsLoading } = useTags();
+  const { queues: availableQueues, loading: queuesLoading } = useQueues();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedQueues, setSelectedQueues] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -45,9 +49,18 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
     );
   };
 
+  const toggleQueue = (queueId: string) => {
+    setSelectedQueues(prev => 
+      prev.includes(queueId) 
+        ? prev.filter(id => id !== queueId)
+        : [...prev, queueId]
+    );
+  };
+
 
   const handleClear = () => {
     setSelectedTags([]);
+    setSelectedQueues([]);
     setSelectedDate(undefined);
     setDateRange(undefined);
     
@@ -55,6 +68,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
     if (onApplyFilters) {
       onApplyFilters({
         tags: [],
+        queues: [],
         selectedDate: undefined,
         dateRange: undefined
       });
@@ -64,6 +78,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
   const handleApply = () => {
     const filterData: FilterData = {
       tags: selectedTags,
+      queues: selectedQueues,
       selectedDate,
       dateRange
     };
@@ -132,6 +147,57 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                           />
                           <span className="text-sm">{tag.name}</span>
                         </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Selecionar filas */}
+          <div>
+            <Label htmlFor="queues" className="text-sm font-medium">
+              Selecionar filas
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal mt-1"
+                  disabled={queuesLoading}
+                >
+                  {queuesLoading ? (
+                    <span className="text-muted-foreground">Carregando filas...</span>
+                  ) : selectedQueues.length === 0 ? (
+                    <span className="text-muted-foreground">Selecionar filas</span>
+                  ) : (
+                    <span>{selectedQueues.length} fila(s) selecionada(s)</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <div className="max-h-60 overflow-y-auto p-2">
+                  {queuesLoading ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Carregando filas...
+                    </div>
+                  ) : availableQueues.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Nenhuma fila encontrada
+                    </div>
+                  ) : (
+                    availableQueues.map((queue) => (
+                      <div
+                        key={queue.id}
+                        className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                        onClick={() => toggleQueue(queue.id)}
+                      >
+                        <Checkbox
+                          checked={selectedQueues.includes(queue.id)}
+                          onCheckedChange={() => toggleQueue(queue.id)}
+                        />
+                        <span className="text-sm">{queue.name}</span>
                       </div>
                     ))
                   )}
