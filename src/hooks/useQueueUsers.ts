@@ -51,29 +51,17 @@ export function useQueueUsers(queueId?: string) {
   }, [queueId]);
 
   const addUsersToQueue = useCallback(async (userIds: string[]) => {
-    if (!queueId) return;
+    if (!queueId || userIds.length === 0) return;
 
     try {
-      // Get max position
-      const { data: existingUsers } = await supabase
-        .from('queue_users')
-        .select('order_position')
-        .eq('queue_id', queueId)
-        .order('order_position', { ascending: false })
-        .limit(1);
-
-      const maxPosition = existingUsers?.[0]?.order_position ?? -1;
-
-      // Create queue user records
-      const queueUsers = userIds.map((userId, index) => ({
-        queue_id: queueId,
-        user_id: userId,
-        order_position: maxPosition + index + 1,
-      }));
-
-      const { error } = await supabase
-        .from('queue_users')
-        .insert(queueUsers);
+      const { error } = await supabase.functions.invoke('manage-queue-users', {
+        body: {
+          action: 'add',
+          queueId,
+          userIds,
+        },
+        headers: getWorkspaceHeaders(),
+      });
 
       if (error) throw error;
 
@@ -81,11 +69,7 @@ export function useQueueUsers(queueId?: string) {
       await loadQueueUsers();
     } catch (error: any) {
       console.error('Erro ao adicionar usuários à fila:', error);
-      if (error.code === '23505') {
-        toast.error('Um ou mais usuários já estão na fila');
-      } else {
-        toast.error('Erro ao adicionar usuários à fila');
-      }
+      toast.error('Erro ao adicionar usuários à fila');
     }
   }, [queueId, loadQueueUsers]);
 
@@ -93,11 +77,14 @@ export function useQueueUsers(queueId?: string) {
     if (!queueId) return;
 
     try {
-      const { error } = await supabase
-        .from('queue_users')
-        .delete()
-        .eq('queue_id', queueId)
-        .eq('user_id', userId);
+      const { error } = await supabase.functions.invoke('manage-queue-users', {
+        body: {
+          action: 'remove',
+          queueId,
+          userId,
+        },
+        headers: getWorkspaceHeaders(),
+      });
 
       if (error) throw error;
 
@@ -113,13 +100,18 @@ export function useQueueUsers(queueId?: string) {
     if (!queueId) return;
 
     try {
-      const { error } = await supabase
-        .from('queue_users')
-        .update({ order_position: newPosition })
-        .eq('queue_id', queueId)
-        .eq('user_id', userId);
+      const { error } = await supabase.functions.invoke('manage-queue-users', {
+        body: {
+          action: 'updateOrder',
+          queueId,
+          userId,
+          newPosition,
+        },
+        headers: getWorkspaceHeaders(),
+      });
 
       if (error) throw error;
+
       await loadQueueUsers();
     } catch (error) {
       console.error('Erro ao atualizar ordem do usuário:', error);
