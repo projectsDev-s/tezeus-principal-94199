@@ -303,6 +303,33 @@ serve(async (req) => {
                     break;
                   }
 
+                  case 'remove_agent':
+                  case 'remover_agente': {
+                    if (!card.conversation_id) {
+                      console.warn('⚠️ [Time Automations] Card sem conversation_id para remove_agent');
+                      actionSuccess = false;
+                      break;
+                    }
+
+                    console.log(`🚫 [Time Automations] Desativando agente IA na conversa ${card.conversation_id}`);
+
+                    const { error: agentError } = await supabase
+                      .from('conversations')
+                      .update({
+                        agente_ativo: false,
+                        agent_active_id: null
+                      })
+                      .eq('id', card.conversation_id);
+
+                    if (agentError) {
+                      console.error('❌ [Time Automations] Erro ao desativar agente:', agentError);
+                      actionSuccess = false;
+                    } else {
+                      console.log('✅ [Time Automations] Agente desativado com sucesso');
+                    }
+                    break;
+                  }
+
                   case 'send_message':
                   case 'enviar_mensagem': {
                     const messageText = actionConfig?.message;
