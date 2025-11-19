@@ -609,6 +609,31 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
       break;
     }
 
+    case 'move_to_column': {
+      const targetColumnId = actionConfig.column_id;
+      if (!targetColumnId) {
+        console.warn('⚠️ move_to_column sem column_id configurado');
+        return;
+      }
+
+      console.log(`🔀 Movendo card para coluna ${targetColumnId}`);
+
+      const { error: moveError } = await supabaseClient
+        .from('pipeline_cards')
+        .update({ 
+          column_id: targetColumnId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', card.id);
+
+      if (moveError) {
+        console.error('❌ Erro ao mover card:', moveError);
+      } else {
+        console.log('✅ Card movido com sucesso');
+      }
+      break;
+    }
+
     default:
       console.warn(`⚠️ Tipo de ação desconhecido: ${action.action_type}`);
   }
