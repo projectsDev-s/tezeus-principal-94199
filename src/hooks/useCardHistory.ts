@@ -319,6 +319,8 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             changed_at,
             from_assigned_user_id,
             to_assigned_user_id,
+            from_queue_id,
+            to_queue_id,
             changed_by
           `)
           .in('conversation_id', conversationIds)
@@ -366,7 +368,21 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
               description = `Conversa vinculada ao responsável: ${toUser?.name || 'Desconhecido'}`;
               eventType = 'user_assigned';
             } else if (event.action === 'queue_transfer') {
-              description = 'Conversa transferida de fila';
+              // Buscar nomes das filas
+              const queueIds = [event.from_queue_id, event.to_queue_id].filter(Boolean) as string[];
+              if (queueIds.length > 0) {
+                const { data: queues } = await supabase
+                  .from('queues')
+                  .select('id, name')
+                  .in('id', queueIds);
+
+                const fromQueue = queues?.find(q => q.id === event.from_queue_id);
+                const toQueue = queues?.find(q => q.id === event.to_queue_id);
+                
+                description = `Conversa transferida de fila: ${fromQueue?.name || 'Nenhuma'} → ${toQueue?.name || 'Nenhuma'}`;
+              } else {
+                description = 'Conversa transferida de fila';
+              }
               eventType = 'queue_transfer';
             }
 

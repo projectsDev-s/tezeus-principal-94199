@@ -874,8 +874,10 @@ export type Database = {
           changed_by: string
           conversation_id: string
           from_assigned_user_id: string | null
+          from_queue_id: string | null
           id: string
           to_assigned_user_id: string | null
+          to_queue_id: string | null
         }
         Insert: {
           action: string
@@ -883,8 +885,10 @@ export type Database = {
           changed_by: string
           conversation_id: string
           from_assigned_user_id?: string | null
+          from_queue_id?: string | null
           id?: string
           to_assigned_user_id?: string | null
+          to_queue_id?: string | null
         }
         Update: {
           action?: string
@@ -892,8 +896,10 @@ export type Database = {
           changed_by?: string
           conversation_id?: string
           from_assigned_user_id?: string | null
+          from_queue_id?: string | null
           id?: string
           to_assigned_user_id?: string | null
+          to_queue_id?: string | null
         }
         Relationships: [
           {
@@ -901,6 +907,20 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_assignments_from_queue_id_fkey"
+            columns: ["from_queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_assignments_to_queue_id_fkey"
+            columns: ["to_queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
             referencedColumns: ["id"]
           },
         ]

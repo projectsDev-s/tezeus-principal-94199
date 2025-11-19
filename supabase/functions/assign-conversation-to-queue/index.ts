@@ -28,10 +28,10 @@ serve(async (req) => {
 
     console.log(`🎯 [assign-conversation-to-queue] Starting assignment for conversation: ${conversation_id}, queue_id: ${queue_id || 'auto-detect'}`);
 
-    // 1️⃣ Buscar informações da conversa
+    // 1️⃣ Buscar informações da conversa INCLUINDO queue_id atual
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('id, workspace_id, connection_id, contact_id, assigned_user_id')
+      .select('id, workspace_id, connection_id, contact_id, assigned_user_id, queue_id')
       .eq('id', conversation_id)
       .single();
 
@@ -158,6 +158,9 @@ serve(async (req) => {
         console.log(`📋 Queue AI Agent ID: ${queue.ai_agent_id}`);
         console.log(`🤖 Agente será ativado? ${queue.ai_agent_id ? 'SIM' : 'NÃO'}`);
         
+        // Buscar queue_id atual antes de atualizar
+        const previousQueueIdNoDist = conversation.queue_id;
+        
         // Atualizar conversa apenas com queue_id e agente se houver
         const { error: updateNoDistError } = await supabase
           .from('conversations')
@@ -178,6 +181,28 @@ serve(async (req) => {
 
         console.log(`✅ Conversa vinculada à fila ${queue.name}${queue.ai_agent_id ? ' com agente ativado' : ''}`);
         console.log(`✅ agente_ativo definido como: ${queue.ai_agent_id ? true : false}`);
+
+        // Registrar mudança de fila no histórico
+        if (previousQueueIdNoDist !== targetQueueId) {
+          console.log(`📝 Registrando mudança de fila: ${previousQueueIdNoDist} → ${targetQueueId}`);
+          
+          const { error: queueHistoryError } = await supabase
+            .from('conversation_assignments')
+            .insert({
+              conversation_id: conversation_id,
+              action: 'queue_transfer',
+              from_queue_id: previousQueueIdNoDist,
+              to_queue_id: targetQueueId,
+              changed_by: null, // Sistema atribuindo automaticamente
+              changed_at: new Date().toISOString()
+            });
+
+          if (queueHistoryError) {
+            console.error('⚠️ Erro ao registrar histórico de fila (não-bloqueante):', queueHistoryError);
+          } else {
+            console.log('✅ Histórico de mudança de fila registrado');
+          }
+        }
 
         return new Response(
           JSON.stringify({ 
@@ -219,7 +244,7 @@ serve(async (req) => {
       );
     }
 
-    // 7️⃣ Registrar atribuição no histórico
+    // 7️⃣ Registrar atribuição de responsável no histórico
     const { error: assignmentError } = await supabase
       .from('conversation_assignments')
       .insert({
@@ -232,6 +257,29 @@ serve(async (req) => {
 
     if (assignmentError) {
       console.error('⚠️ Erro ao registrar histórico de atribuição (não-bloqueante):', assignmentError);
+    }
+
+    // 7b️⃣ Registrar mudança de fila no histórico (se houve mudança)
+    const previousQueueId = conversation.queue_id;
+    if (previousQueueId !== targetQueueId) {
+      console.log(`📝 Registrando mudança de fila: ${previousQueueId} → ${targetQueueId}`);
+      
+      const { error: queueHistoryError } = await supabase
+        .from('conversation_assignments')
+        .insert({
+          conversation_id: conversation_id,
+          action: 'queue_transfer',
+          from_queue_id: previousQueueId,
+          to_queue_id: targetQueueId,
+          changed_by: selectedUserId,
+          changed_at: new Date().toISOString()
+        });
+
+      if (queueHistoryError) {
+        console.error('⚠️ Erro ao registrar histórico de fila (não-bloqueante):', queueHistoryError);
+      } else {
+        console.log('✅ Histórico de mudança de fila registrado');
+      }
     }
 
     // 8️⃣ Atualizar pipeline_cards se existir
