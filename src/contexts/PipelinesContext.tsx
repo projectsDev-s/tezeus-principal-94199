@@ -698,6 +698,11 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   const handleCardInsert = useCallback(async (newCard: PipelineCard) => {
     console.log('✨ [Realtime Handler] Novo card recebido:', newCard);
     
+    // Atualizar timestamp de realtime
+    if ((window as any).__updateRealtimeTimestamp) {
+      (window as any).__updateRealtimeTimestamp();
+    }
+    
     // Verificar se o card já existe (evitar duplicatas)
     setCards(prev => {
       const exists = prev.some(c => c.id === newCard.id);
@@ -759,6 +764,11 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
   const handleCardUpdate = useCallback(async (updatedCard: PipelineCard) => {
     console.log('♻️ [Realtime Handler] Card atualizado:', updatedCard);
+    
+    // Atualizar timestamp de realtime
+    if ((window as any).__updateRealtimeTimestamp) {
+      (window as any).__updateRealtimeTimestamp();
+    }
     
     // Detectar se é um evento de refresh de tags de contato
     const isContactRefresh = (updatedCard as any)._refresh && (updatedCard.id as string).startsWith('refresh-contact-');
@@ -999,6 +1009,11 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   const handleColumnUpdate = useCallback((updatedColumn: PipelineColumn) => {
     console.log('♻️ [Realtime Handler] Coluna atualizada:', updatedColumn);
     
+    // Atualizar timestamp de realtime
+    if ((window as any).__updateRealtimeTimestamp) {
+      (window as any).__updateRealtimeTimestamp();
+    }
+    
     setColumns(prev => 
       prev.map(col => 
         col.id === updatedColumn.id ? { ...col, ...updatedColumn } : col
@@ -1156,14 +1171,24 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     if (!selectedPipeline?.id) return;
 
     let lastFetchTime = Date.now();
+    let lastRealtimeUpdate = Date.now();
     let consecutiveEmptyFetches = 0;
+
+    // Função para atualizar timestamp de realtime (será chamada pelos handlers)
+    const updateRealtimeTimestamp = () => {
+      lastRealtimeUpdate = Date.now();
+    };
+
+    // Expor função para handlers
+    (window as any).__updateRealtimeTimestamp = updateRealtimeTimestamp;
 
     // Refetch apenas quando necessário:
     // 1. Cards incompletos (sem contact/conversation)
-    // 2. Pipeline selecionado há mais de 30s sem atualização
+    // 2. Pipeline sem atualizações realtime há mais de 60s
     const interval = setInterval(() => {
       const now = Date.now();
       const timeSinceLastFetch = now - lastFetchTime;
+      const timeSinceLastRealtime = now - lastRealtimeUpdate;
       
       // Verificar cards incompletos
       const hasIncompleteCards = cards.some(c => 
@@ -1180,9 +1205,15 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      // Se passou muito tempo desde último fetch e não há cards (pode ter sido criado)
-      if (timeSinceLastFetch > 30000 && cards.length === 0 && consecutiveEmptyFetches < 3) {
-        console.log('🔄 [Refetch] Pipeline sem cards há muito tempo, verificando novos cards...');
+      // Se passou muito tempo desde última atualização realtime e não há cards
+      // (pode ter sido criado mas evento não chegou)
+      if (
+        timeSinceLastRealtime > 60000 && 
+        timeSinceLastFetch > 30000 && 
+        cards.length === 0 && 
+        consecutiveEmptyFetches < 3
+      ) {
+        console.log('🔄 [Refetch] Sem atualizações realtime há muito tempo, verificando...');
         fetchCards(selectedPipeline.id);
         lastFetchTime = now;
         consecutiveEmptyFetches++;
@@ -1193,9 +1224,12 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       if (cards.length > 0) {
         consecutiveEmptyFetches = 0;
       }
-    }, 5000); // Verificar a cada 5 segundos
+    }, 15000); // Verificar a cada 15 segundos (reduzido de 5s)
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      delete (window as any).__updateRealtimeTimestamp;
+    };
   }, [selectedPipeline?.id, cards, fetchCards]);
 
   // Função para atualizar otimisticamente o status do agente de uma conversa
