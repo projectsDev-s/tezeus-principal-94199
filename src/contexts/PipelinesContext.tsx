@@ -126,12 +126,34 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      setPipelines(data || []);
+      // Ordenar pipelines: pipeline padrão primeiro, depois por created_at desc
+      let sortedPipelines = data || [];
+      if (sortedPipelines.length > 0 && selectedWorkspace?.workspace_id) {
+        // Buscar workspace para pegar default_pipeline_id
+        const { data: workspaceData } = await supabase
+          .from('workspaces')
+          .select('default_pipeline_id')
+          .eq('id', selectedWorkspace.workspace_id)
+          .single();
+        
+        if (workspaceData?.default_pipeline_id) {
+          const defaultPipeline = sortedPipelines.find(p => p.id === workspaceData.default_pipeline_id);
+          if (defaultPipeline) {
+            // Remover a pipeline padrão da lista e colocá-la no início
+            sortedPipelines = [
+              defaultPipeline,
+              ...sortedPipelines.filter(p => p.id !== workspaceData.default_pipeline_id)
+            ];
+          }
+        }
+      }
+
+      setPipelines(sortedPipelines);
       
       // Auto-select first pipeline if forced or if none selected and we have pipelines
-      if (data?.length > 0 && (forceSelectFirst || !selectedPipeline)) {
-        // Auto-selecting first pipeline
-        setSelectedPipeline(data[0]);
+      if (sortedPipelines.length > 0 && (forceSelectFirst || !selectedPipeline)) {
+        // Auto-selecting first pipeline (que agora é a padrão se houver)
+        setSelectedPipeline(sortedPipelines[0]);
       }
     } catch (error) {
       console.error('❌ Error fetching pipelines:', error);
