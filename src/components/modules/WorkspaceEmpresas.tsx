@@ -24,6 +24,7 @@ import {
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceLimits } from "@/hooks/useWorkspaceLimits";
 import { CreateWorkspaceModal } from "@/components/modals/CreateWorkspaceModal";
 import { WorkspaceConfigModal } from "@/components/modals/WorkspaceConfigModal";
 import { formatDistanceToNow } from "date-fns";
@@ -176,96 +177,101 @@ export function WorkspaceEmpresas({ onNavigateToUsers, onNavigateToConfig }: Wor
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredWorkspaces.map((workspace) => (
-            <Card key={workspace.workspace_id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-lg line-clamp-1">{workspace.name}</CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    conexões: {workspace.connections_count || 0}
-                  </Badge>
+          {filteredWorkspaces.map((workspace) => {
+            const WorkspaceLimitsDisplay = () => {
+              const { limits, isLoading: limitsLoading } = useWorkspaceLimits(workspace.workspace_id);
+              
+              return (
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Cable className="w-4 h-4" />
+                    <span>Limite de Conexões: {limitsLoading ? '...' : limits?.connection_limit || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="w-4 h-4" />
+                    <span>Limite de Usuários: {limitsLoading ? '...' : limits?.user_limit || 0}</span>
+                  </div>
                   {(isMaster || userRole === 'master') && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {(isMaster || userRole === 'master') && (
-                        <>
-                          <DropdownMenuItem onClick={() => handleEditClick(workspace)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteClick(workspace)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        Criado {formatDistanceToNow(new Date(workspace.created_at), { 
+                          addSuffix: true, 
+                          locale: ptBR 
+                        })}
+                      </span>
+                    </div>
                   )}
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm">
-                {workspace.cnpj && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span>CNPJ: {workspace.cnpj}</span>
-                  </div>
-                )}
-                {workspace.slug && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="text-xs">Slug: {workspace.slug}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    Criado {formatDistanceToNow(new Date(workspace.created_at), { 
-                      addSuffix: true, 
-                      locale: ptBR 
-                    })}
-                  </span>
-                </div>
-              </div>
+              );
+            };
 
-              {(isMaster || isAdmin(workspace.workspace_id!) || userRole === 'master' || userRole === 'admin') && (
-                <div className="flex gap-2 justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => handleUsersClick(workspace)}
-                  >
-                    <Users className="w-4 h-4" />
-                    Usuários
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => handleConfigClick(workspace)}
-                  >
-                    <Cable className="w-4 h-4" />
-                    Conexões
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+            return (
+              <Card key={workspace.workspace_id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-primary" />
+                      <CardTitle className="text-lg line-clamp-1">{workspace.name}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        conexões: {workspace.connections_count || 0}
+                      </Badge>
+                      {(isMaster || userRole === 'master') && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(workspace)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(workspace)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <WorkspaceLimitsDisplay />
+
+                  {(isMaster || isAdmin(workspace.workspace_id!) || userRole === 'master' || userRole === 'admin') && (
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleUsersClick(workspace)}
+                      >
+                        <Users className="w-4 h-4" />
+                        Usuários
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleConfigClick(workspace)}
+                      >
+                        <Cable className="w-4 h-4" />
+                        Conexões
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
       </div>
       )}
 
