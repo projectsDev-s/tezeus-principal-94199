@@ -1684,7 +1684,10 @@ function CRMNegociosContent({
           setSelectedColumnForExport(null);
         }} 
         columnName={selectedColumnForExport?.name || ''} 
-        cards={selectedColumnForExport ? getCardsByColumn(selectedColumnForExport.id) : []} 
+        cards={selectedColumnForExport ? getCardsByColumn(selectedColumnForExport.id).map(card => ({
+          ...card,
+          pipeline: { name: selectedPipeline?.name || '' }
+        })) : []} 
       />
     </DndContext>;
 }

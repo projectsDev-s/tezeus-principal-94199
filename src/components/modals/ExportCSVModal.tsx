@@ -35,13 +35,13 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
       key: "basic",
       fields: [
         { key: "id", label: "ID do Negócio", available: true },
-        { key: "pipeline", label: "Pipeline", available: true },
+        { key: "pipeline", label: "Pipeline", available: cards.some(c => c.pipeline_id) },
         { key: "value", label: "Valor", available: true },
         { key: "status", label: "Status", available: true },
         { key: "created_at", label: "Data de Criação", available: true },
         { key: "updated_at", label: "Última Atualização", available: true },
-        { key: "moved_at", label: "Última Movimentação", available: true },
-        { key: "won_at", label: "Data de Ganho", available: true },
+        { key: "moved_at", label: "Última Movimentação", available: cards.some(c => c.moved_at) },
+        { key: "won_at", label: "Data de Ganho", available: cards.some(c => c.won_at) },
       ],
     },
     {
@@ -57,8 +57,7 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
       title: "Informações Comerciais",
       key: "commercial",
       fields: [
-        { key: "product", label: "Produto/Serviço", available: cards.some(c => c.product_name) },
-        { key: "product_value", label: "Valor do Produto", available: cards.some(c => c.product_name) },
+        { key: "product", label: "Produtos", available: cards.some(c => c.product_id) },
         { key: "sales_stage", label: "Etapa de Venda", available: true },
         { key: "tags", label: "Tags", available: cards.some(c => c.contact?.contact_tags?.length > 0) },
         { key: "queue", label: "Filas", available: cards.some(c => c.conversation?.queue) },
@@ -141,7 +140,8 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
       case "id":
         return card.id || "";
       case "pipeline":
-        return card.pipeline?.name || "";
+        // Buscar nome do pipeline via pipeline_id se disponível
+        return card.pipeline?.name || columnName.split(" - ")[0] || "";
       case "value":
         return card.value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.value) : "R$ 0,00";
       case "status":
@@ -161,9 +161,9 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
       case "contact_email":
         return card.contact?.email || "";
       case "product":
-        return card.product_name || "";
+        return card.product?.name || card.product_name || "";
       case "product_value":
-        return card.product_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.product_value) : "R$ 0,00";
+        return card.product?.value || card.product_value ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(card.product?.value || card.product_value) : "R$ 0,00";
       case "sales_stage":
         return columnName;
       case "tags":
@@ -201,15 +201,17 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
     }
 
     // Criar headers baseado nos campos selecionados
-    // Se "product" estiver selecionado, incluir automaticamente "product_value"
+    // Se "product" estiver selecionado, incluir automaticamente "product_value" como coluna adicional
     const selectedFieldsArray = Array.from(selectedFields);
-    const finalFields = [...selectedFieldsArray];
+    const finalFields: string[] = [];
     
-    // Se produto estiver selecionado mas valor do produto não, adicionar
-    if (finalFields.includes("product") && !finalFields.includes("product_value")) {
-      const productIndex = finalFields.indexOf("product");
-      finalFields.splice(productIndex + 1, 0, "product_value");
-    }
+    selectedFieldsArray.forEach(key => {
+      finalFields.push(key);
+      // Se for produto, adicionar valor do produto logo após
+      if (key === "product") {
+        finalFields.push("product_value");
+      }
+    });
     
     const headers = finalFields.map(key => {
       for (const section of sections) {
