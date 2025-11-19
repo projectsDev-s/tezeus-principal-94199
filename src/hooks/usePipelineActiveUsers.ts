@@ -30,6 +30,11 @@ export function usePipelineActiveUsers(pipelineId?: string, workspaceId?: string
         body: {
           action: 'list',
           workspaceId
+        },
+        headers: {
+          'x-system-user-id': user?.id || '',
+          'x-system-user-email': user?.email || '',
+          'x-workspace-id': workspaceId
         }
       });
 
