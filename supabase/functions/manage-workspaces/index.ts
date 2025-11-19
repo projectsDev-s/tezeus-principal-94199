@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, workspaceId, name, cnpj, connectionLimit, userLimit, isActive } = await req.json();
-    console.log('Request received:', { action, workspaceId, name, cnpj, connectionLimit, userLimit, isActive });
+    const { action, workspaceId, name, cnpj, connectionLimit, userLimit, isActive, defaultPipelineId } = await req.json();
+    console.log('Request received:', { action, workspaceId, name, cnpj, connectionLimit, userLimit, isActive, defaultPipelineId });
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -165,9 +165,14 @@ Deno.serve(async (req) => {
       // No special workspace validation needed - all workspaces are editable
 
       // Update workspace
+      const updateData: any = { name, cnpj };
+      if (defaultPipelineId !== undefined) {
+        updateData.default_pipeline_id = defaultPipelineId;
+      }
+      
       const { error: workspaceError } = await supabase
         .from('workspaces')
-        .update({ name, cnpj })
+        .update(updateData)
         .eq('id', workspaceId);
 
       if (workspaceError) {

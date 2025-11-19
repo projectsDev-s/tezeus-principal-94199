@@ -3444,6 +3444,7 @@ export type Database = {
         Row: {
           cnpj: string | null
           created_at: string | null
+          default_pipeline_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -3453,6 +3454,7 @@ export type Database = {
         Insert: {
           cnpj?: string | null
           created_at?: string | null
+          default_pipeline_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -3462,13 +3464,22 @@ export type Database = {
         Update: {
           cnpj?: string | null
           created_at?: string | null
+          default_pipeline_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
           slug?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_default_pipeline_id_fkey"
+            columns: ["default_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
