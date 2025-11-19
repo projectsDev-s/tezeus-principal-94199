@@ -27,14 +27,23 @@ export function ConfigureZapiWebhookModal({
     setResults([]);
     
     try {
-      console.log('🔧 Configurando webhooks do Z-API:', { connectionId, instanceName });
+      console.log('🔧 Corrigindo metadados e configurando webhooks do Z-API:', { connectionId, instanceName });
       
-      const { data, error } = await supabase.functions.invoke('configure-zapi-webhook', {
+      // Primeiro, corrigir os metadados da conexão
+      const { data: fixData, error: fixError } = await supabase.functions.invoke('fix-zapi-connection-metadata', {
         body: {
-          connectionId,
-          webhookType: 'all' // Configurar todos os webhooks
+          connectionId
         }
       });
+
+      if (fixError) {
+        console.error('❌ Erro ao corrigir metadados:', fixError);
+        throw fixError;
+      }
+
+      console.log('✅ Metadados corrigidos e webhooks configurados:', fixData);
+      
+      const { data, error } = fixData;
 
       if (error) {
         console.error('❌ Erro ao configurar webhooks:', error);
@@ -87,7 +96,7 @@ export function ConfigureZapiWebhookModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Webhook className="w-5 h-5" />
-            Configurar Webhooks Z-API
+            Corrigir e Configurar Z-API
           </DialogTitle>
         </DialogHeader>
 
@@ -97,15 +106,24 @@ export function ConfigureZapiWebhookModal({
               <strong>Instância:</strong> {instanceName}
             </p>
             <p className="text-sm text-muted-foreground">
-              Configure os webhooks do Z-API para receber atualizações de status de mensagens em tempo real.
+              Esta ação irá corrigir os metadados da conexão e configurar todos os webhooks necessários para receber mensagens e atualizações de status em tempo real.
             </p>
           </div>
 
           {!isConfigured && (
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <h4 className="font-medium text-sm mb-2 text-blue-900 dark:text-blue-100">
-                O que será configurado:
+                O que será feito:
               </h4>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Atualizar metadados da conexão com credenciais Z-API</li>
+                <li>Webhook de status de mensagens (enviada, entregue, lida)</li>
+                <li>Webhook de mensagens recebidas</li>
+                <li>Webhook de conexão e desconexão</li>
+                <li>Integração com N8N (se configurado)</li>
+              </ul>
+            </div>
+          )}
               <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
                 <li>Webhook de status de mensagens (entregue/lido)</li>
                 <li>Webhook de mensagens recebidas</li>
