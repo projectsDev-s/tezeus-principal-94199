@@ -63,24 +63,40 @@ export function TransferirModal({
 
   const fetchWorkspaceUsers = async () => {
     try {
-      const headers = getHeaders();
       const { data, error } = await supabase.functions.invoke(
-        'get-system-user',
+        'manage-system-user',
         {
-          method: 'GET',
-          headers
+          body: {
+            action: 'list',
+            userData: {}
+          }
         }
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching workspace users:', error);
+        return;
+      }
       
+      if (data?.error) {
+        console.error('Error from edge function:', data.error);
+        return;
+      }
+
+      if (!data?.success) {
+        console.error('Invalid response from server');
+        return;
+      }
+
       // Filter only users from current workspace
-      const users = data?.filter((user: any) => 
-        user.workspace_members?.some((member: any) => 
-          member.workspace_id === selectedWorkspace?.workspace_id
+      const allUsers = data.data || [];
+      const users = allUsers.filter((user: any) => 
+        user.workspaces?.some((ws: any) => 
+          ws.id === selectedWorkspace?.workspace_id
         )
-      ) || [];
+      );
       
+      console.log('✅ Loaded workspace users:', users.length);
       setWorkspaceUsers(users);
     } catch (error) {
       console.error('Error fetching workspace users:', error);
@@ -427,7 +443,7 @@ export function TransferirModal({
                         : "text-gray-900 hover:bg-gray-100"
                     )}
                   >
-                    {user.nome || user.email}
+                    {user.name || user.email}
                   </SelectItem>
                 ))}
               </SelectContent>
