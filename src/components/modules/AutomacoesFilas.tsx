@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getWorkspaceHeaders } from "@/lib/workspaceHeaders";
 import { toast } from "sonner";
 import { AdicionarFilaModal } from "@/components/modals/AdicionarFilaModal";
 import { EditarFilaModal } from "@/components/modals/EditarFilaModal";
@@ -52,7 +53,8 @@ export function AutomacoesFilas() {
             const { data: usersData, error: usersError } = await supabase.functions.invoke(
               'manage-queue-users',
               {
-                body: { action: 'list', queueId: fila.id }
+                body: { action: 'list', queueId: fila.id },
+                headers: getWorkspaceHeaders(selectedWorkspace?.workspace_id),
               }
             );
 
