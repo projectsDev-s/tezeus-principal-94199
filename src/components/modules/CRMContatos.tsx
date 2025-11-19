@@ -49,6 +49,7 @@ interface Contact {
   phone: string;
   email: string;
   createdAt: string;
+  created_at?: string; // Campo original para exportação
   tags: Array<{
     name: string;
     color: string;
@@ -231,6 +232,7 @@ export function CRMContatos() {
           phone: contact.phone || "",
           email: contact.email || "",
           createdAt: format(new Date(contact.created_at), "dd/MM/yyyy HH:mm:ss"),
+          created_at: contact.created_at, // Manter o original para exportação
           tags: contactTags,
           profile_image_url: contact.profile_image_url,
           extra_info: (contact.extra_info as Record<string, any>) || {},
@@ -340,6 +342,7 @@ export function CRMContatos() {
             phone: contact.phone || "",
             email: contact.email || "",
             createdAt: format(new Date(contact.created_at), "dd/MM/yyyy HH:mm:ss"),
+            created_at: contact.created_at, // Manter o original para exportação
             tags: contactTags,
             profile_image_url: contact.profile_image_url,
             extra_info: (contact.extra_info as Record<string, any>) || {},
@@ -995,12 +998,18 @@ export function CRMContatos() {
     const headers = ["Nome", "Telefone", "Email", "Data de Criação"];
     const csvContent = [
       headers.join(","),
-      ...contacts.map((contact) => [
-        `"${contact.name}"`,
-        `"${contact.phone || ""}"`,
-        `"${contact.email || ""}"`,
-        `"${format(new Date(contact.createdAt), "dd/MM/yyyy HH:mm")}"`,
-      ].join(",")),
+      ...contacts.map((contact) => {
+        const createdAtFormatted = contact.created_at 
+          ? format(new Date(contact.created_at), "dd/MM/yyyy HH:mm")
+          : "";
+        
+        return [
+          `"${contact.name}"`,
+          `"${contact.phone || ""}"`,
+          `"${contact.email || ""}"`,
+          `"${createdAtFormatted}"`,
+        ].join(",");
+      }),
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
