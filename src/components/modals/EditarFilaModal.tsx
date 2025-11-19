@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Palette, ChevronDown, Plus } from "lucide-react";
+import { Palette, ChevronDown, Plus, Building2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useQueueUsers } from "@/hooks/useQueueUsers";
 import { AdicionarUsuarioFilaModal } from "./AdicionarUsuarioFilaModal";
@@ -65,6 +65,7 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
   const [distribuicao, setDistribuicao] = useState("");
   const [agenteId, setAgenteId] = useState("");
   const [mensagemSaudacao, setMensagemSaudacao] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
 
   const {
     users: queueUsers,
@@ -99,10 +100,11 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
     setDistribuicao("");
     setAgenteId("");
     setMensagemSaudacao("");
+    setWorkspaceName("");
     setActiveTab("dados");
   };
 
-  const loadFilaData = () => {
+  const loadFilaData = async () => {
     if (fila) {
       setNome(fila.name);
       setCor(fila.color || "#8B5CF6");
@@ -110,6 +112,23 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
       setDistribuicao(fila.distribution_type || "");
       setAgenteId(fila.ai_agent_id || "");
       setMensagemSaudacao(fila.greeting_message || "");
+      
+      // Buscar nome do workspace
+      if (fila.workspace_id) {
+        try {
+          const { data, error } = await supabase
+            .from('workspaces')
+            .select('name')
+            .eq('id', fila.workspace_id)
+            .single();
+          
+          if (!error && data) {
+            setWorkspaceName(data.name);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar workspace:', error);
+        }
+      }
     }
   };
 
@@ -194,6 +213,19 @@ export function EditarFilaModal({ open, onOpenChange, fila, onSuccess }: EditarF
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Nome da fila"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="workspace">Empresa</Label>
+                  <div className="relative">
+                    <Input
+                      id="workspace"
+                      value={workspaceName}
+                      disabled
+                      className="pl-9 bg-muted cursor-not-allowed"
+                    />
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
