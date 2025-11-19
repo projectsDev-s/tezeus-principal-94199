@@ -205,80 +205,63 @@ export function TransferirModal({
             if (cardData?.conversation_id && targetQueueId) {
               try {
                 console.log(`🔧 Aplicando regras da fila "${queueDetails?.name}" à conversa ${cardData.conversation_id}`);
+                console.log(`🤖 Agente da fila: ${queueDetails?.ai_agent_id} (${queueDetails?.ai_agent?.name})`);
                 
-                // SEMPRE atualizar queue_id e agente, independente da distribuição
-                const conversationUpdateBody: any = {
+                // Usar edge function para atualizar fila e agente (garante bypass de RLS)
+                const updateBody: any = {
+                  conversation_id: cardData.conversation_id,
                   queue_id: targetQueueId,
+                  activate_queue_agent: true
                 };
 
-                // Ativar agente de IA da fila, se houver
-                if (queueDetails?.ai_agent_id) {
-                  conversationUpdateBody.agent_active_id = queueDetails.ai_agent_id;
-                  conversationUpdateBody.agente_ativo = true;
-                  console.log(`✅ Agente de IA da fila (${queueDetails.ai_agent?.name}) será ativado`);
-                } else {
-                  // Se a fila não tem agente, desativar o agente atual
-                  conversationUpdateBody.agente_ativo = false;
-                  conversationUpdateBody.agent_active_id = null;
-                  console.log(`⚠️ Fila não tem agente - desativando agente atual`);
+                // Se definiu responsável, incluir no update
+                if (targetResponsibleId) {
+                  updateBody.assigned_user_id = targetResponsibleId;
+                  console.log(`👤 Responsável será atualizado: ${targetResponsibleId}`);
                 }
 
-                // Se não definiu responsável, aplicar distribuição da fila
-                if (!targetResponsibleId) {
-                  console.log('🔄 Nenhum responsável definido - aplicando distribuição da fila');
-                  
-                  // Primeiro atualizar a fila e o agente
-                  const { error: queueUpdateError } = await supabase
-                    .from('conversations')
-                    .update(conversationUpdateBody)
-                    .eq('id', cardData.conversation_id);
-
-                  if (queueUpdateError) {
-                    console.error('❌ Erro ao atualizar fila e agente da conversa:', queueUpdateError);
-                  } else {
-                    console.log('✅ Fila e agente atualizados com sucesso');
+                const { data: updateResult, error: updateError } = await supabase.functions.invoke(
+                  'update-conversation-queue',
+                  {
+                    body: updateBody,
+                    headers
                   }
-                  
-                  // Depois tentar distribuir conforme regras da fila
-                  try {
-                    const { data: distributionData, error: distributionError } = await supabase.functions.invoke(
-                      'assign-conversation-to-queue',
-                      {
-                        body: {
-                          conversation_id: cardData.conversation_id,
-                          queue_id: targetQueueId,
-                        },
-                        headers
-                      }
-                    );
+                );
 
-                    if (distributionError) {
-                      console.error('❌ Erro ao distribuir conversa (agente já foi ativado):', distributionError);
-                      toast({
-                        title: "Aviso",
-                        description: "Fila e agente foram atualizados, mas a distribuição automática falhou",
-                        variant: "default",
-                      });
-                    } else {
-                      console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
-                    }
-                  } catch (distError) {
-                    console.error('❌ Exceção ao distribuir conversa (agente já foi ativado):', distError);
-                  }
+                if (updateError) {
+                  console.error('❌ Erro ao atualizar fila/agente da conversa:', updateError);
+                  toast({
+                    title: "Aviso",
+                    description: "Negócio transferido, mas não foi possível atualizar a fila na conversa",
+                    variant: "default",
+                  });
                 } else {
-                  // Se definiu responsável, atualizar conversa com responsável E agente
-                  conversationUpdateBody.assigned_user_id = targetResponsibleId;
-                  conversationUpdateBody.assigned_at = new Date().toISOString();
+                  console.log('✅ Fila e agente atualizados com sucesso:', updateResult);
+                  
+                  // Se não definiu responsável E a fila tem distribuição, aplicar distribuição
+                  if (!targetResponsibleId && queueDetails?.distribution_type !== 'nao_distribuir') {
+                    console.log('🔄 Aplicando distribuição automática da fila');
+                    
+                    try {
+                      const { data: distributionData, error: distributionError } = await supabase.functions.invoke(
+                        'assign-conversation-to-queue',
+                        {
+                          body: {
+                            conversation_id: cardData.conversation_id,
+                            queue_id: targetQueueId,
+                          },
+                          headers
+                        }
+                      );
 
-                  const { error: convError } = await supabase
-                    .from('conversations')
-                    .update(conversationUpdateBody)
-                    .eq('id', cardData.conversation_id);
-
-                  if (convError) {
-                    console.error('❌ Erro ao atualizar conversa:', convError);
-                  } else {
-                    console.log('✅ Conversa atualizada com novo responsável e agente da fila');
+                      if (distributionError) {
+                        console.error('⚠️ Erro na distribuição automática (não-bloqueante):', distributionError);
+                      } else {
+                        console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
+                      }
+                    } catch (distError) {
+                      console.error('⚠️ Exceção na distribuição automática (não-bloqueante):', distError);
+                    }
                   }
                 }
               } catch (convErr) {
