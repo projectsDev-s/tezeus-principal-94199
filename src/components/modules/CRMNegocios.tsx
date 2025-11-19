@@ -29,6 +29,7 @@ import { EditarContatoModal } from "@/components/modals/EditarContatoModal";
 import { VincularProdutoModal } from "@/components/modals/VincularProdutoModal";
 import { VincularResponsavelModal } from "@/components/modals/VincularResponsavelModal";
 import { DeleteDealModal } from "@/components/modals/DeleteDealModal";
+import { ExportCSVModal } from "@/components/modals/ExportCSVModal";
 import { usePipelinesContext, PipelinesProvider } from "@/contexts/PipelinesContext";
 import { usePipelineActiveUsers } from "@/hooks/usePipelineActiveUsers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -682,6 +683,8 @@ function CRMNegociosContent({
   const [selectedConversationForAgent, setSelectedConversationForAgent] = useState<string | null>(null);
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [columnAutomationCounts, setColumnAutomationCounts] = useState<Record<string, number>>({});
+  const [isExportCSVModalOpen, setIsExportCSVModalOpen] = useState(false);
+  const [selectedColumnForExport, setSelectedColumnForExport] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     setResponsibleFilter('ALL');
@@ -1433,27 +1436,8 @@ function CRMNegociosContent({
                                 </DropdownMenuItem>
                                 {canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
                                   <DropdownMenuItem onClick={() => {
-                                    // Exportar CSV da coluna
-                                    const columnCards = getCardsByColumn(column.id);
-                                    const csvData = columnCards.map(card => ({
-                                      'Título': card.title,
-                                      'Preço': card.value || 0,
-                                      'Status': card.status,
-                                      'Responsável': card.responsible_user?.name || 'Não atribuído',
-                                      'Criado em': new Date(card.created_at).toLocaleDateString('pt-BR')
-                                    }));
-                                    const csv = [Object.keys(csvData[0] || {}).join(','), ...csvData.map(row => Object.values(row).join(','))].join('\n');
-                                    const blob = new Blob([csv], {
-                                      type: 'text/csv;charset=utf-8;'
-                                    });
-                                    const link = document.createElement('a');
-                                    const url = URL.createObjectURL(blob);
-                                    link.setAttribute('href', url);
-                                    link.setAttribute('download', `${column.name}_negocios.csv`);
-                                    link.style.visibility = 'hidden';
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
+                                    setSelectedColumnForExport({ id: column.id, name: column.name });
+                                    setIsExportCSVModalOpen(true);
                                   }}>
                                     <Download className="mr-2 h-4 w-4" />
                                     Baixar CSV
@@ -1688,10 +1672,20 @@ function CRMNegociosContent({
           variant: "destructive"
         });
       } finally {
-        setIsDeleteDealModalOpen(false);
-        setSelectedCardForDeletion(null);
-      }
-    }} dealName={selectedCardForDeletion?.name} />
+      setIsDeleteDealModalOpen(false);
+      setSelectedCardForDeletion(null);
+    }
+  }} dealName={selectedCardForDeletion?.name} />
+
+      <ExportCSVModal 
+        isOpen={isExportCSVModalOpen} 
+        onClose={() => {
+          setIsExportCSVModalOpen(false);
+          setSelectedColumnForExport(null);
+        }} 
+        columnName={selectedColumnForExport?.name || ''} 
+        cards={selectedColumnForExport ? getCardsByColumn(selectedColumnForExport.id) : []} 
+      />
     </DndContext>;
 }
 
