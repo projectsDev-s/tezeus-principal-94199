@@ -20,6 +20,8 @@ import {
   Globe,
   FileText,
   Pin,
+  Download,
+  Upload,
 } from "lucide-react";
 import { ContactTags } from "@/components/chat/ContactTags";
 import { useContactTags } from "@/hooks/useContactTags";
@@ -87,6 +89,9 @@ export function CRMContatos() {
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [selectedContactForWhatsApp, setSelectedContactForWhatsApp] = useState<Contact | null>(null);
   const [isFieldConfigModalOpen, setIsFieldConfigModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const headerCheckboxRef = useRef<HTMLButtonElement>(null);
   const { tags } = useTags();
   const { toast } = useToast();
@@ -976,6 +981,126 @@ export function CRMContatos() {
     setIsTagModalOpen(false);
     setSelectedContactForTag(null);
   };
+
+  const handleExportCSV = () => {
+    if (contacts.length === 0) {
+      toast({
+        title: "Nenhum contato para exportar",
+        description: "Não há contatos disponíveis para exportação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Nome", "Telefone", "Email", "Data de Criação"];
+    const csvContent = [
+      headers.join(","),
+      ...contacts.map((contact) => [
+        `"${contact.name}"`,
+        `"${contact.phone || ""}"`,
+        `"${contact.email || ""}"`,
+        `"${format(new Date(contact.createdAt), "dd/MM/yyyy HH:mm")}"`,
+      ].join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `contatos_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Exportação concluída",
+      description: `${contacts.length} contatos exportados com sucesso.`,
+    });
+  };
+
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".csv")) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione um arquivo CSV.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter((line) => line.trim());
+      
+      if (lines.length < 2) {
+        throw new Error("Arquivo CSV vazio ou inválido");
+      }
+
+      const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
+      const dataLines = lines.slice(1);
+
+      let imported = 0;
+      let errors = 0;
+
+      for (const line of dataLines) {
+        const values = line.split(",").map((v) => v.trim().replace(/"/g, ""));
+        
+        const nameIndex = headers.findIndex((h) => h.toLowerCase().includes("nome"));
+        const phoneIndex = headers.findIndex((h) => h.toLowerCase().includes("telefone"));
+        const emailIndex = headers.findIndex((h) => h.toLowerCase().includes("email"));
+
+        const name = values[nameIndex] || "";
+        const phone = values[phoneIndex] || "";
+        const email = values[emailIndex] || "";
+
+        if (!name) {
+          errors++;
+          continue;
+        }
+
+        try {
+          const { error } = await supabase.from("contacts").insert({
+            name,
+            phone,
+            email,
+            workspace_id: selectedWorkspace.workspace_id,
+          });
+
+          if (error) throw error;
+          imported++;
+        } catch (error) {
+          console.error("Erro ao importar contato:", error);
+          errors++;
+        }
+      }
+
+      await fetchContacts();
+
+      toast({
+        title: "Importação concluída",
+        description: `${imported} contatos importados com sucesso${errors > 0 ? `. ${errors} erros encontrados.` : "."}`,
+      });
+    } catch (error) {
+      console.error("Erro ao processar CSV:", error);
+      toast({
+        title: "Erro na importação",
+        description: "Não foi possível processar o arquivo CSV.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg border border-border/20 m-4 animate-fade-in">
       {/* Header */}
@@ -1077,9 +1202,33 @@ export function CRMContatos() {
             Adicionar
           </Button>
 
-          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap text-xs h-8 px-2">
-            Importar
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="whitespace-nowrap text-xs h-8 px-2"
+            onClick={handleExportCSV}
+          >
+            <Download className="h-3 w-3 mr-1" />
+            Exportar
           </Button>
+
+          <Button 
+            size="sm" 
+            className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap text-xs h-8 px-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            {isImporting ? "Importando..." : "Importar"}
+          </Button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImportCSV}
+          />
 
           <Button
             variant="destructive"
