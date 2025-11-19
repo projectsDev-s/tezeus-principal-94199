@@ -21,6 +21,7 @@ interface Fila {
   ai_agent_id?: string;
   greeting_message?: string;
   workspace_id?: string;
+  user_count?: number;
 }
 
 export function AutomacoesFilas() {
@@ -35,17 +36,34 @@ export function AutomacoesFilas() {
     if (!selectedWorkspace?.workspace_id) return;
 
     try {
-      const { data, error } = await supabase
+      // Buscar filas
+      const { data: queuesData, error: queuesError } = await supabase
         .from('queues')
-        .select(`
-          *,
-          queue_users (count)
-        `)
+        .select('*')
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setFilas(data || []);
+      if (queuesError) throw queuesError;
+
+      // Buscar contagem de usuários para cada fila
+      const filasComContagem = await Promise.all(
+        (queuesData || []).map(async (fila) => {
+          const { count, error: countError } = await supabase
+            .from('queue_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('queue_id', fila.id);
+
+          if (countError) {
+            console.error('Erro ao contar usuários da fila:', countError);
+            return { ...fila, user_count: 0 };
+          }
+
+          return { ...fila, user_count: count || 0 };
+        })
+      );
+
+      console.log('✅ Filas carregadas com contagem:', filasComContagem);
+      setFilas(filasComContagem);
     } catch (error) {
       console.error('Erro ao carregar filas:', error);
       toast.error('Erro ao carregar filas');
@@ -141,7 +159,7 @@ export function AutomacoesFilas() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {(fila as any).queue_users?.[0]?.count || 0}
+                    {fila.user_count || 0}
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {fila.greeting_message || fila.description || '-'}
