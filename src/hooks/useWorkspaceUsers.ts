@@ -58,7 +58,7 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
             action: 'list',
             workspaceId,
           },
-          headers: getWorkspaceHeaders()
+          headers: getWorkspaceHeaders(workspaceId)
         });
 
         if (cancelled) return;
