@@ -148,7 +148,7 @@ export function TransferConversationModal({
         selectedUserId
       );
 
-      if (!assignResult.success && !assignResult.alreadyAssigned) {
+      if (!assignResult.success) {
         throw new Error(
           assignResult.error || "Falha ao atribuir este atendimento."
         );
