@@ -124,14 +124,6 @@ export function ConfigureZapiWebhookModal({
               </ul>
             </div>
           )}
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                <li>Webhook de status de mensagens (entregue/lido)</li>
-                <li>Webhook de mensagens recebidas</li>
-                <li>Webhook de conexão/desconexão</li>
-                <li>Webhook de presença no chat</li>
-              </ul>
-            </div>
-          )}
 
           {results.length > 0 && (
             <div className="space-y-2">
