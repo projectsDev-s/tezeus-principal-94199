@@ -623,7 +623,7 @@ function CRMNegociosContent({
     activeUsers,
     isLoading: isLoadingActiveUsers,
     refreshActiveUsers
-  } = usePipelineActiveUsers(selectedPipeline?.id);
+  } = usePipelineActiveUsers(selectedPipeline?.id, effectiveWorkspaceId);
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCard, setSelectedCard] = useState<any>(null);
