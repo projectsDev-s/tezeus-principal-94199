@@ -33,14 +33,14 @@ export function TransferirModal({
   const [targetPipelineId, setTargetPipelineId] = useState("");
   const [targetColumnId, setTargetColumnId] = useState("");
   const [targetColumns, setTargetColumns] = useState<any[]>([]);
-  const [targetQueueId, setTargetQueueId] = useState<string>("");
-  const [targetResponsibleId, setTargetResponsibleId] = useState<string>("");
+  const [targetQueueId, setTargetQueueId] = useState<string>("none");
+  const [targetResponsibleId, setTargetResponsibleId] = useState<string>("none");
   const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Lógica de desabilitação: se fila selecionada (não vazio), desabilitar responsável e vice-versa
-  const isQueueDisabled = !!targetResponsibleId && targetResponsibleId !== "";
-  const isResponsibleDisabled = !!targetQueueId && targetQueueId !== "";
+  // Lógica de desabilitação: se fila selecionada (não "none"), desabilitar responsável e vice-versa
+  const isQueueDisabled = !!targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none";
+  const isResponsibleDisabled = !!targetQueueId && targetQueueId !== "" && targetQueueId !== "none";
   
   const { pipelines } = usePipelinesContext();
   const { toast } = useToast();
@@ -180,17 +180,17 @@ export function TransferirModal({
           // Aplicar queue_id e responsible_user_id baseado na seleção
           if (targetQueueId === "remove") {
             updateBody.queue_id = null; // Remove fila
-          } else if (targetQueueId && targetQueueId !== "") {
+          } else if (targetQueueId && targetQueueId !== "" && targetQueueId !== "none") {
             updateBody.queue_id = targetQueueId; // Atribui fila
           }
-          // Se vazio (""), não altera nada
+          // Se "none" ou vazio, não altera nada
           
           if (targetResponsibleId === "remove") {
             updateBody.responsible_user_id = null; // Remove responsável
-          } else if (targetResponsibleId && targetResponsibleId !== "") {
+          } else if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none") {
             updateBody.responsible_user_id = targetResponsibleId; // Atribui responsável
           }
-          // Se vazio (""), não altera nada
+          // Se "none" ou vazio, não altera nada
 
           const { error } = await supabase.functions.invoke(
             `pipeline-management/cards?id=${cardId}`,
@@ -215,8 +215,8 @@ export function TransferirModal({
             // Aplicar regras à conversa se houver conversation_id
             if (cardData?.conversation_id) {
               try {
-                // Se tem fila selecionada (não vazia e não "remove"), aplicar suas regras
-                if (targetQueueId && targetQueueId !== "" && targetQueueId !== "remove") {
+                // Se tem fila selecionada (não "none", não vazia e não "remove"), aplicar suas regras
+                if (targetQueueId && targetQueueId !== "" && targetQueueId !== "none" && targetQueueId !== "remove") {
                   console.log(`🔧 Aplicando regras da fila "${queueDetails?.name}" à conversa ${cardData.conversation_id}`);
                   console.log(`🤖 Agente da fila: ${queueDetails?.ai_agent_id} (${queueDetails?.ai_agent?.name})`);
                   
@@ -257,8 +257,8 @@ export function TransferirModal({
                   } else {
                     console.log('✅ Fila e agente atualizados com sucesso:', updateResult);
                     
-                    // Se não definiu responsável (vazio ou não selecionado) E a fila tem distribuição, aplicar distribuição
-                    if ((!targetResponsibleId || targetResponsibleId === "") && queueDetails?.distribution_type !== 'nao_distribuir') {
+                    // Se não definiu responsável ("none" ou vazio) E a fila tem distribuição, aplicar distribuição
+                    if ((!targetResponsibleId || targetResponsibleId === "" || targetResponsibleId === "none") && queueDetails?.distribution_type !== 'nao_distribuir') {
                       console.log('🔄 Aplicando distribuição automática da fila');
                       
                       try {
@@ -283,8 +283,8 @@ export function TransferirModal({
                       }
                     }
                   }
-                } else if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "remove") {
-                  // Tem responsável selecionado (não "remove") mas não tem fila - apenas atualizar responsável
+                } else if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none" && targetResponsibleId !== "remove") {
+                  // Tem responsável selecionado (não "remove" e não "none") mas não tem fila - apenas atualizar responsável
                   console.log(`👤 Atualizando apenas responsável da conversa ${cardData.conversation_id}`);
                   
                   const { data: updateUserResult, error: updateUserError } = await supabase.functions.invoke(
@@ -530,7 +530,7 @@ export function TransferirModal({
                   : "bg-white border-gray-300"
               )}>
                 <SelectItem 
-                  value=""
+                  value="none"
                   className={cn(
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
@@ -593,7 +593,7 @@ export function TransferirModal({
                   : "bg-white border-gray-300"
               )}>
                 <SelectItem 
-                  value=""
+                  value="none"
                   className={cn(
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
