@@ -19,14 +19,30 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
   const filterProfilesKey = JSON.stringify(filterProfiles);
 
   useEffect(() => {
+    // Determinar o workspace efetivo: prop > localStorage
+    let effectiveWorkspaceId = workspaceId;
+
+    if (!effectiveWorkspaceId) {
+      const storedWorkspace = localStorage.getItem('selectedWorkspace');
+      if (storedWorkspace) {
+        try {
+          const parsed = JSON.parse(storedWorkspace);
+          effectiveWorkspaceId = parsed?.workspace_id;
+        } catch (e) {
+          console.error('❌ [useWorkspaceUsers] Erro ao ler selectedWorkspace do localStorage:', e);
+        }
+      }
+    }
+
     console.log('🔍 [useWorkspaceUsers] useEffect triggered:', { 
-      workspaceId, 
+      workspaceIdProp: workspaceId, 
+      effectiveWorkspaceId,
       filterProfiles,
-      hasWorkspaceId: !!workspaceId 
+      hasWorkspaceId: !!effectiveWorkspaceId
     });
     
-    if (!workspaceId) {
-      console.warn('⚠️ useWorkspaceUsers: sem workspace ID');
+    if (!effectiveWorkspaceId) {
+      console.warn('⚠️ useWorkspaceUsers: sem workspace ID efetivo');
       setUsers([]);
       return;
     }
@@ -51,14 +67,14 @@ export function useWorkspaceUsers(workspaceId?: string, filterProfiles?: ('user'
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        console.log('🔄 Buscando usuários do workspace via edge function:', workspaceId);
+        console.log('🔄 Buscando usuários do workspace via edge function:', effectiveWorkspaceId);
         
         const { data, error } = await supabase.functions.invoke('manage-workspace-members', {
           body: { 
             action: 'list',
-            workspaceId,
+            workspaceId: effectiveWorkspaceId,
           },
-          headers: getWorkspaceHeaders(workspaceId)
+          headers: getWorkspaceHeaders(effectiveWorkspaceId)
         });
 
         if (cancelled) return;
