@@ -124,7 +124,6 @@ serve(async (req) => {
           .select(`
             id,
             column_id,
-            title,
             moved_to_column_at,
             pipeline_id,
             contact_id,
@@ -166,7 +165,7 @@ serve(async (req) => {
             continue;
           }
 
-          console.log(`🎬 [Time Automations] Executing automation for card "${card.title}" (${card.id})`);
+          console.log(`🎬 [Time Automations] Executing automation for card ${card.id}`);
 
           // Executar as ações diretamente
           try {
