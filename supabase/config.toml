@@ -42,3 +42,6 @@ verify_jwt = false
 
 [functions.check-message-automations]
 verify_jwt = false
+
+[functions.update-conversation-queue]
+verify_jwt = false

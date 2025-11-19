@@ -7,17 +7,25 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('🔄 [update-conversation-queue] Iniciando requisição');
+  console.log('📝 Method:', req.method);
+  console.log('🌐 Origin:', req.headers.get('origin'));
+  
   if (req.method === 'OPTIONS') {
+    console.log('✅ Retornando headers CORS para OPTIONS');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const body = await req.json();
+    console.log('📦 Body recebido:', JSON.stringify(body, null, 2));
+    
     const { 
       conversation_id, 
       queue_id, 
       assigned_user_id,
       activate_queue_agent = true // Por padrão, ativar o agente da fila
-    } = await req.json();
+    } = body;
 
     if (!conversation_id) {
       return new Response(

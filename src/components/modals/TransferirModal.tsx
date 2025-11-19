@@ -220,13 +220,16 @@ export function TransferirModal({
                   console.log(`👤 Responsável será atualizado: ${targetResponsibleId}`);
                 }
 
+                console.log('📤 Chamando update-conversation-queue com:', JSON.stringify(updateBody, null, 2));
+                
                 const { data: updateResult, error: updateError } = await supabase.functions.invoke(
                   'update-conversation-queue',
                   {
-                    body: updateBody,
-                    headers
+                    body: updateBody
                   }
                 );
+                
+                console.log('📥 Resposta de update-conversation-queue:', { data: updateResult, error: updateError });
 
                 if (updateError) {
                   console.error('❌ Erro ao atualizar fila/agente da conversa:', updateError);
