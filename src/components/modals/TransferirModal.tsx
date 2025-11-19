@@ -38,9 +38,9 @@ export function TransferirModal({
   const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Lógica de desabilitação: se fila selecionada, desabilitar responsável e vice-versa
-  const isQueueDisabled = !!targetResponsibleId;
-  const isResponsibleDisabled = !!targetQueueId;
+  // Lógica de desabilitação: se fila selecionada (não vazio), desabilitar responsável e vice-versa
+  const isQueueDisabled = !!targetResponsibleId && targetResponsibleId !== "";
+  const isResponsibleDisabled = !!targetQueueId && targetQueueId !== "";
   
   const { pipelines } = usePipelinesContext();
   const { toast } = useToast();
@@ -177,13 +177,20 @@ export function TransferirModal({
             column_id: targetColumnId,
           };
 
-          // Somente aplicar queue_id e responsible_user_id se foram selecionados (não vazios)
-          if (targetQueueId && targetQueueId !== "") {
-            updateBody.queue_id = targetQueueId;
+          // Aplicar queue_id e responsible_user_id baseado na seleção
+          if (targetQueueId === "remove") {
+            updateBody.queue_id = null; // Remove fila
+          } else if (targetQueueId && targetQueueId !== "") {
+            updateBody.queue_id = targetQueueId; // Atribui fila
           }
-          if (targetResponsibleId && targetResponsibleId !== "") {
-            updateBody.responsible_user_id = targetResponsibleId;
+          // Se vazio (""), não altera nada
+          
+          if (targetResponsibleId === "remove") {
+            updateBody.responsible_user_id = null; // Remove responsável
+          } else if (targetResponsibleId && targetResponsibleId !== "") {
+            updateBody.responsible_user_id = targetResponsibleId; // Atribui responsável
           }
+          // Se vazio (""), não altera nada
 
           const { error } = await supabase.functions.invoke(
             `pipeline-management/cards?id=${cardId}`,
@@ -208,8 +215,8 @@ export function TransferirModal({
             // Aplicar regras à conversa se houver conversation_id
             if (cardData?.conversation_id) {
               try {
-                // Se tem fila selecionada, aplicar suas regras
-                if (targetQueueId) {
+                // Se tem fila selecionada (não vazia e não "remove"), aplicar suas regras
+                if (targetQueueId && targetQueueId !== "" && targetQueueId !== "remove") {
                   console.log(`🔧 Aplicando regras da fila "${queueDetails?.name}" à conversa ${cardData.conversation_id}`);
                   console.log(`🤖 Agente da fila: ${queueDetails?.ai_agent_id} (${queueDetails?.ai_agent?.name})`);
                   
@@ -250,8 +257,8 @@ export function TransferirModal({
                   } else {
                     console.log('✅ Fila e agente atualizados com sucesso:', updateResult);
                     
-                    // Se não definiu responsável E a fila tem distribuição, aplicar distribuição
-                    if (!targetResponsibleId && queueDetails?.distribution_type !== 'nao_distribuir') {
+                    // Se não definiu responsável (vazio ou não selecionado) E a fila tem distribuição, aplicar distribuição
+                    if ((!targetResponsibleId || targetResponsibleId === "") && queueDetails?.distribution_type !== 'nao_distribuir') {
                       console.log('🔄 Aplicando distribuição automática da fila');
                       
                       try {
@@ -276,8 +283,8 @@ export function TransferirModal({
                       }
                     }
                   }
-                } else if (targetResponsibleId && targetResponsibleId !== "") {
-                  // Tem responsável selecionado mas não tem fila - apenas atualizar responsável
+                } else if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "remove") {
+                  // Tem responsável selecionado (não "remove") mas não tem fila - apenas atualizar responsável
                   console.log(`👤 Atualizando apenas responsável da conversa ${cardData.conversation_id}`);
                   
                   const { data: updateUserResult, error: updateUserError } = await supabase.functions.invoke(
@@ -294,6 +301,35 @@ export function TransferirModal({
                     console.error('❌ Erro ao atualizar responsável da conversa:', updateUserError);
                   } else {
                     console.log('✅ Responsável atualizado na conversa:', updateUserResult);
+                  }
+                } else if (targetQueueId === "remove" || targetResponsibleId === "remove") {
+                  // Remover fila e/ou responsável da conversa
+                  console.log(`🗑️ Removendo fila/responsável da conversa ${cardData.conversation_id}`);
+                  
+                  const removeBody: any = {
+                    conversation_id: cardData.conversation_id
+                  };
+                  
+                  if (targetQueueId === "remove") {
+                    removeBody.queue_id = null;
+                    removeBody.activate_queue_agent = false;
+                  }
+                  
+                  if (targetResponsibleId === "remove") {
+                    removeBody.assigned_user_id = null;
+                  }
+                  
+                  const { data: removeResult, error: removeError } = await supabase.functions.invoke(
+                    'update-conversation-queue',
+                    {
+                      body: removeBody
+                    }
+                  );
+
+                  if (removeError) {
+                    console.error('❌ Erro ao remover fila/responsável da conversa:', removeError);
+                  } else {
+                    console.log('✅ Fila/responsável removidos da conversa:', removeResult);
                   }
                 }
               } catch (convErr) {
@@ -477,8 +513,8 @@ export function TransferirModal({
             </Label>
             <Select 
               value={targetQueueId} 
-              onValueChange={(value) => setTargetQueueId(value === "clear" ? "" : value)}
-              disabled={!!targetResponsibleId}
+              onValueChange={setTargetQueueId}
+              disabled={isQueueDisabled}
             >
               <SelectTrigger className={cn(
                 "mt-1",
@@ -486,7 +522,7 @@ export function TransferirModal({
                   ? "bg-gray-700 border-gray-600 text-white" 
                   : "bg-white border-gray-300 text-gray-900"
               )}>
-                <SelectValue placeholder="Sem fila" />
+                <SelectValue placeholder="Sem ações a serem executadas" />
               </SelectTrigger>
               <SelectContent className={cn(
                 isDarkMode 
@@ -494,14 +530,24 @@ export function TransferirModal({
                   : "bg-white border-gray-300"
               )}>
                 <SelectItem 
-                  value="clear"
+                  value=""
                   className={cn(
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
                       : "text-gray-900 hover:bg-gray-100"
                   )}
                 >
-                  Sem fila
+                  Sem ações a serem executadas
+                </SelectItem>
+                <SelectItem 
+                  value="remove"
+                  className={cn(
+                    isDarkMode 
+                      ? "text-white hover:bg-gray-600" 
+                      : "text-gray-900 hover:bg-gray-100"
+                  )}
+                >
+                  Remover fila
                 </SelectItem>
                 {queues.map(queue => (
                   <SelectItem 
@@ -530,8 +576,8 @@ export function TransferirModal({
             </Label>
             <Select 
               value={targetResponsibleId} 
-              onValueChange={(value) => setTargetResponsibleId(value === "clear" ? "" : value)}
-              disabled={!!targetQueueId}
+              onValueChange={setTargetResponsibleId}
+              disabled={isResponsibleDisabled}
             >
               <SelectTrigger className={cn(
                 "mt-1",
@@ -539,7 +585,7 @@ export function TransferirModal({
                   ? "bg-gray-700 border-gray-600 text-white" 
                   : "bg-white border-gray-300 text-gray-900"
               )}>
-                <SelectValue placeholder="Sem responsável" />
+                <SelectValue placeholder="Sem ações a serem executadas" />
               </SelectTrigger>
               <SelectContent className={cn(
                 isDarkMode 
@@ -547,14 +593,24 @@ export function TransferirModal({
                   : "bg-white border-gray-300"
               )}>
                 <SelectItem 
-                  value="clear"
+                  value=""
                   className={cn(
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
                       : "text-gray-900 hover:bg-gray-100"
                   )}
                 >
-                  Sem responsável
+                  Sem ações a serem executadas
+                </SelectItem>
+                <SelectItem 
+                  value="remove"
+                  className={cn(
+                    isDarkMode 
+                      ? "text-white hover:bg-gray-600" 
+                      : "text-gray-900 hover:bg-gray-100"
+                  )}
+                >
+                  Remover responsável
                 </SelectItem>
                 {workspaceUsers.map(user => (
                   <SelectItem 
