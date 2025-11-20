@@ -2019,6 +2019,15 @@ serve(async (req) => {
               console.error(`❌ Exception ao buscar card atual:`, fetchErr);
             }
 
+            // ✅ Atualizar moved_to_column_at quando card muda de coluna
+            const columnChangedForTimestamp = body.column_id !== undefined &&
+              ((previousColumnId && previousColumnId !== body.column_id) || (!previousColumnId && body.column_id));
+
+            if (columnChangedForTimestamp) {
+              updateData.moved_to_column_at = new Date().toISOString();
+              console.log(`🕒 Atualizando moved_to_column_at para card ${cardId} -> nova coluna: ${body.column_id}`);
+            }
+
             console.log('📋 ========== ATUALIZANDO CARD NO BANCO ==========');
             
             // Fazer update sem select para evitar erro de workspace_id
