@@ -2130,17 +2130,17 @@ serve(async (req) => {
                   console.log('✅ Execuções de automações anteriores limpas com sucesso');
                 }
 
-                const { error: deleteMessageExecError } = await (supabaseClient as any)
-                  .from('automation_executions')
-                  .delete()
-                  .eq('card_id', cardId)
-                  .eq('column_id', previousColumnId);
+            const { error: deleteMessageAutomationError } = await (supabaseClient as any)
+              .from('automation_executions')
+              .delete()
+              .eq('card_id', cardId)
+              .eq('column_id', previousColumnId);
 
-                if (deleteMessageExecError) {
-                  console.error('❌ Erro ao limpar automation_executions anteriores:', deleteMessageExecError);
-                } else {
-                  console.log('✅ Registros de automation_executions limpos com sucesso');
-                }
+            if (deleteMessageAutomationError) {
+              console.error('❌ Erro ao limpar automation_executions (message_received):', deleteMessageAutomationError);
+            } else {
+              console.log('✅ automation_executions limpo para column_id anterior');
+            }
               } catch (delErr) {
                 console.error('❌ Exception ao deletar execuções:', delErr);
               }
