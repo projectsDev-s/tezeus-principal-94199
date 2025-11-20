@@ -331,33 +331,126 @@ async function executeAction(action: any, card: any, supabaseClient: any, worksp
         return;
       }
 
-      // Buscar connection_id da conversa
+      // Buscar dados da conversa (incluindo workspace)
       const { data: conversation } = await supabaseClient
         .from('conversations')
-        .select('connection_id')
+        .select('id, connection_id, workspace_id')
         .eq('id', card.conversation_id)
         .single();
 
-      if (!conversation?.connection_id) {
-        console.error('❌ Connection não encontrada');
+      if (!conversation) {
+        console.error('❌ Conversa não encontrada');
         return;
       }
 
-      console.log(`📤 Enviando mensagem para ${contact.phone}`);
+      const connectionMode = actionConfig.connection_mode || 'last';
+      let finalConnectionId = conversation.connection_id || null;
 
-      // Chamar test-send-msg com os campos corretos
-      const { error: sendError } = await supabaseClient.functions.invoke('test-send-msg', {
-        body: {
-          conversation_id: card.conversation_id,
-          content: messageText,
-          message_type: 'text'
-        }
+      console.log('🔌 Resolvendo conexão para automação de mensagem recebida:', {
+        cardId: card.id,
+        conversationId: conversation.id,
+        connectionMode,
+        currentConnection: conversation.connection_id,
       });
 
-      if (sendError) {
-        console.error('❌ Erro ao enviar mensagem:', sendError);
-      } else {
-        console.log('✅ Mensagem enviada com sucesso');
+      if (connectionMode === 'last' && card.contact_id) {
+        const { data: lastMessage } = await supabaseClient
+          .from('messages')
+          .select('conversation_id, conversations!inner(connection_id)')
+          .eq('conversations.contact_id', card.contact_id)
+          .not('conversations.connection_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (lastMessage?.conversations?.connection_id) {
+          finalConnectionId = lastMessage.conversations.connection_id;
+          console.log('✅ Conexão resolvida via última mensagem:', finalConnectionId);
+        }
+      } else if (connectionMode === 'default' && conversation.workspace_id) {
+        const { data: defaultConnection } = await supabaseClient
+          .from('connections')
+          .select('id')
+          .eq('workspace_id', conversation.workspace_id)
+          .eq('status', 'connected')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (defaultConnection?.id) {
+          finalConnectionId = defaultConnection.id;
+          console.log('✅ Conexão padrão do workspace utilizada:', finalConnectionId);
+        }
+      } else if (connectionMode === 'specific') {
+        const specificConnectionId = actionConfig.connection_id;
+        if (specificConnectionId) {
+          const { data: specificConnection } = await supabaseClient
+            .from('connections')
+            .select('id, status')
+            .eq('id', specificConnectionId)
+            .single();
+
+          if (specificConnection?.status === 'connected') {
+            finalConnectionId = specificConnection.id;
+            console.log('✅ Conexão específica validada:', finalConnectionId);
+          } else {
+            console.error('❌ Conexão específica inválida ou inativa');
+            return;
+          }
+        } else {
+          console.error('❌ connection_mode "specific" sem connection_id configurado');
+          return;
+        }
+      }
+
+      if (!finalConnectionId) {
+        console.error('❌ Não foi possível resolver uma conexão válida para envio automático');
+        return;
+      }
+
+      // Garantir que a conversa esteja vinculada à conexão encontrada
+      if (!conversation.connection_id || conversation.connection_id !== finalConnectionId) {
+        await supabaseClient
+          .from('conversations')
+          .update({ connection_id: finalConnectionId })
+          .eq('id', conversation.id);
+      }
+
+      console.log(`📤 Enviando mensagem para ${contact.phone} via conexão ${finalConnectionId}`);
+
+      const payload = {
+        conversation_id: conversation.id,
+        content: messageText,
+        message_type: 'text',
+        sender_type: 'system',
+        sender_id: null,
+        clientMessageId: `automation_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      };
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const url = `${supabaseUrl}/functions/v1/test-send-msg`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          console.error('❌ Falha HTTP ao enviar mensagem:', response.status, errorBody);
+          return;
+        }
+
+        const data = await response.json();
+        if (data?.success) {
+          console.log('✅ Mensagem enviada com sucesso via automação de mensagens recebidas');
+        } else {
+          console.error('❌ Erro no envio automático:', data);
+        }
+      } catch (error) {
+        console.error('❌ Erro inesperado ao enviar mensagem automática:', error);
       }
       break;
     }
