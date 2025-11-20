@@ -238,6 +238,99 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             queryClient.invalidateQueries({ queryKey });
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'contact_tags',
+            filter: `contact_id=eq.${effectiveContactId}`
+          },
+          async (payload) => {
+            console.log('🔄 Realtime: Tag adicionada', payload);
+            const newRecord = payload.new as any;
+            if (!newRecord) {
+              return;
+            }
+
+            try {
+              const { data: cardData, error: cardError } = await supabase
+                .from('pipeline_cards')
+                .select('pipeline_id')
+                .eq('id', cardId)
+                .maybeSingle();
+
+              if (cardError) {
+                console.error('❌ Erro ao buscar card:', cardError);
+                return;
+              }
+
+              if (!cardData?.pipeline_id) {
+                console.warn('⚠️ Card sem pipeline_id ao registrar tag adicionada');
+                return;
+              }
+
+              const { data: pipelineData, error: pipelineError } = await supabase
+                .from('pipelines')
+                .select('workspace_id')
+                .eq('id', cardData.pipeline_id)
+                .maybeSingle();
+
+              if (pipelineError) {
+                console.error('❌ Erro ao buscar pipeline:', pipelineError);
+                return;
+              }
+
+              const { data: tagInfo, error: tagError } = await supabase
+                .from('tags')
+                .select('name, color')
+                .eq('id', newRecord.tag_id)
+                .maybeSingle();
+
+              if (tagError) {
+                console.error('❌ Erro ao buscar tag info:', tagError);
+              }
+
+              let createdByName: string | undefined;
+              if (newRecord.created_by) {
+                const { data: createdByUser } = await supabase
+                  .from('system_users')
+                  .select('name')
+                  .eq('id', newRecord.created_by)
+                  .maybeSingle();
+                createdByName = createdByUser?.name || undefined;
+              }
+
+              if (pipelineData && tagInfo) {
+                const { error: insertError } = await supabase
+                  .from('pipeline_card_history')
+                  .insert({
+                    card_id: cardId,
+                    action: 'tag_added',
+                    workspace_id: pipelineData.workspace_id,
+                    metadata: {
+                      tag_id: newRecord.tag_id,
+                      tag_name: tagInfo.name,
+                      tag_color: tagInfo.color,
+                      added_at: new Date().toISOString(),
+                      added_by: newRecord.created_by,
+                      changed_by_name: createdByName,
+                    }
+                  });
+
+                if (insertError) {
+                  console.error('❌ ERRO ao inserir histórico de adição de tag:', insertError);
+                } else {
+                  console.log('✅ Histórico de adição de tag inserido com sucesso');
+                }
+              }
+            } catch (err) {
+              console.error('❌ Erro ao processar tag adicionada:', err);
+            } finally {
+              queryClient.invalidateQueries({ queryKey });
+            }
+          }
+        )
         .subscribe((status) => {
           console.log('🔌 Realtime connection status:', status);
         });

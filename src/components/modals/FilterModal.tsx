@@ -22,6 +22,7 @@ interface FilterModalProps {
 interface FilterData {
   tags: string[];
   queues: string[];
+  status: string[];
   selectedDate?: Date;
   dateRange?: { from: Date; to: Date };
 }
@@ -37,6 +38,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
   const { queues: availableQueues, loading: queuesLoading } = useQueues();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedQueues, setSelectedQueues] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -61,6 +63,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
   const handleClear = () => {
     setSelectedTags([]);
     setSelectedQueues([]);
+    setSelectedStatuses([]);
     setSelectedDate(undefined);
     setDateRange(undefined);
     
@@ -69,6 +72,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
       onApplyFilters({
         tags: [],
         queues: [],
+        status: [],
         selectedDate: undefined,
         dateRange: undefined
       });
@@ -79,6 +83,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
     const filterData: FilterData = {
       tags: selectedTags,
       queues: selectedQueues,
+      status: selectedStatuses,
       selectedDate,
       dateRange
     };
@@ -201,6 +206,49 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                       </div>
                     ))
                   )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Selecionar status */}
+          <div>
+            <Label htmlFor="status" className="text-sm font-medium">
+              Status do negócio
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal mt-1"
+                >
+                  {selectedStatuses.length === 0 ? (
+                    <span className="text-muted-foreground">Selecionar status</span>
+                  ) : (
+                    <span>{selectedStatuses.length} status selecionado(s)</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <div className="p-2 space-y-1">
+                  {['Aberto', 'Ganho', 'Perda'].map(status => (
+                    <label
+                      key={status}
+                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selectedStatuses.includes(status)}
+                        onCheckedChange={() => {
+                          setSelectedStatuses(prev =>
+                            prev.includes(status)
+                              ? prev.filter(item => item !== status)
+                              : [...prev, status]
+                          );
+                        }}
+                      />
+                      <span className="text-sm">{status}</span>
+                    </label>
+                  ))}
                 </div>
               </PopoverContent>
             </Popover>

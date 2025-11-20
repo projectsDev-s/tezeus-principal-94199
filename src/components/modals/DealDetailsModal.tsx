@@ -331,7 +331,7 @@ export function DealDetailsModal({
   const [isMovingCard, setIsMovingCard] = useState(false);
   const [targetStepAnimation, setTargetStepAnimation] = useState<string | null>(null);
   const { toast } = useToast();
-  const { selectedPipeline, moveCardOptimistic } = usePipelinesContext();
+  const { selectedPipeline, moveCardOptimistic, updateCard } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   const { getHeaders } = useWorkspaceHeaders();
   const queryClient = useQueryClient();
@@ -628,24 +628,16 @@ export function DealDetailsModal({
 
       console.log('✅ Executando transferência...');
 
-      // Atualizar o card para o pipeline/coluna de destino
-      const { data: updatedCard, error } = await supabase
-        .from('pipeline_cards')
-        .update({
-          pipeline_id: action.target_pipeline_id,
-          column_id: action.target_column_id,
-          status: action.deal_state === 'Ganho' ? 'ganho' : 'perda'
-        })
-        .eq('id', selectedCardId)
-        .select()
-        .single();
+      // Atualizar o card para o pipeline/coluna de destino usando contexto (Edge Function)
+      await updateCard(selectedCardId, {
+        pipeline_id: action.target_pipeline_id,
+        column_id: action.target_column_id,
+        status: action.deal_state === 'Ganho' ? 'ganho' : 'perda'
+      });
 
-      if (error) {
-        console.error('❌ Erro ao atualizar card:', error);
-        throw error;
-      }
-
-      console.log('✅ Card atualizado com sucesso:', updatedCard);
+      console.log('✅ Card atualizado com sucesso via contexto');
+      setSelectedPipelineId(action.target_pipeline_id);
+      setSelectedColumnId(action.target_column_id);
 
       // Mostrar toast de sucesso IMEDIATAMENTE
       toast({

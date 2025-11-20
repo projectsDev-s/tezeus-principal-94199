@@ -90,6 +90,7 @@ interface Deal {
   responsible_avatar?: string;
   tags: string[];
   priority: 'low' | 'medium' | 'high';
+  status?: string;
   product?: string;
   product_name?: string;
   product_id?: string;
@@ -240,10 +241,23 @@ function DraggableDeal({
 
   const responsibleName = deal.responsible?.trim() || "";
   const responsibleInitials = responsibleName ? getAvatarInitials(responsibleName) : "?";
-  return <Card ref={setNodeRef} style={{
+  const normalizedStatus = (deal.status || '').toLowerCase();
+  const statusColor = normalizedStatus.includes('ganh')
+    ? '#22c55e'
+    : normalizedStatus.includes('perd')
+      ? '#ef4444'
+      : undefined;
+
+  const cardStyle: React.CSSProperties = {
     ...style,
-    borderLeftColor: columnColor
-  }} {...!isSelectionMode && {
+    borderLeftColor: statusColor ?? columnColor
+  };
+
+  if (statusColor) {
+    cardStyle.borderColor = statusColor;
+  }
+
+  return <Card ref={setNodeRef} style={cardStyle} {...!isSelectionMode && {
     ...attributes,
     ...listeners
   }} className={cn("hover:shadow-md transition-shadow mb-2 md:mb-2.5 border-l-4 relative min-h-[100px] md:min-h-[110px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30", isDarkMode ? "bg-card border-border" : "bg-card border-border")} onClick={isSelectionMode ? e => {
@@ -645,6 +659,7 @@ function CRMNegociosContent({
   const [appliedFilters, setAppliedFilters] = useState<{
     tags: string[];
     queues: string[];
+    status?: string[];
     selectedDate?: Date;
     dateRange?: {
       from: Date;
@@ -873,6 +888,27 @@ function CRMNegociosContent({
     }
 
     // Filtrar por data
+    if (appliedFilters?.status && appliedFilters.status.length > 0) {
+      columnCards = columnCards.filter(card => {
+        let status = (card.status || '').toLowerCase();
+        if (!status) {
+          status = 'aberto';
+        }
+
+        if (status === 'ganho' || status === 'perdido') {
+          // normalize to português labels used in filter
+          status = status === 'ganho' ? 'ganho' : 'perda';
+        }
+
+        // fallback: treat anything not ganho/perda as aberto
+        if (status !== 'ganho' && status !== 'perda') {
+          status = 'aberto';
+        }
+
+        return appliedFilters.status?.some(filterStatus => filterStatus.toLowerCase() === status);
+      });
+    }
+
     if (appliedFilters?.selectedDate || appliedFilters?.dateRange) {
       columnCards = columnCards.filter(card => {
         if (!card.created_at) return false;
@@ -1243,11 +1279,11 @@ function CRMNegociosContent({
                     <Plus className="w-5 h-5" />
                   </Button>
                 )}
-                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
+                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.status && appliedFilters.status.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
                   <ListFilter className="w-4 h-4 mr-2" />
                   Filtrar
-                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
-                      {(appliedFilters?.tags?.length || 0) + (appliedFilters?.queues?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.status && appliedFilters.status.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
+                      {(appliedFilters?.tags?.length || 0) + (appliedFilters?.queues?.length || 0) + (appliedFilters?.status?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
                     </Badge>}
                 </Button>
               </div>
@@ -1538,6 +1574,7 @@ function CRMNegociosContent({
                             name: card.title,
                             value: card.value || 0,
                             stage: column.name,
+                            status: card.status,
                             responsible: card.responsible_user?.name || (card.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
                             responsible_user_id: card.responsible_user_id,
                             responsible_avatar: (card.responsible_user as any)?.avatar,
@@ -1612,6 +1649,7 @@ function CRMNegociosContent({
               name: activeCard.title,
               value: activeCard.value || 0,
               stage: activeColumn?.name || "",
+              status: activeCard.status,
               responsible: activeCard.responsible_user?.name || (activeCard.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
               responsible_avatar: (activeCard.responsible_user as any)?.avatar,
               tags: Array.isArray(activeCard.tags) ? activeCard.tags : [],
@@ -1646,10 +1684,11 @@ function CRMNegociosContent({
       // Implementar reordenação se necessário
     }} />
 
-      <FilterModal open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen} onApplyFilters={filters => {
+                  <FilterModal open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen} onApplyFilters={filters => {
       setAppliedFilters({
         tags: filters.tags,
         queues: filters.queues,
+        status: filters.status,
         selectedDate: filters.selectedDate,
         dateRange: filters.dateRange
       });
