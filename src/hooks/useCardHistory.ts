@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { useEffect, useMemo, useState } from 'react';
@@ -24,12 +24,11 @@ export interface CardHistoryEvent {
   metadata?: any;
 }
 
-export const cardHistoryQueryKey = (cardId: string, contactId?: string | null) =>
-  ['card-history', cardId, contactId || 'no-contact'] as const;
+export const cardHistoryQueryKey = (cardId: string) =>
+  ['card-history', cardId] as const;
 
 export const useCardHistory = (cardId: string, contactId?: string) => {
   const { getHeaders } = useWorkspaceHeaders();
-  const queryClient = useQueryClient();
   const [resolvedContactId, setResolvedContactId] = useState<string | null>(contactId || null);
 
   // Buscar contactId se não for fornecido
@@ -55,300 +54,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
   }, [cardId, contactId, resolvedContactId]);
 
   const effectiveContactId = contactId || resolvedContactId;
-  const queryKey = useMemo(() => cardHistoryQueryKey(cardId, effectiveContactId), [cardId, effectiveContactId]);
-
-  // Adicionar realtime listener para atualizar automaticamente
-  useEffect(() => {
-    if (!cardId || !effectiveContactId) return;
-
-    console.log('🔌 Configurando realtime para histórico do card:', cardId);
-
-    // Primeiro buscar as conversas do contato para filtrar os eventos
-    const setupRealtimeWithFilters = async () => {
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('contact_id', effectiveContactId);
-
-      const conversationIds = conversations?.map(c => c.id) || [];
-      console.log('📋 Conversas encontradas para realtime:', conversationIds);
-
-      const channel = supabase
-        .channel(`card-history-${cardId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'conversation_agent_history'
-          },
-          (payload) => {
-            console.log('🔄 Realtime: conversation_agent_history changed', payload);
-            // Verificar se o evento pertence a uma das conversas do contato
-            const record = payload.new as any;
-            if (conversationIds.includes(record?.conversation_id)) {
-              console.log('✅ Evento válido, invalidando cache');
-              queryClient.invalidateQueries({ queryKey });
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'conversation_assignments'
-          },
-          (payload) => {
-            console.log('🔄 Realtime: conversation_assignments changed', payload);
-            const record = payload.new as any;
-            if (conversationIds.includes(record?.conversation_id)) {
-              console.log('✅ Evento válido, invalidando cache');
-              queryClient.invalidateQueries({ queryKey });
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'pipeline_card_history',
-            filter: `card_id=eq.${cardId}`
-          },
-          (payload) => {
-            console.log('🔄 Realtime: pipeline_card_history changed', payload);
-            queryClient.invalidateQueries({ queryKey });
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'activities'
-          },
-          (payload) => {
-            console.log('🔄 Realtime: activities changed', payload);
-            const record = payload.new as any;
-            if (record?.contact_id === contactId || record?.pipeline_card_id === cardId) {
-              console.log('✅ Evento válido, invalidando cache');
-              queryClient.invalidateQueries({ queryKey });
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'contact_tags',
-            filter: `contact_id=eq.${effectiveContactId}`
-          },
-          async (payload) => {
-            console.log('🔄 Realtime: Tag removida', payload);
-            // Registrar remoção de tag no histórico
-            const oldRecord = payload.old as any;
-            if (oldRecord) {
-              console.log('📝 Processando remoção de tag:', oldRecord);
-              
-              // Buscar workspace_id do card
-              const { data: cardData, error: cardError } = await supabase
-                .from('pipeline_cards')
-                .select('pipeline_id')
-                .eq('id', cardId)
-                .maybeSingle();
-
-              if (cardError) {
-                console.error('❌ Erro ao buscar card:', cardError);
-                return;
-              }
-
-              if (cardData) {
-                const { data: pipelineData, error: pipelineError } = await supabase
-                  .from('pipelines')
-                  .select('workspace_id')
-                  .eq('id', cardData.pipeline_id)
-                  .maybeSingle();
-
-                if (pipelineError) {
-                  console.error('❌ Erro ao buscar pipeline:', pipelineError);
-                  return;
-                }
-
-                // Buscar informações da tag removida
-                const { data: tagInfo, error: tagError } = await supabase
-                  .from('tags')
-                  .select('name, color')
-                  .eq('id', oldRecord.tag_id)
-                  .maybeSingle();
-
-                if (tagError) {
-                  console.error('❌ Erro ao buscar tag info:', tagError);
-                }
-
-                let removedByName: string | undefined;
-                if (oldRecord.created_by) {
-                  const { data: createdByUser } = await supabase
-                    .from('system_users')
-                    .select('name')
-                    .eq('id', oldRecord.created_by)
-                    .maybeSingle();
-                  removedByName = createdByUser?.name || undefined;
-                }
-
-                if (tagInfo && pipelineData) {
-                  console.log('💾 Inserindo evento de remoção de tag no histórico:', {
-                    card_id: cardId,
-                    tag_name: tagInfo.name,
-                    workspace_id: pipelineData.workspace_id
-                  });
-                  
-                  // Salvar evento de remoção no pipeline_card_history
-                  const { data: insertedHistory, error: insertError } = await supabase
-                    .from('pipeline_card_history')
-                    .insert({
-                      card_id: cardId,
-                      action: 'tag_removed',
-                      workspace_id: pipelineData.workspace_id,
-                      metadata: {
-                        tag_id: oldRecord.tag_id,
-                        tag_name: tagInfo.name,
-                        tag_color: tagInfo.color,
-                        removed_at: new Date().toISOString(),
-                        removed_by: oldRecord.created_by,
-                        changed_by_name: removedByName,
-                      }
-                    })
-                    .select();
-
-                  if (insertError) {
-                    console.error('❌ ERRO ao inserir histórico de remoção de tag:', insertError);
-                  } else {
-                    console.log('✅ Histórico de remoção de tag inserido com sucesso:', insertedHistory);
-                  }
-                } else {
-                  console.warn('⚠️ Não foi possível registrar remoção - tagInfo ou pipelineData ausente', {
-                    hasTagInfo: !!tagInfo,
-                    hasPipelineData: !!pipelineData
-                  });
-                }
-              }
-            }
-            queryClient.invalidateQueries({ queryKey });
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'contact_tags',
-            filter: `contact_id=eq.${effectiveContactId}`
-          },
-          async (payload) => {
-            console.log('🔄 Realtime: Tag adicionada', payload);
-            const newRecord = payload.new as any;
-            if (!newRecord) {
-              return;
-            }
-
-            try {
-              const { data: cardData, error: cardError } = await supabase
-                .from('pipeline_cards')
-                .select('pipeline_id')
-                .eq('id', cardId)
-                .maybeSingle();
-
-              if (cardError) {
-                console.error('❌ Erro ao buscar card:', cardError);
-                return;
-              }
-
-              if (!cardData?.pipeline_id) {
-                console.warn('⚠️ Card sem pipeline_id ao registrar tag adicionada');
-                return;
-              }
-
-              const { data: pipelineData, error: pipelineError } = await supabase
-                .from('pipelines')
-                .select('workspace_id')
-                .eq('id', cardData.pipeline_id)
-                .maybeSingle();
-
-              if (pipelineError) {
-                console.error('❌ Erro ao buscar pipeline:', pipelineError);
-                return;
-              }
-
-              const { data: tagInfo, error: tagError } = await supabase
-                .from('tags')
-                .select('name, color')
-                .eq('id', newRecord.tag_id)
-                .maybeSingle();
-
-              if (tagError) {
-                console.error('❌ Erro ao buscar tag info:', tagError);
-              }
-
-              let createdByName: string | undefined;
-              if (newRecord.created_by) {
-                const { data: createdByUser } = await supabase
-                  .from('system_users')
-                  .select('name')
-                  .eq('id', newRecord.created_by)
-                  .maybeSingle();
-                createdByName = createdByUser?.name || undefined;
-              }
-
-              if (pipelineData && tagInfo) {
-                const { error: insertError } = await supabase
-                  .from('pipeline_card_history')
-                  .insert({
-                    card_id: cardId,
-                    action: 'tag_added',
-                    workspace_id: pipelineData.workspace_id,
-                    metadata: {
-                      tag_id: newRecord.tag_id,
-                      tag_name: tagInfo.name,
-                      tag_color: tagInfo.color,
-                      added_at: new Date().toISOString(),
-                      added_by: newRecord.created_by,
-                      changed_by_name: createdByName,
-                    }
-                  });
-
-                if (insertError) {
-                  console.error('❌ ERRO ao inserir histórico de adição de tag:', insertError);
-                } else {
-                  console.log('✅ Histórico de adição de tag inserido com sucesso');
-                }
-              }
-            } catch (err) {
-              console.error('❌ Erro ao processar tag adicionada:', err);
-            } finally {
-              queryClient.invalidateQueries({ queryKey });
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('🔌 Realtime connection status:', status);
-        });
-
-      return channel;
-    };
-
-    const channelPromise = setupRealtimeWithFilters();
-
-    return () => {
-      console.log('🔌 Desconectando realtime do histórico');
-      channelPromise.then(channel => {
-        if (channel) {
-          supabase.removeChannel(channel);
-        }
-      });
-    };
-  }, [cardId, effectiveContactId, queryClient, queryKey]);
+  const queryKey = useMemo(() => cardHistoryQueryKey(cardId), [cardId]);
 
   return useQuery({
     queryKey,
@@ -374,6 +80,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
           let description = '';
           let eventType: CardHistoryEvent['type'] = 'column_transfer';
           let eventTitle: string | undefined;
+          const timestamp = event.changed_at || (event as any)?.created_at || new Date().toISOString();
 
           if (event.action === 'column_changed') {
             const fromColumn = metadata.old_column_name || 'Etapa desconhecida';
@@ -410,7 +117,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             type: eventType,
             action: event.action,
             description,
-            timestamp: event.changed_at,
+            timestamp,
             user_name: metadata?.changed_by_name,
             metadata: {
               ...metadata,
@@ -461,7 +168,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
               type: 'agent_activity',
               action: event.action,
               description,
-              timestamp: event.created_at,
+              timestamp: event.created_at || new Date().toISOString(),
               user_name: (event.system_users as any)?.name,
               metadata: event.metadata
             });
@@ -527,6 +234,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             let description = '';
             let eventType: 'queue_transfer' | 'user_assigned' = 'user_assigned';
             let eventTitle = 'Conversa Atualizada';
+            const assignmentTimestamp = event.changed_at || (event as any)?.created_at || new Date().toISOString();
 
             const fromUserName = formatUserName(event.from_assigned_user_id);
             const toUserName = formatUserName(event.to_assigned_user_id);
@@ -556,7 +264,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
               type: eventType,
               action: event.action,
               description,
-              timestamp: event.changed_at,
+              timestamp: assignmentTimestamp,
               user_name: changedByName,
               metadata: {
                 event_title: eventTitle,
@@ -617,6 +325,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
 
           const eventType = activityTypeMap[activity.type] || 'activity_lembrete';
           const activityTypeName = activity.type || 'Atividade';
+          const createdTimestamp = activity.created_at || new Date().toISOString();
 
           // Evento de criação
           allEvents.push({
@@ -624,7 +333,7 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             type: eventType,
             action: 'created',
             description: `${activityTypeName} "${activity.subject}" foi criada`,
-            timestamp: activity.created_at,
+            timestamp: createdTimestamp,
             user_name: activity.responsible_id ? usersMap.get(activity.responsible_id) : undefined,
             metadata: {
               activity_type: activity.type,
@@ -636,12 +345,13 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
 
           // Evento de conclusão (se foi concluída)
           if (activity.is_completed && activity.completed_at) {
+            const completedTimestamp = activity.completed_at || new Date().toISOString();
             allEvents.push({
               id: `${activity.id}_completed`,
               type: eventType,
               action: 'completed',
               description: `${activityTypeName} "${activity.subject}" foi concluída`,
-              timestamp: activity.completed_at,
+              timestamp: completedTimestamp,
               user_name: activity.responsible_id ? usersMap.get(activity.responsible_id) : undefined,
               metadata: {
                 activity_type: activity.type,
@@ -663,9 +373,9 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
         const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
         const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
         if (aTime !== bTime) {
-          return aTime - bTime;
+          return bTime - aTime;
         }
-        return a.id.localeCompare(b.id);
+        return b.id.localeCompare(a.id);
       });
 
       return allEvents;

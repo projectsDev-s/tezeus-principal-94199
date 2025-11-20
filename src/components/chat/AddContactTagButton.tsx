@@ -5,10 +5,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandGroup, CommandItem } from "@/components/ui/command";
 import { useContactTags } from "@/hooks/useContactTags";
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface AddContactTagButtonProps {
   contactId: string;
   isDarkMode?: boolean;
-  onTagAdded?: () => void;
+  onTagAdded?: (tag: Tag) => void;
 }
 
 export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded }: AddContactTagButtonProps) {
@@ -25,9 +31,18 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
   const assignedTagIds = contactTags.map(tag => tag.id);
 
   const handleSelectTag = async (tagId: string) => {
+    const selectedTag = availableTags.find(tag => tag.id === tagId);
     await addTagToContact(tagId);
     setIsOpen(false);
-    onTagAdded?.();
+    if (selectedTag) {
+      onTagAdded?.(selectedTag);
+    } else {
+      onTagAdded?.({
+        id: tagId,
+        name: '',
+        color: '#999999'
+      });
+    }
   };
 
   return (

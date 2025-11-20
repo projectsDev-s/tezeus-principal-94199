@@ -23,6 +23,7 @@ interface ConnectionUpdateRequest {
   default_column_id?: string;
   default_column_name?: string;
   queue_id?: string;
+  instance_name?: string;
 }
 
 interface ConnectionResponse {

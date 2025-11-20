@@ -175,6 +175,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   // Hook para gerenciar providers
   const { providers, isLoading: loadingProvider, fetchProviders } = useWhatsAppProviders(workspaceId);
 
+  const isEditingZapi = isEditMode && editingConnection?.provider?.provider === 'zapi';
+
   // Load connections on component mount
   useEffect(() => {
     if (workspaceId) {
@@ -547,7 +549,37 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
 
   const editConnection = async () => {
     if (!editingConnection) return;
-    
+
+    const trimmedInstanceName = instanceName.trim();
+    const isZapiConnection = editingConnection.provider?.provider === 'zapi';
+
+    if (isZapiConnection) {
+      if (!trimmedInstanceName) {
+        toast({
+          title: 'Erro',
+          description: 'Nome da instância é obrigatório para renomear.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const duplicateName = connections.some(conn =>
+        conn.id !== editingConnection.id &&
+        conn.instance_name.toLowerCase() === trimmedInstanceName.toLowerCase()
+      );
+
+      if (duplicateName) {
+        toast({
+          title: 'Nome duplicado',
+          description: 'Já existe outra instância com este nome. Escolha um nome diferente.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    const normalizedPhone = phoneNumber ? normalizePhoneNumber(phoneNumber) : null;
+
     setIsLoading(true);
     try {
       // Buscar nome da coluna selecionada
@@ -555,13 +587,17 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       
       const updateData = {
         connectionId: editingConnection.id,
-        phone_number: phoneNumber?.trim() || null,
+        phone_number: normalizedPhone,
         auto_create_crm_card: createCrmCard,
         default_pipeline_id: selectedPipeline || null,
         default_column_id: selectedColumn || null,
         default_column_name: selectedColumnData?.name || null,
         queue_id: selectedQueueId || null,
       };
+
+      if (isZapiConnection && trimmedInstanceName) {
+        (updateData as any).instance_name = trimmedInstanceName;
+      }
 
       console.log('Updating connection with data:', updateData);
 
@@ -615,6 +651,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     setSelectedPipeline(connection.default_pipeline_id || '');
     setSelectedColumn(connection.default_column_id || '');
     setSelectedQueueId(connection.queue_id || '');
+    setSelectedProvider(connection.provider?.provider || 'evolution');
     setIsEditMode(true);
     setIsCreateModalOpen(true);
   };
@@ -1294,9 +1331,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                     value={instanceName}
                     onChange={(e) => setInstanceName(e.target.value)}
                     placeholder="Digite o nome da instância"
-                    disabled={isEditMode}
+                    disabled={isEditMode && !isEditingZapi}
                     className="h-11"
                   />
+                  {isEditMode && !isEditingZapi && (
+                    <p className="text-xs text-muted-foreground">
+                      Renomear disponível apenas para instâncias Z-API.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

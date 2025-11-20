@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -303,6 +303,7 @@ export function DealDetailsModal({
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showMinutePicker, setShowMinutePicker] = useState(false);
   const [selectedAttachment, setSelectedAttachment] = useState<{ url: string; name: string } | null>(null);
+  const [currentSystemUser, setCurrentSystemUser] = useState<{ id: string | null; name: string } | null>(null);
   
   // Hook otimizado para usuários com cache - filtrado por workspace e sem masters
   const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache(workspaceId, ['user', 'admin']);
@@ -354,7 +355,7 @@ export function DealDetailsModal({
   useEffect(() => {
     if (isOpen && cardId) {
       console.log('🔄 Modal aberto - Atualizando histórico do card');
-      const historyKey = cardHistoryQueryKey(cardId, contactId || null);
+      const historyKey = cardHistoryQueryKey(cardId);
       queryClient.invalidateQueries({ queryKey: historyKey });
       queryClient.refetchQueries({ queryKey: historyKey });
       refetchHistory();
@@ -364,7 +365,7 @@ export function DealDetailsModal({
   useEffect(() => {
     if (activeTab === "historico" && cardId) {
       console.log('🔄 Aba Histórico selecionada - Recarregando histórico do card');
-      const historyKey = cardHistoryQueryKey(cardId, contactId || null);
+      const historyKey = cardHistoryQueryKey(cardId);
       queryClient.invalidateQueries({ queryKey: historyKey });
       queryClient.refetchQueries({ queryKey: historyKey });
       refetchHistory();
@@ -1016,16 +1017,122 @@ export function DealDetailsModal({
   // Função fetchCardHistory removida - agora usamos useCardHistory hook
   
   // Funções de histórico removidas - agora usamos apenas useCardHistory que busca tudo de forma unificada
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadCurrentUser = async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const email = authData.user?.email;
+        if (!email) {
+          setCurrentSystemUser(null);
+          return;
+        }
+
+        const { data: systemUser } = await supabase
+          .from('system_users')
+          .select('id, name')
+          .eq('email', email)
+          .maybeSingle();
+
+        setCurrentSystemUser({
+          id: systemUser?.id || null,
+          name: systemUser?.name || email,
+        });
+      } catch (error) {
+        console.error('Erro ao carregar usuário atual:', error);
+        setCurrentSystemUser(null);
+      }
+    };
+
+    loadCurrentUser();
+  }, [isOpen]);
+
+  const logTagHistory = useCallback(
+    async (action: 'tag_added' | 'tag_removed', tag: Tag) => {
+      if (!selectedCardId) return;
+
+      try {
+        const { data: cardRow, error: cardError } = await supabase
+          .from('pipeline_cards')
+          .select('id, pipeline_id, pipelines!inner(workspace_id)')
+          .eq('id', selectedCardId)
+          .maybeSingle();
+
+        if (cardError || !cardRow) {
+          console.error('Erro ao buscar card para histórico de tags:', cardError);
+          return;
+        }
+
+        const workspaceId = (cardRow as any)?.pipelines?.workspace_id;
+        if (!workspaceId) {
+          console.warn('workspace_id não encontrado ao registrar histórico de tag');
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const metadata =
+          action === 'tag_added'
+            ? {
+                tag_id: tag.id,
+                tag_name: tag.name,
+                tag_color: tag.color,
+                added_at: now,
+                added_by: currentSystemUser?.id || null,
+                changed_by_name: currentSystemUser?.name,
+              }
+            : {
+                tag_id: tag.id,
+                tag_name: tag.name,
+                tag_color: tag.color,
+                removed_at: now,
+                removed_by: currentSystemUser?.id || null,
+                changed_by_name: currentSystemUser?.name,
+              };
+
+        const { error: insertError } = await supabase
+          .from('pipeline_card_history')
+          .insert({
+            card_id: selectedCardId,
+            action,
+            workspace_id: workspaceId,
+            metadata,
+          });
+
+        if (insertError) {
+          console.error('Erro ao registrar histórico de tag:', insertError);
+        } else {
+          const historyKey = cardHistoryQueryKey(cardId);
+          queryClient.invalidateQueries({ queryKey: historyKey });
+          await refetchHistory();
+        }
+      } catch (error) {
+        console.error('Erro inesperado ao registrar histórico de tag:', error);
+      }
+    },
+    [selectedCardId, currentSystemUser, queryClient, cardId, refetchHistory]
+  );
+
   const handleTagAdded = (tag: Tag) => {
-    setContactTags(prev => [...prev, tag]);
+    setContactTags(prev => {
+      const exists = prev.some(existing => existing.id === tag.id);
+      if (exists) return prev;
+      return [...prev, tag];
+    });
+    logTagHistory('tag_added', tag);
   };
+
   const handleRemoveTag = async (tagId: string) => {
+    const removedTag = contactTags.find(tag => tag.id === tagId);
     try {
       const {
         error
       } = await supabase.from('contact_tags').delete().eq('contact_id', contactId).eq('tag_id', tagId);
       if (error) throw error;
       setContactTags(prev => prev.filter(tag => tag.id !== tagId));
+      if (removedTag) {
+        await logTagHistory('tag_removed', removedTag);
+      }
       toast({
         title: "Tag removida",
         description: "A tag foi removida do contato."
@@ -1310,11 +1417,11 @@ export function DealDetailsModal({
                   <AddContactTagButton 
                     contactId={contactId} 
                     isDarkMode={isDarkMode}
-                    onTagAdded={() => {
-                      // Recarregar tags do contato após adicionar
+                    onTagAdded={(tag) => {
                       if (contactId) {
                         fetchContactTags(contactId);
                       }
+                      handleTagAdded(tag);
                     }} 
                   />
                 )}
@@ -1357,7 +1464,7 @@ export function DealDetailsModal({
             <button
               key={tab.id}
               onClick={() => {
-                const historyKey = cardHistoryQueryKey(cardId, contactId || null);
+                const historyKey = cardHistoryQueryKey(cardId);
                 queryClient.invalidateQueries({ queryKey: historyKey });
                 queryClient.refetchQueries({ queryKey: historyKey });
                 
