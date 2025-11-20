@@ -335,7 +335,10 @@ function DraggableDeal({
               {deal.product_name && <span className="text-muted-foreground truncate max-w-[80px]">
                   {deal.product_name}
                 </span>}
-              {deal.value ? <span className="text-primary font-medium">
+              {deal.value ? <span className="text-primary font-medium cursor-pointer hover:text-primary/80 transition-colors" onClick={(e) => {
+                e.stopPropagation();
+                onValueClick?.(deal);
+              }}>
                   R$ {deal.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span> : <span className="text-xs text-muted-foreground/60 hover:text-primary/70 cursor-pointer transition-colors" onClick={(e) => {
               e.stopPropagation();
