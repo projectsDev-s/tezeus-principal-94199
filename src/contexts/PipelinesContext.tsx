@@ -5,6 +5,27 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { usePipelineRealtime } from '@/hooks/usePipelineRealtime';
 
+const parseFunctionErrorBody = (error: any) => {
+  const body = error?.context?.body;
+
+  if (!body) return null;
+
+  if (typeof body === 'string') {
+    try {
+      return JSON.parse(body);
+    } catch (parseError) {
+      console.warn('⚠️ [PipelinesContext] Falha ao analisar corpo de erro da função:', parseError, body);
+      return null;
+    }
+  }
+
+  if (typeof body === 'object') {
+    return body;
+  }
+
+  return null;
+};
+
 export interface Pipeline {
   id: string;
   workspace_id: string;
@@ -427,13 +448,18 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('❌ Erro ao criar card no backend:', error);
+        const parsedError = parseFunctionErrorBody(error);
+        console.error('❌ Erro ao criar card no backend:', {
+          error,
+          parsedError
+        });
         // Remover card otimista em caso de erro
         setCards(prev => prev.filter(c => c.id !== tempCardId));
         
         // Verificar se é erro de card duplicado
         if (error.message?.includes('Já existe um card aberto') || 
-            error.message?.includes('duplicate_open_card')) {
+            error.message?.includes('duplicate_open_card') ||
+            parsedError?.error === 'duplicate_open_card') {
           toast({
             title: "Negócio já existe",
             description: "Este contato já possui um negócio aberto neste pipeline. Finalize o anterior antes de criar um novo.",
@@ -442,7 +468,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         } else {
           toast({
             title: "Erro",
-            description: "Erro ao criar card",
+            description: parsedError?.message || "Erro ao criar card",
             variant: "destructive",
           });
         }
@@ -460,11 +486,16 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
 
       return data;
     } catch (error: any) {
-      console.error('❌ Error creating card:', error);
+      const parsedError = parseFunctionErrorBody(error);
+      console.error('❌ Error creating card:', {
+        error,
+        parsedError
+      });
       
       // Verificar se é erro de card duplicado (do trigger do banco)
       if (error.message?.includes('Já existe um card aberto') || 
-          error.message?.includes('duplicate_open_card')) {
+          error.message?.includes('duplicate_open_card') ||
+          parsedError?.error === 'duplicate_open_card') {
         toast({
           title: "Negócio já existe",
           description: "Este contato já possui um negócio aberto neste pipeline. Finalize o anterior antes de criar um novo.",
@@ -473,7 +504,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       } else {
         toast({
           title: "Erro",
-          description: "Erro ao criar card",
+          description: parsedError?.message || "Erro ao criar card",
           variant: "destructive",
         });
       }

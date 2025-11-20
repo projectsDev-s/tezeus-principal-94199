@@ -1860,6 +1860,32 @@ serve(async (req) => {
 
             if (error) {
               console.error('❌ Database error creating card:', error);
+
+              const errorMessage = typeof error?.message === 'string' ? error.message : '';
+              const errorDetails = typeof error?.details === 'string' ? error.details : '';
+
+              const isDuplicateError =
+                error?.code === '23505' ||
+                errorMessage.includes('duplicate key value') ||
+                errorMessage.includes('duplicate_open_card') ||
+                errorDetails.includes('duplicate_open_card');
+
+              if (isDuplicateError) {
+                console.warn('⚠️ Duplicate open card detected for contact:', {
+                  contact_id: body.contact_id,
+                  pipeline_id: body.pipeline_id,
+                  conversation_id: resolvedConversationId
+                });
+
+                return new Response(
+                  JSON.stringify({
+                    error: 'duplicate_open_card',
+                    message: 'Já existe um card aberto para este contato neste pipeline.'
+                  }),
+                  { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
+
               throw error;
             }
             
@@ -1869,7 +1895,33 @@ serve(async (req) => {
             });
           } catch (err) {
             console.error('❌ Error in POST cards:', err);
-            throw err;
+
+            const code = (err as any)?.code;
+            const message = (err as any)?.message || (err instanceof Error ? err.message : 'Erro desconhecido ao criar card');
+            const details = (err as any)?.details;
+
+            // Se for erro conhecido do Postgres, retornar resposta estruturada em vez de 500 genérico
+            if (code) {
+              const status = code === '23505' ? 409 : 400;
+
+              return new Response(JSON.stringify({
+                error: code,
+                message,
+                details
+              }), {
+                status,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+
+            return new Response(JSON.stringify({
+              error: 'unexpected_error',
+              message,
+              details
+            }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
           }
         }
 

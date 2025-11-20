@@ -663,11 +663,42 @@ function CRMNegociosContent({
     value: number;
   } | null>(null);
   const unassignedCount = useMemo(() => cards.filter(card => !card.responsible_user_id).length, [cards]);
-  const responsibleOptions = useMemo(() => activeUsers.map(user => ({
-    id: user.id,
-    name: user.name,
-    dealCount: user.dealCount ?? 0
-  })), [activeUsers]);
+  const responsibleOptions = useMemo(() => {
+    const optionsMap = new Map<string, {
+      id: string;
+      name: string;
+      dealCount: number;
+    }>();
+
+    activeUsers.forEach(user => {
+      optionsMap.set(user.id, {
+        id: user.id,
+        name: user.name || 'Responsável sem nome',
+        dealCount: 0
+      });
+    });
+
+    cards.forEach(card => {
+      if (!card.responsible_user_id) return;
+
+      const existingOption = optionsMap.get(card.responsible_user_id);
+      const fallbackName = card.responsible_user?.name || card.contact?.name || 'Responsável sem nome';
+
+      if (existingOption) {
+        existingOption.dealCount += 1;
+      } else {
+        optionsMap.set(card.responsible_user_id, {
+          id: card.responsible_user_id,
+          name: fallbackName,
+          dealCount: 1
+        });
+      }
+    });
+
+    return Array.from(optionsMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', {
+      sensitivity: 'base'
+    }));
+  }, [activeUsers, cards]);
   const [isVincularResponsavelModalOpen, setIsVincularResponsavelModalOpen] = useState(false);
   const [selectedCardForResponsavel, setSelectedCardForResponsavel] = useState<{
     cardId: string;
@@ -759,6 +790,27 @@ function CRMNegociosContent({
   // quando o workspace muda, ele limpa os dados e mostra skeleton
   // Atualizado: 2025-10-03 - removido isRefreshing
 
+  const parseFunctionErrorBody = (error: any) => {
+    const body = error?.context?.body;
+
+    if (!body) return null;
+
+    if (typeof body === 'string') {
+      try {
+        return JSON.parse(body);
+      } catch (parseError) {
+        console.warn('⚠️ [CRMNegocios] Falha ao analisar corpo de erro da função:', parseError, body);
+        return null;
+      }
+    }
+
+    if (typeof body === 'object') {
+      return body;
+    }
+
+    return null;
+  };
+
   // Função para formatar valores monetários
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -773,11 +825,15 @@ function CRMNegociosContent({
 
     // Filtrar por termo de busca
     if (searchTerm) {
-      columnCards = columnCards.filter(card => 
-        card.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        card.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.contact?.phone?.includes(searchTerm)
-      );
+      const normalizedSearchTerm = searchTerm.toLowerCase();
+
+      columnCards = columnCards.filter(card => {
+        const titleMatch = (card.title?.toLowerCase() ?? '').includes(normalizedSearchTerm);
+        const descriptionMatch = (card.description?.toLowerCase() ?? '').includes(normalizedSearchTerm);
+        const phoneMatch = String(card.contact?.phone ?? '').toLowerCase().includes(normalizedSearchTerm);
+
+        return titleMatch || descriptionMatch || phoneMatch;
+      });
     }
 
     // 🎯 FILTRAR POR RESPONSÁVEL SELECIONADO
@@ -1015,7 +1071,8 @@ function CRMNegociosContent({
           body: {
             phoneNumber: contact.phone,
             orgId: effectiveWorkspaceId
-          }
+          },
+          headers: getHeaders(effectiveWorkspaceId)
         });
         if (conversationError) throw conversationError;
         conversationId = conversationData?.conversationId;
@@ -1049,14 +1106,18 @@ function CRMNegociosContent({
       });
       setIsCriarNegocioModalOpen(false);
     } catch (error: any) {
-      console.error('Erro ao criar negócio:', error);
+      const parsedErrorBody = parseFunctionErrorBody(error);
+      console.error('Erro ao criar negócio:', {
+        error,
+        parsedErrorBody
+      });
       
       // Verificar se é erro de duplicação (do trigger ou da edge function)
-      const errorMessage = error?.message || error?.context?.body?.message || '';
+      const errorMessage = error?.message || parsedErrorBody?.message || '';
       const isDuplicateError = 
         errorMessage.includes('Já existe um card aberto') || 
         errorMessage.includes('duplicate_open_card') ||
-        error?.context?.body?.error === 'duplicate_open_card';
+        parsedErrorBody?.error === 'duplicate_open_card';
       
       if (isDuplicateError) {
         toast({
@@ -1067,7 +1128,7 @@ function CRMNegociosContent({
       } else {
         toast({
           title: "Erro",
-          description: error instanceof Error ? error.message : "Erro ao criar negócio",
+          description: parsedErrorBody?.message || (error instanceof Error ? error.message : "Erro ao criar negócio"),
           variant: "destructive"
         });
       }
