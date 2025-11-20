@@ -341,8 +341,8 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             if (metadata.tag_id) {
               recordedTagAdditions.add(metadata.tag_id);
             }
-          } else if (!metadata.description && event.description) {
-            description = event.description;
+          } else if (metadata.description) {
+            description = metadata.description;
           }
 
           allEvents.push({

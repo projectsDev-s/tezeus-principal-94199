@@ -58,7 +58,6 @@ interface Database {
           column_id: string;
           conversation_id: string | null;
           contact_id: string | null;
-          title: string;
           description: string | null;
           value: number;
           status: string;
@@ -66,13 +65,13 @@ interface Database {
           created_at: string;
           updated_at: string;
           responsible_user_id: string | null;
+          moved_to_column_at: string | null;
         };
         Insert: {
           pipeline_id: string;
           column_id: string;
           conversation_id?: string;
           contact_id?: string;
-          title: string;
           description?: string;
           value?: number;
           status?: string;
@@ -1175,7 +1174,7 @@ serve(async (req) => {
             const timeInColumnMs = now.getTime() - cardMovedAt.getTime();
             const timeInColumnMinutes = Math.floor(timeInColumnMs / (1000 * 60));
 
-            console.log(`\n🔍 Verificando card ${(card as any).id} (${(card as any).title})`);
+            console.log(`\n🔍 Verificando card ${(card as any).id}`);
             console.log(`   ⏱️  Tempo na coluna: ${timeInColumnMinutes} minuto(s)`);
 
             // 3. Buscar automações time_in_column para esta coluna
@@ -1314,7 +1313,7 @@ serve(async (req) => {
                   executedCount++;
                   results.push({
                     card_id: (card as any).id,
-                    card_title: (card as any).title,
+                    card_description: (card as any).description,
                     automation_name: automation.name,
                     time_in_column_minutes: timeInColumnMinutes,
                     required_minutes: requiredMinutes,
@@ -1824,8 +1823,7 @@ serve(async (req) => {
               column_id: body.column_id,
               conversation_id: resolvedConversationId,
               contact_id: body.contact_id,
-              title: body.title,
-              description: body.description,
+              description: body.description || body.title || '',
               value: body.value || 0,
               status: body.status || 'aberto',
               tags: body.tags || [],
@@ -1969,7 +1967,7 @@ serve(async (req) => {
             const updateData: any = {};
             if (body.column_id !== undefined) updateData.column_id = body.column_id;
             if (body.pipeline_id !== undefined) updateData.pipeline_id = body.pipeline_id;
-            if (body.title !== undefined) updateData.title = body.title;
+            if (body.title !== undefined) updateData.description = body.title; // Map title to description for backwards compatibility
             if (body.description !== undefined) updateData.description = body.description;
             if (body.value !== undefined) updateData.value = body.value;
             if (body.status !== undefined) updateData.status = body.status;
@@ -2132,7 +2130,7 @@ serve(async (req) => {
               id: card.id,
               conversation_id: card.conversation_id,
               contact_id: card.contact_id,
-              title: card.title,
+              description: card.description,
               pipeline_id: card.pipeline_id || body.pipeline_id
             }, null, 2));
 
@@ -2294,7 +2292,7 @@ serve(async (req) => {
                         contact_id: card.conversation.contact_id
                       } : null,
                       contact_id: card.contact_id,
-                      title: card.title,
+                      description: card.description,
                       column_id: card.column_id,
                       pipeline_id: card.pipeline_id
                     });
