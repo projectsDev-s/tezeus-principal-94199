@@ -139,8 +139,7 @@ serve(async (req) => {
             pipelines!inner(workspace_id)
           `)
           .eq('column_id', automation.column_id)
-          .lt('moved_to_column_at', timeThreshold.toISOString())
-          .neq('status', 'cancelado'); // Aceita qualquer status exceto cancelado
+          .lt('moved_to_column_at', timeThreshold.toISOString());
 
         console.log(`🔍 [Time Automations] Query result: ${eligibleCards?.length || 0} cards found, error: ${cardsError ? JSON.stringify(cardsError) : 'none'}`);
 

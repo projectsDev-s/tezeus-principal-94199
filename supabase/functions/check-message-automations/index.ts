@@ -41,7 +41,6 @@ serve(async (req) => {
       `)
       .eq('contact_id', contactId)
       .eq('pipelines.workspace_id', workspaceId)
-      .eq('status', 'aberto')
       .order('created_at', { ascending: false });
 
     if (cardsError) {
