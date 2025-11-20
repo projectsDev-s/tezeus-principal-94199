@@ -344,6 +344,11 @@ export function DealDetailsModal({
   
   // Estado para filtro de histórico
   const [historyFilter, setHistoryFilter] = useState<string>("todos");
+  const [historyLimit, setHistoryLimit] = useState<number>(10);
+
+  useEffect(() => {
+    setHistoryLimit(10);
+  }, [historyFilter, cardId, fullHistory.length]);
 
   // Refresh dos dados do histórico quando o modal abrir
   useEffect(() => {
@@ -1356,9 +1361,42 @@ export function DealDetailsModal({
 
         {/* Tabs */}
         <div className={cn("flex border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
-          {tabs.map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-3 text-sm font-medium border-b-2 transition-colors", activeTab === tab.id ? "border-yellow-400 text-yellow-600" : "border-transparent", isDarkMode ? activeTab === tab.id ? "text-yellow-400" : "text-gray-400 hover:text-white" : activeTab === tab.id ? "text-yellow-600" : "text-gray-600 hover:text-gray-900")}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                const historyKey = cardHistoryQueryKey(cardId, contactId || null);
+                queryClient.invalidateQueries({ queryKey: historyKey });
+                queryClient.refetchQueries({ queryKey: historyKey });
+                
+                if ((tab.id === 'historico-atividades' || tab.id === 'atividades') && contactId) {
+                  fetchActivities(contactId);
+                }
+
+                if (tab.id === 'negocios') {
+                  fetchCardData();
+                  if (selectedPipelineId) {
+                    fetchPipelineActions(selectedPipelineId);
+                  }
+                }
+
+                setActiveTab(tab.id);
+              }}
+              className={cn(
+                "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
+                activeTab === tab.id ? "border-yellow-400 text-yellow-600" : "border-transparent",
+                isDarkMode
+                  ? activeTab === tab.id
+                    ? "text-yellow-400"
+                    : "text-gray-400 hover:text-white"
+                  : activeTab === tab.id
+                    ? "text-yellow-600"
+                    : "text-gray-600 hover:text-gray-900"
+              )}
+            >
               {tab.label}
-            </button>)}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
@@ -1816,11 +1854,16 @@ export function DealDetailsModal({
                       return a.id.localeCompare(b.id);
                     });
                   
+                  const visibleHistory = orderedHistory.slice(0, historyLimit);
+
                   return (
                     <div className="space-y-0">
-                      {orderedHistory.map((event, index) => {
+                      {visibleHistory.map((event, index) => {
                     const eventMetadata = (event.metadata as any) || {};
                     const eventTitle =
+                      (typeof eventMetadata.activity_type === 'string' && eventMetadata.activity_type.trim().length > 0
+                        ? eventMetadata.activity_type
+                        : undefined) ||
                       eventMetadata.event_title ||
                       (event.type === 'agent_activity'
                         ? 'Agente de IA'
@@ -1880,7 +1923,7 @@ export function DealDetailsModal({
                     return (
                       <div key={event.id} className="relative">
                         {/* Linha vertical conectando os eventos */}
-                        {index < orderedHistory.length - 1 && (
+                            {index < visibleHistory.length - 1 && (
                           <div 
                             className={cn(
                               "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
@@ -1953,6 +1996,17 @@ export function DealDetailsModal({
                       </div>
                     );
                   })}
+                      {historyLimit < orderedHistory.length && (
+                        <div className="pt-2">
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setHistoryLimit(prev => prev + 10)}
+                          >
+                            Ver mais
+                          </Button>
+                        </div>
+                      )}
                 </div>
               );
             })()
