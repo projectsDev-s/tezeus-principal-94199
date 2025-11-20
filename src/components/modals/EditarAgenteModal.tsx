@@ -469,28 +469,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
             </div>
           </div>
 
-          {/* API Key */}
-          <div className="space-y-2">
-            <Label htmlFor="api_key">API Key OpenAI</Label>
-            <div className="flex gap-2">
-              <Input
-                id="api_key"
-                type={showApiKey ? "text" : "password"}
-                value={formData.api_key}
-                onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                placeholder="sk-..."
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setShowApiKey(!showApiKey)}
-              >
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-
           {/* Instruções do Sistema */}
           <div className="space-y-2">
             <Label htmlFor="system_instructions">Instruções do Sistema (Prompt)</Label>

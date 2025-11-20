@@ -94,6 +94,8 @@ interface Deal {
   product?: string;
   product_name?: string;
   product_id?: string;
+  product_value?: number | null;
+  hasProduct?: boolean;
   lastContact?: string;
   created_at?: string;
   contact?: {
@@ -160,7 +162,7 @@ interface DraggableDealProps {
   isSelected?: boolean;
   onToggleSelection?: () => void;
   onEditContact?: (contactId: string) => void;
-  onLinkProduct?: (cardId: string, currentValue: number) => void;
+  onLinkProduct?: (cardId: string, currentValue: number, currentProductId?: string | null) => void;
   onDeleteCard?: (cardId: string) => void;
   onOpenTransferModal?: (cardId: string) => void;
   onVincularResponsavel?: (cardId: string, conversationId?: string, currentResponsibleId?: string, contactId?: string) => void;
@@ -304,7 +306,7 @@ function DraggableDeal({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={e => {
               e.stopPropagation();
-              onLinkProduct?.(deal.id, deal.value);
+              onLinkProduct?.(deal.id, deal.value, deal.product_id || null);
             }}>
                   Vincular Produto
                 </DropdownMenuItem>
@@ -676,10 +678,11 @@ function CRMNegociosContent({
   const [isEditarContatoModalOpen, setIsEditarContatoModalOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isVincularProdutoModalOpen, setIsVincularProdutoModalOpen] = useState(false);
-  const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
-    id: string;
-    value: number;
-  } | null>(null);
+const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
+  id: string;
+  value: number;
+  productId?: string | null;
+} | null>(null);
   const unassignedCount = useMemo(() => cards.filter(card => !card.responsible_user_id).length, [cards]);
   const responsibleOptions = useMemo(() => {
     const optionsMap = new Map<string, {
@@ -1569,10 +1572,17 @@ function CRMNegociosContent({
                             </div> : <div className="space-y-2 md:space-y-2.5">
                               <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
                                 {columnCards.map(card => {
+                          const productRelations = Array.isArray((card as any).products) ? (card as any).products : [];
+                          const primaryProduct = productRelations.length > 0 ? productRelations[0] : null;
+                          const productName = primaryProduct?.product?.name || null;
+                          const productId = primaryProduct?.product_id || null;
+                          const productValue = primaryProduct?.total_value ?? primaryProduct?.unit_value ?? primaryProduct?.product?.value ?? null;
+                          const effectiveValue = card.value ?? productValue ?? 0;
+
                           const deal: Deal = {
                             id: card.id,
                             name: card.title,
-                            value: card.value || 0,
+                            value: effectiveValue,
                             stage: column.name,
                             status: card.status,
                             responsible: card.responsible_user?.name || (card.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
@@ -1584,7 +1594,11 @@ function CRMNegociosContent({
                             contact: card.contact,
                             conversation: card.conversation || (card.conversation_id ? {
                               id: card.conversation_id
-                            } : undefined)
+                            } : undefined),
+                            product_name: productName || undefined,
+                            product_id: productId || undefined,
+                            product_value: productValue ?? null,
+                            hasProduct: !!productId
                           };
                           return <DraggableDeal key={card.id} deal={deal} isDarkMode={isDarkMode} onClick={() => !isSelectionMode && openCardDetails(card)} columnColor={column.color} onOpenTransferModal={handleOpenTransferModal} onVincularResponsavel={handleVincularResponsavel} onChatClick={dealData => {
                             console.log('🎯 CRM: Abrindo chat para deal:', dealData);
@@ -1594,6 +1608,19 @@ function CRMNegociosContent({
                             setSelectedChatCard(dealData);
                             setIsChatModalOpen(true);
                           }} onValueClick={dealData => {
+                            if (dealData.hasProduct) {
+                              toast({
+                                title: "Produto vinculado",
+                                description: "Desvincule o produto para definir um valor manual.",
+                              });
+                              setSelectedCardForProduct({
+                                id: dealData.id,
+                                value: dealData.value,
+                                productId: dealData.product_id || null
+                              });
+                              setIsVincularProdutoModalOpen(true);
+                              return;
+                            }
                             setSelectedCardForValue(dealData);
                             setIsSetValueModalOpen(true);
                           }} onConfigureAgent={(conversationId) => {
@@ -1610,10 +1637,11 @@ function CRMNegociosContent({
                           }} onEditContact={contactId => {
                             setSelectedContactId(contactId);
                             setIsEditarContatoModalOpen(true);
-                          }} onLinkProduct={(cardId, currentValue) => {
+                          }} onLinkProduct={(cardId, currentValue, currentProductId) => {
                             setSelectedCardForProduct({
                               id: cardId,
-                              value: currentValue
+                              value: currentValue,
+                              productId: currentProductId || null
                             });
                             setIsVincularProdutoModalOpen(true);
                           }} onDeleteCard={cardId => {
@@ -1644,10 +1672,16 @@ function CRMNegociosContent({
           const activeCard = cards.find(card => `card-${card.id}` === activeId);
           if (activeCard) {
             const activeColumn = columns.find(col => col.id === activeCard.column_id);
+            const productRelations = Array.isArray((activeCard as any).products) ? (activeCard as any).products : [];
+            const primaryProduct = productRelations.length > 0 ? productRelations[0] : null;
+            const productId = primaryProduct?.product_id || null;
+            const productName = primaryProduct?.product?.name || null;
+            const productValue = primaryProduct?.total_value ?? primaryProduct?.unit_value ?? primaryProduct?.product?.value ?? null;
+            const effectiveValue = activeCard.value ?? productValue ?? 0;
             const deal: Deal = {
               id: activeCard.id,
               name: activeCard.title,
-              value: activeCard.value || 0,
+              value: effectiveValue,
               stage: activeColumn?.name || "",
               status: activeCard.status,
               responsible: activeCard.responsible_user?.name || (activeCard.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
@@ -1658,13 +1692,30 @@ function CRMNegociosContent({
               contact: activeCard.contact,
               conversation: activeCard.conversation || (activeCard.conversation_id ? {
                 id: activeCard.conversation_id
-              } : undefined)
+              } : undefined),
+              product_id: productId || undefined,
+              product_name: productName || undefined,
+              product_value: productValue ?? null,
+              hasProduct: !!productId
             };
             return <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} onChatClick={dealData => {
               console.log('🎯 CRM DragOverlay: Abrindo chat para deal:', dealData);
               setSelectedChatCard(dealData);
               setIsChatModalOpen(true);
             }} onValueClick={dealData => {
+              if (dealData.hasProduct) {
+                toast({
+                  title: "Produto vinculado",
+                  description: "Desvincule o produto para definir um valor manual.",
+                });
+                setSelectedCardForProduct({
+                  id: dealData.id,
+                  value: dealData.value,
+                  productId: dealData.product_id || null
+                });
+                setIsVincularProdutoModalOpen(true);
+                return;
+              }
               setSelectedCardForValue(dealData);
               setIsSetValueModalOpen(true);
             }} onConfigureAgent={(conversationId) => {
@@ -1723,7 +1774,7 @@ function CRMNegociosContent({
       <SetValueModal isOpen={isSetValueModalOpen} onClose={() => {
       setIsSetValueModalOpen(false);
       setSelectedCardForValue(null);
-    }} onSave={handleSetCardValue} currentValue={selectedCardForValue?.value || 0} isDarkMode={isDarkMode} />
+    }} onSave={handleSetCardValue} currentValue={selectedCardForValue?.value || 0} isDarkMode={isDarkMode} canEdit={!selectedCardForValue?.hasProduct} />
 
       <EditarColunaModal open={isEditarColunaModalOpen} onOpenChange={setIsEditarColunaModalOpen} columnId={selectedColumnForAction} columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''} columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'} onUpdate={() => {
       refreshCurrentPipeline();
@@ -1737,7 +1788,7 @@ function CRMNegociosContent({
       <VincularProdutoModal isOpen={isVincularProdutoModalOpen} onClose={() => {
       setIsVincularProdutoModalOpen(false);
       setSelectedCardForProduct(null);
-    }} cardId={selectedCardForProduct?.id || null} currentValue={selectedCardForProduct?.value || 0} onProductLinked={() => refreshCurrentPipeline()} />
+    }} cardId={selectedCardForProduct?.id || null} currentValue={selectedCardForProduct?.value || 0} currentProductId={selectedCardForProduct?.productId || null} onProductLinked={() => refreshCurrentPipeline()} />
 
       <VincularResponsavelModal isOpen={isVincularResponsavelModalOpen} onClose={() => {
       setIsVincularResponsavelModalOpen(false);

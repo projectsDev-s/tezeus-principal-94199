@@ -10,6 +10,7 @@ interface SetValueModalProps {
   onSave: (value: number) => void;
   currentValue?: number;
   isDarkMode?: boolean;
+  canEdit?: boolean;
 }
 
 export function SetValueModal({
@@ -17,7 +18,8 @@ export function SetValueModal({
   onClose,
   onSave,
   currentValue = 0,
-  isDarkMode = false
+  isDarkMode = false,
+  canEdit = true
 }: SetValueModalProps) {
   const [value, setValue] = useState(currentValue.toString());
 
@@ -73,9 +75,15 @@ export function SetValueModal({
                 onChange={handleValueChange}
                 placeholder="0"
                 className="pl-10"
+                disabled={!canEdit}
                 autoFocus
               />
             </div>
+            {!canEdit && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Desvincule o produto para editar o valor manualmente.
+              </p>
+            )}
           </div>
         </div>
 
@@ -90,6 +98,7 @@ export function SetValueModal({
           <Button
             onClick={handleSave}
             className="bg-gray-500 hover:bg-gray-600 text-white"
+            disabled={!canEdit}
           >
             Confirmar
           </Button>

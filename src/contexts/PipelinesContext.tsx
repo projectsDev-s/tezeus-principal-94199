@@ -66,6 +66,18 @@ export interface PipelineCard {
   };
   contact?: any;
   conversation?: any;
+  products?: Array<{
+    id: string;
+    product_id: string | null;
+    quantity: number;
+    unit_value: number;
+    total_value: number;
+    product?: {
+      id: string;
+      name: string;
+      value: number;
+    };
+  }>;
 }
 
 interface PipelinesContextType {

@@ -1629,7 +1629,19 @@ serve(async (req) => {
                     )
                   )
                 ),
-                responsible_user:system_users!responsible_user_id(id, name, avatar)
+                responsible_user:system_users!responsible_user_id(id, name, avatar),
+                products:pipeline_cards_products(
+                  id,
+                  product_id,
+                  quantity,
+                  unit_value,
+                  total_value,
+                  product:products(
+                    id,
+                    name,
+                    value
+                  )
+                )
               `)
               .eq('id', cardId)
               .maybeSingle();
@@ -1680,7 +1692,19 @@ serve(async (req) => {
                   )
                 )
               ),
-              responsible_user:system_users!responsible_user_id(id, name, avatar)
+              responsible_user:system_users!responsible_user_id(id, name, avatar),
+              products:pipeline_cards_products(
+                id,
+                product_id,
+                quantity,
+                unit_value,
+                total_value,
+                product:products(
+                  id,
+                  name,
+                  value
+                )
+              )
             `)
             .eq('pipeline_id', pipelineId)
             .order('created_at', { ascending: false });
@@ -2104,6 +2128,18 @@ serve(async (req) => {
                   console.error('❌ Erro ao deletar execuções anteriores:', deleteError);
                 } else {
                   console.log('✅ Execuções de automações anteriores limpas com sucesso');
+                }
+
+                const { error: deleteMessageExecError } = await (supabaseClient as any)
+                  .from('automation_executions')
+                  .delete()
+                  .eq('card_id', cardId)
+                  .eq('column_id', previousColumnId);
+
+                if (deleteMessageExecError) {
+                  console.error('❌ Erro ao limpar automation_executions anteriores:', deleteMessageExecError);
+                } else {
+                  console.log('✅ Registros de automation_executions limpos com sucesso');
                 }
               } catch (delErr) {
                 console.error('❌ Exception ao deletar execuções:', delErr);

@@ -113,37 +113,6 @@ export function WorkspaceConfigModal({
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="p-4 border rounded-lg bg-background">
-            <h3 className="text-lg font-semibold mb-4">Pipeline Padrão</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Selecione qual pipeline deve aparecer primeiro no CRM. Essa pipeline será automaticamente selecionada ao acessar a página de negócios.
-            </p>
-            <div className="flex items-end gap-4">
-              <div className="flex-1">
-                <Label htmlFor="default-pipeline">Pipeline Padrão</Label>
-                <Select value={defaultPipelineId} onValueChange={setDefaultPipelineId}>
-                  <SelectTrigger id="default-pipeline">
-                    <SelectValue placeholder="Selecione uma pipeline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma (última criada primeiro)</SelectItem>
-                    {pipelines.map((pipeline) => (
-                      <SelectItem key={pipeline.id} value={pipeline.id}>
-                        {pipeline.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button 
-                onClick={handleSaveDefaultPipeline}
-                disabled={isLoading}
-              >
-                {isLoading ? "Salvando..." : "Salvar"}
-              </Button>
-            </div>
-          </div>
-
           <div className="mt-6">
             <ConexoesNova workspaceId={workspaceId} />
           </div>
