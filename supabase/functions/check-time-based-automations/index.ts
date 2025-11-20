@@ -158,14 +158,14 @@ serve(async (req) => {
 
         // Processar cada card elegível
         for (const card of eligibleCards) {
-          // Verificar se já executou essa automação para esse card neste período
+          // Verificar se já executou essa automação para esse card
+          // Não depende de moved_to_column_at para evitar duplicações quando a automação move o card
           const { data: existingExecution } = await supabase
             .from('crm_automation_executions')
             .select('id')
             .eq('automation_id', automation.id)
             .eq('card_id', card.id)
-            .eq('column_id', automation.column_id)
-            .gte('executed_at', card.moved_to_column_at)
+            .eq('execution_type', 'time_in_column')
             .maybeSingle();
 
           if (existingExecution) {
