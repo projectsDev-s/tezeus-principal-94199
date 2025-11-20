@@ -357,6 +357,9 @@ serve(async (req) => {
                         sender_id: '00000000-0000-0000-0000-000000000001', // ID especial para automações
                         sender_type: 'system',
                         message_type: 'text'
+                      },
+                      headers: {
+                        Authorization: `Bearer ${supabaseKey}`
                       }
                     });
 
