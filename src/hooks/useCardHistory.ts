@@ -296,7 +296,6 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
 
       const headers = getHeaders();
       const allEvents: CardHistoryEvent[] = [];
-      const recordedTagAdditions = new Set<string>();
 
       // 1. Buscar histórico de mudanças de coluna do card
       const { data: cardHistory } = await supabase
@@ -338,9 +337,6 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             description = `Tag "${metadata.tag_name || 'sem nome'}" foi atribuída ao contato`;
             eventType = 'tag';
             eventTitle = 'Tag Atribuída';
-            if (metadata.tag_id) {
-              recordedTagAdditions.add(metadata.tag_id);
-            }
           } else if (metadata.description) {
             description = metadata.description;
           }
@@ -594,8 +590,8 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
         }
       }
 
-      // 4. Buscar tags adicionadas E removidas do contato
-      // Primeiro buscar tags atuais (adicionadas)
+      // 4. Buscar tags do contato (apenas as que ainda estão vinculadas e não foram registradas no histórico)
+      // Isso evita duplicação, pois tags adicionadas/removidas já estão em pipeline_card_history
       const { data: contactTags } = await supabase
         .from('contact_tags')
         .select(`
@@ -609,35 +605,41 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
         .eq('contact_id', effectiveContactId)
         .order('created_at', { ascending: false });
 
+      // Criar um Set com todos os tag_ids que já foram processados no pipeline_card_history
+      // para evitar duplicação (tanto tag_added quanto tag_removed)
+      const processedTagIds = new Set<string>();
+      cardHistory?.forEach(event => {
+        if ((event.action === 'tag_added' || event.action === 'tag_removed') && (event.metadata as any)?.tag_id) {
+          processedTagIds.add((event.metadata as any).tag_id);
+        }
+      });
+
       if (contactTags) {
         for (const tagEvent of contactTags) {
-          if (tagEvent.tag_id && recordedTagAdditions.has(tagEvent.tag_id)) {
-            continue;
+          // Só adicionar se esta tag NÃO foi processada no pipeline_card_history
+          if (tagEvent.tag_id && !processedTagIds.has(tagEvent.tag_id)) {
+            const tagData = tagEvent.tags as any;
+            const description = `Tag "${tagData?.name}" foi atribuída ao contato`;
+            
+            allEvents.push({
+              id: tagEvent.id,
+              type: 'tag' as any,
+              action: 'tag_added',
+              description,
+              timestamp: tagEvent.created_at,
+              user_name: (tagEvent.system_users as any)?.name,
+              metadata: {
+                tag_id: tagEvent.tag_id,
+                tag_name: tagData?.name,
+                tag_color: tagData?.color,
+                action: 'added',
+                event_title: 'Tag Atribuída',
+                changed_by_name: (tagEvent.system_users as any)?.name,
+              }
+            });
           }
-          const tagData = tagEvent.tags as any;
-          const description = `Tag "${tagData?.name}" foi atribuída ao contato`;
-          
-          allEvents.push({
-            id: tagEvent.id,
-            type: 'tag' as any,
-            action: 'tag_added',
-            description,
-            timestamp: tagEvent.created_at,
-            user_name: (tagEvent.system_users as any)?.name,
-            metadata: {
-              tag_id: tagEvent.tag_id,
-              tag_name: tagData?.name,
-              tag_color: tagData?.color,
-              action: 'added',
-              event_title: 'Tag Atribuída',
-              changed_by_name: (tagEvent.system_users as any)?.name,
-            }
-          });
         }
       }
-
-      // Buscar histórico de tags removidas através de audit/logs se existir
-      // Como não temos uma tabela de audit, vamos registrar quando detectarmos remoções via realtime
 
       // Ordenar todos os eventos por data (mais recentes primeiro)
       allEvents.sort((a, b) => {
