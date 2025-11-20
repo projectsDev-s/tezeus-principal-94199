@@ -340,7 +340,8 @@ export default function PipelineConfiguracao({
     deletePipeline
   } = usePipelinesContext();
   const {
-    user
+    user,
+    userRole
   } = useAuth();
   const {
     selectedWorkspace
@@ -350,6 +351,7 @@ export default function PipelineConfiguracao({
   const [currency, setCurrency] = useState("brl");
   const [selectedColumn, setSelectedColumn] = useState("qualificar");
   const [selectedAutomation, setSelectedAutomation] = useState("");
+  const canConfigureOpenStatus = userRole === 'master' || userRole === 'admin';
   const handleUpdateColumnPermissions = async (columnId: string, userIds: string[]) => {
     try {
       const {
@@ -1178,7 +1180,10 @@ export default function PipelineConfiguracao({
                             <SelectTrigger className={cn("text-sm", isDarkMode ? "bg-muted border-border text-foreground" : "")}>
                               <SelectValue placeholder="Estado do negócio" />
                             </SelectTrigger>
-                            <SelectContent>
+                          <SelectContent>
+                              <SelectItem value="Aberto" disabled={!canConfigureOpenStatus}>
+                                Aberto {!canConfigureOpenStatus ? '(somente admin/master)' : ''}
+                              </SelectItem>
                               <SelectItem value="Ganho">Ganho</SelectItem>
                               <SelectItem value="Perda">Perda</SelectItem>
                             </SelectContent>

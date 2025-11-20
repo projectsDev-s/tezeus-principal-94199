@@ -2645,7 +2645,14 @@ serve(async (req) => {
 
             if (error) {
               console.error('❌ Database error creating action:', error);
-              throw error;
+              return new Response(JSON.stringify({
+                error: 'database_error',
+                message: error.message,
+                details: error
+              }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
             }
             
             console.log('✅ Pipeline action created successfully:', actionData);
@@ -2684,7 +2691,17 @@ serve(async (req) => {
               .select()
               .single()) as any;
 
-            if (error) throw error;
+            if (error) {
+              console.error('❌ Database error updating action:', error);
+              return new Response(JSON.stringify({
+                error: 'database_error',
+                message: error.message,
+                details: error
+              }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
             
             console.log('✅ Pipeline action updated successfully');
             return new Response(JSON.stringify(actionData), {

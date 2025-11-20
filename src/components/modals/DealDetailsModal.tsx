@@ -32,6 +32,7 @@ import { useContactExtraInfo } from "@/hooks/useContactExtraInfo";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
 import { cardHistoryQueryKey, useCardHistory } from "@/hooks/useCardHistory";
 import { Bot, UserCheck, Users, ArrowRightLeft, LayoutGrid, Tag as TagIcon, CalendarClock, Calendar as CalendarIconLucide } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 interface Tag {
   id: string;
   name: string;
@@ -336,6 +337,8 @@ export function DealDetailsModal({
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   const { getHeaders } = useWorkspaceHeaders();
   const queryClient = useQueryClient();
+  const { userRole } = useAuth();
+  const canViewOpenAction = userRole === 'master' || userRole === 'admin';
   
   // Hook para informações adicionais do contato
   const { fields: extraFields, isLoading: isLoadingExtraInfo } = useContactExtraInfo(contactId, workspaceId);
@@ -630,10 +633,17 @@ export function DealDetailsModal({
       console.log('✅ Executando transferência...');
 
       // Atualizar o card para o pipeline/coluna de destino usando contexto (Edge Function)
+      const statusMap: Record<string, string> = {
+        'Ganho': 'ganho',
+        'Perda': 'perda',
+        'Aberto': 'aberto',
+      };
+      const normalizedStatus = statusMap[action.deal_state] || 'aberto';
+
       await updateCard(selectedCardId, {
         pipeline_id: action.target_pipeline_id,
         column_id: action.target_column_id,
-        status: action.deal_state === 'Ganho' ? 'ganho' : 'perda'
+        status: normalizedStatus
       });
 
       console.log('✅ Card atualizado com sucesso via contexto');
@@ -1434,24 +1444,38 @@ export function DealDetailsModal({
                 console.log('🎨 Renderizando botões de ação. Total de ações:', pipelineActions.length);
                 console.log('📊 Ações disponíveis:', pipelineActions);
                 
-                const filteredActions = pipelineActions.filter(
-                  action => action.deal_state === 'Ganho' || action.deal_state === 'Perda'
-                );
+                const filteredActions = pipelineActions.filter((action: any) => {
+                  if (action.deal_state === 'Aberto') {
+                    return canViewOpenAction;
+                  }
+                  return action.deal_state === 'Ganho' || action.deal_state === 'Perda';
+                });
                 
                 console.log('✅ Ações filtradas (Ganho/Perda):', filteredActions);
                 
-                return filteredActions.map((action) => (
+                return filteredActions.map((action: any) => {
+                  const isWin = action.deal_state === 'Ganho';
+                  const isLoss = action.deal_state === 'Perda';
+                  const isOpen = action.deal_state === 'Aberto';
+                  const variant = isLoss ? 'destructive' : isOpen ? 'secondary' : 'default';
+                  const className = isWin
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : isLoss
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white';
+                  return (
                   <Button
                     key={action.id}
                     size="sm"
-                    variant={action.deal_state === 'Ganho' ? 'default' : 'destructive'}
+                    variant={variant}
                     onClick={() => executeAction(action)}
                     disabled={isExecutingAction}
-                    className={action.deal_state === 'Ganho' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+                    className={className}
                   >
                     {isExecutingAction ? 'Processando...' : action.action_name}
                   </Button>
-                ));
+                  );
+                });
               })()}
             </div>
           </div>
