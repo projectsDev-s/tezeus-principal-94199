@@ -149,14 +149,21 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             console.log('🔄 Realtime: Tag adicionada', payload);
             const newRecord = payload.new as any;
             if (newRecord) {
-              const { data: cardData } = await supabase
+              console.log('📝 Processando adição de tag:', newRecord);
+              
+              const { data: cardData, error: cardError } = await supabase
                 .from('pipeline_cards')
                 .select('pipeline_id')
                 .eq('id', cardId)
                 .maybeSingle();
 
+              if (cardError) {
+                console.error('❌ Erro ao buscar card:', cardError);
+                return;
+              }
+
               if (cardData) {
-                const [{ data: pipelineData }, { data: tagInfo }] = await Promise.all([
+                const [{ data: pipelineData, error: pipelineError }, { data: tagInfo, error: tagError }] = await Promise.all([
                   supabase
                     .from('pipelines')
                     .select('workspace_id')
@@ -169,6 +176,15 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
                     .maybeSingle(),
                 ]);
 
+                if (pipelineError) {
+                  console.error('❌ Erro ao buscar pipeline:', pipelineError);
+                  return;
+                }
+
+                if (tagError) {
+                  console.error('❌ Erro ao buscar tag info:', tagError);
+                }
+
                 let createdByName: string | undefined;
                 if (newRecord.created_by) {
                   const { data: createdByUser } = await supabase
@@ -180,18 +196,38 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
                 }
 
                 if (pipelineData && tagInfo) {
-                  await supabase.from('pipeline_card_history').insert({
+                  console.log('💾 Inserindo evento de adição de tag no histórico:', {
                     card_id: cardId,
-                    action: 'tag_added',
-                    workspace_id: pipelineData.workspace_id,
-                    metadata: {
-                      tag_id: newRecord.tag_id,
-                      tag_name: tagInfo.name,
-                      tag_color: tagInfo.color,
-                      added_at: new Date().toISOString(),
-                      added_by: newRecord.created_by,
-                      changed_by_name: createdByName,
-                    },
+                    tag_name: tagInfo.name,
+                    workspace_id: pipelineData.workspace_id
+                  });
+                  
+                  const { data: insertedHistory, error: insertError } = await supabase
+                    .from('pipeline_card_history')
+                    .insert({
+                      card_id: cardId,
+                      action: 'tag_added',
+                      workspace_id: pipelineData.workspace_id,
+                      metadata: {
+                        tag_id: newRecord.tag_id,
+                        tag_name: tagInfo.name,
+                        tag_color: tagInfo.color,
+                        added_at: new Date().toISOString(),
+                        added_by: newRecord.created_by,
+                        changed_by_name: createdByName,
+                      },
+                    })
+                    .select();
+
+                  if (insertError) {
+                    console.error('❌ ERRO ao inserir histórico de adição de tag:', insertError);
+                  } else {
+                    console.log('✅ Histórico de adição de tag inserido com sucesso:', insertedHistory);
+                  }
+                } else {
+                  console.warn('⚠️ Não foi possível registrar adição - tagInfo ou pipelineData ausente', {
+                    hasTagInfo: !!tagInfo,
+                    hasPipelineData: !!pipelineData
                   });
                 }
               }
@@ -213,26 +249,42 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
             // Registrar remoção de tag no histórico
             const oldRecord = payload.old as any;
             if (oldRecord) {
+              console.log('📝 Processando remoção de tag:', oldRecord);
+              
               // Buscar workspace_id do card
-              const { data: cardData } = await supabase
+              const { data: cardData, error: cardError } = await supabase
                 .from('pipeline_cards')
                 .select('pipeline_id')
                 .eq('id', cardId)
                 .maybeSingle();
 
+              if (cardError) {
+                console.error('❌ Erro ao buscar card:', cardError);
+                return;
+              }
+
               if (cardData) {
-                const { data: pipelineData } = await supabase
+                const { data: pipelineData, error: pipelineError } = await supabase
                   .from('pipelines')
                   .select('workspace_id')
                   .eq('id', cardData.pipeline_id)
                   .maybeSingle();
 
+                if (pipelineError) {
+                  console.error('❌ Erro ao buscar pipeline:', pipelineError);
+                  return;
+                }
+
                 // Buscar informações da tag removida
-                const { data: tagInfo } = await supabase
+                const { data: tagInfo, error: tagError } = await supabase
                   .from('tags')
                   .select('name, color')
                   .eq('id', oldRecord.tag_id)
                   .maybeSingle();
+
+                if (tagError) {
+                  console.error('❌ Erro ao buscar tag info:', tagError);
+                }
 
                 let removedByName: string | undefined;
                 if (oldRecord.created_by) {
@@ -245,8 +297,14 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
                 }
 
                 if (tagInfo && pipelineData) {
+                  console.log('💾 Inserindo evento de remoção de tag no histórico:', {
+                    card_id: cardId,
+                    tag_name: tagInfo.name,
+                    workspace_id: pipelineData.workspace_id
+                  });
+                  
                   // Salvar evento de remoção no pipeline_card_history
-                  await supabase
+                  const { data: insertedHistory, error: insertError } = await supabase
                     .from('pipeline_card_history')
                     .insert({
                       card_id: cardId,
@@ -260,7 +318,19 @@ export const useCardHistory = (cardId: string, contactId?: string) => {
                         removed_by: oldRecord.created_by,
                         changed_by_name: removedByName,
                       }
-                    });
+                    })
+                    .select();
+
+                  if (insertError) {
+                    console.error('❌ ERRO ao inserir histórico de remoção de tag:', insertError);
+                  } else {
+                    console.log('✅ Histórico de remoção de tag inserido com sucesso:', insertedHistory);
+                  }
+                } else {
+                  console.warn('⚠️ Não foi possível registrar remoção - tagInfo ou pipelineData ausente', {
+                    hasTagInfo: !!tagInfo,
+                    hasPipelineData: !!pipelineData
+                  });
                 }
               }
             }
