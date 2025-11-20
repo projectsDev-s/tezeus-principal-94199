@@ -140,7 +140,7 @@ serve(async (req) => {
           `)
           .eq('column_id', automation.column_id)
           .lt('moved_to_column_at', timeThreshold.toISOString())
-          .eq('status', 'aberto');
+          .neq('status', 'cancelado'); // Aceita qualquer status exceto cancelado
 
         console.log(`🔍 [Time Automations] Query result: ${eligibleCards?.length || 0} cards found, error: ${cardsError ? JSON.stringify(cardsError) : 'none'}`);
 
