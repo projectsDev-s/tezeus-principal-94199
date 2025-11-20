@@ -186,7 +186,7 @@ serve(async (req) => {
 
         // 🔒 Verificar se já foi executada NESTA entrada na coluna
         // A automação só pode ser executada UMA VEZ por entrada na coluna
-        const { data: existingExecutions, error: existingExecError } = await supabase
+        let { data: existingExecutions, error: existingExecError } = await supabase
           .from('automation_executions')
           .select('id, executed_at')
           .eq('card_id', card.id)
@@ -200,9 +200,44 @@ serve(async (req) => {
         console.log(`📊 Execuções nesta entrada: ${executionCount}`);
         console.log(`📅 Contando apenas execuções após: ${columnEntryDate}`);
 
-        // Apenas uma execução permitida por entrada na coluna
-        if (executionCount > 0) {
-          console.log(`🚫 Automação "${automation.name}" já foi executada nesta entrada na coluna`);
+        // Permitir reexecução se novas mensagens chegaram após a última execução
+        if (executionCount > 0 && existingExecutions) {
+          const latestExecution = existingExecutions.reduce((latest, current) => {
+            return !latest || current.executed_at > latest.executed_at ? current : latest;
+          }, null as { id: string; executed_at: string } | null);
+
+          if (latestExecution) {
+            const { count: messagesAfterLastExecution, error: countAfterError } = await supabase
+              .from('messages')
+              .select('id', { count: 'exact', head: true })
+              .eq('conversation_id', conversationToCheck)
+              .eq('sender_type', 'contact')
+              .gte('created_at', latestExecution.executed_at);
+
+            if (countAfterError) {
+              console.error('❌ Erro ao contar mensagens após última execução:', countAfterError);
+            } else if ((messagesAfterLastExecution || 0) >= requiredMessageCount) {
+              console.log('♻️ Novas mensagens recebidas após a última execução. Resetando histórico para nova execução.');
+              const { error: cleanupError } = await supabase
+                .from('automation_executions')
+                .delete()
+                .eq('card_id', card.id)
+                .eq('column_id', card.column_id)
+                .eq('automation_id', automation.id)
+                .eq('trigger_type', 'message_received');
+
+              if (cleanupError) {
+                console.error('❌ Erro ao limpar histórico para reexecução:', cleanupError);
+                continue;
+              }
+
+              existingExecutions = [];
+            }
+          }
+        }
+
+        if ((existingExecutions?.length || 0) > 0) {
+          console.log(`🚫 Automação "${automation.name}" já foi executada recentemente nesta coluna (sem novas mensagens suficientes)`);
           continue;
         }
 
