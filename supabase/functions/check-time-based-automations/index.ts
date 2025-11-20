@@ -359,7 +359,10 @@ serve(async (req) => {
                         message_type: 'text'
                       },
                       headers: {
-                        Authorization: `Bearer ${supabaseKey}`
+                        Authorization: `Bearer ${supabaseKey}`,
+                        'x-system-user-id': '00000000-0000-0000-0000-000000000001',
+                        'x-system-user-email': 'automacao@sistema.com',
+                        'x-workspace-id': (card as any).pipelines?.workspace_id || ''
                       }
                     });
 
