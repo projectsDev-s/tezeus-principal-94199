@@ -48,12 +48,26 @@ Deno.serve(async (req) => {
 
     const { conversation_id, target_user_id } = await req.json();
 
-    if (!conversation_id || !target_user_id) {
+    if (!conversation_id) {
       return new Response(
-        JSON.stringify({ error: 'conversation_id and target_user_id are required' }),
+        JSON.stringify({ error: 'conversation_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const normalizedTargetUserId =
+      typeof target_user_id === 'string'
+        ? target_user_id.trim()
+        : target_user_id;
+
+    const targetUserId =
+      normalizedTargetUserId === null ||
+      normalizedTargetUserId === undefined ||
+      normalizedTargetUserId === '' ||
+      normalizedTargetUserId === 'none' ||
+      normalizedTargetUserId === 'null'
+        ? null
+        : (normalizedTargetUserId as string);
 
     console.log('🔄 Assigning conversation:', {
       conversation_id,
@@ -77,20 +91,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify target user is workspace member
-    const { data: targetUserMember, error: targetUserError } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', target_user_id)
-      .single();
+    if (targetUserId) {
+      // Verify target user is workspace member
+      const { data: targetUserMember, error: targetUserError } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', targetUserId)
+        .single();
 
-    if (targetUserError || !targetUserMember) {
-      console.error('❌ Target user not a workspace member:', targetUserError);
-      return new Response(
-        JSON.stringify({ error: 'Usuário selecionado não é membro deste workspace' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (targetUserError || !targetUserMember) {
+        console.error('❌ Target user not a workspace member:', targetUserError);
+        return new Response(
+          JSON.stringify({ error: 'Usuário selecionado não é membro deste workspace' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Get current conversation state
@@ -121,8 +137,8 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabase
       .from('conversations')
       .update({
-        assigned_user_id: target_user_id,
-        assigned_at: new Date().toISOString(),
+        assigned_user_id: targetUserId || null,
+        assigned_at: targetUserId ? new Date().toISOString() : null,
         status: 'open'
       })
       .eq('id', conversation_id);
@@ -135,17 +151,22 @@ Deno.serve(async (req) => {
     console.log('✅ Conversation updated:', {
       conversation_id,
       from: previousAssignedUserId,
-      to: target_user_id
+      to: targetUserId
     });
 
     // Log assignment action
-    const action = previousAssignedUserId ? 'transfer' : 'assign';
+    let action: 'assign' | 'transfer' | 'unassign';
+    if (targetUserId) {
+      action = previousAssignedUserId ? 'transfer' : 'assign';
+    } else {
+      action = 'unassign';
+    }
     const { error: assignmentError } = await supabase
       .from('conversation_assignments')
       .insert({
         conversation_id,
         from_assigned_user_id: previousAssignedUserId,
-        to_assigned_user_id: target_user_id,
+        to_assigned_user_id: targetUserId || null,
         changed_by: systemUserId,
         action
       });
@@ -164,7 +185,7 @@ Deno.serve(async (req) => {
       for (const card of pipelineCards) {
         await supabase
           .from('pipeline_cards')
-          .update({ responsible_user_id: target_user_id })
+          .update({ responsible_user_id: targetUserId || null })
           .eq('id', card.id);
         
         console.log('✅ Pipeline card updated:', card.id);

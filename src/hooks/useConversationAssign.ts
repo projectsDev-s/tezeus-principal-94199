@@ -7,7 +7,7 @@ export const useConversationAssign = () => {
   const [isAssigning, setIsAssigning] = useState<string | null>(null);
   const { getHeaders } = useWorkspaceHeaders();
 
-  const assignConversation = async (conversationId: string, targetUserId: string) => {
+  const assignConversation = async (conversationId: string, targetUserId: string | null) => {
     try {
       setIsAssigning(conversationId);
       
@@ -29,7 +29,12 @@ export const useConversationAssign = () => {
         throw new Error(response.error);
       }
 
-      const actionText = response.action === 'transfer' ? 'transferida' : 'atribuída';
+      let actionText = 'atribuída';
+      if (response.action === 'transfer') {
+        actionText = 'transferida';
+      } else if (response.action === 'unassign') {
+        actionText = 'desvinculada';
+      }
 
       toast({
         title: `Conversa ${actionText}`,

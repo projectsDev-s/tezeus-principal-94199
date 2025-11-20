@@ -446,7 +446,7 @@ export function WhatsAppChat({
       queueId,
     }: {
       conversationId: string;
-      assignedUserId: string;
+      assignedUserId: string | null;
       assignedUserName?: string | null;
       connectionId: string;
       queueId?: string | null;
@@ -464,7 +464,10 @@ export function WhatsAppChat({
         return {
           ...prev,
           assigned_user_id: assignedUserId,
-          assigned_user_name: assignedUserName ?? prev.assigned_user_name,
+          assigned_user_name:
+            assignedUserId !== null
+              ? assignedUserName ?? prev.assigned_user_name
+              : null,
           connection_id: connectionId,
           connection: connectionInfo
             ? {

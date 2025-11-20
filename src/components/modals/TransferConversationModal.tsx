@@ -39,7 +39,7 @@ type TransferConversationModalProps = {
   isLoadingQueues?: boolean;
   onTransferSuccess?: (params: {
     conversationId: string;
-    assignedUserId: string;
+    assignedUserId: string | null;
     assignedUserName?: string | null;
     connectionId: string;
     queueId?: string | null;
@@ -57,7 +57,7 @@ export function TransferConversationModal({
   isLoadingQueues,
   onTransferSuccess,
 }: TransferConversationModalProps) {
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("none");
   const [selectedQueueId, setSelectedQueueId] = useState<string>("none");
   const [selectedConnectionId, setSelectedConnectionId] =
     useState<string>("");
@@ -97,7 +97,7 @@ export function TransferConversationModal({
 
   useEffect(() => {
     if (!open) {
-      setSelectedUserId("");
+      setSelectedUserId("none");
       setSelectedQueueId("none");
       setSelectedConnectionId("");
       setIsSubmitting(false);
@@ -105,7 +105,7 @@ export function TransferConversationModal({
     }
 
     if (conversation) {
-      setSelectedUserId(conversation.assigned_user_id || "");
+      setSelectedUserId(conversation.assigned_user_id || "none");
       setSelectedQueueId(
         (conversation.queue_id as string | null | undefined) || "none"
       );
@@ -115,10 +115,16 @@ export function TransferConversationModal({
 
   const handleSubmit = async () => {
     if (!conversation) return;
-    if (!selectedUserId) {
+
+    const hasResponsible =
+      selectedUserId !== "" && selectedUserId !== null && selectedUserId !== "none";
+    const hasQueue = selectedQueueId && selectedQueueId !== "none";
+
+    if (!hasResponsible && !hasQueue) {
       toast({
-        title: "Selecione um usuário",
-        description: "É necessário escolher um responsável para o atendimento.",
+        title: "Selecione um responsável ou uma fila",
+        description:
+          "Escolha um responsável ou uma fila para concluir a transferência.",
         variant: "destructive",
       });
       return;
@@ -136,6 +142,7 @@ export function TransferConversationModal({
     try {
       setIsSubmitting(true);
 
+      const normalizedUserId = hasResponsible ? selectedUserId : null;
       const previousUserId = conversation.assigned_user_id || null;
       const previousUserName =
         (previousUserId &&
@@ -145,7 +152,7 @@ export function TransferConversationModal({
 
       const assignResult = await assignConversation(
         conversation.id,
-        selectedUserId
+        normalizedUserId
       );
 
       if (!assignResult.success) {
@@ -173,8 +180,9 @@ export function TransferConversationModal({
         throw updateError;
       }
 
-      const assignedUserNameResolved =
-        userOptions.find((option) => option.id === selectedUserId)?.name || null;
+      const assignedUserNameResolved = hasResponsible
+        ? userOptions.find((option) => option.id === selectedUserId)?.name || null
+        : null;
 
       toast({
         title: "Atendimento transferido",
@@ -185,18 +193,28 @@ export function TransferConversationModal({
         queryKey: ["conversation-assignments", conversation.id],
       });
 
+      const actionType =
+        assignResult.action ??
+        (hasResponsible
+          ? previousUserId
+            ? "transfer"
+            : "assign"
+          : previousUserId
+          ? "unassign"
+          : "assign");
+
       const optimisticAssignedUserName =
-        userOptions.find((option) => option.id === selectedUserId)?.name ??
+        assignedUserNameResolved ??
         conversation.assigned_user_name ??
-        "Usuário";
+        "Sem responsável";
 
       const optimisticEntry: AssignmentEntry = {
         id: `temp_${Date.now()}`,
-        action: previousUserId ? "transfer" : "assign",
+        action: actionType,
         changed_at: new Date().toISOString(),
         changed_by: user?.id || null,
         from_assigned_user_id: previousUserId,
-        to_assigned_user_id: selectedUserId,
+        to_assigned_user_id: normalizedUserId,
         from_user_name: previousUserName,
         to_user_name: optimisticAssignedUserName,
         changed_by_name: user?.name || null,
@@ -214,7 +232,7 @@ export function TransferConversationModal({
 
       onTransferSuccess?.({
         conversationId: conversation.id,
-        assignedUserId: selectedUserId,
+        assignedUserId: normalizedUserId,
         assignedUserName: assignedUserNameResolved,
         connectionId: selectedConnectionId,
         queueId:
@@ -238,6 +256,17 @@ export function TransferConversationModal({
   const isProcessing =
     isSubmitting || (isAssigning ? isAssigning === conversation?.id : false);
 
+  const isUserSelectDisabled =
+    isProcessing ||
+    (selectedQueueId !== "none" && selectedQueueId !== "");
+
+  const isQueueSelectDisabled =
+    isProcessing ||
+    isLoadingQueues ||
+    (selectedUserId !== "" &&
+      selectedUserId !== null &&
+      selectedUserId !== "none");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
@@ -257,12 +286,13 @@ export function TransferConversationModal({
             <Select
               value={selectedUserId}
               onValueChange={setSelectedUserId}
-              disabled={isProcessing || userOptions.length === 0}
+              disabled={isUserSelectDisabled}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione um usuário" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">Sem responsável</SelectItem>
                 {userOptions.length === 0 ? (
                   <SelectItem value="__empty" disabled>
                     Nenhum usuário disponível
@@ -285,7 +315,7 @@ export function TransferConversationModal({
             <Select
               value={selectedQueueId}
               onValueChange={setSelectedQueueId}
-              disabled={isProcessing || isLoadingQueues}
+              disabled={isQueueSelectDisabled}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione uma fila (opcional)" />
