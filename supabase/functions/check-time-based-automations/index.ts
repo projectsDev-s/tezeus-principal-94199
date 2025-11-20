@@ -345,13 +345,17 @@ serve(async (req) => {
                       break;
                     }
 
-                    console.log(`📤 [Time Automations] Enviando mensagem via test-send-msg`);
+                    console.log(`📤 [Time Automations] Enviando mensagem para conversa ${card.conversation_id}`);
+                    console.log(`📤 [Time Automations] Conteúdo da mensagem: "${messageText}"`);
 
-                    // Chamar test-send-msg com os campos corretos
-                    const { error: sendError } = await supabase.functions.invoke('test-send-msg', {
+                    // Chamar send-message (função de produção)
+                    // Usar UUID especial para identificar mensagens de automação
+                    const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-message', {
                       body: {
                         conversation_id: card.conversation_id,
                         content: messageText,
+                        sender_id: '00000000-0000-0000-0000-000000000001', // ID especial para automações
+                        sender_type: 'system',
                         message_type: 'text'
                       }
                     });
@@ -360,7 +364,7 @@ serve(async (req) => {
                       console.error('❌ [Time Automations] Erro ao enviar mensagem:', sendError);
                       actionSuccess = false;
                     } else {
-                      console.log('✅ [Time Automations] Mensagem enviada com sucesso');
+                      console.log('✅ [Time Automations] Mensagem enviada com sucesso:', sendResult);
                     }
                     break;
                   }
