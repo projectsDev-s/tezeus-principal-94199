@@ -147,7 +147,7 @@ serve(async (req) => {
           metadata?.instanceToken ??
           metadata?.instance_token ??
           metadata?.accessToken ??
-          currentConnection.connection_secrets?.token;
+          currentConnection.connection_secrets?.[0]?.token;
 
         if (!zapiInstanceId || !zapiInstanceToken) {
           console.error('update-connection: Missing Z-API credentials in metadata:', metadata);
