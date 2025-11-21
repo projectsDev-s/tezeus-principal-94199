@@ -20,6 +20,7 @@ serve(async (req) => {
 
     const { 
       logo_url,
+      favicon_url,
       background_color,
       primary_color,
       header_color,
@@ -47,7 +48,7 @@ serve(async (req) => {
     })
 
     console.log('🎨 Updating system customization...')
-    console.log('📝 Data:', { logo_url, background_color, primary_color, header_color, sidebar_color })
+    console.log('📝 Data:', { logo_url, favicon_url, background_color, primary_color, header_color, sidebar_color })
 
     // Check if a record exists
     const { data: existing, error: selectError } = await supabase
@@ -69,6 +70,7 @@ serve(async (req) => {
         .update({
           logo_url,
           background_color,
+          favicon_url,
           primary_color,
           header_color,
           sidebar_color,
@@ -86,6 +88,7 @@ serve(async (req) => {
         .insert({
           logo_url,
           background_color,
+          favicon_url,
           primary_color,
           header_color,
           sidebar_color

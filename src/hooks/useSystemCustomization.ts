@@ -16,6 +16,8 @@ interface SystemCustomization {
 }
 
 const defaultCustomization: SystemCustomization = {
+  logo_url: '',
+  favicon_url: '',
   background_color: '#f5f5f5',
   primary_color: '#eab308',
   header_color: '#ffffff',
@@ -224,7 +226,11 @@ export function useSystemCustomization() {
     try {
       await updateCustomization({
         logo_url: '',
-        ...defaultCustomization
+        favicon_url: '',
+        background_color: defaultCustomization.background_color,
+        primary_color: defaultCustomization.primary_color,
+        header_color: defaultCustomization.header_color,
+        sidebar_color: defaultCustomization.sidebar_color
       });
     } catch (err) {
       console.error('❌ Error resetting to defaults:', err);

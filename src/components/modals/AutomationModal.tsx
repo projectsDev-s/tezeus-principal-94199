@@ -444,14 +444,6 @@ export function AutomationModal({
 
     try {
       setIsLoading(true);
-      const headers = getHeaders();
-
-      // Configurar contexto do usuário antes das chamadas RPC
-      await supabase.rpc('set_current_user_context', {
-        user_id: headers['x-system-user-id'],
-        user_email: headers['x-system-user-email']
-      });
-
       if (automation?.id) {
         // Atualizar automação existente usando função SQL
         const triggersJson = triggers.map(t => ({
@@ -476,7 +468,6 @@ export function AutomationModal({
           p_description: description.trim() || null,
           p_triggers: triggersJson as any,
           p_actions: actionsJson as any,
-          p_user_id: headers['x-system-user-id']
         });
 
         if (updateError) throw updateError;
@@ -509,7 +500,6 @@ export function AutomationModal({
           p_description: description.trim() || null,
           p_triggers: triggersJson as any,
           p_actions: actionsJson as any,
-          p_user_id: headers['x-system-user-id']
         });
 
         if (createError) throw createError;
