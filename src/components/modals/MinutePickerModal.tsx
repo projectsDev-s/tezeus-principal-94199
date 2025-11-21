@@ -7,6 +7,7 @@ interface MinutePickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onMinuteSelect: (minute: number) => void;
+  selectedMinute?: number | null;
   isDarkMode?: boolean;
 }
 
@@ -14,9 +15,17 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
   isOpen,
   onClose,
   onMinuteSelect,
+  selectedMinute = null,
   isDarkMode = false,
 }) => {
   const minutes = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, 10, 15, ..., 55
+  const [currentMinute, setCurrentMinute] = React.useState<number | null>(selectedMinute);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setCurrentMinute(selectedMinute ?? null);
+    }
+  }, [isOpen, selectedMinute]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -46,20 +55,25 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
                 const radius = 90;
                 const x = Math.cos((angle * Math.PI) / 180) * radius;
                 const y = Math.sin((angle * Math.PI) / 180) * radius;
+                const isSelected = currentMinute === minute;
                 
                 return (
                   <button
                     key={minute}
                     className={cn(
-                      "absolute w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                      "hover:bg-yellow-400 hover:text-black",
-                      isDarkMode ? "text-gray-300 hover:bg-yellow-400" : "text-gray-700 hover:bg-yellow-400"
+                      "absolute w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-transform",
+                      isDarkMode ? "text-gray-300 hover:text-black" : "text-gray-700 hover:text-black",
+                      isSelected ? "font-semibold text-gray-900" : ""
                     )}
                     style={{
                       left: `calc(50% + ${x}px - 16px)`,
                       top: `calc(50% + ${y}px - 16px)`,
+                      transform: isSelected ? 'scale(1.05)' : 'none'
                     }}
-                    onClick={() => onMinuteSelect(minute)}
+                    onClick={() => {
+                      setCurrentMinute(minute);
+                      onMinuteSelect(minute);
+                    }}
                   >
                     {minute.toString().padStart(2, '0')}
                   </button>
@@ -67,15 +81,18 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
               })}
               
               {/* Ponteiro do relógio */}
-              <div className={cn(
-                "absolute w-1 bg-yellow-400 origin-bottom",
-                "transform -translate-x-1/2"
-              )} style={{
-                height: "60px",
-                left: "50%",
-                top: "calc(50% - 60px)",
-                transform: "translateX(-50%) rotate(0deg)"
-              }} />
+          <div
+            className={cn(
+              "absolute w-1 origin-bottom transition-transform duration-300",
+              currentMinute !== null ? "bg-yellow-400" : "bg-transparent"
+            )}
+            style={{
+              height: "60px",
+              left: "50%",
+              top: "calc(50% - 60px)",
+              transform: `translateX(-50%) rotate(${(currentMinute ?? 0) * 6 - 90}deg)`
+            }}
+          />
               
               {/* Centro do relógio */}
               <div className="absolute w-3 h-3 bg-yellow-400 rounded-full" style={{

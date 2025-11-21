@@ -986,10 +986,16 @@ export function CRMContatos() {
   };
 
   const handleExportCSV = () => {
-    if (contacts.length === 0) {
+    const targetContacts = selectedIds.length > 0
+      ? contacts.filter((contact) => selectedIds.includes(contact.id))
+      : contacts;
+
+    if (targetContacts.length === 0) {
       toast({
         title: "Nenhum contato para exportar",
-        description: "Não há contatos disponíveis para exportação.",
+        description: selectedIds.length > 0
+          ? "Selecione contatos válidos para exportar."
+          : "Não há contatos disponíveis para exportação.",
         variant: "destructive",
       });
       return;
@@ -999,7 +1005,7 @@ export function CRMContatos() {
     const workspaceFieldNames = workspaceFields.map((field) => field.field_name);
     const extraInfoKeySet = new Set<string>();
 
-    contacts.forEach((contact) => {
+    targetContacts.forEach((contact) => {
       const extraInfo = contact.extra_info;
       if (extraInfo && typeof extraInfo === "object" && !Array.isArray(extraInfo)) {
         Object.keys(extraInfo).forEach((key) => {
@@ -1041,7 +1047,7 @@ export function CRMContatos() {
 
     const csvContent = [
       headers.map((header) => escapeCSVValue(header)).join(","),
-      ...contacts.map((contact) => {
+      ...targetContacts.map((contact) => {
         const createdAtFormatted = contact.created_at ? format(new Date(contact.created_at), "dd/MM/yyyy HH:mm") : "";
         const extraInfo = contact.extra_info && typeof contact.extra_info === "object" && !Array.isArray(contact.extra_info)
           ? (contact.extra_info as Record<string, unknown>)
@@ -1073,7 +1079,7 @@ export function CRMContatos() {
 
     toast({
       title: "Exportação concluída",
-      description: `${contacts.length} contatos exportados com sucesso.`,
+      description: `${targetContacts.length} contato(s) exportado(s) com sucesso.`,
     });
   };
 

@@ -130,30 +130,72 @@ serve(async (req) => {
       console.log(`Using existing contact with ID: ${contactId}`)
     }
 
-    // Check if open conversation already exists
-    let { data: existingConversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('contact_id', contactId)
-      .eq('status', 'open')
+    // Buscar conexão padrão ativa antes de verificar conversas existentes
+    const { data: defaultConnection } = await supabase
+      .from('connections')
+      .select('id, instance_name')
       .eq('workspace_id', workspaceId)
-      .maybeSingle()
+      .eq('status', 'connected')
+      .order('is_default', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    let conversationId = existingConversation?.id
+    // Buscar conversas existentes do contato no workspace
+    const { data: existingConversations, error: existingConvError } = await supabase
+      .from('conversations')
+      .select('id, status, connection_id')
+      .eq('contact_id', contactId)
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false });
+
+    if (existingConvError) {
+      console.error('❌ Erro ao buscar conversas existentes:', existingConvError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar conversas existentes' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let conversationId: string | undefined;
+    let conversationToReuse =
+      existingConversations?.find(conv => conv.connection_id && defaultConnection?.id && conv.connection_id === defaultConnection.id) ??
+      existingConversations?.[0];
+
+    if (conversationToReuse) {
+      conversationId = conversationToReuse.id;
+
+      // Reabrir conversa caso esteja fechada e garantir que está vinculada à conexão padrão
+      const updates: Record<string, any> = {
+        status: 'open',
+        updated_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
+      };
+
+      if (defaultConnection?.id) {
+        updates.connection_id = defaultConnection.id;
+        updates.evolution_instance = defaultConnection.instance_name || null;
+      }
+
+      const { error: reopenError } = await supabase
+        .from('conversations')
+        .update(updates)
+        .eq('id', conversationId)
+        .eq('workspace_id', workspaceId);
+
+      if (reopenError) {
+        console.error('❌ Erro ao reabrir conversa existente:', reopenError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao reabrir conversa existente' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`🔁 Reutilizando conversa existente ${conversationId} (status atualizado para open)`);
+    }
 
     // Create conversation if doesn't exist
     if (!conversationId) {
       console.log('📡 Creating new conversation for contact:', contactId);
-
-      // 🔌 Buscar conexão padrão ativa para o workspace
-      const { data: defaultConnection } = await supabase
-        .from('connections')
-        .select('id, instance_name')
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'connected')
-        .order('is_default', { ascending: false })
-        .limit(1)
-        .maybeSingle();
 
       if (!defaultConnection) {
         console.warn(`⚠️ Nenhuma conexão ativa encontrada para workspace ${workspaceId}`);
@@ -196,14 +238,14 @@ serve(async (req) => {
         console.log(`🎯 Verificando fila padrão do workspace: ${workspaceId}`);
         
         // Buscar fila padrão do workspace (primeira ativa, ou pela conexão padrão)
-        const { data: defaultConnection } = await supabase
+        const { data: defaultConnectionQueue } = await supabase
           .from('connections')
           .select('queue_id, instance_name')
           .eq('workspace_id', workspaceId)
           .eq('is_default', true)
           .maybeSingle();
 
-        const defaultQueueId = defaultConnection?.queue_id;
+        const defaultQueueId = defaultConnectionQueue?.queue_id;
 
         if (defaultQueueId) {
           console.log(`📋 Conexão padrão vinculada à fila: ${defaultQueueId}`);

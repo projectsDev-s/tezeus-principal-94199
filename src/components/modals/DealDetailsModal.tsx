@@ -1844,17 +1844,6 @@ export function DealDetailsModal({
                       </Popover>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        Duração (minutos)
-                      </label>
-                      <Input 
-                        type="number" 
-                        value={activityForm.durationMinutes} 
-                        onChange={(e) => setActivityForm({...activityForm, durationMinutes: Number(e.target.value)})}
-                        className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
-                      />
-                    </div>
                   </div>
 
                   {/* Upload de arquivo */}
@@ -2353,6 +2342,7 @@ export function DealDetailsModal({
         isOpen={showTimePicker}
         onClose={() => setShowTimePicker(false)}
         onTimeSelect={handleHourSelect}
+        selectedHour={selectedHour}
         isDarkMode={isDarkMode}
       />
       
@@ -2360,6 +2350,7 @@ export function DealDetailsModal({
         isOpen={showMinutePicker}
         onClose={() => setShowMinutePicker(false)}
         onMinuteSelect={handleMinuteSelect}
+        selectedMinute={selectedMinute}
         isDarkMode={isDarkMode}
       />
       

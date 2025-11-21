@@ -7,6 +7,7 @@ interface TimePickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTimeSelect: (hour: number) => void;
+  selectedHour?: number | null;
   isDarkMode?: boolean;
 }
 
@@ -14,15 +15,29 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   isOpen,
   onClose,
   onTimeSelect,
+  selectedHour = null,
   isDarkMode = false,
 }) => {
   const [period, setPeriod] = React.useState<'AM' | 'PM'>('AM');
-  const [selectedHour, setSelectedHour] = React.useState<number | null>(null);
+  const [currentHour, setCurrentHour] = React.useState<number | null>(selectedHour !== null && selectedHour !== undefined
+    ? selectedHour % 12
+    : null);
   const hours = Array.from({ length: 12 }, (_, i) => i);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const initialHour = selectedHour ?? null;
+      const displayHour = initialHour !== null ? (initialHour % 12 === 0 ? 12 : initialHour % 12) : null;
+      setCurrentHour(displayHour);
+      if (initialHour !== null) {
+        setPeriod(initialHour >= 12 ? 'PM' : 'AM');
+      }
+    }
+  }, [isOpen, selectedHour]);
 
   const handleHourSelect = (hour: number) => {
     const displayHour = hour === 0 ? 12 : hour;
-    setSelectedHour(displayHour);
+    setCurrentHour(displayHour);
     // Converter para formato 24h
     const hour24 = period === 'PM' && displayHour !== 12 ? displayHour + 12 : displayHour === 12 && period === 'AM' ? 0 : displayHour;
     onTimeSelect(hour24);
@@ -85,22 +100,20 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                 const radius = 110;
                 const x = Math.cos((angle * Math.PI) / 180) * radius;
                 const y = Math.sin((angle * Math.PI) / 180) * radius;
-                const isSelected = selectedHour === displayHour;
+                const isSelected = currentHour === displayHour;
                 
                 return (
                   <button
                     key={hour}
                     className={cn(
-                      "absolute w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all z-10",
-                      isSelected 
-                        ? "bg-yellow-400 text-gray-900 scale-110 shadow-lg" 
-                        : isDarkMode 
-                          ? "text-gray-400 hover:text-gray-200" 
-                          : "text-gray-600 hover:text-gray-900"
+                      "absolute w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all z-10 border border-transparent",
+                      isDarkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-600 hover:text-gray-900",
+                      isSelected ? "font-bold text-gray-900" : ""
                     )}
                     style={{
                       left: `calc(50% + ${x}px - 20px)`,
                       top: `calc(50% + ${y}px - 20px)`,
+                      transform: isSelected ? 'scale(1.05)' : 'none'
                     }}
                     onClick={() => handleHourSelect(displayHour)}
                   >
@@ -110,14 +123,14 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               })}
 
               {/* Ponteiro do relógio */}
-              {selectedHour !== null && (
+              {currentHour !== null && (
                 <div 
                   className="absolute w-1 bg-yellow-400 origin-bottom transition-all duration-300"
                   style={{
                     height: "90px",
                     left: "50%",
                     top: "calc(50% - 90px)",
-                    transform: `translateX(-50%) rotate(${(selectedHour * 30) - 90}deg)`,
+                    transform: `translateX(-50%) rotate(${(currentHour * 30) - 90}deg)`,
                     transformOrigin: "bottom center"
                   }} 
                 />
