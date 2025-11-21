@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface Tag {
   id: string;
   name: string;
   color: string;
-  workspace_id?: string | null;
 }
 
 interface ConversationTag {
@@ -17,45 +15,29 @@ interface ConversationTag {
   tag: Tag;
 }
 
-export function useConversationTags(conversationId?: string, workspaceIdOverride?: string | null) {
+export function useConversationTags(conversationId?: string) {
   const [conversationTags, setConversationTags] = useState<ConversationTag[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { selectedWorkspace } = useWorkspace();
-
-  const workspaceId = workspaceIdOverride ?? selectedWorkspace?.workspace_id ?? null;
 
   // Fetch tags already assigned to conversation
   const fetchConversationTags = async () => {
-    if (!conversationId) {
-      setConversationTags([]);
-      return;
-    }
+    if (!conversationId) return;
     
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('conversation_tags')
         .select(`
           id,
           conversation_id,
           tag_id,
-          tag:tags(id, name, color, workspace_id)
+          tag:tags(id, name, color)
         `)
         .eq('conversation_id', conversationId);
 
-      if (workspaceId) {
-        query = query.eq('tag.workspace_id', workspaceId);
-      }
-
-      const { data, error } = await query;
-
       if (error) throw error;
-      const filtered = (data || []).filter(item => {
-        if (!workspaceId) return true;
-        return item.tag?.workspace_id === workspaceId;
-      });
-      setConversationTags(filtered);
+      setConversationTags(data || []);
     } catch (err) {
       console.error('Error fetching conversation tags:', err);
     }
@@ -63,16 +45,10 @@ export function useConversationTags(conversationId?: string, workspaceIdOverride
 
   // Fetch all available tags
   const fetchAvailableTags = async () => {
-    if (!workspaceId) {
-      setAvailableTags([]);
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from('tags')
-        .select('id, name, color, workspace_id')
-        .eq('workspace_id', workspaceId)
+        .select('id, name, color')
         .order('name');
 
       if (error) throw error;
@@ -91,15 +67,11 @@ export function useConversationTags(conversationId?: string, workspaceIdOverride
       // First, get the conversation to find the contact
       const { data: convData, error: convError } = await supabase
         .from('conversations')
-        .select('contact_id, workspace_id')
+        .select('contact_id')
         .eq('id', conversationId)
         .single();
       
       if (convError) throw convError;
-
-      if (workspaceId && convData.workspace_id && convData.workspace_id !== workspaceId) {
-        throw new Error('A conversa pertence a outro workspace.');
-      }
       
       // Add tag to conversation
       const { error: convTagError } = await supabase
@@ -156,11 +128,11 @@ export function useConversationTags(conversationId?: string, workspaceIdOverride
 
   useEffect(() => {
     fetchAvailableTags();
-  }, [workspaceId]);
+  }, []);
 
   useEffect(() => {
     fetchConversationTags();
-  }, [conversationId, workspaceId]);
+  }, [conversationId]);
 
   return {
     conversationTags,
@@ -171,7 +143,7 @@ export function useConversationTags(conversationId?: string, workspaceIdOverride
     refreshTags: fetchConversationTags,
     fetchContactTags: async (contactId: string) => {
       // Function to refresh contact tags externally
-      let query = supabase
+      return await supabase
         .from('contact_tags')
         .select(`
           id,
@@ -179,17 +151,10 @@ export function useConversationTags(conversationId?: string, workspaceIdOverride
           tags (
             id,
             name,
-            color,
-            workspace_id
+            color
           )
         `)
         .eq('contact_id', contactId);
-
-      if (workspaceId) {
-        query = query.eq('tags.workspace_id', workspaceId);
-      }
-
-      return await query;
     }
   };
 }

@@ -7,12 +7,11 @@ import { useConversationTags } from "@/hooks/useConversationTags";
 
 interface AddTagButtonProps {
   conversationId: string;
-  workspaceId?: string | null;
   isDarkMode?: boolean;
   onTagAdded?: () => void;
 }
 
-export function AddTagButton({ conversationId, workspaceId = null, isDarkMode = false, onTagAdded }: AddTagButtonProps) {
+export function AddTagButton({ conversationId, isDarkMode = false, onTagAdded }: AddTagButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -21,7 +20,7 @@ export function AddTagButton({ conversationId, workspaceId = null, isDarkMode = 
     availableTags,
     conversationTags,
     addTagToConversation
-  } = useConversationTags(conversationId, workspaceId);
+  } = useConversationTags(conversationId);
 
   const handleMouseEnter = () => {
     if (hideTimeout) {

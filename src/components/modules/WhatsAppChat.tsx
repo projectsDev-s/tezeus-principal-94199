@@ -152,13 +152,9 @@ export function WhatsAppChat({
     selectedWorkspace
   } = useWorkspace();
   const { members: workspaceMembers } = useWorkspaceMembers(selectedWorkspace?.workspace_id);
-  const visibleWorkspaceMembers = useMemo(
-    () => workspaceMembers.filter(member => member.role !== 'master'),
-    [workspaceMembers]
-  );
   const assignedUsersMap = useMemo(() => {
     const map = new Map<string, { name?: string | null; avatar?: string | null }>();
-    visibleWorkspaceMembers.forEach(member => {
+    workspaceMembers.forEach(member => {
       const userId = member.user?.id || member.user_id;
       if (userId) {
         map.set(userId, {
@@ -168,7 +164,7 @@ export function WhatsAppChat({
       }
     });
     return map;
-  }, [visibleWorkspaceMembers]);
+  }, [workspaceMembers]);
   const {
     updateConversationAgentStatus
   } = usePipelinesContext();
@@ -2109,11 +2105,11 @@ export function WhatsAppChat({
                       {selectedConversation.contact?.name}
                     </h3>
                     <div className="flex items-center gap-2">
-                      <ContactTags contactId={selectedConversation.contact.id} workspaceId={selectedConversation.workspace_id} isDarkMode={isDarkMode} onTagRemoved={() => {
+                      <ContactTags contactId={selectedConversation.contact.id} isDarkMode={isDarkMode} onTagRemoved={() => {
                     // Refresh conversations after removing tag
                     fetchConversations();
                   }} />
-                      <AddTagButton conversationId={selectedConversation.id} workspaceId={selectedConversation.workspace_id} isDarkMode={isDarkMode} onTagAdded={() => {
+                      <AddTagButton conversationId={selectedConversation.id} isDarkMode={isDarkMode} onTagAdded={() => {
                     // Refresh conversations after adding tag
                     fetchConversations();
                   }} />
@@ -2659,7 +2655,7 @@ export function WhatsAppChat({
         open={transferModalOpen}
         onOpenChange={setTransferModalOpen}
         conversation={selectedConversation}
-        users={visibleWorkspaceMembers}
+        users={workspaceMembers}
         queues={queues}
         connections={workspaceConnections}
         isLoadingConnections={connectionsLoading}

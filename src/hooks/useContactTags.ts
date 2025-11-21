@@ -43,11 +43,11 @@ export function useContactTags(contactId?: string | null, workspaceIdOverride?: 
       const { data, error } = await query;
 
       if (error) throw error;
-      const tags = data?.map(item => item.tags).filter((tag): tag is Tag => Boolean(tag)) || [];
+      const tags = data?.map(item => item.tags).filter((tag): tag is { id: string; name: string; color: string; workspace_id: string | null } => Boolean(tag)) || [];
       const filteredTags = workspaceId
         ? tags.filter(tag => tag.workspace_id === workspaceId)
         : tags;
-      setContactTags(filteredTags);
+      setContactTags(filteredTags as Tag[]);
     } catch (err) {
       console.error('Error fetching contact tags:', err);
     }

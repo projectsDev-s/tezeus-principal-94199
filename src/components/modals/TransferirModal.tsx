@@ -35,12 +35,20 @@ export function TransferirModal({
   const [targetColumns, setTargetColumns] = useState<any[]>([]);
   const [targetQueueId, setTargetQueueId] = useState<string>("none");
   const [targetResponsibleId, setTargetResponsibleId] = useState<string>("none");
-  const [workspaceUsers, setWorkspaceUsers] = useState<Array<{ id: string; name?: string | null; email?: string | null }>>([]);
+  const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Lógica de desabilitação: se fila selecionada (não "none"), desabilitar responsável e vice-versa
   const isQueueDisabled = !!targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none";
-  const isResponsibleDisabled = !!targetQueueId && targetQueueId !== "" && targetQueueId !== "none";
+  const isResponsibleDisabled = !!targetQueueId && targetQueueId !== "" && targetQueueId !== "none" && targetQueueId !== "remove";
+
+  // Quando seleciona uma fila válida, limpa o responsável para aplicar as regras da fila
+  useEffect(() => {
+    if (targetQueueId && targetQueueId !== "" && targetQueueId !== "none" && targetQueueId !== "remove") {
+      console.log('🔄 Fila selecionada, limpando responsável para aplicar regras da fila');
+      setTargetResponsibleId("none");
+    }
+  }, [targetQueueId]);
   
   const { pipelines } = usePipelinesContext();
   const { toast } = useToast();
@@ -95,24 +103,11 @@ export function TransferirModal({
 
       // Filter only users from current workspace
       const allUsers = data.data || [];
-      const users = allUsers
-        .map((user: any) => {
-          if (!selectedWorkspace?.workspace_id) return null;
-          const workspaceEntry = user.workspaces?.find(
-            (ws: any) => ws.id === selectedWorkspace.workspace_id
-          );
-          if (!workspaceEntry) return null;
-          const role = workspaceEntry.role || workspaceEntry.workspace_role || workspaceEntry?.pivot?.role;
-          if (role === 'master' || role === 'MASTER') {
-            return null;
-          }
-          return {
-            id: user.id,
-            name: user.name || null,
-            email: user.email || null,
-          };
-        })
-        .filter(Boolean) as Array<{ id: string; name?: string | null; email?: string | null }>;
+      const users = allUsers.filter((user: any) => 
+        user.workspaces?.some((ws: any) => 
+          ws.id === selectedWorkspace?.workspace_id
+        )
+      );
       
       console.log('✅ Loaded workspace users:', users.length);
       setWorkspaceUsers(users);
@@ -232,29 +227,25 @@ export function TransferirModal({
                 if (targetQueueId && targetQueueId !== "" && targetQueueId !== "none" && targetQueueId !== "remove") {
                   console.log(`🔧 Aplicando regras da fila "${queueDetails?.name}" à conversa ${cardData.conversation_id}`);
                   console.log(`🤖 Agente da fila: ${queueDetails?.ai_agent_id} (${queueDetails?.ai_agent?.name})`);
+                  console.log(`📋 Tipo de distribuição: ${queueDetails?.distribution_type}`);
                   
-                  // Usar edge function para atualizar fila e agente (garante bypass de RLS)
+                  // Primeiro: Atualizar fila e remover responsável atual (será redistribuído pela fila)
                   const updateBody: any = {
                     conversation_id: cardData.conversation_id,
                     queue_id: targetQueueId,
+                    assigned_user_id: null, // Remover responsável para aplicar distribuição
                     activate_queue_agent: true
                   };
 
-                  // Se definiu responsável, incluir no update
-                  if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none") {
-                    updateBody.assigned_user_id = targetResponsibleId;
-                    console.log(`👤 Responsável será atualizado: ${targetResponsibleId}`);
-                  }
-
-                  console.log('📤 Chamando update-conversation-queue com:', JSON.stringify(updateBody, null, 2));
+                  console.log('📤 Chamando update-conversation-queue para atualizar fila e remover responsável:', JSON.stringify(updateBody, null, 2));
                   
                   const { data: updateResult, error: updateError } = await supabase.functions.invoke(
                     'update-conversation-queue',
                     {
                       body: updateBody,
                       headers: {
-                        ...headers,
-                        'x-force-queue-history': 'true'  // Forçar registro mesmo se fila não mudou na conversa
+                        'x-force-queue-history': 'true',  // Forçar registro mesmo se fila não mudou na conversa
+                        'x-system-user-id': selectedWorkspace?.workspace_id || ''
                       }
                     }
                   );
@@ -269,11 +260,11 @@ export function TransferirModal({
                       variant: "default",
                     });
                   } else {
-                    console.log('✅ Fila e agente atualizados com sucesso:', updateResult);
+                    console.log('✅ Fila e agente atualizados, responsável removido');
                     
-                    // Se não definiu responsável ("none" ou vazio) E a fila tem distribuição, aplicar distribuição
-                    if ((!targetResponsibleId || targetResponsibleId === "" || targetResponsibleId === "none") && queueDetails?.distribution_type !== 'nao_distribuir') {
-                      console.log('🔄 Aplicando distribuição automática da fila');
+                    // Segundo: Aplicar distribuição da fila (se houver distribuição configurada)
+                    if (queueDetails?.distribution_type && queueDetails.distribution_type !== 'nao_distribuir') {
+                      console.log(`🔄 Aplicando distribuição automática da fila (tipo: ${queueDetails.distribution_type})`);
                       
                       try {
                         const { data: distributionData, error: distributionError } = await supabase.functions.invoke(
@@ -287,51 +278,36 @@ export function TransferirModal({
                           }
                         );
 
-                        console.log('📦 Resultado assign-conversation-to-queue:', JSON.stringify({
-                          data: distributionData,
-                          error: distributionError
-                        }, null, 2));
-
                         if (distributionError) {
-                          console.error('⚠️ Erro na distribuição automática (não-bloqueante):', distributionError);
+                          console.error('⚠️ Erro na distribuição automática:', distributionError);
+                          toast({
+                            title: "Aviso",
+                            description: "Fila atualizada, mas não foi possível distribuir automaticamente",
+                            variant: "default",
+                          });
                         } else {
                           console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
-                          const distributionResult = distributionData || {};
-                          const assignedUserId =
-                            distributionResult.assigned_user_id ??
-                            distributionResult.assignedUserId ??
-                            distributionResult.assigned_user?.id ??
-                            distributionResult.assignedUser?.id ??
-                            distributionResult.distribution?.assigned_user_id ??
-                            distributionResult.distribution?.assignedUserId ??
-                            distributionResult.distribution?.assigned_user?.id ??
-                            distributionResult.distribution?.assignedUser?.id ??
-                            null;
-
-                          if (assignedUserId) {
-                            console.log(`👤 Atualizando card ${cardId} com responsável distribuído ${assignedUserId}`);
-                            const { error: updateCardResponsibleError } = await supabase.functions.invoke(
+                          
+                          // Atualizar responsible_user_id no card se houver usuário atribuído
+                          if (distributionData?.assigned_user_id) {
+                            await supabase.functions.invoke(
                               `pipeline-management/cards?id=${cardId}`,
                               {
                                 method: 'PUT',
                                 headers,
                                 body: {
-                                  responsible_user_id: assignedUserId
-                                }
+                                  responsible_user_id: distributionData.assigned_user_id
+                                },
                               }
                             );
-                            if (updateCardResponsibleError) {
-                              console.error('❌ Erro ao sincronizar responsável distribuído no card:', updateCardResponsibleError);
-                            } else {
-                              console.log('✅ Responsável distribuído sincronizado no card!');
-                            }
-                          } else {
-                            console.warn('⚠️ Distribuição executada, mas nenhum responsável foi retornado.');
+                            console.log(`✅ Responsável ${distributionData.assigned_user_id} atribuído ao card`);
                           }
                         }
                       } catch (distError) {
-                        console.error('⚠️ Exceção na distribuição automática (não-bloqueante):', distError);
+                        console.error('⚠️ Exceção na distribuição automática:', distError);
                       }
+                    } else {
+                      console.log('⏭️ Fila não distribui automaticamente, conversa fica sem responsável');
                     }
                   }
                 } else if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none" && targetResponsibleId !== "remove") {
@@ -344,8 +320,7 @@ export function TransferirModal({
                       body: {
                         conversation_id: cardData.conversation_id,
                         assigned_user_id: targetResponsibleId
-                      },
-                      headers
+                      }
                     }
                   );
 
@@ -374,8 +349,7 @@ export function TransferirModal({
                   const { data: removeResult, error: removeError } = await supabase.functions.invoke(
                     'update-conversation-queue',
                     {
-                      body: removeBody,
-                      headers
+                      body: removeBody
                     }
                   );
 
