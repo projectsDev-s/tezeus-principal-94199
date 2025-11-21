@@ -169,7 +169,8 @@ export function WhatsAppChat({
     updateConversationAgentStatus
   } = usePipelinesContext();
   const {
-    user
+    user,
+    hasRole
   } = useAuth();
   const {
     tags
@@ -314,6 +315,8 @@ export function WhatsAppChat({
 
   // Estados para as abas baseadas no papel
   const [activeTab, setActiveTab] = useState<string>('all');
+
+  const isMasterUser = hasRole(['master']);
 
   // Definir abas baseado no papel do usuário  
   const getUserTabs = () => {
@@ -547,11 +550,12 @@ export function WhatsAppChat({
 
   // Marcar como lida automaticamente ao abrir conversa
   useEffect(() => {
+    if (isMasterUser) return;
     if (selectedConversation && conversationNotifications.has(selectedConversation.id)) {
       console.log('📖 Marcando conversa como lida:', selectedConversation.contact.name);
       markContactAsRead(selectedConversation.id);
     }
-  }, [selectedConversation?.id]);
+  }, [selectedConversation?.id, isMasterUser]);
 
 
   // ✅ Enviar mensagem - OTIMIZADO
@@ -920,10 +924,11 @@ export function WhatsAppChat({
     clearMessages(); // Limpar mensagens da conversa anterior (somente na troca)
     await loadMessages(conversation.id, true); // ✅ forceRefresh = true
     
-    // Marcar notificações e conversa como lidas SEMPRE ao abrir conversa
-    console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
-    markContactAsRead(conversation.id); // atualiza sino/notificações
-    try { await markAsRead(conversation.id); } catch (e) { console.warn('⚠️ markAsRead falhou (continua):', e); }
+    if (!isMasterUser) {
+      console.log('🔔 [WhatsAppChat] Marcando conversa como lida:', conversation.id);
+      markContactAsRead(conversation.id); // atualiza sino/notificações
+      try { await markAsRead(conversation.id); } catch (e) { console.warn('⚠️ markAsRead falhou (continua):', e); }
+    }
   };
 
   // ✅ Evitar loop: abrir automaticamente a conversa selecionada apenas quando mudar o ID

@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from './useAuth';
 import { useNotificationSound } from './useNotificationSound';
-import { useWorkspaceRole } from './useWorkspaceRole';
 
 export interface NotificationMessage {
   id: string;
@@ -20,9 +19,9 @@ export interface NotificationMessage {
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
   const { selectedWorkspace } = useWorkspace();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const { playNotificationSound } = useNotificationSound();
-  const { isUser } = useWorkspaceRole();
+  const isMaster = hasRole(['master']);
 
   // Buscar notificações
   const fetchNotifications = async () => {
@@ -40,20 +39,44 @@ export function useNotifications() {
           conversations!inner(assigned_user_id)
         `)
         .eq('workspace_id', selectedWorkspace.workspace_id)
-        .eq('user_id', user.id)
         .eq('status', 'unread');
 
-      // Se for usuário de nível 'user', aplicar filtro de atribuição
-      if (isUser(selectedWorkspace.workspace_id)) {
-        console.log('🔒 [useNotifications] Aplicando filtro de role "user"');
-        query = query.or(`conversations.assigned_user_id.is.null,conversations.assigned_user_id.eq.${user.id}`);
+      if (!isMaster && user?.id) {
+        query = query
+          .or(
+            [
+              `user_id.eq.${user.id}`,
+              `user_id.is.null`,
+              `conversations.assigned_user_id.eq.${user.id}`,
+              `conversations.assigned_user_id.is.null`
+            ].join(',')
+          );
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedNotifications: NotificationMessage[] = (data || []).map(notif => ({
+      const filteredData = (data || []).filter((notif: any) => {
+        if (isMaster) {
+          return true;
+        }
+
+        const assignedUserId = notif.conversations?.assigned_user_id ?? null;
+        const notificationUserId = notif.user_id ?? null;
+
+        if (notificationUserId && notificationUserId === user?.id) {
+          return true;
+        }
+
+        if (!assignedUserId) {
+          return true;
+        }
+
+        return assignedUserId === user?.id;
+      });
+
+      const formattedNotifications: NotificationMessage[] = filteredData.map((notif: any) => ({
         id: notif.id,
         conversationId: notif.conversation_id,
         contactId: notif.contact_id,
@@ -154,7 +177,12 @@ export function useNotifications() {
 
   // Marcar conversa como lida
   const markContactAsRead = async (conversationId: string) => {
-    if (!user?.id) return;
+    if (!user?.id || isMaster) {
+      if (isMaster) {
+        console.log('🔒 [useNotifications] Usuário master não altera notificações');
+      }
+      return;
+    }
 
     try {
       // Atualização otimista imediata para refletir no sino e nos cards
@@ -168,7 +196,6 @@ export function useNotifications() {
           status: 'read',
           read_at: new Date().toISOString()
         })
-        .eq('user_id', user.id)
         .eq('conversation_id', conversationId)
         .eq('status', 'unread');
 
@@ -184,7 +211,12 @@ export function useNotifications() {
 
   // Marcar todas como lidas
   const markAllAsRead = async () => {
-    if (!user?.id || !selectedWorkspace?.workspace_id) return;
+    if (!user?.id || !selectedWorkspace?.workspace_id || isMaster) {
+      if (isMaster) {
+        console.log('🔒 [useNotifications] Usuário master não limpa notificações');
+      }
+      return;
+    }
 
     try {
       const { error } = await supabase
