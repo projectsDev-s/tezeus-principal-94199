@@ -102,6 +102,18 @@ export function CRMContatos() {
     selectedWorkspace?.workspace_id || null,
   );
 
+  const buildExtraInfoObject = useCallback((fields: Array<{ key: string; value: string }>) => {
+    const result: Record<string, string> = {};
+
+    fields.forEach((field) => {
+      const key = field.key?.trim();
+      if (!key) return;
+      result[key] = field.value?.trim() ?? "";
+    });
+
+    return result;
+  }, []);
+
   // Fetch contacts directly from contacts table
   const fetchContacts = useCallback(async () => {
     try {
@@ -193,6 +205,7 @@ export function CRMContatos() {
 
       // Get contact tags - only if we have contacts
       let contactTagsData: any[] = [];
+      let contactExtraInfoData: any[] = [];
       if (contactIds.length > 0) {
         const { data: tagsData, error: tagsError } = await supabase
           .from("contact_tags")
@@ -214,10 +227,35 @@ export function CRMContatos() {
         } else {
           contactTagsData = tagsData || [];
         }
+
+        const { data: extraInfoData, error: extraInfoError } = await supabase
+          .from("contact_extra_info")
+          .select("contact_id, field_name, field_value")
+          .in("contact_id", contactIds);
+
+        if (extraInfoError) {
+          console.warn("⚠️ [CRMContatos] Error fetching extra info (non-critical):", extraInfoError);
+        } else {
+          contactExtraInfoData = extraInfoData || [];
+        }
       }
 
       // Map tags to contacts
       const contactsWithTags = contactsData.map((contact) => {
+        const mergedExtraInfo: Record<string, any> = {
+          ...((contact.extra_info as Record<string, any>) || {}),
+        };
+
+        if (contactExtraInfoData.length > 0) {
+          contactExtraInfoData
+            .filter((extra) => extra.contact_id === contact.id)
+            .forEach((extra) => {
+              const key = extra.field_name;
+              if (!key) return;
+              mergedExtraInfo[key] = extra.field_value ?? "";
+            });
+        }
+
         const contactTags =
           contactTagsData
             .filter((ct) => ct.contact_id === contact.id)
@@ -235,7 +273,7 @@ export function CRMContatos() {
           created_at: contact.created_at, // Manter o original para exportação
           tags: contactTags,
           profile_image_url: contact.profile_image_url,
-          extra_info: (contact.extra_info as Record<string, any>) || {},
+          extra_info: mergedExtraInfo,
         };
       });
 
@@ -312,6 +350,7 @@ export function CRMContatos() {
         // Buscar tags opcionalmente (não bloquear se falhar)
         const contactIds = contactsData.map((c) => c.id);
         let contactTagsData: any[] = [];
+        let contactExtraInfoData: any[] = [];
         
         if (contactIds.length > 0) {
           try {
@@ -324,10 +363,35 @@ export function CRMContatos() {
           } catch (tagsError) {
             console.warn("⚠️ [CRMContatos] Tags error (non-critical):", tagsError);
           }
+
+          try {
+            const { data: extraInfoData } = await supabase
+              .from("contact_extra_info")
+              .select("contact_id, field_name, field_value")
+              .in("contact_id", contactIds);
+
+            contactExtraInfoData = extraInfoData || [];
+          } catch (extraError) {
+            console.warn("⚠️ [CRMContatos] Extra info error (non-critical):", extraError);
+          }
         }
 
         // Mapear contatos com tags
         const contactsWithTags = contactsData.map((contact) => {
+          const mergedExtraInfo: Record<string, any> = {
+            ...((contact.extra_info as Record<string, any>) || {}),
+          };
+
+          if (contactExtraInfoData.length > 0) {
+            contactExtraInfoData
+              .filter((extra) => extra.contact_id === contact.id)
+              .forEach((extra) => {
+                const key = extra.field_name;
+                if (!key) return;
+                mergedExtraInfo[key] = extra.field_value ?? "";
+              });
+          }
+
           const contactTags =
             contactTagsData
               .filter((ct) => ct.contact_id === contact.id)
@@ -345,7 +409,7 @@ export function CRMContatos() {
             created_at: contact.created_at, // Manter o original para exportação
             tags: contactTags,
             profile_image_url: contact.profile_image_url,
-            extra_info: (contact.extra_info as Record<string, any>) || {},
+            extra_info: mergedExtraInfo,
           };
         });
 
@@ -709,6 +773,15 @@ export function CRMContatos() {
   const handleEditContact = async (contact: Contact) => {
     setEditingContact(contact);
 
+    const fieldsMap = new Map<string, string>();
+
+    if (contact.extra_info && typeof contact.extra_info === "object") {
+      Object.entries(contact.extra_info).forEach(([key, value]) => {
+        if (!key) return;
+        fieldsMap.set(key, value !== null && value !== undefined ? String(value) : "");
+      });
+    }
+
     // Load existing custom fields from contact_extra_info table
     try {
       const { data: extraInfoData, error } = await supabase
@@ -720,14 +793,20 @@ export function CRMContatos() {
       if (error) throw error;
 
       if (extraInfoData && extraInfoData.length > 0) {
-        // Map database fields to form fields
-        const existingFields = extraInfoData.map((field) => ({
-          key: field.field_name,
-          value: field.field_value,
-        }));
-        setCustomFields(existingFields);
+        extraInfoData.forEach((field) => {
+          if (!field.field_name) return;
+          fieldsMap.set(field.field_name, field.field_value ?? "");
+        });
+      }
+
+      if (fieldsMap.size > 0) {
+        setCustomFields(
+          Array.from(fieldsMap.entries()).map(([key, value]) => ({
+            key,
+            value,
+          })),
+        );
       } else {
-        // No existing fields
         setCustomFields([]);
       }
     } catch (error) {
@@ -782,6 +861,8 @@ export function CRMContatos() {
     }
 
     try {
+      const extraInfoObject = buildExtraInfoObject(customFields);
+
       if (isCreateMode) {
         // Sanitizar telefone adicionando 55 na frente se não tiver
         let sanitizedPhone = editingContact.phone.trim();
@@ -797,6 +878,7 @@ export function CRMContatos() {
             phone: sanitizedPhone || null,
             email: editingContact.email.trim() || null,
             workspace_id: selectedWorkspace!.workspace_id,
+            extra_info: Object.keys(extraInfoObject).length > 0 ? extraInfoObject : null,
           })
           .select()
           .single();
@@ -835,6 +917,7 @@ export function CRMContatos() {
             email: editingContact.email.trim() || null,
             updated_at: new Date().toISOString(),
             // phone removido - não pode ser alterado para preservar histórico
+            extra_info: Object.keys(extraInfoObject).length > 0 ? extraInfoObject : null,
           })
           .eq("id", editingContact.id);
         if (error) throw error;
@@ -869,6 +952,7 @@ export function CRMContatos() {
                   name: editingContact.name.trim(),
                   phone: editingContact.phone.trim(),
                   email: editingContact.email.trim(),
+                  extra_info: extraInfoObject,
                 }
               : contact,
           ),
@@ -1052,7 +1136,7 @@ export function CRMContatos() {
         const extraInfo = contact.extra_info && typeof contact.extra_info === "object" && !Array.isArray(contact.extra_info)
           ? (contact.extra_info as Record<string, unknown>)
           : {};
-        const tagsAsString = (contact.tags || []).map((tag) => tag.name).filter(Boolean).join("; ");
+        const tagsAsString = (contact.tags || []).map((tag) => tag.name).filter(Boolean).join(", ");
 
         const rowValues = [
           escapeCSVValue(contact.name),

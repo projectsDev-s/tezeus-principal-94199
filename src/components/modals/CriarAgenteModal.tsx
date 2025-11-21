@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Eye, EyeOff, FileText, Trash } from "lucide-react";
+import { FileText, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
@@ -29,7 +29,6 @@ interface CriarAgenteModalProps {
 interface FormData {
   workspace_id: string;
   name: string;
-  api_key: string;
   model: string;
   system_instructions: string;
   temperature: number;
@@ -50,7 +49,6 @@ export function CriarAgenteModal({
   onAgentCreated
 }: CriarAgenteModalProps) {
   const [loading, setLoading] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const { workspaces } = useWorkspaces();
   const queryClient = useQueryClient();
@@ -58,7 +56,6 @@ export function CriarAgenteModal({
   const [formData, setFormData] = useState<FormData>({
     workspace_id: '',
     name: '',
-    api_key: '',
     model: 'gpt-4o-mini',
     system_instructions: '',
     temperature: 0.7,
@@ -147,7 +144,7 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
   };
 
   const handleSave = async () => {
-    if (!formData.workspace_id || !formData.name || !formData.api_key) {
+    if (!formData.workspace_id || !formData.name) {
       toast.error('Por favor, preencha todos os campos obrigatórios');
       return;
     }
@@ -216,7 +213,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
           id: agentId,
           workspace_id: formData.workspace_id,
           name: formData.name,
-          api_key_encrypted: formData.api_key,
           model: formData.model,
           system_instructions: formData.system_instructions,
           temperature: formData.temperature,
@@ -249,7 +245,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
       setFormData({
         workspace_id: '',
         name: '',
-        api_key: '',
         model: 'gpt-4o-mini',
         system_instructions: '',
         temperature: 0.7,
@@ -439,28 +434,6 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
                   <SelectItem value="sora-2-pro">sora-2-pro</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          {/* API Key */}
-          <div className="space-y-2">
-            <Label htmlFor="api_key">API Key OpenAI</Label>
-            <div className="flex gap-2">
-              <Input
-                id="api_key"
-                type={showApiKey ? "text" : "password"}
-                value={formData.api_key}
-                onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                placeholder="sk-..."
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setShowApiKey(!showApiKey)}
-              >
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
 

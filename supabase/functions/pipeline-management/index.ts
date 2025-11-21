@@ -1262,7 +1262,8 @@ serve(async (req) => {
                   .eq('automation_id', automation.id)
                   .eq('card_id', (card as any).id)
                   .eq('column_id', columnId)
-                  .single();
+                  .gte('executed_at', cardMovedAt.toISOString())
+                  .maybeSingle();
 
                 if (existingExecution) {
                   console.log(`   ⏭️  Automação já foi executada para este card nesta coluna, pulando`);
