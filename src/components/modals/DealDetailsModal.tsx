@@ -1167,7 +1167,13 @@ export function DealDetailsModal({
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
-      // Após selecionar a data, abrir o seletor de hora
+      setShowTimePicker(true);
+      return;
+    }
+
+    // Se o usuário clicar novamente no mesmo dia (ex: hoje),
+    // manter a data atual e abrir o seletor de hora
+    if (!date && selectedDate) {
       setShowTimePicker(true);
     }
   };

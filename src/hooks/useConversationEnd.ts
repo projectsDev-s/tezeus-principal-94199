@@ -27,8 +27,8 @@ export const useConversationEnd = () => {
       }
 
       toast({
-        title: "Conversa encerrada",
-        description: "A conversa foi encerrada com sucesso",
+        title: "Responsável desvinculado",
+        description: "O atendimento foi liberado sem encerrar a conversa.",
       });
 
       return { success: true, conversation: response.conversation };

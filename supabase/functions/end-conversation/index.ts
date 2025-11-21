@@ -70,11 +70,31 @@ serve(async (req) => {
       )
     }
 
-    // Update conversation status to 'closed'
+    // Buscar conversa atual para registrar histórico e preservar queue/responsável antes da alteração
+    const { data: currentConversation, error: fetchError } = await supabaseClient
+      .from('conversations')
+      .select('assigned_user_id, queue_id, status')
+      .eq('id', conversation_id)
+      .eq('workspace_id', workspaceId)
+      .single()
+
+    if (fetchError || !currentConversation) {
+      console.log('❌ Error fetching conversation:', fetchError)
+      return new Response(
+        JSON.stringify({ success: false, error: 'Conversa não encontrada' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Atualizar conversa removendo responsável e fila, mantendo status
     const { data: updatedConversation, error: updateError } = await supabaseClient
       .from('conversations')
       .update({ 
-        status: 'closed',
+        assigned_user_id: null,
+        assigned_at: null,
+        queue_id: null,
+        agente_ativo: false,
+        agent_active_id: null,
         updated_at: new Date().toISOString()
       })
       .eq('id', conversation_id)
@@ -85,18 +105,45 @@ serve(async (req) => {
     if (updateError || !updatedConversation) {
       console.log('❌ Error updating conversation:', updateError)
       return new Response(
-        JSON.stringify({ success: false, error: 'Erro ao encerrar conversa' }),
+        JSON.stringify({ success: false, error: 'Erro ao desvincular responsável' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`✅ Conversation ${conversation_id} ended successfully`)
+    // Registrar no histórico a remoção do responsável
+    if (currentConversation.assigned_user_id) {
+      await supabaseClient
+        .from('conversation_assignments')
+        .insert({
+          conversation_id,
+          action: currentConversation.status === 'closed' ? 'unassign_closed' : 'unassign',
+          from_assigned_user_id: currentConversation.assigned_user_id,
+          to_assigned_user_id: null,
+          changed_by: systemUserId
+        })
+    }
+
+    // Registrar histórico de remoção de fila caso existisse
+    if (currentConversation.queue_id) {
+      await supabaseClient
+        .from('conversation_assignments')
+        .insert({
+          conversation_id,
+          action: 'queue_transfer',
+          from_queue_id: currentConversation.queue_id,
+          to_queue_id: null,
+          changed_by: systemUserId,
+          changed_at: new Date().toISOString()
+        })
+    }
+
+    console.log(`✅ Conversation ${conversation_id} unassigned successfully`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         conversation: updatedConversation,
-        message: 'Conversa encerrada com sucesso'
+        message: 'Responsável desvinculado com sucesso'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
