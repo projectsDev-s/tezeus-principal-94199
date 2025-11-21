@@ -1119,18 +1119,31 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
       // 3. Criar conversa apenas se não existe
       if (!conversationId) {
-        const {
-          data: conversationData,
-          error: conversationError
-        } = await supabase.functions.invoke('create-quick-conversation', {
-          body: {
-            phoneNumber: contact.phone,
-            orgId: effectiveWorkspaceId
-          },
-          headers: getHeaders(effectiveWorkspaceId)
-        });
-        if (conversationError) throw conversationError;
-        conversationId = conversationData?.conversationId;
+      const {
+        data: conversationData,
+        error: conversationError
+      } = await supabase.functions.invoke('create-quick-conversation', {
+        body: {
+          phoneNumber: contact.phone,
+          orgId: effectiveWorkspaceId
+        },
+        headers: getHeaders(effectiveWorkspaceId)
+      });
+
+      if (conversationError) {
+        console.error('Erro create-quick-conversation:', conversationError);
+        if (conversationError.message?.includes('instância WhatsApp')) {
+          toast({
+            title: "Número inválido",
+            description: "Este número pertence a uma instância WhatsApp e não pode ser usado como contato.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw conversationError;
+      }
+
+      conversationId = conversationData?.conversationId;
       }
 
       // 4. Validar se a coluna selecionada existe
