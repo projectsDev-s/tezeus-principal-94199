@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info } from "lucide-react";
+import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info, FileSpreadsheet, File as FileIcon } from "lucide-react";
 import { ChatModal } from "./ChatModal";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,7 @@ import { AddContactTagButton } from "@/components/chat/AddContactTagButton";
 import { CreateActivityModal } from "./CreateActivityModal";
 import { TimePickerModal } from "./TimePickerModal";
 import { MinutePickerModal } from "./MinutePickerModal";
-import { ImageModal } from "@/components/chat/ImageModal";
+import { AttachmentPreviewModal } from "./AttachmentPreviewModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
@@ -48,6 +48,9 @@ interface Activity {
   is_completed: boolean;
   attachment_url?: string | null;
   attachment_name?: string | null;
+  pipeline_card_id?: string | null;
+  contact_id?: string;
+  workspace_id?: string;
   users?: {
     name: string;
   };
@@ -96,14 +99,16 @@ function ActivityItem({
   contactId,
   onComplete,
   onUpdate,
-  onAttachmentClick
+  onAttachmentClick,
+  onDelete
 }: {
   activity: Activity;
   isDarkMode: boolean;
   contactId: string;
   onComplete: (id: string) => void;
   onUpdate: (contactId: string) => void;
-  onAttachmentClick: (attachment: { url: string; name: string }) => void;
+  onAttachmentClick: (attachment: { url: string; name: string; type?: string }) => void;
+  onDelete: (activity: Activity) => void;
 }) {
   const [isEditingActivity, setIsEditingActivity] = useState(false);
   const [editActivityForm, setEditActivityForm] = useState({
@@ -216,17 +221,11 @@ function ActivityItem({
             
             {/* Imagem à direita */}
             {activity.attachment_url && (
-              <div className="flex-shrink-0">
-                <img 
-                  src={activity.attachment_url} 
-                  alt={activity.attachment_name || "Anexo"}
-                  className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
-                  onClick={() => onAttachmentClick({ 
-                    url: activity.attachment_url!, 
-                    name: activity.attachment_name || "Anexo" 
-                  })}
-                />
-              </div>
+              <AttachmentPreview
+                activity={activity}
+                isDarkMode={isDarkMode}
+                onPreview={onAttachmentClick}
+              />
             )}
           </div>
           
@@ -251,12 +250,99 @@ function ActivityItem({
               size="sm" 
               variant="outline"
               className="border-red-500 text-red-600 hover:bg-red-50"
+              onClick={() => onDelete(activity)}
             >
               <X className="w-4 h-4" />
             </Button>
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function AttachmentPreview({
+  activity,
+  isDarkMode,
+  onPreview,
+}: {
+  activity: Activity;
+  isDarkMode: boolean;
+  onPreview: (attachment: { url: string; name: string; type?: string }) => void;
+}) {
+  const attachmentUrl = activity.attachment_url!;
+  const attachmentName = activity.attachment_name || "Anexo";
+
+  const resolveExtension = () => {
+    const source = activity.attachment_name || activity.attachment_url || "";
+    const sanitized = source.split("?")[0].split("#")[0];
+    const parts = sanitized.split(".");
+    if (parts.length <= 1) return "";
+    return parts.pop()?.toLowerCase() || "";
+  };
+
+  const extension = resolveExtension();
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"];
+  const sheetExtensions = ["xls", "xlsx", "csv"];
+
+  const isImage =
+    (extension && imageExtensions.includes(extension)) ||
+    attachmentUrl.startsWith("data:image");
+  const isPdf = extension === "pdf";
+  const isSheet = extension ? sheetExtensions.includes(extension) : false;
+
+  const attachmentType = isImage
+    ? "image"
+    : isPdf
+    ? "pdf"
+    : isSheet
+    ? extension
+    : extension || "file";
+
+  if (isImage) {
+    return (
+      <div className="flex-shrink-0">
+        <img
+          src={attachmentUrl}
+          alt={attachmentName}
+          className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+          onClick={() =>
+            onPreview({
+              url: attachmentUrl,
+              name: attachmentName,
+              type: attachmentType,
+            })
+          }
+        />
+      </div>
+    );
+  }
+
+  const Icon = isPdf ? FileText : isSheet ? FileSpreadsheet : FileIcon;
+
+  return (
+    <div className="flex-shrink-0">
+      <button
+        type="button"
+        onClick={() =>
+          onPreview({
+            url: attachmentUrl,
+            name: attachmentName,
+            type: attachmentType,
+          })
+        }
+        className={cn(
+          "w-32 h-32 border border-dashed rounded-lg flex flex-col items-center justify-center gap-3 text-center px-3 transition-all",
+          "hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/50",
+          isDarkMode && "border-gray-600 hover:border-yellow-500 hover:bg-yellow-500/10"
+        )}
+      >
+        <Icon className="w-8 h-8 text-primary" />
+        <span className="text-xs font-medium text-foreground truncate w-full">
+          {attachmentName}
+        </span>
+        <span className="text-[11px] text-muted-foreground">Clique para visualizar</span>
+      </button>
     </div>
   );
 }
@@ -303,8 +389,10 @@ export function DealDetailsModal({
   const [isCreatingActivity, setIsCreatingActivity] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showMinutePicker, setShowMinutePicker] = useState(false);
-  const [selectedAttachment, setSelectedAttachment] = useState<{ url: string; name: string } | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<{ url: string; name: string; type?: string } | null>(null);
   const [currentSystemUser, setCurrentSystemUser] = useState<{ id: string | null; name: string } | null>(null);
+  const [activityToDelete, setActivityToDelete] = useState<Activity | null>(null);
+  const [isDeletingActivity, setIsDeletingActivity] = useState(false);
   
   // Hook otimizado para usuários com cache - filtrado por workspace e sem masters
   const { users, isLoading: isLoadingUsers, loadUsers } = useUsersCache(workspaceId, ['user', 'admin']);
@@ -348,11 +436,6 @@ export function DealDetailsModal({
   
   // Estado para filtro de histórico
   const [historyFilter, setHistoryFilter] = useState<string>("todos");
-  const [historyLimit, setHistoryLimit] = useState<number>(10);
-
-  useEffect(() => {
-    setHistoryLimit(10);
-  }, [historyFilter, cardId, fullHistory.length]);
 
   // Refresh dos dados do histórico quando o modal abrir
   useEffect(() => {
@@ -1159,6 +1242,46 @@ export function DealDetailsModal({
     setActivities(prev => [...prev, activity]);
   };
 
+  const handleRequestDeleteActivity = (activity: Activity) => {
+    setActivityToDelete(activity);
+  };
+
+  const handleConfirmDeleteActivity = async () => {
+    if (!activityToDelete) return;
+
+    try {
+      setIsDeletingActivity(true);
+
+      const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', activityToDelete.id);
+
+      if (error) throw error;
+
+      setActivities(prev => prev.filter(item => item.id !== activityToDelete.id));
+
+      toast({
+        title: "Atividade excluída",
+        description: "A atividade foi removida com sucesso."
+      });
+
+      if (contactId) {
+        await fetchActivities(contactId);
+      }
+    } catch (error) {
+      console.error('Erro ao excluir atividade:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a atividade.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingActivity(false);
+      setActivityToDelete(null);
+    }
+  };
+
   // Funções para o formulário de atividade integrado
   const handleDateTimeClick = () => {
     // Este clique não faz nada, o calendário já abre automaticamente pelo Popover
@@ -1336,17 +1459,30 @@ export function DealDetailsModal({
   }, [activeTab, users.length, loadUsers, workspaceId, isLoadingUsers]);
   const handleCompleteActivity = async (activityId: string) => {
     try {
+      const completionTimestamp = new Date().toISOString();
+
       const {
         error
       } = await supabase.from('activities').update({
         is_completed: true,
-        completed_at: new Date().toISOString()
+        completed_at: completionTimestamp
       }).eq('id', activityId);
       if (error) throw error;
       setActivities(prev => prev.map(activity => activity.id === activityId ? {
         ...activity,
-        is_completed: true
+        is_completed: true,
+        completed_at: completionTimestamp
       } : activity));
+
+      if (contactId) {
+        await fetchActivities(contactId);
+      }
+
+      const historyKey = cardHistoryQueryKey(cardId);
+      queryClient.invalidateQueries({ queryKey: historyKey });
+      queryClient.refetchQueries({ queryKey: historyKey });
+      await refetchHistory();
+
       toast({
         title: "Atividade concluída",
         description: "A atividade foi marcada como concluída."
@@ -1500,6 +1636,10 @@ export function DealDetailsModal({
                 
                 if ((tab.id === 'historico-atividades' || tab.id === 'atividades') && contactId) {
                   fetchActivities(contactId);
+                }
+
+                if (tab.id === 'historico') {
+                  setHistoryFilter('todos');
                 }
 
                 if (tab.id === 'negocios') {
@@ -1717,6 +1857,7 @@ export function DealDetailsModal({
                         onComplete={handleCompleteActivity}
                         onUpdate={fetchActivities}
                         onAttachmentClick={setSelectedAttachment}
+                        onDelete={handleRequestDeleteActivity}
                       />
                     ))}
                   </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
@@ -1972,11 +2113,9 @@ export function DealDetailsModal({
                       return a.id.localeCompare(b.id);
                     });
                   
-                  const visibleHistory = orderedHistory.slice(0, historyLimit);
-
                   return (
                     <div className="space-y-0">
-                      {visibleHistory.map((event, index) => {
+                      {orderedHistory.map((event, index) => {
                     const eventMetadata = (event.metadata as any) || {};
                     const eventTitle =
                       (typeof eventMetadata.activity_type === 'string' && eventMetadata.activity_type.trim().length > 0
@@ -2041,7 +2180,7 @@ export function DealDetailsModal({
                     return (
                       <div key={event.id} className="relative">
                         {/* Linha vertical conectando os eventos */}
-                            {index < visibleHistory.length - 1 && (
+                            {index < orderedHistory.length - 1 && (
                           <div 
                             className={cn(
                               "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
@@ -2114,17 +2253,6 @@ export function DealDetailsModal({
                       </div>
                     );
                   })}
-                      {historyLimit < orderedHistory.length && (
-                        <div className="pt-2">
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setHistoryLimit(prev => prev + 10)}
-                          >
-                            Ver mais
-                          </Button>
-                        </div>
-                      )}
                 </div>
               );
             })()
@@ -2317,15 +2445,11 @@ export function DealDetailsModal({
         {/* Modais */}
         <AddTagModal isOpen={showAddTagModal} onClose={() => setShowAddTagModal(false)} contactId={contactId} onTagAdded={handleTagAdded} isDarkMode={isDarkMode} />
         
-        {/* Modal de Imagem */}
-        {selectedAttachment && (
-          <ImageModal
-            isOpen={!!selectedAttachment}
-            onClose={() => setSelectedAttachment(null)}
-            imageUrl={selectedAttachment.url}
-            fileName={selectedAttachment.name}
-          />
-        )}
+        <AttachmentPreviewModal
+          isOpen={!!selectedAttachment}
+          onClose={() => setSelectedAttachment(null)}
+          attachment={selectedAttachment}
+        />
 
         <CreateActivityModal 
           isOpen={showCreateActivityModal} 
@@ -2366,6 +2490,36 @@ export function DealDetailsModal({
       />
     </Dialog>
     
+    {/* Modal de confirmação para exclusão de atividade */}
+    <AlertDialog 
+      open={!!activityToDelete} 
+      onOpenChange={(open) => {
+        if (!open && !isDeletingActivity) {
+          setActivityToDelete(null);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir atividade?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {activityToDelete
+              ? `A atividade "${activityToDelete.subject || 'Sem assunto'}" será removida permanentemente. Deseja continuar?`
+              : ''}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeletingActivity}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirmDeleteActivity}
+            disabled={isDeletingActivity}
+          >
+            {isDeletingActivity ? 'Excluindo...' : 'Excluir'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     {/* Modal de confirmação para ação de Perda */}
     <AlertDialog open={!!confirmLossAction} onOpenChange={() => setConfirmLossAction(null)}>
       <AlertDialogContent>

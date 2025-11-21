@@ -7,7 +7,7 @@ import { WhatsAppConversation } from '@/hooks/useWhatsAppConversations';
 
 interface EndConversationButtonProps {
   conversation: WhatsAppConversation;
-  onEnd?: (conversationId: string) => void;
+  onEnd?: (conversationId: string, updatedConversation?: Partial<WhatsAppConversation> | null) => void;
   className?: string;
 }
 
@@ -24,7 +24,7 @@ export function EndConversationButton({ conversation, onEnd, className }: EndCon
     
     if (result.success) {
       // Notificar o componente pai sobre o sucesso
-      onEnd?.(conversation.id);
+      onEnd?.(conversation.id, result.conversation as Partial<WhatsAppConversation> | null);
     }
   };
 

@@ -87,6 +87,8 @@ serve(async (req) => {
     }
 
     // Atualizar conversa removendo responsável e fila, mantendo status
+    const completionTimestamp = new Date().toISOString()
+
     const { data: updatedConversation, error: updateError } = await supabaseClient
       .from('conversations')
       .update({ 
@@ -95,7 +97,8 @@ serve(async (req) => {
         queue_id: null,
         agente_ativo: false,
         agent_active_id: null,
-        updated_at: new Date().toISOString()
+        status: 'closed',
+        updated_at: completionTimestamp
       })
       .eq('id', conversation_id)
       .eq('workspace_id', workspaceId)
@@ -133,8 +136,19 @@ serve(async (req) => {
           from_queue_id: currentConversation.queue_id,
           to_queue_id: null,
           changed_by: systemUserId,
-          changed_at: new Date().toISOString()
+          changed_at: completionTimestamp
         })
+    }
+
+    // Remover cards de pipeline vinculados à conversa
+    const { error: deleteCardError } = await supabaseClient
+      .from('pipeline_cards')
+      .delete()
+      .eq('conversation_id', conversation_id)
+      .eq('workspace_id', workspaceId)
+
+    if (deleteCardError) {
+      console.error('❌ Error deleting related pipeline cards:', deleteCardError)
     }
 
     console.log(`✅ Conversation ${conversation_id} unassigned successfully`)

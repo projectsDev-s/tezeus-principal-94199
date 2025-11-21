@@ -2185,22 +2185,12 @@ export function WhatsAppChat({
               }} className="h-8 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md" />
                   
                   <EndConversationButton conversation={selectedConversation} onEnd={async (conversationId: string) => {
-                // Update selected conversation status immediately for better UX
                 if (selectedConversation && selectedConversation.id === conversationId) {
-                  setSelectedConversation(prev => prev ? {
-                    ...prev,
-                    status: 'closed'
-                  } : prev);
-                }
-
-                // Refresh conversations to sync with server and update the list
-                await fetchConversations();
-
-                // Clear selected conversation if it was the one ended
-                if (selectedConversation?.id === conversationId) {
                   setSelectedConversation(null);
                   clearMessages();
                 }
+
+                await fetchConversations();
               }} className="h-8 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md" />
                   
                   {selectedConversation && (
