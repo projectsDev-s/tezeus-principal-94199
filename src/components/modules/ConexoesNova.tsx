@@ -154,6 +154,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [connectionToDelete, setConnectionToDelete] = useState<Connection | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSettingDefault, setIsSettingDefault] = useState(false);
+  const [confirmInstanceName, setConfirmInstanceName] = useState('');
   
   // Form states
   const [instanceName, setInstanceName] = useState('');
@@ -658,6 +659,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
 
   const openDeleteModal = (connection: Connection) => {
     setConnectionToDelete(connection);
+    setConfirmInstanceName('');
     setIsDeleteModalOpen(true);
   };
 
@@ -1589,13 +1591,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => openDeleteModal(connection)}
-                        className="text-destructive"
-                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
+                      {(userRole === 'admin' || userRole === 'master') && (
+                        <DropdownMenuItem 
+                          onClick={() => openDeleteModal(connection)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir Instância
+                        </DropdownMenuItem>
+                      )}
                      </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1805,23 +1809,49 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <AlertDialogContent>
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={(open) => {
+        setIsDeleteModalOpen(open);
+        if (!open) setConfirmInstanceName('');
+      }}>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a instância "{connectionToDelete?.instance_name}"? 
-              Esta ação não pode ser desfeita e todos os dados associados serão perdidos.
+            <AlertDialogTitle className="text-destructive">⚠️ Confirmar Exclusão de Instância</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4 pt-4">
+              <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                <p className="text-sm text-foreground leading-relaxed">
+                  A exclusão desta instância é permanente e resultará na inativação imediata da conexão. 
+                  <span className="font-semibold"> Importante:</span> mesmo após excluir, a assinatura Z-API continuará válida até o fim do ciclo atual, 
+                  gerando cobrança referente ao mês vigente. Caso realmente deseje prosseguir, digite o nome da instância para confirmar o cancelamento.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirm-instance" className="text-sm font-medium">
+                  Digite o nome da instância para confirmar:
+                </Label>
+                <div className="p-2 bg-muted rounded border">
+                  <code className="text-sm font-mono">{connectionToDelete?.instance_name}</code>
+                </div>
+                <Input
+                  id="confirm-instance"
+                  value={confirmInstanceName}
+                  onChange={(e) => setConfirmInstanceName(e.target.value)}
+                  placeholder="Digite o nome da instância"
+                  className="font-mono"
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setConfirmInstanceName('')}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={removeConnection}
-              disabled={isDisconnecting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDisconnecting || confirmInstanceName !== connectionToDelete?.instance_name}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             >
-              {isDisconnecting ? 'Excluindo...' : 'Excluir'}
+              {isDisconnecting ? 'Excluindo...' : 'Excluir Instância'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
