@@ -1180,12 +1180,19 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
         parsedErrorBody
       });
       
-      // Verificar se é erro de duplicação (do trigger ou da edge function)
       const errorMessage = error?.message || parsedErrorBody?.message || '';
+      const errorCode = parsedErrorBody?.error || '';
+      const errorDescription = parsedErrorBody?.description || parsedErrorBody?.detail || parsedErrorBody?.details || '';
+      const stringifiedBody = JSON.stringify(parsedErrorBody || {});
+
       const isDuplicateError = 
         errorMessage.includes('Já existe um card aberto') || 
         errorMessage.includes('duplicate_open_card') ||
-        parsedErrorBody?.error === 'duplicate_open_card';
+        errorDescription.includes('Já existe um card aberto') ||
+        errorCode === 'duplicate_open_card' ||
+        errorCode === 'P0001' ||
+        stringifiedBody.includes('Já existe um card aberto') ||
+        stringifiedBody.includes('duplicate_open_card');
       
       if (isDuplicateError) {
         toast({
@@ -1196,7 +1203,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       } else {
         toast({
           title: "Erro",
-          description: parsedErrorBody?.message || (error instanceof Error ? error.message : "Erro ao criar negócio"),
+          description: parsedErrorBody?.message || parsedErrorBody?.error || (error instanceof Error ? error.message : "Erro ao criar negócio"),
           variant: "destructive"
         });
       }
