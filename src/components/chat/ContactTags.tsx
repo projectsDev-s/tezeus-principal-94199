@@ -1,28 +1,36 @@
-import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useMemo } from "react";
 import { X, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface Tag {
   id: string;
   name: string;
   color: string;
+  workspace_id?: string | null;
 }
 
 interface ContactTagsProps {
   contactId?: string;
+  workspaceId?: string | null;
   isDarkMode?: boolean;
   onTagRemoved?: () => void;
 }
 
-export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: ContactTagsProps) {
+export function ContactTags({ contactId, workspaceId = null, isDarkMode = false, onTagRemoved }: ContactTagsProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleTagId, setVisibleTagId] = useState<string | null>(null);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const { selectedWorkspace } = useWorkspace();
+
+  const resolvedWorkspaceId = useMemo(
+    () => workspaceId ?? selectedWorkspace?.workspace_id ?? null,
+    [workspaceId, selectedWorkspace?.workspace_id]
+  );
 
   const handleMouseEnter = (tagId: string) => {
     if (hideTimeout) {
@@ -50,7 +58,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
     if (!contactId) return;
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('contact_tags')
         .select(`
           id,
@@ -58,14 +66,23 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
           tags (
             id,
             name,
-            color
+            color,
+            workspace_id
           )
         `)
         .eq('contact_id', contactId);
 
+      if (resolvedWorkspaceId) {
+        query = query.eq('tags.workspace_id', resolvedWorkspaceId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       
-      const contactTags = data?.map(item => item.tags).filter(Boolean) || [];
+      const contactTags = data
+        ?.map(item => item.tags)
+        .filter((tag): tag is Tag => Boolean(tag) && (!resolvedWorkspaceId || tag.workspace_id === resolvedWorkspaceId)) || [];
       setTags(contactTags as Tag[]);
     } catch (err) {
       console.error('Error fetching contact tags:', err);
@@ -89,6 +106,11 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
       onTagRemoved?.();
     } catch (error: any) {
       console.error('Error removing tag:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a tag. Tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +118,7 @@ export function ContactTags({ contactId, isDarkMode = false, onTagRemoved }: Con
 
   useEffect(() => {
     fetchContactTags();
-  }, [contactId]);
+  }, [contactId, resolvedWorkspaceId]);
 
   if (!contactId || tags.length === 0) {
     return null;

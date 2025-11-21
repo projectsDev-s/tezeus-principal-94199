@@ -13,11 +13,12 @@ interface Tag {
 
 interface AddContactTagButtonProps {
   contactId: string;
+  workspaceId?: string | null;
   isDarkMode?: boolean;
   onTagAdded?: (tag: Tag) => void;
 }
 
-export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded }: AddContactTagButtonProps) {
+export function AddContactTagButton({ contactId, workspaceId = null, isDarkMode = false, onTagAdded }: AddContactTagButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -25,7 +26,7 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
     availableTags,
     contactTags,
     addTagToContact
-  } = useContactTags(contactId);
+  } = useContactTags(contactId, workspaceId);
 
   // Verificar quais tags já estão atribuídas ao contato
   const assignedTagIds = contactTags.map(tag => tag.id);

@@ -146,7 +146,8 @@ export function useWorkspaceMembers(workspaceId?: string) {
         body: {
           action: 'create',
           userData: userData
-        }
+        },
+        headers: getRequestHeaders()
       });
 
       if (createError) {
@@ -259,7 +260,8 @@ export function useWorkspaceMembers(workspaceId?: string) {
           action: 'update',
           userId,
           userData
-        }
+        },
+        headers: getRequestHeaders()
       });
 
       if (error) {

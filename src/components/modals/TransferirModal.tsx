@@ -35,7 +35,7 @@ export function TransferirModal({
   const [targetColumns, setTargetColumns] = useState<any[]>([]);
   const [targetQueueId, setTargetQueueId] = useState<string>("none");
   const [targetResponsibleId, setTargetResponsibleId] = useState<string>("none");
-  const [workspaceUsers, setWorkspaceUsers] = useState<any[]>([]);
+  const [workspaceUsers, setWorkspaceUsers] = useState<Array<{ id: string; name?: string | null; email?: string | null }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Lógica de desabilitação: se fila selecionada (não "none"), desabilitar responsável e vice-versa
@@ -95,11 +95,24 @@ export function TransferirModal({
 
       // Filter only users from current workspace
       const allUsers = data.data || [];
-      const users = allUsers.filter((user: any) => 
-        user.workspaces?.some((ws: any) => 
-          ws.id === selectedWorkspace?.workspace_id
-        )
-      );
+      const users = allUsers
+        .map((user: any) => {
+          if (!selectedWorkspace?.workspace_id) return null;
+          const workspaceEntry = user.workspaces?.find(
+            (ws: any) => ws.id === selectedWorkspace.workspace_id
+          );
+          if (!workspaceEntry) return null;
+          const role = workspaceEntry.role || workspaceEntry.workspace_role || workspaceEntry?.pivot?.role;
+          if (role === 'master' || role === 'MASTER') {
+            return null;
+          }
+          return {
+            id: user.id,
+            name: user.name || null,
+            email: user.email || null,
+          };
+        })
+        .filter(Boolean) as Array<{ id: string; name?: string | null; email?: string | null }>;
       
       console.log('✅ Loaded workspace users:', users.length);
       setWorkspaceUsers(users);
@@ -228,7 +241,7 @@ export function TransferirModal({
                   };
 
                   // Se definiu responsável, incluir no update
-                  if (targetResponsibleId) {
+                  if (targetResponsibleId && targetResponsibleId !== "" && targetResponsibleId !== "none") {
                     updateBody.assigned_user_id = targetResponsibleId;
                     console.log(`👤 Responsável será atualizado: ${targetResponsibleId}`);
                   }
@@ -240,6 +253,7 @@ export function TransferirModal({
                     {
                       body: updateBody,
                       headers: {
+                        ...headers,
                         'x-force-queue-history': 'true'  // Forçar registro mesmo se fila não mudou na conversa
                       }
                     }
@@ -273,10 +287,47 @@ export function TransferirModal({
                           }
                         );
 
+                        console.log('📦 Resultado assign-conversation-to-queue:', JSON.stringify({
+                          data: distributionData,
+                          error: distributionError
+                        }, null, 2));
+
                         if (distributionError) {
                           console.error('⚠️ Erro na distribuição automática (não-bloqueante):', distributionError);
                         } else {
                           console.log('✅ Conversa distribuída segundo regras da fila:', distributionData);
+                          const distributionResult = distributionData || {};
+                          const assignedUserId =
+                            distributionResult.assigned_user_id ??
+                            distributionResult.assignedUserId ??
+                            distributionResult.assigned_user?.id ??
+                            distributionResult.assignedUser?.id ??
+                            distributionResult.distribution?.assigned_user_id ??
+                            distributionResult.distribution?.assignedUserId ??
+                            distributionResult.distribution?.assigned_user?.id ??
+                            distributionResult.distribution?.assignedUser?.id ??
+                            null;
+
+                          if (assignedUserId) {
+                            console.log(`👤 Atualizando card ${cardId} com responsável distribuído ${assignedUserId}`);
+                            const { error: updateCardResponsibleError } = await supabase.functions.invoke(
+                              `pipeline-management/cards?id=${cardId}`,
+                              {
+                                method: 'PUT',
+                                headers,
+                                body: {
+                                  responsible_user_id: assignedUserId
+                                }
+                              }
+                            );
+                            if (updateCardResponsibleError) {
+                              console.error('❌ Erro ao sincronizar responsável distribuído no card:', updateCardResponsibleError);
+                            } else {
+                              console.log('✅ Responsável distribuído sincronizado no card!');
+                            }
+                          } else {
+                            console.warn('⚠️ Distribuição executada, mas nenhum responsável foi retornado.');
+                          }
                         }
                       } catch (distError) {
                         console.error('⚠️ Exceção na distribuição automática (não-bloqueante):', distError);
@@ -293,7 +344,8 @@ export function TransferirModal({
                       body: {
                         conversation_id: cardData.conversation_id,
                         assigned_user_id: targetResponsibleId
-                      }
+                      },
+                      headers
                     }
                   );
 
@@ -322,7 +374,8 @@ export function TransferirModal({
                   const { data: removeResult, error: removeError } = await supabase.functions.invoke(
                     'update-conversation-queue',
                     {
-                      body: removeBody
+                      body: removeBody,
+                      headers
                     }
                   );
 
