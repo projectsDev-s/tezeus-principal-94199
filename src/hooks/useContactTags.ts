@@ -1,47 +1,70 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface Tag {
   id: string;
   name: string;
   color: string;
+  workspace_id?: string | null;
 }
 
-export function useContactTags(contactId?: string) {
+export function useContactTags(contactId?: string | null, workspaceIdOverride?: string | null) {
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { selectedWorkspace } = useWorkspace();
+
+  const workspaceId = workspaceIdOverride ?? selectedWorkspace?.workspace_id ?? null;
 
   // Fetch tags already assigned to contact
   const fetchContactTags = useCallback(async () => {
-    if (!contactId) return;
+    if (!contactId) {
+      setContactTags([]);
+      return;
+    }
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('contact_tags')
         .select(`
           id,
           tag_id,
-          tags(id, name, color)
+          tags(id, name, color, workspace_id)
         `)
         .eq('contact_id', contactId);
 
+      if (workspaceId) {
+        query = query.eq('tags.workspace_id', workspaceId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      const tags = data?.map(item => item.tags).filter(Boolean) || [];
-      setContactTags(tags as Tag[]);
+      const tags = data?.map(item => item.tags).filter((tag): tag is Tag => Boolean(tag)) || [];
+      const filteredTags = workspaceId
+        ? tags.filter(tag => tag.workspace_id === workspaceId)
+        : tags;
+      setContactTags(filteredTags);
     } catch (err) {
       console.error('Error fetching contact tags:', err);
     }
-  }, [contactId]);
+  }, [contactId, workspaceId]);
 
   // Fetch all available tags
   const fetchAvailableTags = useCallback(async () => {
+    if (!workspaceId) {
+      setAvailableTags([]);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('tags')
-        .select('id, name, color')
+        .select('id, name, color, workspace_id')
+        .eq('workspace_id', workspaceId)
         .order('name');
 
       if (error) throw error;
@@ -49,7 +72,7 @@ export function useContactTags(contactId?: string) {
     } catch (err) {
       console.error('Error fetching available tags:', err);
     }
-  }, []);
+  }, [workspaceId]);
 
   // Add tag to contact
   const addTagToContact = async (tagId: string) => {

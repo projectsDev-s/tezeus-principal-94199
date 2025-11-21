@@ -167,6 +167,7 @@ interface DraggableDealProps {
   onOpenTransferModal?: (cardId: string) => void;
   onVincularResponsavel?: (cardId: string, conversationId?: string, currentResponsibleId?: string, contactId?: string) => void;
   onConfigureAgent?: (conversationId: string) => void;
+  workspaceId?: string | null;
 }
 function DraggableDeal({
   deal,
@@ -183,7 +184,8 @@ function DraggableDeal({
   onDeleteCard,
   onOpenTransferModal,
   onVincularResponsavel,
-  onConfigureAgent
+  onConfigureAgent,
+  workspaceId
 }: DraggableDealProps) {
   const {
     selectedWorkspace
@@ -191,6 +193,7 @@ function DraggableDeal({
   const {
     toast
   } = useToast();
+  const resolvedWorkspaceId = workspaceId ?? selectedWorkspace?.workspace_id ?? null;
   const [isTagPopoverOpen, setIsTagPopoverOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [visibleTagId, setVisibleTagId] = React.useState<string | null>(null);
@@ -201,7 +204,7 @@ function DraggableDeal({
     addTagToContact,
     getFilteredTags,
     refreshTags
-  } = useContactTags(deal.contact?.id || null);
+  } = useContactTags(deal.contact?.id || null, resolvedWorkspaceId);
   const {
     attributes,
     listeners,
@@ -487,10 +490,20 @@ function DraggableDeal({
             if (deal.contact?.id) {
               try {
                 console.log('🔍 Buscando conversa para contact_id:', deal.contact.id);
+                let query = supabase
+                  .from('conversations')
+                  .select('id')
+                  .eq('contact_id', deal.contact.id)
+                  .eq('status', 'open');
+
+                if (resolvedWorkspaceId) {
+                  query = query.eq('workspace_id', resolvedWorkspaceId);
+                }
+
                 const {
                   data: conversations,
                   error
-                } = await supabase.from('conversations').select('id').eq('contact_id', deal.contact.id).eq('workspace_id', selectedWorkspace?.workspace_id).eq('status', 'open').limit(1);
+                } = await query.limit(1);
                 console.log('📊 Resultado da busca:', {
                   conversations,
                   error
@@ -1600,7 +1613,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                             product_value: productValue ?? null,
                             hasProduct: !!productId
                           };
-                          return <DraggableDeal key={card.id} deal={deal} isDarkMode={isDarkMode} onClick={() => !isSelectionMode && openCardDetails(card)} columnColor={column.color} onOpenTransferModal={handleOpenTransferModal} onVincularResponsavel={handleVincularResponsavel} onChatClick={dealData => {
+                          return <DraggableDeal key={card.id} deal={deal} isDarkMode={isDarkMode} onClick={() => !isSelectionMode && openCardDetails(card)} columnColor={column.color} workspaceId={effectiveWorkspaceId} onOpenTransferModal={handleOpenTransferModal} onVincularResponsavel={handleVincularResponsavel} onChatClick={dealData => {
                             console.log('🎯 CRM: Abrindo chat para deal:', dealData);
                             console.log('🆔 CRM: Deal ID:', dealData.id);
                             console.log('🗣️ CRM: Deal conversation:', dealData.conversation);
@@ -1698,7 +1711,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               product_value: productValue ?? null,
               hasProduct: !!productId
             };
-            return <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} onChatClick={dealData => {
+            return <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} workspaceId={effectiveWorkspaceId} onChatClick={dealData => {
               console.log('🎯 CRM DragOverlay: Abrindo chat para deal:', dealData);
               setSelectedChatCard(dealData);
               setIsChatModalOpen(true);
