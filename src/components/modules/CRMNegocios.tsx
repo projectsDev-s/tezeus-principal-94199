@@ -297,7 +297,7 @@ function DraggableDeal({
               e.stopPropagation();
               onOpenTransferModal?.(deal.id);
             }}>
-                  Trocar Negócio
+                  Transferir Negócio
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={e => {
               e.stopPropagation();
