@@ -2337,15 +2337,49 @@ export function DealDetailsModal({
                       {/* Imagens anexadas */}
                       {activity.attachment_url && (
                         <div className="mt-3">
-                          <img 
-                            src={activity.attachment_url} 
-                            alt={activity.attachment_name || "Anexo"}
-                            className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
-                            onClick={() => setSelectedAttachment({ 
-                              url: activity.attachment_url!, 
-                              name: activity.attachment_name || "Anexo" 
-                            })}
-                          />
+                          {(() => {
+                            const fileName = activity.attachment_name || activity.attachment_url || "";
+                            const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileName);
+                            
+                            if (isImg) {
+                              return (
+                                <img 
+                                  src={activity.attachment_url} 
+                                  alt={activity.attachment_name || "Anexo"}
+                                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                                  onClick={() => setSelectedAttachment({ 
+                                    url: activity.attachment_url!, 
+                                    name: activity.attachment_name || "Anexo" 
+                                  })}
+                                />
+                              );
+                            }
+                            
+                            return (
+                              <div 
+                                className={cn(
+                                  "w-full sm:w-64 p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-colors",
+                                  isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                                )}
+                                onClick={() => window.open(activity.attachment_url!, '_blank')}
+                              >
+                                <div className={cn(
+                                  "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                                  isDarkMode ? "bg-gray-700" : "bg-white border border-gray-200"
+                                )}>
+                                  <FileText className={cn("w-5 h-5", isDarkMode ? "text-blue-400" : "text-blue-600")} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
+                                    {activity.attachment_name || "Anexo"}
+                                  </p>
+                                  <p className={cn("text-xs truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                                    Clique para visualizar
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
