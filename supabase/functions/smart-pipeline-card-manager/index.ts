@@ -113,7 +113,7 @@ serve(async (req) => {
 
     if (connectionPhone) {
       filteredCards = filteredCards.filter(card => {
-        const cardPhone = card.conversation?.connection_phone;
+        const cardPhone = card.conversation?.[0]?.connection_phone;
         return !cardPhone || cardPhone === connectionPhone;
       });
     }

@@ -55,7 +55,7 @@ serve(async (req) => {
       if (conversationError) {
         console.error('⚠️ Não foi possível carregar dados da conversa para obter o telefone da instância:', conversationError.message);
       } else {
-        instancePhone = conversationDetails?.connection?.phone_number ?? null;
+        instancePhone = conversationDetails?.connection?.[0]?.phone_number ?? null;
         console.log('📞 INSTANCE_PHONE detectado:', instancePhone || 'não informado');
       }
     }

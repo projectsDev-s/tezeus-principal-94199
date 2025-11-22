@@ -70,11 +70,22 @@ serve(async (req) => {
 
     const updateData: any = {};
 
-    // Atualizar queue_id (inclusive null para remover)
+    // Normalizar queue_id
+    let normalizedQueueId = queue_id;
     if (queue_id !== undefined) {
-      updateData.queue_id = queue_id;
+      // Normalizar valores que representam "sem fila"
+      if (
+        queue_id === null ||
+        queue_id === 'none' ||
+        queue_id === 'null' ||
+        queue_id === ''
+      ) {
+        normalizedQueueId = null;
+      }
+      
+      updateData.queue_id = normalizedQueueId;
 
-      if (queue_id) {
+      if (normalizedQueueId) {
         // Buscar detalhes da fila para obter o agente
         if (activate_queue_agent) {
           const { data: queueData, error: queueError } = await supabase
@@ -100,19 +111,30 @@ serve(async (req) => {
           }
         }
       } else {
-        // queue_id é null - remover fila e desativar agente
+        // normalizedQueueId é null - remover fila e desativar agente
         updateData.agent_active_id = null;
         updateData.agente_ativo = false;
         console.log(`🗑️ Removendo fila e desativando agente`);
       }
     }
 
-    // Atualizar assigned_user_id (inclusive null para remover)
+    // Normalizar e atualizar assigned_user_id
+    let normalizedAssignedUserId = assigned_user_id;
     if (assigned_user_id !== undefined) {
-      updateData.assigned_user_id = assigned_user_id;
-      if (assigned_user_id) {
+      // Normalizar valores que representam "sem responsável"
+      if (
+        assigned_user_id === null ||
+        assigned_user_id === 'none' ||
+        assigned_user_id === 'null' ||
+        assigned_user_id === ''
+      ) {
+        normalizedAssignedUserId = null;
+      }
+      
+      updateData.assigned_user_id = normalizedAssignedUserId;
+      if (normalizedAssignedUserId) {
         updateData.assigned_at = new Date().toISOString();
-        console.log(`👤 Atribuindo responsável: ${assigned_user_id}`);
+        console.log(`👤 Atribuindo responsável: ${normalizedAssignedUserId}`);
       } else {
         console.log(`🗑️ Removendo responsável`);
       }
@@ -144,12 +166,12 @@ serve(async (req) => {
     console.log(`🔍 Verificando se deve registrar histórico de fila:`);
     console.log(`   • queue_id !== undefined: ${queue_id !== undefined}`);
     console.log(`   • previousQueueId: ${previousQueueId}`);
-    console.log(`   • queue_id: ${queue_id}`);
-    console.log(`   • previousQueueId !== queue_id: ${previousQueueId !== queue_id}`);
+    console.log(`   • normalizedQueueId: ${normalizedQueueId}`);
+    console.log(`   • previousQueueId !== normalizedQueueId: ${previousQueueId !== normalizedQueueId}`);
     console.log(`   • forceQueueHistory: ${forceQueueHistory}`);
     
-    if (queue_id !== undefined && (previousQueueId !== queue_id || forceQueueHistory)) {
-      console.log(`📝 ✅ Registrando transferência de fila: ${previousQueueId} → ${queue_id}`);
+    if (queue_id !== undefined && (previousQueueId !== normalizedQueueId || forceQueueHistory)) {
+      console.log(`📝 ✅ Registrando transferência de fila: ${previousQueueId} → ${normalizedQueueId}`);
       
       const { error: queueHistoryError } = await supabase
         .from('conversation_assignments')
@@ -157,7 +179,7 @@ serve(async (req) => {
           conversation_id: conversation_id,
           action: 'queue_transfer',
           from_queue_id: previousQueueId,
-          to_queue_id: queue_id,
+          to_queue_id: normalizedQueueId,
           changed_by: systemUserId,
           changed_at: new Date().toISOString()
         });
@@ -172,17 +194,23 @@ serve(async (req) => {
     }
 
     // Registrar histórico de mudança de responsável se assigned_user_id mudou
-    if (assigned_user_id !== undefined && previousUserId !== assigned_user_id) {
-      console.log(`📝 Registrando mudança de responsável: ${previousUserId} → ${assigned_user_id}`);
+    if (assigned_user_id !== undefined && previousUserId !== normalizedAssignedUserId) {
+      console.log(`📝 Registrando mudança de responsável: ${previousUserId} → ${normalizedAssignedUserId}`);
       
-      const action = previousUserId ? 'transfer' : 'assign';
+      let action: 'assign' | 'transfer' | 'unassign';
+      if (normalizedAssignedUserId) {
+        action = previousUserId ? 'transfer' : 'assign';
+      } else {
+        action = 'unassign';
+      }
+      
       const { error: userHistoryError } = await supabase
         .from('conversation_assignments')
         .insert({
           conversation_id: conversation_id,
           action: action,
           from_assigned_user_id: previousUserId,
-          to_assigned_user_id: assigned_user_id,
+          to_assigned_user_id: normalizedAssignedUserId,
           changed_by: systemUserId,
           changed_at: new Date().toISOString()
         });
@@ -203,9 +231,9 @@ serve(async (req) => {
           agent_id: updateData.agent_active_id,
           agent_name: 'Agente da Fila',
           action: 'activated',
-          changed_by: assigned_user_id || null,
+          changed_by: normalizedAssignedUserId || systemUserId || null,
           metadata: { 
-            queue_id,
+            queue_id: normalizedQueueId,
             reason: 'Transferência de negócio com mudança de fila'
           }
         });
