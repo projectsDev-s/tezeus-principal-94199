@@ -47,7 +47,7 @@ serve(async (req) => {
     // Buscar estado atual da conversa para registrar histórico
     const { data: currentConversation, error: fetchError } = await supabase
       .from('conversations')
-      .select('queue_id, assigned_user_id')
+      .select('queue_id, assigned_user_id, agent_active_id, ai_agents:agent_active_id(name)')
       .eq('id', conversation_id)
       .single();
 
@@ -61,6 +61,8 @@ serve(async (req) => {
 
     const previousQueueId = currentConversation?.queue_id;
     const previousUserId = currentConversation?.assigned_user_id;
+    const previousAgentId = currentConversation?.agent_active_id;
+    const previousAgentName = (currentConversation?.ai_agents as any)?.[0]?.name || 'Agente Anterior';
     
     console.log(`📋 Estado atual da conversa:`);
     console.log(`   • previousQueueId: ${previousQueueId}`);
@@ -102,10 +104,12 @@ serve(async (req) => {
             if (queueData.ai_agent_id) {
               updateData.agent_active_id = queueData.ai_agent_id;
               updateData.agente_ativo = true;
+              updateData.new_agent_name = queueData.name; // Para usar no histórico
               console.log(`🤖 Ativando agente da fila: ${queueData.ai_agent_id}`);
             } else {
               updateData.agente_ativo = false;
               updateData.agent_active_id = null;
+              updateData.should_log_agent_deactivation = true;
               console.log(`⚠️ Fila não tem agente - desativando agente atual`);
             }
           }
@@ -114,6 +118,7 @@ serve(async (req) => {
         // normalizedQueueId é null - remover fila e desativar agente
         updateData.agent_active_id = null;
         updateData.agente_ativo = false;
+        updateData.should_log_agent_deactivation = true;
         console.log(`🗑️ Removendo fila e desativando agente`);
       }
     }
@@ -222,24 +227,56 @@ serve(async (req) => {
       }
     }
 
-    // Registrar no histórico de agente se mudou
-    if (updateData.agent_active_id) {
+    // Registrar no histórico de agente
+    // Caso 1: Agente foi ativado (novo agente diferente do anterior)
+    if (updateData.agent_active_id && updateData.agent_active_id !== previousAgentId) {
+      console.log(`📝 Registrando ativação de agente: ${updateData.agent_active_id}`);
+      
       const { error: historyError } = await supabase
         .from('conversation_agent_history')
         .insert({
           conversation_id: conversation_id,
           agent_id: updateData.agent_active_id,
-          agent_name: 'Agente da Fila',
-          action: 'activated',
+          agent_name: updateData.new_agent_name || 'Agente da Fila',
+          action: previousAgentId ? 'changed' : 'activated',
           changed_by: normalizedAssignedUserId || systemUserId || null,
           metadata: { 
             queue_id: normalizedQueueId,
+            old_agent_id: previousAgentId,
             reason: 'Transferência de negócio com mudança de fila'
           }
         });
 
       if (historyError) {
         console.error('⚠️ Erro ao registrar histórico de agente (não-bloqueante):', historyError);
+      } else {
+        console.log('✅ Histórico de ativação de agente registrado');
+      }
+    }
+    
+    // Caso 2: Agente foi desativado (tinha agente e agora não tem mais)
+    if (updateData.should_log_agent_deactivation && previousAgentId) {
+      console.log(`📝 Registrando desativação de agente: ${previousAgentId}`);
+      
+      const { error: historyError } = await supabase
+        .from('conversation_agent_history')
+        .insert({
+          conversation_id: conversation_id,
+          agent_id: null,
+          agent_name: previousAgentName,
+          action: 'deactivated',
+          changed_by: normalizedAssignedUserId || systemUserId || null,
+          metadata: { 
+            queue_id: normalizedQueueId,
+            old_agent_id: previousAgentId,
+            reason: normalizedQueueId ? 'Fila sem agente configurado' : 'Remoção de fila'
+          }
+        });
+
+      if (historyError) {
+        console.error('⚠️ Erro ao registrar histórico de desativação de agente (não-bloqueante):', historyError);
+      } else {
+        console.log('✅ Histórico de desativação de agente registrado');
       }
     }
 
