@@ -20,7 +20,8 @@ serve(async (req) => {
       contactId, 
       conversationId, 
       workspaceId,
-      pipelineId 
+      pipelineId,
+      connectionPhone = null
     } = await req.json();
 
     console.log('🎯 Smart Pipeline Card Manager - Início', { 
@@ -87,7 +88,17 @@ serve(async (req) => {
     // 4. VERIFICAR SE JÁ EXISTE UM CARD ABERTO PARA ESTE CONTATO NESTE PIPELINE
     const { data: existingCards, error: searchError } = await supabase
       .from('pipeline_cards')
-      .select('id, title, description, responsible_user_id, updated_at')
+      .select(`
+        id,
+        title,
+        description,
+        responsible_user_id,
+        updated_at,
+        conversation:conversation_id (
+          id,
+          connection_phone
+        )
+      `)
       .eq('contact_id', contactId)
       .eq('pipeline_id', targetPipelineId)
       .eq('status', 'aberto');
@@ -98,8 +109,17 @@ serve(async (req) => {
 
     // REGRA: Apenas UM card aberto por contato por pipeline
     // Se já existe, RETORNAR ERRO amigável
-    if (existingCards && existingCards.length > 0) {
-      const existingCard = existingCards[0];
+    let filteredCards = existingCards || [];
+
+    if (connectionPhone) {
+      filteredCards = filteredCards.filter(card => {
+        const cardPhone = card.conversation?.connection_phone;
+        return !cardPhone || cardPhone === connectionPhone;
+      });
+    }
+
+    if (filteredCards.length > 0) {
+      const existingCard = filteredCards[0];
       console.log('⚠️ Já existe um card aberto para este contato neste pipeline:', existingCard.id);
       
       return new Response(

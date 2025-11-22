@@ -573,11 +573,27 @@ serve(async (req) => {
       }
     }
 
+    // Resolve latest phone number of the connection (instance number)
+    let connectionPhone: string | null = null;
+    if (connection_id) {
+      const { data: connectionInfo, error: connectionInfoError } = await supabase
+        .from('connections')
+        .select('phone_number')
+        .eq('id', connection_id)
+        .maybeSingle();
+
+      if (connectionInfoError) {
+        console.error(`⚠️ [${requestId}] Error fetching connection phone:`, connectionInfoError.message);
+      } else {
+        connectionPhone = connectionInfo?.phone_number || null;
+      }
+    }
+
     // Find existing conversation for this contact and workspace (prioritize reusing any existing conversation)
     let conversationId: string;
     const { data: existingConversation, error: conversationFindError } = await supabase
       .from('conversations')
-      .select('id, connection_id')
+      .select('id, connection_id, connection_phone')
       .eq('contact_id', contactId)
       .eq('workspace_id', workspace_id)
       .order('created_at', { ascending: false })
@@ -596,12 +612,27 @@ serve(async (req) => {
       });
     }
 
-    if (existingConversation) {
-      conversationId = existingConversation.id;
+    let reusableConversation = existingConversation;
+
+    if (existingConversation && connectionPhone) {
+      if (existingConversation.connection_phone && existingConversation.connection_phone !== connectionPhone) {
+        console.log(`↪️ [${requestId}] Connection phone changed (old: ${existingConversation.connection_phone}, new: ${connectionPhone}). Creating a fresh conversation.`);
+        reusableConversation = null;
+      } else if (!existingConversation.connection_phone) {
+        await supabase
+          .from('conversations')
+          .update({ connection_phone: connectionPhone })
+          .eq('id', existingConversation.id);
+        reusableConversation = { ...existingConversation, connection_phone: connectionPhone };
+      }
+    }
+
+    if (reusableConversation) {
+      conversationId = reusableConversation.id;
       console.log(`✅ [${requestId}] Found existing conversation: ${conversationId}`);
       
       // Update connection_id if provided and different (link conversation to current connection)
-      if (connection_id && existingConversation.connection_id !== connection_id) {
+      if (connection_id && reusableConversation.connection_id !== connection_id) {
         await supabase
           .from('conversations')
           .update({ connection_id: connection_id })
@@ -616,6 +647,7 @@ serve(async (req) => {
           contact_id: contactId,
           workspace_id: workspace_id,
           connection_id: connection_id,
+          connection_phone: connectionPhone,
           status: 'open'
         })
         .select('id')

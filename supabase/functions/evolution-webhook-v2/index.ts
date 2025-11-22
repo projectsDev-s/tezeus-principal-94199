@@ -70,13 +70,14 @@ async function getOrCreateConversation(
   contactId: string,
   connectionId: string,
   workspaceId: string,
-  instanceName: string
+  instanceName: string,
+  connectionPhone?: string | null
 ) {
   // ✅ Buscar conversa ativa existente por contact_id + connection_id
   // Isso garante que ao mudar connection_id, a conversa seja vinculada corretamente
   const { data: existing } = await supabase
     .from('conversations')
-    .select('id, contact_id, assigned_user_id, connection_id')
+    .select('id, contact_id, assigned_user_id, connection_id, connection_phone')
     .eq('contact_id', contactId)
     .eq('connection_id', connectionId)
     .eq('workspace_id', workspaceId)
@@ -84,15 +85,30 @@ async function getOrCreateConversation(
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  
-  if (existing) {
-    console.log(`✅ [ROUTING] Found conversation ${existing.id} for contact ${contactId} on connection ${connectionId}`);
+
+  let matchedConversation = existing;
+
+  if (existing && connectionPhone && existing.connection_phone && existing.connection_phone !== connectionPhone) {
+    console.log(`↪️ [ROUTING] Connection phone changed (old: ${existing.connection_phone}, new: ${connectionPhone}). Creating a fresh conversation.`);
+    matchedConversation = null;
+  } else if (existing && connectionPhone && !existing.connection_phone) {
+    console.log(`🧼 [ROUTING] Backfilling connection phone snapshot for conversation ${existing.id}`);
+    await supabase
+      .from('conversations')
+      .update({ connection_phone: connectionPhone })
+      .eq('id', existing.id);
+    
+    matchedConversation = { ...existing, connection_phone: connectionPhone };
+  }
+
+  if (matchedConversation) {
+    console.log(`✅ [ROUTING] Found conversation ${matchedConversation.id} for contact ${contactId} on connection ${connectionId}`);
     
     // 🤖 Verificar e ativar agente IA se necessário
     const { data: existingWithQueue } = await supabase
       .from('conversations')
       .select('id, queue_id, agente_ativo')
-      .eq('id', existing.id)
+      .eq('id', matchedConversation.id)
       .single();
     
     if (existingWithQueue?.queue_id) {
@@ -103,7 +119,7 @@ async function getOrCreateConversation(
         .single();
       
       if (queue?.ai_agent_id && !existingWithQueue.agente_ativo) {
-        console.log(`🤖 [${instanceName}] Ativando agente IA para conversa ${existing.id}`);
+        console.log(`🤖 [${instanceName}] Ativando agente IA para conversa ${matchedConversation.id}`);
         
         await supabase
           .from('conversations')
@@ -111,22 +127,17 @@ async function getOrCreateConversation(
             agente_ativo: true,
             agent_active_id: queue.ai_agent_id  // ✅ SALVAR ID DO AGENTE
           })
-          .eq('id', existing.id);
+          .eq('id', matchedConversation.id);
         
-        existing.agente_ativo = true;
+        matchedConversation.agente_ativo = true;
         console.log(`✅ [${instanceName}] Agente IA ativado automaticamente (ID: ${queue.ai_agent_id})`);
       }
     }
     
-    return existing;
+    return matchedConversation;
   }
   
   // Criar nova conversa se não existir
-  // ⚠️ MODIFICADO: Não criar conversa automaticamente para evitar duplicação com n8n
-  console.log(`⚠️ [ROUTING] Conversation not found for contact ${contactId}. Skipping creation as per n8n flow requirement.`);
-  return null;
-
-  /*
   console.log(`🆕 [ROUTING] Creating new conversation for contact ${contactId} on connection ${connectionId}`);
   const { data: newConv, error } = await supabase
     .from('conversations')
@@ -136,10 +147,11 @@ async function getOrCreateConversation(
       connection_id: connectionId,
       workspace_id: workspaceId,
       instance_name: instanceName,
+      connection_phone: connectionPhone || null,
       status: 'active',
       last_message_at: new Date().toISOString()
     })
-    .select('id, contact_id, assigned_user_id, connection_id')
+    .select('id, contact_id, assigned_user_id, connection_id, connection_phone')
     .single();
   
   if (error) {
@@ -175,7 +187,6 @@ async function getOrCreateConversation(
   }
   
   return newConv;
-  */
 }
 
 serve(async (req) => {
@@ -236,6 +247,7 @@ serve(async (req) => {
         .select(`
           id,
           workspace_id,
+          phone_number,
           history_days,
           history_recovery,
           history_sync_status,
@@ -834,7 +846,8 @@ serve(async (req) => {
                 contact.id,
                 connectionData.id,
                 workspaceId,
-                instanceName
+                instanceName,
+                connectionData.phone_number
               );
               
               if (!conversation) {
@@ -845,13 +858,30 @@ serve(async (req) => {
                 // 3. Verificar se já existe card aberto
                 const { data: existingCard } = await supabase
                   .from('pipeline_cards')
-                  .select('id, title')
+                  .select(`
+                    id,
+                    title,
+                    conversation:conversation_id (
+                      id,
+                      connection_phone
+                    )
+                  `)
                   .eq('contact_id', contact.id)
                   .eq('pipeline_id', connectionData.default_pipeline_id)
                   .eq('status', 'aberto')
                   .maybeSingle();
                 
-                if (existingCard) {
+                const cardConnectionPhone = existingCard?.conversation?.connection_phone || null;
+                const shouldReuseExistingCard = Boolean(
+                  existingCard &&
+                  (
+                    !connectionData.phone_number ||
+                    !cardConnectionPhone ||
+                    cardConnectionPhone === connectionData.phone_number
+                  )
+                );
+
+                if (shouldReuseExistingCard && existingCard) {
                   console.log(`✅ [${requestId}] Card já existe: ${existingCard.id} - "${existingCard.title}"`);
                 } else {
                   console.log(`🆕 [${requestId}] Criando card para contato ${contact.id}`);
@@ -864,7 +894,8 @@ serve(async (req) => {
                         contactId: contact.id,
                         conversationId: conversation.id,
                         workspaceId: workspaceId,
-                        pipelineId: connectionData.default_pipeline_id
+                        pipelineId: connectionData.default_pipeline_id,
+                        connectionPhone: connectionData.phone_number
                       }
                     }
                   );

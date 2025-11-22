@@ -1003,6 +1003,7 @@ export type Database = {
           assigned_at: string | null
           assigned_user_id: string | null
           canal: string | null
+          connection_phone: string | null
           connection_id: string | null
           contact_id: string
           created_at: string
@@ -1023,6 +1024,7 @@ export type Database = {
           assigned_at?: string | null
           assigned_user_id?: string | null
           canal?: string | null
+          connection_phone?: string | null
           connection_id?: string | null
           contact_id: string
           created_at?: string
@@ -1043,6 +1045,7 @@ export type Database = {
           assigned_at?: string | null
           assigned_user_id?: string | null
           canal?: string | null
+          connection_phone?: string | null
           connection_id?: string | null
           contact_id?: string
           created_at?: string
