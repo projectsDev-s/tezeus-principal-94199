@@ -1153,78 +1153,13 @@ export function DealDetailsModal({
     loadCurrentUser();
   }, [isOpen]);
 
-  const logTagHistory = useCallback(
-    async (action: 'tag_added' | 'tag_removed', tag: Tag) => {
-      if (!selectedCardId) return;
-
-      try {
-        const { data: cardRow, error: cardError } = await supabase
-          .from('pipeline_cards')
-          .select('id, pipeline_id, pipelines!inner(workspace_id)')
-          .eq('id', selectedCardId)
-          .maybeSingle();
-
-        if (cardError || !cardRow) {
-          console.error('Erro ao buscar card para histórico de tags:', cardError);
-          return;
-        }
-
-        const workspaceId = (cardRow as any)?.pipelines?.workspace_id;
-        if (!workspaceId) {
-          console.warn('workspace_id não encontrado ao registrar histórico de tag');
-          return;
-        }
-
-        const now = new Date().toISOString();
-        const metadata =
-          action === 'tag_added'
-            ? {
-                tag_id: tag.id,
-                tag_name: tag.name,
-                tag_color: tag.color,
-                added_at: now,
-                added_by: currentSystemUser?.id || null,
-                changed_by_name: currentSystemUser?.name,
-              }
-            : {
-                tag_id: tag.id,
-                tag_name: tag.name,
-                tag_color: tag.color,
-                removed_at: now,
-                removed_by: currentSystemUser?.id || null,
-                changed_by_name: currentSystemUser?.name,
-              };
-
-        const { error: insertError } = await supabase
-          .from('pipeline_card_history')
-          .insert({
-            card_id: selectedCardId,
-            action,
-            workspace_id: workspaceId,
-            metadata,
-          });
-
-        if (insertError) {
-          console.error('Erro ao registrar histórico de tag:', insertError);
-        } else {
-          const historyKey = cardHistoryQueryKey(cardId);
-          queryClient.invalidateQueries({ queryKey: historyKey });
-          await refetchHistory();
-        }
-      } catch (error) {
-        console.error('Erro inesperado ao registrar histórico de tag:', error);
-      }
-    },
-    [selectedCardId, currentSystemUser, queryClient, cardId, refetchHistory]
-  );
-
   const handleTagAdded = (tag: Tag) => {
     setContactTags(prev => {
       const exists = prev.some(existing => existing.id === tag.id);
       if (exists) return prev;
       return [...prev, tag];
     });
-    logTagHistory('tag_added', tag);
+    // O trigger log_contact_tag_action já registra no histórico automaticamente
   };
 
   const handleRemoveTag = async (tagId: string) => {
@@ -1235,9 +1170,7 @@ export function DealDetailsModal({
       } = await supabase.from('contact_tags').delete().eq('contact_id', contactId).eq('tag_id', tagId);
       if (error) throw error;
       setContactTags(prev => prev.filter(tag => tag.id !== tagId));
-      if (removedTag) {
-        await logTagHistory('tag_removed', removedTag);
-      }
+      // O trigger log_contact_tag_action já registra no histórico automaticamente
       toast({
         title: "Tag removida",
         description: "A tag foi removida do contato."
