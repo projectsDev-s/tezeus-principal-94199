@@ -871,7 +871,7 @@ serve(async (req) => {
                   .eq('status', 'aberto')
                   .maybeSingle();
                 
-                const cardConnectionPhone = existingCard?.conversation?.connection_phone || null;
+                const cardConnectionPhone = existingCard?.conversation?.[0]?.connection_phone || null;
                 const shouldReuseExistingCard = Boolean(
                   existingCard &&
                   (
