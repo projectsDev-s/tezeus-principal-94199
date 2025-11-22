@@ -122,6 +122,11 @@ async function getOrCreateConversation(
   }
   
   // Criar nova conversa se não existir
+  // ⚠️ MODIFICADO: Não criar conversa automaticamente para evitar duplicação com n8n
+  console.log(`⚠️ [ROUTING] Conversation not found for contact ${contactId}. Skipping creation as per n8n flow requirement.`);
+  return null;
+
+  /*
   console.log(`🆕 [ROUTING] Creating new conversation for contact ${contactId} on connection ${connectionId}`);
   const { data: newConv, error } = await supabase
     .from('conversations')
@@ -170,6 +175,7 @@ async function getOrCreateConversation(
   }
   
   return newConv;
+  */
 }
 
 serve(async (req) => {
