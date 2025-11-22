@@ -51,6 +51,22 @@ const formatPhoneNumberDisplay = (phone: string): string => {
   return phone;
 };
 
+const ALLOWED_CONNECTION_STATUSES: Connection['status'][] = ['creating', 'qr', 'connecting', 'connected', 'disconnected', 'error'];
+
+const normalizeConnectionStatus = (status?: string | null): Connection['status'] => {
+  if (!status) {
+    return 'disconnected';
+  }
+
+  const normalized = status.toLowerCase() as Connection['status'];
+  return ALLOWED_CONNECTION_STATUSES.includes(normalized) ? normalized : 'disconnected';
+};
+
+const withNormalizedStatus = (connection: Connection): Connection => ({
+  ...connection,
+  status: normalizeConnectionStatus(connection.status),
+});
+
 interface ConexoesNovaProps {
   workspaceId: string;
 }
@@ -189,7 +205,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
 
   // Monitor selected connection status and close modal when connected
   useEffect(() => {
-    if (selectedConnection && selectedConnection.status === 'connected' && isQRModalOpen) {
+    if (!selectedConnection) {
+      return;
+    }
+
+    const normalizedStatus = normalizeConnectionStatus(selectedConnection.status);
+
+    if (normalizedStatus === 'connected' && isQRModalOpen) {
       console.log('✅ Conexão estabelecida, fechando modal automaticamente');
       
       // Close modal
@@ -299,7 +321,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       const response = await evolutionProvider.listConnections(workspaceId);
       console.log('📋 ConexoesNova received response:', response);
       
-      setConnections(response.connections);
+      setConnections(response.connections.map(withNormalizedStatus));
       refreshLimits(); // Refresh limits when connections are loaded
     } catch (error) {
       console.warn('Error loading connections:', error);
@@ -466,7 +488,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
       // If connection has QR code, automatically open QR modal
       if (connection.qr_code) {
         console.log('QR Code already available, opening modal');
-        setSelectedConnection(connection);
+        setSelectedConnection(withNormalizedStatus(connection));
         setIsQRModalOpen(true);
         startPolling(connection.id);
         
@@ -658,12 +680,32 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   };
 
   const openDeleteModal = (connection: Connection) => {
+    if (userRole !== 'master') {
+      toast({
+        title: "Permissão negada",
+        description: "Apenas usuários master podem excluir instâncias.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setConnectionToDelete(connection);
     setConfirmInstanceName('');
     setIsDeleteModalOpen(true);
   };
 
   const removeConnection = async () => {
+    if (userRole !== 'master') {
+      toast({
+        title: "Permissão negada",
+        description: "Apenas usuários master podem excluir instâncias.",
+        variant: "destructive",
+      });
+      setIsDeleteModalOpen(false);
+      setConnectionToDelete(null);
+      return;
+    }
+
     if (!connectionToDelete) return;
 
     try {
@@ -763,7 +805,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const connectInstance = async (connection: Connection) => {
     try {
       setIsConnecting(true);
-      setSelectedConnection(connection);
+      setSelectedConnection(withNormalizedStatus(connection));
       
       // Verificar qual provider está sendo usado
       const isZAPI = connection.provider?.provider === 'zapi';
@@ -903,16 +945,16 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         // Atualizar selectedConnection com o status atual
         // MAS: se o status atual é 'qr' e recebeu 'disconnected', não atualizar
         // (aguardando usuário escanear o QR code)
+        const normalizedStatus = normalizeConnectionStatus(connectionStatus.status);
+
         if (selectedConnection) {
-          const shouldUpdate = !(
-            selectedConnection.status === 'qr' && 
-            connectionStatus.status === 'disconnected'
-          );
+          const isSelectedQR = normalizeConnectionStatus(selectedConnection.status) === 'qr';
+          const shouldUpdate = !(isSelectedQR && normalizedStatus === 'disconnected');
           
           if (shouldUpdate) {
             setSelectedConnection(prev => prev ? { 
               ...prev, 
-              status: connectionStatus.status,
+              status: normalizedStatus,
               phone_number: connectionStatus.phone_number || prev.phone_number
             } : null);
           } else {
@@ -921,8 +963,18 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         }
         
         // Conectado - notificar apenas uma vez
-        if (connectionStatus.status === 'connected' && lastNotifiedStatus !== 'connected') {
+        if (normalizedStatus === 'connected' && lastNotifiedStatus !== 'connected') {
           lastNotifiedStatus = 'connected';
+          
+          setConnections(prev => prev.map(conn => 
+            conn.id === connectionId 
+              ? { 
+                  ...conn, 
+                  status: 'connected', 
+                  phone_number: connectionStatus.phone_number || conn.phone_number 
+                } 
+              : conn
+          ));
           
           // Close modal and update UI
           setIsQRModalOpen(false);
@@ -944,13 +996,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         // Desconectado - NÃO notificar na verificação inicial do modal
         // Só notificar se for uma desconexão que aconteceu durante o processo
         // E NÃO fechar o modal se o status atual for 'qr' (aguardando scan)
-        if (connectionStatus.status === 'disconnected' && 
+        if (normalizedStatus === 'disconnected' && 
             !isInitialCheck && 
-            selectedConnection?.status !== 'qr' && 
+            normalizeConnectionStatus(selectedConnection?.status) !== 'qr' && 
             lastNotifiedStatus !== 'disconnected') {
           lastNotifiedStatus = 'disconnected';
           
           console.log('⚠️ Desconexão detectada durante processo');
+
+          setConnections(prev => prev.map(conn => 
+            conn.id === connectionId 
+              ? { 
+                  ...conn, 
+                  status: 'disconnected', 
+                  phone_number: connectionStatus.phone_number || conn.phone_number 
+                } 
+              : conn
+          ));
           
           setIsQRModalOpen(false);
           setSelectedConnection(null);
@@ -1591,7 +1653,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                         <Edit3 className="mr-2 h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
-                      {(userRole === 'admin' || userRole === 'master') && (
+                      {userRole === 'master' && (
                         <DropdownMenuItem 
                           onClick={() => openDeleteModal(connection)}
                           className="text-destructive"
@@ -1848,7 +1910,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={removeConnection}
-              disabled={isDisconnecting || confirmInstanceName !== connectionToDelete?.instance_name}
+              disabled={
+                userRole !== 'master' ||
+                isDisconnecting ||
+                confirmInstanceName !== connectionToDelete?.instance_name
+              }
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             >
               {isDisconnecting ? 'Excluindo...' : 'Excluir Instância'}

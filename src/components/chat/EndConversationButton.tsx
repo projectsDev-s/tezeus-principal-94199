@@ -1,52 +1,76 @@
-import React from 'react';
-import { X, Loader2 } from 'lucide-react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useConversationEnd } from '@/hooks/useConversationEnd';
 import { WhatsAppConversation } from '@/hooks/useWhatsAppConversations';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useQueues } from '@/hooks/useQueues';
 
 interface EndConversationButtonProps {
   conversation: WhatsAppConversation;
-  onEnd?: (conversationId: string, updatedConversation?: Partial<WhatsAppConversation> | null) => void;
   className?: string;
 }
 
-export function EndConversationButton({ conversation, onEnd, className }: EndConversationButtonProps) {
-  const { endConversation, isEnding } = useConversationEnd();
-
+export function EndConversationButton({ conversation, className }: EndConversationButtonProps) {
   // Só mostra o botão se assigned_user_id for preenchido (conversa foi aceita)
   if (conversation.assigned_user_id === null) {
     return null;
   }
 
-  const handleEnd = async () => {
-    const result = await endConversation(conversation.id);
-    
-    if (result.success) {
-      // Notificar o componente pai sobre o sucesso
-      onEnd?.(conversation.id, result.conversation as Partial<WhatsAppConversation> | null);
-    }
-  };
+  const { queues } = useQueues();
 
-  const isCurrentlyEnding = isEnding === conversation.id;
+  const filaNome = useMemo(() => {
+    if (!conversation.queue_id) {
+      return null;
+    }
+
+    return queues.find(queue => queue.id === conversation.queue_id)?.name ?? null;
+  }, [queues, conversation.queue_id]);
+
+  const conexaoLabel = useMemo(() => {
+    if (conversation.connection?.instance_name) {
+      return conversation.connection.instance_name;
+    }
+
+    if (conversation.connection?.phone_number) {
+      return conversation.connection.phone_number;
+    }
+
+    return conversation.connection_id ?? null;
+  }, [
+    conversation.connection?.instance_name,
+    conversation.connection?.phone_number,
+    conversation.connection_id
+  ]);
+
+  const tooltipLines = [
+    filaNome ? `Fila: ${filaNome}` : 'Sem fila atribuída',
+    conexaoLabel ? `Conexão: ${conexaoLabel}` : null
+  ].filter(Boolean);
 
   return (
-    <Button
-      onClick={handleEnd}
-      disabled={isCurrentlyEnding}
-      size="sm"
-      className={cn(
-        'gap-2 bg-white text-destructive border border-destructive/40 hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/40 shadow-sm',
-        className
-      )}
-      variant="outline"
-    >
-      {isCurrentlyEnding ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <X className="w-4 h-4" />
-      )}
-      {isCurrentlyEnding ? 'Encerrando...' : 'Encerrar'}
-    </Button>
+    <TooltipProvider>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <Button
+            disabled
+            size="sm"
+            className={cn(
+              'gap-2 bg-muted text-muted-foreground border border-muted-foreground/30 cursor-not-allowed',
+              className
+            )}
+            variant="outline"
+          >
+            Conversa aceita
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          <div className="flex flex-col gap-1">
+            {tooltipLines.map(line => (
+              <span key={line}>{line}</span>
+            ))}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

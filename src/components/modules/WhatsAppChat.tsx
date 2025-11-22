@@ -2189,14 +2189,7 @@ export function WhatsAppChat({
                 await fetchConversations();
               }} className="h-8 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md" />
                   
-                  <EndConversationButton conversation={selectedConversation} onEnd={async (conversationId: string) => {
-                if (selectedConversation && selectedConversation.id === conversationId) {
-                  setSelectedConversation(null);
-                  clearMessages();
-                }
-
-                await fetchConversations();
-              }} className="h-8 px-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md" />
+                  <EndConversationButton conversation={selectedConversation} className="h-8 px-4" />
                   
                   {selectedConversation && (
                     <DropdownMenu>
