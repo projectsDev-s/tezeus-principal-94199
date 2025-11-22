@@ -37,6 +37,29 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Resolver telefone da instância associado à conversa (se existir)
+    let instancePhone: string | null = null;
+    if (conversationId) {
+      const { data: conversationDetails, error: conversationError } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          connection_id,
+          connection:connection_id (
+            phone_number
+          )
+        `)
+        .eq('id', conversationId)
+        .maybeSingle();
+
+      if (conversationError) {
+        console.error('⚠️ Não foi possível carregar dados da conversa para obter o telefone da instância:', conversationError.message);
+      } else {
+        instancePhone = conversationDetails?.connection?.phone_number ?? null;
+        console.log('📞 INSTANCE_PHONE detectado:', instancePhone || 'não informado');
+      }
+    }
+
     // Regex para detectar ações no formato [ADD_ACTION]: [param1: value1], [param2: value2]
     const actionPattern = /\[ADD_ACTION\]:\s*(?:\[([^\]]+)\](?:,\s*)?)+/gi;
     
@@ -69,6 +92,8 @@ serve(async (req) => {
           processedParams[key] = conversationId;
         } else if (value === 'WORKSPACE_ID') {
           processedParams[key] = workspaceId;
+        } else if (value === 'INSTANCE_PHONE') {
+          processedParams[key] = instancePhone || '';
         } else {
           processedParams[key] = value;
         }

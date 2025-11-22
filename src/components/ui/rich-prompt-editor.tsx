@@ -60,7 +60,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Conexão
-  const conexaoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[conection_name:\s*(.*?)\]\s*,\s*\[conection_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]/);
+  const conexaoMatch = actionText.match(/\[ADD_ACTION\]:\s*\[conection_name:\s*(.*?)\]\s*,\s*\[conection_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\](?:\s*,\s*\[instabce_phone:\s*INSTANCE_PHONE\])?/);
   if (conexaoMatch) {
     console.log('✅ Match encontrado: transferir conexão');
     return {
@@ -72,7 +72,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Transferir Fila
-  const filaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[fila_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[conversation_id:\s*CONVERSATION_ID\]/);
+  const filaMatch = actionText.match(/\[ADD_ACTION\]:\s*\[fila_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[conversation_id:\s*CONVERSATION_ID\](?:\s*,\s*\[instabce_phone:\s*INSTANCE_PHONE\])?/);
   if (filaMatch) {
     console.log('✅ Match encontrado: transferir fila');
     return {
@@ -84,7 +84,7 @@ function parseActionDetails(actionText: string): ActionDetails | null {
   }
 
   // Criar Card
-  const criarCardMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\]\s*,\s*\[coluna_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[conversation_id:\s*CONVERSATION_ID\]/);
+  const criarCardMatch = actionText.match(/\[ADD_ACTION\]:\s*\[pipeline_id:\s*(.*?)\]\s*,\s*\[coluna_id:\s*(.*?)\]\s*,\s*\[contact_id:\s*CONTACT_ID\]\s*,\s*\[conversation_id:\s*CONVERSATION_ID\](?:\s*,\s*\[instabce_phone:\s*INSTANCE_PHONE\])?/);
   if (criarCardMatch) {
     console.log('✅ Match encontrado: criar card');
     return {

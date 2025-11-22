@@ -241,14 +241,14 @@ export function PromptEditorModal({
   };
 
   const handleQueueSelected = (queueId: string, queueName: string) => {
-    const actionText = `\n[ADD_ACTION]: [fila_id: ${queueId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+    const actionText = `\n[ADD_ACTION]: [fila_id: ${queueId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID], [instabce_phone: INSTANCE_PHONE]\n`;
     editorRef.current?.insertText(actionText);
     setShowQueueSelector(false);
     setPendingActionType(null);
   };
 
   const handleConnectionSelected = (connectionId: string, connectionName: string) => {
-    const actionText = `\n[ADD_ACTION]: [conection_name: ${connectionName}], [conection_id: ${connectionId}], [contact_id: CONTACT_ID]\n`;
+    const actionText = `\n[ADD_ACTION]: [conection_name: ${connectionName}], [conection_id: ${connectionId}], [contact_id: CONTACT_ID], [instabce_phone: INSTANCE_PHONE]\n`;
     editorRef.current?.insertText(actionText);
     setShowConnectionSelector(false);
     setPendingActionType(null);
@@ -264,7 +264,7 @@ export function PromptEditorModal({
     
     let actionText = "";
     if (actionType === "create-crm-card") {
-      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+      actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID], [instabce_phone: INSTANCE_PHONE]\n`;
     } else {
       actionText = `\n[ADD_ACTION]: [pipeline_id: ${pipelineId}], [coluna_id: ${columnId}], [card_id: ID_DO_CARD], [contact_id: CONTACT_ID]\n`;
     }
@@ -275,7 +275,7 @@ export function PromptEditorModal({
   };
 
   const handleFunnelSelected = (funnelId: string, funnelTitle: string) => {
-    const actionText = `\n[ADD_ACTION]: [funnel_id: ${funnelId}], [funnel_title: ${funnelTitle}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID]\n`;
+    const actionText = `\n[ADD_ACTION]: [funnel_id: ${funnelId}], [funnel_title: ${funnelTitle}], [contact_id: CONTACT_ID], [conversation_id: CONVERSATION_ID], [instabce_phone: INSTANCE_PHONE]\n`;
     editorRef.current?.insertText(actionText);
     setShowFunnelSelector(false);
     setPendingActionType(null);
