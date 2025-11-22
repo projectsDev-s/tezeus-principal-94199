@@ -367,7 +367,7 @@ export function AdicionarEditarUsuarioModal({
                   <SelectContent>
                     <SelectItem value="user">Usuário</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="master">Master</SelectItem>
+                    <SelectItem value="master">Usuário Tezeus</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

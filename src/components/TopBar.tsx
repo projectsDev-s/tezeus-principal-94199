@@ -32,7 +32,7 @@ export function TopBar({ onNavigateToConversation }: TopBarProps) {
   return (
     <>
       <div className="flex gap-2 mx-4 mt-4 mb-4">
-        {/* Botão de Voltar para Dashboard Master (apenas para usuários master) */}
+        {/* Botão de Voltar para Central Tezeus (apenas para usuário interno) */}
         {showBackButton && (
           <div className="flex items-center gap-2">
             <Button
@@ -42,7 +42,7 @@ export function TopBar({ onNavigateToConversation }: TopBarProps) {
               className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden md:inline">Dashboard Master</span>
+              <span className="hidden md:inline">Central Tezeus</span>
               <Home className="h-4 w-4 md:hidden" />
             </Button>
             <div className="h-8 w-px bg-border" />
@@ -64,15 +64,24 @@ export function TopBar({ onNavigateToConversation }: TopBarProps) {
             }}
           />
           <CardContent className="p-6 relative z-10">
-            <p className="text-xs font-semibold mb-2 text-foreground">
-              Bem Vindo
-            </p>
-            <h3 className="text-xl font-semibold mb-1 text-foreground">
-              CDE - Centro de Desenvolvimento Empresarial
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Aqui estão algumas estatísticas da sua empresa
-            </p>
+            {userRole !== 'master' ? (
+              <>
+                <p className="text-xs font-semibold mb-2 text-foreground">
+                  Bem Vindo
+                </p>
+                <h3 className="text-xl font-semibold mb-1 text-foreground">
+                  CDE - Centro de Desenvolvimento Empresarial
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Aqui estão algumas estatísticas da sua empresa
+                </p>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Home className="h-4 w-4" />
+                <span>Acessando empresas como usuário Tezeus</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

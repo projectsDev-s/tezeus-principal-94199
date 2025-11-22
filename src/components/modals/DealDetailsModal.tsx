@@ -436,6 +436,18 @@ export function DealDetailsModal({
   
   // Estado para filtro de histórico
   const [historyFilter, setHistoryFilter] = useState<string>("todos");
+  const [historyDisplayCount, setHistoryDisplayCount] = useState<number>(5);
+
+  const handleHistoryFilterChange = useCallback((value: string) => {
+    setHistoryFilter(value);
+    setHistoryDisplayCount(5);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "historico") {
+      setHistoryDisplayCount(5);
+    }
+  }, [cardId, activeTab]);
 
   // Refresh dos dados do histórico quando o modal abrir
   useEffect(() => {
@@ -2047,14 +2059,15 @@ export function DealDetailsModal({
               </div>
             </div>}
 
-          {isInitialLoading ? null : activeTab === "historico" && <div className="space-y-6">
+          {activeTab === "historico" && (
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
                   Histórico de eventos
                 </h3>
                 
                 {/* Filtro de eventos */}
-                <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                <Select value={historyFilter} onValueChange={handleHistoryFilterChange}>
                   <SelectTrigger className="w-[220px]">
                     <SelectValue placeholder="Filtrar por tipo" />
                   </SelectTrigger>
@@ -2063,7 +2076,7 @@ export function DealDetailsModal({
                     <SelectItem value="agent_activity">Evento de Agente IA</SelectItem>
                     <SelectItem value="user_assigned">Conversa Vinculada</SelectItem>
                     <SelectItem value="queue_transfer">Transferência de Fila</SelectItem>
-                  <SelectItem value="pipeline_transfer">Transferência de Pipeline</SelectItem>
+                    <SelectItem value="pipeline_transfer">Transferência de Pipeline</SelectItem>
                     <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
                     <SelectItem value="activity_lembrete_created">Lembretes Criados</SelectItem>
                     <SelectItem value="activity_lembrete_completed">Lembretes Concluídos</SelectItem>
@@ -2081,11 +2094,20 @@ export function DealDetailsModal({
               </div>
               
               {/* Timeline de eventos */}
-              {isLoadingHistory ? (
+              {(isInitialLoading || isLoadingHistory) ? (
                 <div className="space-y-4">
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={`history-skeleton-${index}`} className="relative">
+                      <div className="flex gap-3 pb-4">
+                        <Skeleton className="w-10 h-10 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-1/3" />
+                          <Skeleton className="h-3 w-2/3" />
+                          <Skeleton className="h-3 w-1/4" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : fullHistory.length > 0 ? (
                 (() => {
@@ -2112,160 +2134,169 @@ export function DealDetailsModal({
                       }
                       return a.id.localeCompare(b.id);
                     });
+                  const visibleHistory = orderedHistory.slice(0, historyDisplayCount);
                   
                   return (
                     <div className="space-y-0">
-                      {orderedHistory.map((event, index) => {
-                    const eventMetadata = (event.metadata as any) || {};
-                    const eventTitle =
-                      (typeof eventMetadata.activity_type === 'string' && eventMetadata.activity_type.trim().length > 0
-                        ? eventMetadata.activity_type
-                        : undefined) ||
-                      eventMetadata.event_title ||
-                      (event.type === 'agent_activity'
-                        ? 'Agente de IA'
-                        : event.type === 'user_assigned'
-                          ? event.action === 'queue_transfer'
-                            ? 'Transferência de Fila'
-                            : event.action === 'transfer'
-                              ? 'Conversa Transferida'
-                              : 'Conversa Vinculada'
-                          : event.type === 'queue_transfer'
-                            ? 'Transferência de Fila'
-                            : event.type === 'pipeline_transfer'
-                              ? 'Transferência de Pipeline'
-                              : event.type === 'column_transfer'
-                                ? 'Transferência de Etapa'
-                                : 'Evento');
-                    // Ícone baseado no tipo de evento
-                    let Icon = MessageSquare;
-                    let iconBgColor = "bg-yellow-400";
-                    let iconColor = "text-gray-900";
-                    
-                    if (event.type === 'agent_activity') {
-                      Icon = Bot;
-                      iconBgColor = "bg-yellow-400";
-                    } else if (event.type === 'pipeline_transfer') {
-                      Icon = ArrowRightLeft;
-                      iconBgColor = "bg-amber-500";
-                    } else if (event.type === 'user_assigned') {
-                      Icon = UserCheck;
-                      iconBgColor = "bg-yellow-400";
-                    } else if (event.type === 'queue_transfer') {
-                      Icon = Users;
-                      iconBgColor = "bg-yellow-400";
-                    } else if (event.type === 'column_transfer') {
-                      Icon = ArrowRightLeft;
-                      iconBgColor = "bg-yellow-400";
-                    } else if (event.type === 'activity_lembrete') {
-                      Icon = Clock;
-                      iconBgColor = "bg-blue-400";
-                    } else if (event.type === 'activity_mensagem') {
-                      Icon = MessageSquare;
-                      iconBgColor = "bg-green-400";
-                    } else if (event.type === 'activity_ligacao') {
-                      Icon = Phone;
-                      iconBgColor = "bg-indigo-400";
-                    } else if (event.type === 'activity_reuniao') {
-                      Icon = CalendarIconLucide;
-                      iconBgColor = "bg-pink-400";
-                    } else if (event.type === 'activity_agendamento') {
-                      Icon = CalendarClock;
-                      iconBgColor = "bg-orange-400";
-                    } else if (event.type === 'tag') {
-                      Icon = TagIcon;
-                      iconBgColor = "bg-purple-400";
-                    }
-
-                    return (
-                      <div key={event.id} className="relative">
-                        {/* Linha vertical conectando os eventos */}
-                            {index < orderedHistory.length - 1 && (
-                          <div 
-                            className={cn(
-                              "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
-                              isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                            )}
-                          />
-                        )}
+                      {visibleHistory.map((event, index) => {
+                        const eventMetadata = (event.metadata as any) || {};
+                        const eventTitle =
+                          (typeof eventMetadata.activity_type === 'string' && eventMetadata.activity_type.trim().length > 0
+                            ? eventMetadata.activity_type
+                            : undefined) ||
+                          eventMetadata.event_title ||
+                          (event.type === 'agent_activity'
+                            ? 'Agente de IA'
+                            : event.type === 'user_assigned'
+                              ? event.action === 'queue_transfer'
+                                ? 'Transferência de Fila'
+                                : event.action === 'transfer'
+                                  ? 'Conversa Transferida'
+                                  : 'Conversa Vinculada'
+                              : event.type === 'queue_transfer'
+                                ? 'Transferência de Fila'
+                                : event.type === 'pipeline_transfer'
+                                  ? 'Transferência de Pipeline'
+                                  : event.type === 'column_transfer'
+                                    ? 'Transferência de Etapa'
+                                    : 'Evento');
+                        // Ícone baseado no tipo de evento
+                        let Icon = MessageSquare;
+                        let iconBgColor = "bg-yellow-400";
+                        let iconColor = "text-gray-900";
                         
-                        <div className="flex gap-3 pb-4">
-                          {/* Ícone circular */}
-                          <div className={cn(
-                            "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center z-10",
-                            iconBgColor
-                          )}>
-                            <Icon className={cn("w-5 h-5", iconColor)} />
-                          </div>
-                          
-                          {/* Conteúdo do evento */}
-                          <div className={cn(
-                            "flex-1 rounded-lg p-4 border",
-                            isDarkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-gray-50 border-gray-200"
-                          )}>
-                            {/* Título do evento */}
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <h4 className={cn(
-                                "font-medium text-sm",
-                                isDarkMode ? "text-white" : "text-gray-900"
-                              )}>
-                                {eventTitle}
-                              </h4>
-                            </div>
-                            
-                            {/* Descrição */}
-                            <div className={cn(
-                              "text-sm mb-2",
-                              isDarkMode ? "text-gray-300" : "text-gray-700"
-                            )}>
-                              {event.description.split(/(\*\*.*?\*\*)/).map((part, i) => {
-                                if (part.startsWith('**') && part.endsWith('**')) {
-                                  return <strong key={i}>{part.slice(2, -2)}</strong>;
-                                }
-                                return <span key={i}>{part}</span>;
-                              })}
-                            </div>
-                            
-                            {/* Data e hora */}
-                            <div className="flex items-center gap-2">
-                              <Clock className={cn(
-                                "w-3 h-3",
-                                isDarkMode ? "text-gray-500" : "text-gray-400"
-                              )} />
-                              <span className={cn(
-                                "text-xs",
-                                isDarkMode ? "text-gray-500" : "text-gray-500"
-                              )}>
-                                {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                              </span>
-                            </div>
+                        if (event.type === 'agent_activity') {
+                          Icon = Bot;
+                          iconBgColor = "bg-yellow-400";
+                        } else if (event.type === 'pipeline_transfer') {
+                          Icon = ArrowRightLeft;
+                          iconBgColor = "bg-amber-500";
+                        } else if (event.type === 'user_assigned') {
+                          Icon = UserCheck;
+                          iconBgColor = "bg-yellow-400";
+                        } else if (event.type === 'queue_transfer') {
+                          Icon = Users;
+                          iconBgColor = "bg-yellow-400";
+                        } else if (event.type === 'column_transfer') {
+                          Icon = ArrowRightLeft;
+                          iconBgColor = "bg-yellow-400";
+                        } else if (event.type === 'activity_lembrete') {
+                          Icon = Clock;
+                          iconBgColor = "bg-blue-400";
+                        } else if (event.type === 'activity_mensagem') {
+                          Icon = MessageSquare;
+                          iconBgColor = "bg-green-400";
+                        } else if (event.type === 'activity_ligacao') {
+                          Icon = Phone;
+                          iconBgColor = "bg-indigo-400";
+                        } else if (event.type === 'activity_reuniao') {
+                          Icon = CalendarIconLucide;
+                          iconBgColor = "bg-pink-400";
+                        } else if (event.type === 'activity_agendamento') {
+                          Icon = CalendarClock;
+                          iconBgColor = "bg-orange-400";
+                        } else if (event.type === 'tag') {
+                          Icon = TagIcon;
+                          iconBgColor = "bg-purple-400";
+                        }
 
-                            {(event.user_name || eventMetadata.changed_by_name) && (
-                              <div className={cn(
-                                "mt-2 text-xs",
-                                isDarkMode ? "text-gray-500" : "text-gray-500"
-                              )}>
-                                Atualizado por: {eventMetadata.changed_by_name || event.user_name}
-                              </div>
+                        return (
+                          <div key={event.id} className="relative">
+                            {/* Linha vertical conectando os eventos */}
+                            {index < visibleHistory.length - 1 && (
+                              <div 
+                                className={cn(
+                                  "absolute left-[19px] top-[40px] w-[2px] h-[calc(100%+0px)]",
+                                  isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                                )}
+                              />
                             )}
+                            
+                            <div className="flex gap-3 pb-4">
+                              {/* Ícone circular */}
+                              <div className={cn(
+                                "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center z-10",
+                                iconBgColor
+                              )}>
+                                <Icon className={cn("w-5 h-5", iconColor)} />
+                              </div>
+                              
+                              {/* Conteúdo do evento */}
+                              <div className={cn(
+                                "flex-1 rounded-lg p-4 border",
+                                isDarkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-gray-50 border-gray-200"
+                              )}>
+                                {/* Título do evento */}
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <h4 className={cn(
+                                    "font-medium text-sm",
+                                    isDarkMode ? "text-white" : "text-gray-900"
+                                  )}>
+                                    {eventTitle}
+                                  </h4>
+                                </div>
+                                
+                                {/* Descrição */}
+                                <div className={cn(
+                                  "text-sm mb-2",
+                                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                                )}>
+                                  {event.description.split(/(\*\*.*?\*\*)/).map((part, i) => {
+                                    if (part.startsWith('**') && part.endsWith('**')) {
+                                      return <strong key={i}>{part.slice(2, -2)}</strong>;
+                                    }
+                                    return <span key={i}>{part}</span>;
+                                  })}
+                                </div>
+                                
+                                {/* Data e hora */}
+                                <div className="flex items-center gap-2">
+                                  <Clock className={cn(
+                                    "w-3 h-3",
+                                    isDarkMode ? "text-gray-500" : "text-gray-400"
+                                  )} />
+                                  <span className={cn(
+                                    "text-xs",
+                                    isDarkMode ? "text-gray-500" : "text-gray-500"
+                                  )}>
+                                    {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </span>
+                                </div>
+
+                                {(event.user_name || eventMetadata.changed_by_name) && (
+                                  <div className={cn(
+                                    "mt-2 text-xs",
+                                    isDarkMode ? "text-gray-500" : "text-gray-500"
+                                  )}>
+                                    Atualizado por: {eventMetadata.changed_by_name || event.user_name}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
+                        );
+                      })}
+                      {orderedHistory.length > historyDisplayCount && (
+                        <div className="flex justify-center pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setHistoryDisplayCount((prev) => prev + 5)}
+                            className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                          >
+                            Carregar mais
+                          </Button>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()
+                      )}
+                    </div>
+                  );
+                })()
               ) : (
-                <div className={cn(
-                  "text-center py-8 rounded-lg border",
-                  isDarkMode ? "bg-[#1f1f1f] border-gray-700 text-gray-400" : "bg-gray-50 border-gray-200 text-gray-600"
-                )}>
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-40" />
+                <div className={cn("text-center py-10", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                   <p>Nenhum histórico encontrado</p>
                 </div>
               )}
-            </div>}
+            </div>
+          )}
 
           {isInitialLoading ? null : activeTab === "historico-atividades" && <div className="space-y-6">
               <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>

@@ -20,12 +20,21 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
 }) => {
   const minutes = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, 10, 15, ..., 55
   const [currentMinute, setCurrentMinute] = React.useState<number | null>(selectedMinute);
+  const [hasSelection, setHasSelection] = React.useState<boolean>(selectedMinute !== null && selectedMinute !== undefined);
 
   React.useEffect(() => {
     if (isOpen) {
-      setCurrentMinute(selectedMinute ?? null);
+      const initialMinute = selectedMinute ?? null;
+      setCurrentMinute(initialMinute);
+      setHasSelection(initialMinute !== null);
+    } else {
+      const initialMinute = selectedMinute ?? null;
+      setCurrentMinute(initialMinute);
+      setHasSelection(initialMinute !== null);
     }
   }, [isOpen, selectedMinute]);
+
+  const pointerAngle = currentMinute !== null ? (currentMinute * 6) : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -81,18 +90,20 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
               })}
               
               {/* Ponteiro do relógio */}
-          <div
-            className={cn(
-              "absolute w-1 origin-bottom transition-transform duration-300",
-              currentMinute !== null ? "bg-yellow-400" : "bg-transparent"
-            )}
-            style={{
-              height: "60px",
-              left: "50%",
-              top: "calc(50% - 60px)",
-              transform: `translateX(-50%) rotate(${(currentMinute ?? 0) * 6 - 90}deg)`
-            }}
-          />
+              <div
+                className={cn(
+                  "absolute w-1 origin-bottom transition-transform duration-300",
+                  hasSelection ? "bg-yellow-400" : "bg-transparent"
+                )}
+                style={{
+                  height: hasSelection ? "60px" : "0px",
+                  left: "50%",
+                  top: hasSelection ? "calc(50% - 60px)" : "50%",
+                  transform: hasSelection
+                    ? `translateX(-50%) rotate(${pointerAngle}deg)`
+                    : "translate(-50%, 0)",
+                }}
+              />
               
               {/* Centro do relógio */}
               <div className="absolute w-3 h-3 bg-yellow-400 rounded-full" style={{

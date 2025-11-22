@@ -639,19 +639,21 @@ export function TransferirModal({
                 >
                   Remover responsável
                 </SelectItem>
-                {workspaceUsers.map(user => (
-                  <SelectItem 
-                    key={user.id} 
-                    value={user.id}
-                    className={cn(
-                      isDarkMode 
-                        ? "text-white hover:bg-gray-600" 
-                        : "text-gray-900 hover:bg-gray-100"
-                    )}
-                  >
-                    {user.name || user.email}
-                  </SelectItem>
-                ))}
+                {workspaceUsers
+                  .filter(user => user.profile !== 'master')
+                  .map(user => (
+                    <SelectItem 
+                      key={user.id} 
+                      value={user.id}
+                      className={cn(
+                        isDarkMode 
+                          ? "text-white hover:bg-gray-600" 
+                          : "text-gray-900 hover:bg-gray-100"
+                      )}
+                    >
+                      {user.name || user.email}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

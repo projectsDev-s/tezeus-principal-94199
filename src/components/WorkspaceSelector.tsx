@@ -18,7 +18,7 @@ export function WorkspaceSelector() {
   const { workspaceId: urlWorkspaceId } = useParams<{ workspaceId: string }>();
   const { isMaster } = useWorkspaceRole();
 
-  // Para Masters, priorizar workspace da URL
+  // Para usuários master, escondemos a identificação de master; apenas usamos workspace selecionado
   const displayWorkspace = useMemo(() => {
     if (isMaster && urlWorkspaceId) {
       const urlWorkspace = workspaces.find(w => w.workspace_id === urlWorkspaceId);

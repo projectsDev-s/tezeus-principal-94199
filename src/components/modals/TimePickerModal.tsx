@@ -22,15 +22,26 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   const [currentHour, setCurrentHour] = React.useState<number | null>(selectedHour !== null && selectedHour !== undefined
     ? selectedHour % 12
     : null);
+  const [hasSelection, setHasSelection] = React.useState<boolean>(selectedHour !== null && selectedHour !== undefined);
   const hours = Array.from({ length: 12 }, (_, i) => i);
 
   React.useEffect(() => {
     if (isOpen) {
       const initialHour = selectedHour ?? null;
-      const displayHour = initialHour !== null ? (initialHour % 12 === 0 ? 12 : initialHour % 12) : null;
+      const hasInitialSelection = initialHour !== null;
+      const displayHour = hasInitialSelection ? (initialHour % 12 === 0 ? 12 : initialHour % 12) : null;
+
+      setHasSelection(hasInitialSelection);
       setCurrentHour(displayHour);
-      if (initialHour !== null) {
+      if (hasInitialSelection) {
         setPeriod(initialHour >= 12 ? 'PM' : 'AM');
+      }
+    } else {
+      // Ao fechar o modal, o ponteiro deve voltar para o centro até uma nova seleção
+      setHasSelection(selectedHour !== null && selectedHour !== undefined);
+      if (selectedHour === null || selectedHour === undefined) {
+        setCurrentHour(null);
+        setPeriod('AM');
       }
     }
   }, [isOpen, selectedHour]);
@@ -38,10 +49,15 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   const handleHourSelect = (hour: number) => {
     const displayHour = hour === 0 ? 12 : hour;
     setCurrentHour(displayHour);
+    setHasSelection(true);
     // Converter para formato 24h
     const hour24 = period === 'PM' && displayHour !== 12 ? displayHour + 12 : displayHour === 12 && period === 'AM' ? 0 : displayHour;
     onTimeSelect(hour24);
   };
+
+  const pointerAngle = currentHour !== null
+    ? (((currentHour % 12) || 0) * 30)
+    : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -123,18 +139,19 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               })}
 
               {/* Ponteiro do relógio */}
-              {currentHour !== null && (
-                <div 
-                  className="absolute w-1 bg-yellow-400 origin-bottom transition-all duration-300"
-                  style={{
-                    height: "90px",
-                    left: "50%",
-                    top: "calc(50% - 90px)",
-                    transform: `translateX(-50%) rotate(${(currentHour * 30) - 90}deg)`,
-                    transformOrigin: "bottom center"
-                  }} 
-                />
-              )}
+              <div 
+                className="absolute w-1 bg-yellow-400 origin-bottom transition-all duration-300"
+                style={{
+                  height: hasSelection ? "90px" : "0px",
+                  left: "50%",
+                  top: hasSelection ? "calc(50% - 90px)" : "50%",
+                  transform: hasSelection
+                    ? `translateX(-50%) rotate(${pointerAngle}deg)`
+                    : "translate(-50%, 0)",
+                  opacity: hasSelection ? 1 : 0,
+                  transformOrigin: "bottom center"
+                }} 
+              />
               
               {/* Centro do relógio */}
               <div className="absolute w-4 h-4 bg-yellow-400 rounded-full z-20 shadow-md" style={{

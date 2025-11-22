@@ -77,7 +77,7 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
           { key: "pipeline", label: "Pipeline", available: cards.some((c) => c.pipeline_id) },
           { key: "value", label: "Preço", available: true },
           { key: "status", label: "Status", available: true },
-          { key: "created_at", label: "Data de Criação", available: true },
+          { key: "created_at", label: "Data de Criação do Negócio", available: true },
           { key: "updated_at", label: "Última Atualização", available: true },
           { key: "moved_at", label: "Última Movimentação", available: cards.some((c) => c.moved_at) },
           { key: "won_at", label: "Data de Ganho", available: cards.some((c) => c.won_at) },
@@ -115,7 +115,6 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
         key: "responsible",
         fields: [
           { key: "responsible_user", label: "Usuário Responsável", available: true },
-          { key: "sales_responsible", label: "Responsável pela Venda", available: cards.some((c) => c.responsible_user) },
         ],
       },
       {
@@ -249,8 +248,6 @@ export function ExportCSVModal({ isOpen, onClose, columnName, cards }: ExportCSV
       case "queue":
         return card.conversation?.queue?.name || "";
       case "responsible_user":
-        return card.responsible_user?.name || card.responsible || "";
-      case "sales_responsible":
         return card.responsible_user?.name || card.responsible || "";
       case "activities_count":
         return card.activities?.length?.toString() || "0";

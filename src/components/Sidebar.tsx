@@ -406,7 +406,7 @@ export function Sidebar({
                 {hasRole(['master']) && selectedWorkspace && (
                   <DropdownMenuItem onClick={handleBackToMasterDashboard}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Dashboard Master
+                    Central Tezeus
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => setIsPerfilModalOpen(true)}>
@@ -427,7 +427,9 @@ export function Sidebar({
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-foreground truncate">{user?.name}</div>
                 <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
-                <div className="text-xs text-primary font-medium capitalize">{userRole}</div>
+                <div className="text-xs text-primary font-medium capitalize">
+                  {userRole === 'master' ? 'Usuário Tezeus' : userRole}
+                </div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -439,7 +441,7 @@ export function Sidebar({
                   {hasRole(['master']) && selectedWorkspace && (
                     <DropdownMenuItem onClick={handleBackToMasterDashboard}>
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Dashboard Master
+                      Central Tezeus
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => setIsPerfilModalOpen(true)}>

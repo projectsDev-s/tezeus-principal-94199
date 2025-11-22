@@ -444,6 +444,9 @@ export function AutomationModal({
 
     try {
       setIsLoading(true);
+      const headers = getHeaders();
+      const currentUserId = headers['x-system-user-id'] || null;
+
       if (automation?.id) {
         // Atualizar automação existente usando função SQL
         const triggersJson = triggers.map(t => ({
@@ -468,6 +471,7 @@ export function AutomationModal({
           p_description: description.trim() || null,
           p_triggers: triggersJson as any,
           p_actions: actionsJson as any,
+          p_user_id: currentUserId,
         });
 
         if (updateError) throw updateError;
@@ -500,6 +504,7 @@ export function AutomationModal({
           p_description: description.trim() || null,
           p_triggers: triggersJson as any,
           p_actions: actionsJson as any,
+          p_user_id: currentUserId,
         });
 
         if (createError) throw createError;
