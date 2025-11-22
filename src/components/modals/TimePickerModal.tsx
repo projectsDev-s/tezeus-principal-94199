@@ -1,6 +1,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface TimePickerModalProps {
@@ -18,49 +19,80 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
   selectedHour = null,
   isDarkMode = false,
 }) => {
-  const [period, setPeriod] = React.useState<'AM' | 'PM'>('AM');
-  const [currentHour, setCurrentHour] = React.useState<number | null>(selectedHour !== null && selectedHour !== undefined
-    ? selectedHour % 12
-    : null);
-  const [hasSelection, setHasSelection] = React.useState<boolean>(selectedHour !== null && selectedHour !== undefined);
-  const hours = Array.from({ length: 12 }, (_, i) => i);
+  const [currentHour, setCurrentHour] = React.useState<number | null>(
+    selectedHour !== null && selectedHour !== undefined ? selectedHour : new Date().getHours()
+  );
 
   React.useEffect(() => {
     if (isOpen) {
       const initialHour = selectedHour ?? null;
-      const hasInitialSelection = initialHour !== null;
-      const displayHour = hasInitialSelection ? (initialHour % 12 === 0 ? 12 : initialHour % 12) : null;
-
-      setHasSelection(hasInitialSelection);
-      setCurrentHour(displayHour);
-      if (hasInitialSelection) {
-        setPeriod(initialHour >= 12 ? 'PM' : 'AM');
-      }
+      setCurrentHour(
+        initialHour !== null && initialHour !== undefined
+          ? initialHour
+          : new Date().getHours()
+      );
     } else {
-      // Ao fechar o modal, o ponteiro deve voltar para o centro até uma nova seleção
-      setHasSelection(selectedHour !== null && selectedHour !== undefined);
-      if (selectedHour === null || selectedHour === undefined) {
-        setCurrentHour(null);
-        setPeriod('AM');
-      }
+      setCurrentHour(
+        selectedHour !== null && selectedHour !== undefined
+          ? selectedHour
+          : new Date().getHours()
+      );
     }
   }, [isOpen, selectedHour]);
 
-  const handleHourSelect = (hour: number) => {
-    const displayHour = hour === 0 ? 12 : hour;
-    setCurrentHour(displayHour);
-    setHasSelection(true);
-    // Converter para formato 24h
-    const hour24 = period === 'PM' && displayHour !== 12 ? displayHour + 12 : displayHour === 12 && period === 'AM' ? 0 : displayHour;
-    onTimeSelect(hour24);
+  const clampHour = (hour: number) => {
+    if (Number.isNaN(hour)) return null;
+    if (hour < 0) return 0;
+    if (hour > 23) return 23;
+    return hour;
   };
 
-  const pointerAngle = currentHour !== null
-    ? (((currentHour % 12) || 0) * 30)
-    : 0;
+  const handleInputChange = (value: string) => {
+    if (value === '') {
+      setCurrentHour(null);
+      return;
+    }
+
+    const parsed = parseInt(value, 10);
+    const clamped = clampHour(parsed);
+    setCurrentHour(clamped);
+  };
+
+  const handleIncrement = () => {
+    setCurrentHour((prev) => {
+      if (prev === null) return 0;
+      return prev === 23 ? 0 : prev + 1;
+    });
+  };
+
+  const handleDecrement = () => {
+    setCurrentHour((prev) => {
+      if (prev === null) return 23;
+      return prev === 0 ? 23 : prev - 1;
+    });
+  };
+
+  const handleSliderChange = (value: string) => {
+    setCurrentHour(Number(value));
+  };
+
+  const handleConfirm = () => {
+    if (currentHour !== null) {
+      onTimeSelect(currentHour);
+    }
+    onClose();
+  };
+
+  const displayHour = currentHour !== null
+    ? currentHour.toString().padStart(2, '0')
+    : '--';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
       <DialogContent className={cn(
         "sm:max-w-md",
         isDarkMode ? "bg-[#1a1a1a] border-gray-700" : "bg-white"
@@ -74,98 +106,81 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col items-center space-y-4 p-4">
-          {/* Toggle AM/PM */}
-          <div className="flex gap-2 mb-4">
-            <Button
-              variant={period === 'AM' ? 'default' : 'outline'}
-              onClick={() => setPeriod('AM')}
-              className={cn(
-                "px-6",
-                period === 'AM' 
-                  ? "bg-blue-500 hover:bg-blue-600 text-white" 
-                  : isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-700"
-              )}
-            >
-              AM
-            </Button>
-            <Button
-              variant={period === 'PM' ? 'default' : 'outline'}
-              onClick={() => setPeriod('PM')}
-              className={cn(
-                "px-6",
-                period === 'PM' 
-                  ? "bg-blue-500 hover:bg-blue-600 text-white" 
-                  : isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-700"
-              )}
-            >
-              PM
-            </Button>
+        <div className="flex flex-col items-center space-y-6 p-4">
+          {/* Display digital */}
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "rounded-lg px-6 py-4 text-6xl font-mono tracking-widest shadow-inner",
+              isDarkMode ? "bg-gray-900 text-yellow-300" : "bg-gray-100 text-blue-600"
+            )}>
+              {displayHour}
+              <span className="text-4xl align-baseline ml-1 text-current">h</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                onClick={handleIncrement}
+                className={cn(
+                  "w-16",
+                  isDarkMode ? "border-gray-700 text-gray-200 hover:bg-gray-800" : "text-gray-700"
+                )}
+              >
+                +1
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDecrement}
+                className={cn(
+                  "w-16",
+                  isDarkMode ? "border-gray-700 text-gray-200 hover:bg-gray-800" : "text-gray-700"
+                )}
+              >
+                -1
+              </Button>
+            </div>
           </div>
 
-          {/* Relógio Visual */}
-          <div className="relative w-72 h-72">
-            <div className={cn(
-              "w-full h-full rounded-full flex items-center justify-center relative",
-              isDarkMode ? "bg-gray-800" : "bg-gray-100"
+          <div className="w-full space-y-3">
+            <label className={cn(
+              "text-sm font-medium",
+              isDarkMode ? "text-gray-300" : "text-gray-700"
             )}>
-              {/* Números das horas */}
-              {hours.map((hour) => {
-                const displayHour = hour === 0 ? 12 : hour;
-                const angle = (displayHour * 30) - 90;
-                const radius = 110;
-                const x = Math.cos((angle * Math.PI) / 180) * radius;
-                const y = Math.sin((angle * Math.PI) / 180) * radius;
-                const isSelected = currentHour === displayHour;
-                
-                return (
-                  <button
-                    key={hour}
-                    className={cn(
-                      "absolute w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all z-10 border border-transparent",
-                      isDarkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-600 hover:text-gray-900",
-                      isSelected ? "font-bold text-gray-900" : ""
-                    )}
-                    style={{
-                      left: `calc(50% + ${x}px - 20px)`,
-                      top: `calc(50% + ${y}px - 20px)`,
-                      transform: isSelected ? 'scale(1.05)' : 'none'
-                    }}
-                    onClick={() => handleHourSelect(displayHour)}
-                  >
-                    {displayHour}
-                  </button>
-                );
-              })}
-
-              {/* Ponteiro do relógio */}
-              <div 
-                className="absolute w-1 bg-yellow-400 origin-bottom transition-all duration-300"
-                style={{
-                  height: hasSelection ? "90px" : "0px",
-                  left: "50%",
-                  top: hasSelection ? "calc(50% - 90px)" : "50%",
-                  transform: hasSelection
-                    ? `translateX(-50%) rotate(${pointerAngle}deg)`
-                    : "translate(-50%, 0)",
-                  opacity: hasSelection ? 1 : 0,
-                  transformOrigin: "bottom center"
-                }} 
+              Ajustar horário manualmente
+            </label>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                max={23}
+                value={currentHour ?? ''}
+                onChange={(event) => handleInputChange(event.target.value)}
+                className={cn(
+                  "w-24 text-center text-2xl font-mono",
+                  isDarkMode ? "bg-gray-900 border-gray-700 text-gray-100" : "text-gray-900"
+                )}
               />
-              
-              {/* Centro do relógio */}
-              <div className="absolute w-4 h-4 bg-yellow-400 rounded-full z-20 shadow-md" style={{
-                left: "calc(50% - 8px)",
-                top: "calc(50% - 8px)"
-              }} />
+              <span className={cn(
+                "text-sm",
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+              )}>
+                Informe uma hora entre 0 e 23.
+              </span>
             </div>
+            <input
+              type="range"
+              min={0}
+              max={23}
+              value={currentHour ?? 0}
+              onChange={(event) => handleSliderChange(event.target.value)}
+              className="w-full"
+            />
           </div>
 
           {/* Botões de ação */}
           <div className="flex space-x-4">
             <Button
               variant="ghost"
-              onClick={onClose}
+              onClick={() => onClose()}
               className={cn(
                 isDarkMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"
               )}
@@ -173,8 +188,9 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
               Cancelar
             </Button>
             <Button
-              onClick={onClose}
+              onClick={handleConfirm}
               className="bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+              disabled={currentHour === null}
             >
               OK
             </Button>

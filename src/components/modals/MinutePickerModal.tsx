@@ -1,6 +1,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface MinutePickerModalProps {
@@ -18,26 +19,79 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
   selectedMinute = null,
   isDarkMode = false,
 }) => {
-  const minutes = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, 10, 15, ..., 55
-  const [currentMinute, setCurrentMinute] = React.useState<number | null>(selectedMinute);
-  const [hasSelection, setHasSelection] = React.useState<boolean>(selectedMinute !== null && selectedMinute !== undefined);
+  const [currentMinute, setCurrentMinute] = React.useState<number | null>(
+    selectedMinute !== null && selectedMinute !== undefined ? selectedMinute : new Date().getMinutes()
+  );
 
   React.useEffect(() => {
     if (isOpen) {
       const initialMinute = selectedMinute ?? null;
-      setCurrentMinute(initialMinute);
-      setHasSelection(initialMinute !== null);
+      setCurrentMinute(
+        initialMinute !== null && initialMinute !== undefined
+          ? initialMinute
+          : new Date().getMinutes()
+      );
     } else {
-      const initialMinute = selectedMinute ?? null;
-      setCurrentMinute(initialMinute);
-      setHasSelection(initialMinute !== null);
+      setCurrentMinute(
+        selectedMinute !== null && selectedMinute !== undefined
+          ? selectedMinute
+          : new Date().getMinutes()
+      );
     }
   }, [isOpen, selectedMinute]);
 
-  const pointerAngle = currentMinute !== null ? (currentMinute * 6) : 0;
+  const clampMinute = (minute: number) => {
+    if (Number.isNaN(minute)) return null;
+    if (minute < 0) return 0;
+    if (minute > 59) return 59;
+    return minute;
+  };
+
+  const handleInputChange = (value: string) => {
+    if (value === '') {
+      setCurrentMinute(null);
+      return;
+    }
+    const parsed = parseInt(value, 10);
+    const clamped = clampMinute(parsed);
+    setCurrentMinute(clamped);
+  };
+
+  const handleIncrement = () => {
+    setCurrentMinute((prev) => {
+      if (prev === null) return 0;
+      return prev === 59 ? 0 : prev + 1;
+    });
+  };
+
+  const handleDecrement = () => {
+    setCurrentMinute((prev) => {
+      if (prev === null) return 59;
+      return prev === 0 ? 59 : prev - 1;
+    });
+  };
+
+  const handleSliderChange = (value: string) => {
+    setCurrentMinute(Number(value));
+  };
+
+  const handleConfirm = () => {
+    if (currentMinute !== null) {
+      onMinuteSelect(currentMinute);
+    }
+    onClose();
+  };
+
+  const displayMinute = currentMinute !== null
+    ? currentMinute.toString().padStart(2, '0')
+    : '--';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
       <DialogContent className={cn(
         "sm:max-w-md",
         isDarkMode ? "bg-[#1a1a1a] border-gray-700" : "bg-white"
@@ -51,83 +105,91 @@ export const MinutePickerModal: React.FC<MinutePickerModalProps> = ({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col items-center space-y-4 p-4">
-          {/* Relógio Visual para Minutos */}
-          <div className="relative w-64 h-64">
+        <div className="flex flex-col items-center space-y-6 p-4">
+          {/* Display digital */}
+          <div className="flex items-center gap-4">
             <div className={cn(
-              "w-full h-full rounded-full border-2 flex items-center justify-center relative",
-              isDarkMode ? "bg-gray-800 border-gray-600" : "bg-gray-100 border-gray-300"
+              "rounded-lg px-6 py-4 text-6xl font-mono tracking-widest shadow-inner",
+              isDarkMode ? "bg-gray-900 text-yellow-300" : "bg-gray-100 text-blue-600"
             )}>
-              {/* Números dos minutos */}
-              {minutes.map((minute, index) => {
-                const angle = (index * 30) - 90; // 360/12 = 30 graus por posição, -90 para começar no topo
-                const radius = 90;
-                const x = Math.cos((angle * Math.PI) / 180) * radius;
-                const y = Math.sin((angle * Math.PI) / 180) * radius;
-                const isSelected = currentMinute === minute;
-                
-                return (
-                  <button
-                    key={minute}
-                    className={cn(
-                      "absolute w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-transform",
-                      isDarkMode ? "text-gray-300 hover:text-black" : "text-gray-700 hover:text-black",
-                      isSelected ? "font-semibold text-gray-900" : ""
-                    )}
-                    style={{
-                      left: `calc(50% + ${x}px - 16px)`,
-                      top: `calc(50% + ${y}px - 16px)`,
-                      transform: isSelected ? 'scale(1.05)' : 'none'
-                    }}
-                    onClick={() => {
-                      setCurrentMinute(minute);
-                      onMinuteSelect(minute);
-                    }}
-                  >
-                    {minute.toString().padStart(2, '0')}
-                  </button>
-                );
-              })}
-              
-              {/* Ponteiro do relógio */}
-              <div
-                className={cn(
-                  "absolute w-1 origin-bottom transition-transform duration-300",
-                  hasSelection ? "bg-yellow-400" : "bg-transparent"
-                )}
-                style={{
-                  height: hasSelection ? "60px" : "0px",
-                  left: "50%",
-                  top: hasSelection ? "calc(50% - 60px)" : "50%",
-                  transform: hasSelection
-                    ? `translateX(-50%) rotate(${pointerAngle}deg)`
-                    : "translate(-50%, 0)",
-                }}
-              />
-              
-              {/* Centro do relógio */}
-              <div className="absolute w-3 h-3 bg-yellow-400 rounded-full" style={{
-                left: "calc(50% - 6px)",
-                top: "calc(50% - 6px)"
-              }} />
+              {displayMinute}
+              <span className="text-4xl align-baseline ml-1 text-current">min</span>
             </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                onClick={handleIncrement}
+                className={cn(
+                  "w-16",
+                  isDarkMode ? "border-gray-700 text-gray-200 hover:bg-gray-800" : "text-gray-700"
+                )}
+              >
+                +1
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDecrement}
+                className={cn(
+                  "w-16",
+                  isDarkMode ? "border-gray-700 text-gray-200 hover:bg-gray-800" : "text-gray-700"
+                )}
+              >
+                -1
+              </Button>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3">
+            <label className={cn(
+              "text-sm font-medium",
+              isDarkMode ? "text-gray-300" : "text-gray-700"
+            )}>
+              Ajustar minutos manualmente
+            </label>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                value={currentMinute ?? ''}
+                onChange={(event) => handleInputChange(event.target.value)}
+                className={cn(
+                  "w-24 text-center text-2xl font-mono",
+                  isDarkMode ? "bg-gray-900 border-gray-700 text-gray-100" : "text-gray-900"
+                )}
+              />
+              <span className={cn(
+                "text-sm",
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+              )}>
+                Informe minutos entre 0 e 59.
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={59}
+              value={currentMinute ?? 0}
+              onChange={(event) => handleSliderChange(event.target.value)}
+              className="w-full"
+            />
           </div>
 
           {/* Botões de ação */}
           <div className="flex space-x-4">
             <Button
               variant="ghost"
-              onClick={onClose}
+              onClick={() => onClose()}
               className={cn(
-                "text-yellow-500 hover:text-yellow-600",
-                isDarkMode ? "hover:bg-gray-800" : "hover:bg-gray-100"
+                isDarkMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"
               )}
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
-              onClick={onClose}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+              onClick={handleConfirm}
+              className="bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+              disabled={currentMinute === null}
             >
               OK
             </Button>

@@ -5,7 +5,7 @@ import { useAgentHistory } from "@/hooks/useAgentHistory";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { UserCircle, ArrowRight, UserPlus, Clock, Bot, Power, PowerOff, ArrowRightLeft, User, UserMinus } from "lucide-react";
+import { UserCircle, ArrowRight, UserPlus, Clock, Bot, Power, PowerOff, ArrowRightLeft, User, UserMinus, GitBranch } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
@@ -34,6 +34,11 @@ const assignmentActionConfig: Record<string, {
     icon: <ArrowRight className="h-4 w-4 text-orange-500" />,
     label: 'Transferido',
     badgeClass: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  },
+  queue_transfer: {
+    icon: <ArrowRightLeft className="h-4 w-4 text-purple-500" />,
+    label: 'Transferência de fila',
+    badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
   },
   unassign: {
     icon: <UserMinus className="h-4 w-4 text-red-500" />,
@@ -146,6 +151,9 @@ export function AssignmentHistoryModal({
                   };
                   const fromUserName = assignment.from_user_name || 'Não atribuído';
                   const toUserName = assignment.to_user_name || 'Não atribuído';
+                  const fromQueueName = assignment.from_queue_name || 'Sem fila';
+                  const toQueueName = assignment.to_queue_name || 'Sem fila';
+                  const isQueueTransfer = assignment.action === 'queue_transfer';
                   return (
                     <div
                       key={`assignment-${assignment.id}`}
@@ -160,20 +168,23 @@ export function AssignmentHistoryModal({
                           <Badge variant="outline" className={assignmentConfig.badgeClass}>
                             {assignmentConfig.label}
                           </Badge>
-                          
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <User className="h-3 w-3" />
+                            {isQueueTransfer ? (
+                              <GitBranch className="h-3 w-3" />
+                            ) : (
+                              <User className="h-3 w-3" />
+                            )}
                             <span>
-                              de{' '}
+                              {isQueueTransfer ? 'da fila ' : 'de '}
                               <span className="font-medium text-foreground">
-                                {fromUserName}
+                                {isQueueTransfer ? fromQueueName : fromUserName}
                               </span>
                             </span>
                             <ArrowRight className="h-3 w-3 mx-1" />
                             <span>
-                              para{' '}
+                              {isQueueTransfer ? 'para a fila ' : 'para '}
                               <span className="font-medium text-foreground">
-                                {toUserName}
+                                {isQueueTransfer ? toQueueName : toUserName}
                               </span>
                             </span>
                           </div>

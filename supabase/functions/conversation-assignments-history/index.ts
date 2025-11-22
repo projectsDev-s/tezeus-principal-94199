@@ -50,7 +50,7 @@ serve(async (req) => {
     const { data, error } = await supabaseClient
       .from("conversation_assignments")
       .select(
-        "id, action, changed_at, changed_by, from_assigned_user_id, to_assigned_user_id",
+        "id, action, changed_at, changed_by, from_assigned_user_id, to_assigned_user_id, from_queue_id, to_queue_id",
       )
       .eq("conversation_id", conversationId)
       .order("changed_at", { ascending: false });
@@ -60,6 +60,8 @@ serve(async (req) => {
     }
 
     const userIds = new Set<string>();
+    const queueIds = new Set<string>();
+
     (data ?? []).forEach((entry) => {
       if (entry.from_assigned_user_id) {
         userIds.add(entry.from_assigned_user_id);
@@ -69,6 +71,12 @@ serve(async (req) => {
       }
       if (entry.changed_by) {
         userIds.add(entry.changed_by);
+      }
+      if (entry.from_queue_id) {
+        queueIds.add(entry.from_queue_id);
+      }
+      if (entry.to_queue_id) {
+        queueIds.add(entry.to_queue_id);
       }
     });
 
@@ -86,6 +94,20 @@ serve(async (req) => {
       userMap = new Map((users ?? []).map((user) => [user.id, user.name]));
     }
 
+    let queueMap = new Map<string, string>();
+    if (queueIds.size > 0) {
+      const { data: queues, error: queuesError } = await supabaseClient
+        .from("queues")
+        .select("id, name")
+        .in("id", Array.from(queueIds));
+
+      if (queuesError) {
+        throw queuesError;
+      }
+
+      queueMap = new Map((queues ?? []).map((queue) => [queue.id, queue.name]));
+    }
+
     const items = (data ?? []).map((entry) => ({
       ...entry,
       from_user_name: entry.from_assigned_user_id
@@ -96,6 +118,12 @@ serve(async (req) => {
         : null,
       changed_by_name: entry.changed_by
         ? userMap.get(entry.changed_by) ?? null
+        : null,
+      from_queue_name: entry.from_queue_id
+        ? queueMap.get(entry.from_queue_id) ?? null
+        : null,
+      to_queue_name: entry.to_queue_id
+        ? queueMap.get(entry.to_queue_id) ?? null
         : null,
     }));
 
