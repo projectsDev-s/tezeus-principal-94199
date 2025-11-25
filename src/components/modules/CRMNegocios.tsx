@@ -1265,8 +1265,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       <main className="h-screen flex flex-col w-full overflow-hidden">
         
         {/* CARD DE FILTROS */}
-        <div className="sticky top-0 z-10 px-4 py-2 flex-shrink-0">
-          <div className="max-w-screen-xl mx-auto w-full">
+        <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
+          <div className="mx-auto w-full max-w-screen-xl px-4 py-2">
             <div className={cn("w-full bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
               <div className="flex w-full flex-wrap items-center gap-3">
                 <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
@@ -1434,34 +1434,35 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
         {/* CONTAINER DO PIPELINE */}
         <div className="flex-1 min-h-0">
-          <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
-            {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
-              {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
-                  <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
-                    <div className="p-4 pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="w-3 h-3 rounded-full" />
-                          <Skeleton className="h-5 w-24" />
-                          <Skeleton className="h-5 w-8 rounded-full" />
+          <div className="mx-auto h-full w-full max-w-screen-xl px-4 pb-4">
+            <div className="h-full overflow-x-auto">
+              {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
+                {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
+                    <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
+                      <div className="p-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="w-3 h-3 rounded-full" />
+                            <Skeleton className="h-5 w-24" />
+                            <Skeleton className="h-5 w-8 rounded-full" />
+                          </div>
+                          <Skeleton className="h-4 w-16" />
                         </div>
-                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <div className="p-3 pt-0 space-y-3">
+                        {[...Array(3)].map((_, cardIndex) => <div key={cardIndex} className="bg-muted/20 rounded-lg p-4 space-y-2">
+                            <Skeleton className="h-5 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                            <div className="flex justify-between items-center mt-3">
+                              <Skeleton className="h-4 w-16" />
+                              <Skeleton className="h-4 w-20" />
+                            </div>
+                          </div>)}
                       </div>
                     </div>
-                    <div className="p-3 pt-0 space-y-3">
-                      {[...Array(3)].map((_, cardIndex) => <div key={cardIndex} className="bg-muted/20 rounded-lg p-4 space-y-2">
-                          <Skeleton className="h-5 w-full" />
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-4 w-1/2" />
-                          <div className="flex justify-between items-center mt-3">
-                            <Skeleton className="h-4 w-16" />
-                            <Skeleton className="h-4 w-20" />
-                          </div>
-                        </div>)}
-                    </div>
-                  </div>
-                </div>)}
-            </div> : !selectedPipeline ? <div className="flex items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
+                  </div>)}
+              </div> : !selectedPipeline ? <div className="flex items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
               <div className="text-center">
                 <p className="text-muted-foreground mb-4">Nenhum pipeline selecionado</p>
                 <Button onClick={() => setIsCriarPipelineModalOpen(true)}>
