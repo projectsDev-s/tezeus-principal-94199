@@ -1390,7 +1390,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
         {/* CONTAINER DO PIPELINE */}
         <div className="flex-1 min-h-0">
-          <div className="h-full overflow-x-auto px-4">
+          <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
             {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
               {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">

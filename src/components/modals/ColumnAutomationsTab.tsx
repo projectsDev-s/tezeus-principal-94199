@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Plus, Edit2, Trash2, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
@@ -21,18 +21,21 @@ interface ColumnAutomation {
   updated_at: string;
   triggers?: AutomationTrigger[];
   actions?: AutomationAction[];
+  triggersCount?: number;
+  actionsCount?: number;
+  executionsCount?: number;
 }
 
 interface AutomationTrigger {
   id: string;
-  automation_id: string;
+  automation_id?: string;
   trigger_type: 'enter_column' | 'leave_column' | 'time_in_column' | 'message_received';
   trigger_config: any;
 }
 
 interface AutomationAction {
   id: string;
-  automation_id: string;
+  automation_id?: string;
   action_type: 'send_message' | 'send_funnel' | 'move_to_column' | 'add_tag' | 'add_agent' | 'remove_agent';
   action_config: any;
   action_order: number;
@@ -44,6 +47,77 @@ interface ColumnAutomationsTabProps {
   isActive?: boolean; // ✅ NOVO: Indica se a aba está ativa
   isModalOpen?: boolean; // ✅ NOVO: Indica se o modal está aberto
 }
+
+const TIME_UNIT_LABELS: Record<string, string> = {
+  minutes: "minutos",
+  hours: "horas",
+  days: "dias",
+};
+
+const truncateText = (value: string, limit = 40) => {
+  if (!value) {
+    return "";
+  }
+  return value.length > limit ? `${value.slice(0, limit)}...` : value;
+};
+
+const formatTriggerLabel = (trigger: AutomationTrigger) => {
+  const config = trigger.trigger_config || {};
+
+  switch (trigger.trigger_type) {
+    case "enter_column":
+      return "Entrada no card";
+    case "leave_column":
+      return "Saída da coluna";
+    case "time_in_column": {
+      const value = config.time_value;
+      const unit = config.time_unit;
+      const unitLabel = TIME_UNIT_LABELS[unit] || unit || "tempo";
+      return value ? `Tempo na coluna: ${value} ${unitLabel}` : "Tempo na coluna";
+    }
+    case "message_received": {
+      const count = config.message_count;
+      return count ? `Recebe ${count} mensagem(ns)` : "Mensagens recebidas";
+    }
+    default:
+      return "Gatilho configurado";
+  }
+};
+
+const formatActionLabel = (action: AutomationAction) => {
+  const config = action.action_config || {};
+
+  switch (action.action_type) {
+    case "send_message": {
+      const message = typeof config.message === "string" ? config.message : "";
+      return message
+        ? `Enviar mensagem: "${truncateText(message)}"`
+        : "Enviar mensagem";
+    }
+    case "send_funnel":
+      return config.funnel_name
+        ? `Enviar funil ${config.funnel_name}`
+        : "Enviar funil";
+    case "move_to_column":
+      return config.column_name
+        ? `Mover para ${config.column_name}`
+        : "Mover para coluna";
+    case "add_tag":
+      return config.tag_name
+        ? `Adicionar tag ${config.tag_name}`
+        : "Adicionar tag";
+    case "add_agent":
+      return config.agent_name
+        ? `Adicionar agente ${config.agent_name}`
+        : "Adicionar agente";
+    case "remove_agent":
+      return config.agent_name
+        ? `Remover agente ${config.agent_name}`
+        : "Remover agente";
+    default:
+      return "Ação configurada";
+  }
+};
 
 export function ColumnAutomationsTab({ 
   columnId, 
@@ -129,29 +203,61 @@ export function ColumnAutomationsTab({
         return;
       }
 
-      // ✅ OTIMIZADO: Buscar apenas contagens de triggers e actions (mais rápido)
-      // Não precisa dos dados completos para a lista
-      const automationsWithCounts = await Promise.all(
+      const automationsWithDetails = await Promise.all(
         automationsData.map(async (automation) => {
-          const { count: triggersCount } = await supabase
-            .from('crm_column_automation_triggers')
-            .select('*', { count: 'exact', head: true })
-            .eq('automation_id', automation.id);
+          try {
+            const [detailsResponse, executionsResponse] = await Promise.all([
+              supabase.rpc('get_automation_details', { p_automation_id: automation.id }),
+              supabase
+                .from('crm_automation_executions')
+                .select('*', { count: 'exact', head: true })
+                .eq('automation_id', automation.id)
+            ]);
 
-          const { count: actionsCount } = await supabase
-            .from('crm_column_automation_actions')
-            .select('*', { count: 'exact', head: true })
-            .eq('automation_id', automation.id);
+            if ((detailsResponse as any)?.error) {
+              throw (detailsResponse as any).error;
+            }
 
-          return {
-            ...automation,
-            triggersCount: triggersCount || 0,
-            actionsCount: actionsCount || 0
-          };
+            if ((executionsResponse as any)?.error) {
+              throw (executionsResponse as any).error;
+            }
+
+            const details = ((detailsResponse as any)?.data || {}) as {
+              triggers?: AutomationTrigger[];
+              actions?: AutomationAction[];
+            };
+
+            const triggers = Array.isArray(details.triggers) ? details.triggers : [];
+            const actions = Array.isArray(details.actions) ? details.actions : [];
+            const sortedActions = [...actions].sort((a, b) => {
+              const orderA = a?.action_order ?? 0;
+              const orderB = b?.action_order ?? 0;
+              return orderA - orderB;
+            });
+
+            return {
+              ...automation,
+              triggers,
+              actions: sortedActions,
+              triggersCount: triggers.length,
+              actionsCount: sortedActions.length,
+              executionsCount: (executionsResponse as any)?.count || 0
+            };
+          } catch (detailsError) {
+            console.error('Erro ao carregar detalhes da automação:', detailsError);
+            return {
+              ...automation,
+              triggers: [],
+              actions: [],
+              triggersCount: 0,
+              actionsCount: 0,
+              executionsCount: 0
+            };
+          }
         })
       );
 
-      setAutomations(automationsWithCounts as any);
+      setAutomations(automationsWithDetails as ColumnAutomation[]);
       setHasLoaded(true);
     } catch (error: any) {
       console.error('Erro ao buscar automações:', error);
@@ -378,27 +484,112 @@ export function ColumnAutomationsTab({
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {automations.map((automation) => (
-            <Card key={automation.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+        <div className="space-y-4">
+          {automations.map((automation) => {
+            const triggers = automation.triggers ?? [];
+            const actions = automation.actions ?? [];
+            const triggersCount = automation.triggersCount ?? triggers.length;
+            const actionsCount = automation.actionsCount ?? actions.length;
+            const executionsCount = automation.executionsCount ?? 0;
+
+            return (
+              <Card key={automation.id} className="border border-amber-200/80 shadow-sm">
+                <CardHeader className="pb-4 bg-amber-50/60 border-b border-amber-100">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base text-slate-900">{automation.name}</CardTitle>
+                      {automation.description && (
+                        <CardDescription>{automation.description}</CardDescription>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
-                      <CardTitle className="text-base">{automation.name}</CardTitle>
+                      <span
+                        className={`text-xs font-medium ${automation.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                      >
+                        {automation.is_active ? 'Ativa' : 'Inativa'}
+                      </span>
                       <Switch
                         checked={automation.is_active}
                         onCheckedChange={() => handleToggleActive(automation)}
                       />
-                      <Label className="text-xs text-muted-foreground">
-                        {automation.is_active ? 'Ativa' : 'Inativa'}
-                      </Label>
                     </div>
-                    {automation.description && (
-                      <CardDescription className="mt-1">{automation.description}</CardDescription>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid gap-6 md:grid-cols-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <span>Gatilhos</span>
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-amber-200 bg-amber-100/80 text-amber-700"
+                        >
+                          {triggersCount}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {triggers.length > 0 ? (
+                          triggers.map((trigger, index) => (
+                            <Badge
+                              key={trigger.id || `trigger-${index}`}
+                              variant="outline"
+                              className="border border-amber-200 bg-amber-50 text-amber-700"
+                            >
+                              {formatTriggerLabel(trigger)}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Nenhum gatilho configurado
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <span>Ações</span>
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-blue-200 bg-blue-100/80 text-blue-700"
+                        >
+                          {actionsCount}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {actions.length > 0 ? (
+                          actions.map((action, index) => (
+                            <Badge
+                              key={action.id || `action-${index}`}
+                              variant="outline"
+                              className="border border-blue-200 bg-blue-50 text-blue-700"
+                            >
+                              {formatActionLabel(action)}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Nenhuma ação configurada
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <span>Execuções</span>
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-slate-200 bg-slate-100 text-slate-700"
+                        >
+                          {executionsCount}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+                        <div className="text-2xl font-semibold text-slate-900">{executionsCount}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">total de execuções</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-6 flex justify-end gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -415,20 +606,10 @@ export function ColumnAutomationsTab({
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
-                    <strong>Gatilhos:</strong> {(automation as any).triggersCount || automation.triggers?.length || 0}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <strong>Ações:</strong> {(automation as any).actionsCount || automation.actions?.length || 0}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
