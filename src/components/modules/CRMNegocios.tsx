@@ -1261,137 +1261,189 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
         </div>
       </div>;
   }
-  return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
-      <main className="h-screen flex flex-col w-full overflow-hidden">
-        
+  return (
+    <div className="p-6 bg-background min-h-screen">
+      <div className="space-y-6">
         {/* CARD DE FILTROS */}
-        <div className="sticky top-0 z-10 px-4 py-2 flex-shrink-0">
-          <div className={cn("flex items-center bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {/* Settings Button */}
-              {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && <Button size="icon" variant="ghost" className="h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0" onClick={() => setIsConfigModalOpen(true)} disabled={!selectedPipeline}>
-                  <Settings className="w-5 h-5" />
-                </Button>}
-              
-              {/* Pipeline Selector */}
-              <div className="mr-2 flex-shrink-0">
-                {isLoading ? (
-                  <Skeleton className="h-10 w-[200px]" />
-                ) : pipelines && pipelines.length > 0 ? (
-                  <Select 
-                    value={selectedPipeline?.id || ""} 
-                    onValueChange={(value) => {
-                      const pipeline = pipelines.find(p => p.id === value);
-                      if (pipeline) {
-                        selectPipeline(pipeline);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={cn("w-[200px] h-10 font-bold", isDarkMode ? "bg-card text-white border-border" : "bg-background")}>
-                      <SelectValue placeholder="Selecione um pipeline" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50 bg-background">
-                      {pipelines.map((pipeline) => (
-                        <SelectItem key={pipeline.id} value={pipeline.id}>
-                          {pipeline.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
-                )}
-              </div>
+        <div className="sticky top-6 z-10 flex-shrink-0">
+          <div className="px-4">
+            <div className="max-w-[1180px] mx-auto w-full">
+              <div className={cn("w-full bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
+                <div className="flex w-full flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                  {/* Settings Button */}
+                  {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-10 w-10 text-primary hover:bg-primary/10"
+                      onClick={() => setIsConfigModalOpen(true)}
+                      disabled={!selectedPipeline}
+                    >
+                      <Settings className="w-5 h-5" />
+                    </Button>
+                  )}
+                  
+                  {/* Pipeline Selector */}
+                  <div className="flex-shrink-0">
+                    {isLoading ? (
+                      <Skeleton className="h-10 w-[200px]" />
+                    ) : pipelines && pipelines.length > 0 ? (
+                      <Select
+                        value={selectedPipeline?.id || ""}
+                        onValueChange={(value) => {
+                          const pipeline = pipelines.find(p => p.id === value);
+                          if (pipeline) {
+                            selectPipeline(pipeline);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={cn("w-[200px] h-10 font-bold", isDarkMode ? "bg-card text-white border-border" : "bg-background")}>
+                          <SelectValue placeholder="Selecione um pipeline" />
+                        </SelectTrigger>
+                        <SelectContent className="z-50 bg-background">
+                          {pipelines.map((pipeline) => (
+                            <SelectItem key={pipeline.id} value={pipeline.id}>
+                              {pipeline.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
+                    )}
+                  </div>
 
-              {/* Criar Pipeline e Filtrar Buttons */}
-              <div className="relative flex-shrink-0 flex items-center gap-2">
-                {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    className="h-10 w-10 p-0 text-primary hover:bg-primary/10"
-                    onClick={() => setIsCriarPipelineModalOpen(true)}
-                  >
-                    <Plus className="w-5 h-5" />
-                  </Button>
-                )}
-                <Button size="sm" className={cn("font-medium relative", appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.status && appliedFilters.status.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange ? "bg-warning text-warning-foreground hover:bg-warning/90" : "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => setIsFilterModalOpen(true)} disabled={!selectedPipeline}>
-                  <ListFilter className="w-4 h-4 mr-2" />
-                  Filtrar
-                  {(appliedFilters?.tags && appliedFilters.tags.length > 0 || appliedFilters?.queues && appliedFilters.queues.length > 0 || appliedFilters?.status && appliedFilters.status.length > 0 || appliedFilters?.selectedDate || appliedFilters?.dateRange) && <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
-                      {(appliedFilters?.tags?.length || 0) + (appliedFilters?.queues?.length || 0) + (appliedFilters?.status?.length || 0) + (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
-                    </Badge>}
-                </Button>
-              </div>
-              
-              {/* Visualizar mensagens Button */}
-              
-              
-              {/* Search Input */}
-              <div className="relative flex-shrink-0 flex-1 max-w-xs">
-                <Search className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4", isDarkMode ? "text-gray-400" : "text-gray-500")} />
-                <Input placeholder="Buscar negócios..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={cn("pl-10 h-10 border-gray-300 bg-transparent", isDarkMode ? "border-gray-600 text-white placeholder:text-gray-400" : "")} />
-              </div>
-              
-              {/* Filtro por responsável */}
-              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                <div className="w-[220px]">
-                  <Select
-                    value={responsibleFilter}
-                    onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Filtrar responsável" />
-                    </SelectTrigger>
-                    <SelectContent align="end" className="min-w-[220px]">
-                      <SelectItem value="ALL">Todos os responsáveis</SelectItem>
-                      <SelectItem value="UNASSIGNED">
-                        Sem responsável ({unassignedCount})
-                      </SelectItem>
-                      {isLoadingActiveUsers ? (
-                        <SelectItem value="__loading" disabled>
-                          Carregando responsáveis...
-                        </SelectItem>
-                      ) : responsibleOptions.length > 0 ? (
-                        responsibleOptions.map(option => (
-                          <SelectItem key={option.id} value={option.id}>
-                            {option.name}{option.dealCount ? ` (${option.dealCount})` : ""}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="__empty" disabled>
-                          Nenhum responsável encontrado
-                        </SelectItem>
+                  {/* Criar Pipeline e Filtrar Buttons */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-10 w-10 p-0 text-primary hover:bg-primary/10"
+                        onClick={() => setIsCriarPipelineModalOpen(true)}
+                      >
+                        <Plus className="w-5 h-5" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "font-medium relative",
+                        appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                        appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                        appliedFilters?.status && appliedFilters.status.length > 0 ||
+                        appliedFilters?.selectedDate ||
+                        appliedFilters?.dateRange
+                          ? "bg-warning text-warning-foreground hover:bg-warning/90"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
                       )}
-                    </SelectContent>
-                  </Select>
-                </div>
+                      onClick={() => setIsFilterModalOpen(true)}
+                      disabled={!selectedPipeline}
+                    >
+                      <ListFilter className="w-4 h-4 mr-2" />
+                      Filtrar
+                      {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                        appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                        appliedFilters?.status && appliedFilters.status.length > 0 ||
+                        appliedFilters?.selectedDate ||
+                        appliedFilters?.dateRange) && (
+                          <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
+                            {(appliedFilters?.tags?.length || 0) +
+                              (appliedFilters?.queues?.length || 0) +
+                              (appliedFilters?.status?.length || 0) +
+                              (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                          </Badge>
+                        )}
+                    </Button>
+                  </div>
+                  
+                  {/* Search Input */}
+                  <div className="relative flex-1 min-w-[200px] max-w-xs">
+                    <Search className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4", isDarkMode ? "text-gray-400" : "text-gray-500")} />
+                    <Input
+                      placeholder="Buscar negócios..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      className={cn("pl-10 h-10 border-gray-300 bg-transparent", isDarkMode ? "border-gray-600 text-white placeholder:text-gray-400" : "")}
+                    />
+                  </div>
+                  
+                  {/* Filtro por responsável */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="w-[220px]">
+                      <Select
+                        value={responsibleFilter}
+                        onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Filtrar responsável" />
+                        </SelectTrigger>
+                        <SelectContent align="end" className="min-w-[220px]">
+                          <SelectItem value="ALL">Todos os responsáveis</SelectItem>
+                          <SelectItem value="UNASSIGNED">
+                            Sem responsável ({unassignedCount})
+                          </SelectItem>
+                          {isLoadingActiveUsers ? (
+                            <SelectItem value="__loading" disabled>
+                              Carregando responsáveis...
+                            </SelectItem>
+                          ) : responsibleOptions.length > 0 ? (
+                            responsibleOptions.map(option => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.name}
+                                {option.dealCount ? ` (${option.dealCount})` : ""}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="__empty" disabled>
+                              Nenhum responsável encontrado
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                {responsibleFilter !== 'ALL' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setResponsibleFilter('ALL')}
-                    className="flex-shrink-0 text-xs"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    Limpar
-                  </Button>
-                )}
+                    {responsibleFilter !== 'ALL' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setResponsibleFilter('ALL')}
+                        className="text-xs"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Limpar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                  {/* + Coluna Button - Only show if pipeline exists and user can manage columns */}
+                  {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                    <Button
+                      size="sm"
+                      className={cn("bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto")}
+                      onClick={() => setIsAddColumnModalOpen(true)}
+                    >
+                      + Coluna
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-            
-            {/* + Coluna Button - Only show if pipeline exists and user can manage columns */}
-            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && <Button size="sm" className={cn("bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-4 flex-shrink-0")} onClick={() => setIsAddColumnModalOpen(true)}>
-                + Coluna
-              </Button>}
           </div>
-        </div>
 
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+        >
         {/* CONTAINER DO PIPELINE */}
         <div className="flex-1 min-h-0">
-          <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
-            {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
+          <div className="h-full w-full max-w-[1180px] mx-auto overflow-x-auto px-4">
+++ End Patch*** End Patch to=functions.apply_patchანმრთassistant to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patchောင် to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_patch to=functions_apply_PATCH to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_PATCH to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patchJSONString to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.applyываем to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch_OUTPUT_TOO_LARGE_RESULT្ល to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch_BUFFER.Writer to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply_patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patchازت to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patchettava to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patch to=functions.apply.patchственную
               {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                     <div className="p-4 pb-3">
@@ -1698,9 +1750,12 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
           })}
             </div>}
           </div>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <DragOverlay>
+      <DragOverlay>
           {activeId && (() => {
           const activeCard = cards.find(card => `card-${card.id}` === activeId);
           if (activeCard) {
@@ -1759,7 +1814,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
           return null;
         })()}
         </DragOverlay>
-      </main>
+
+        </DndContext>
 
       {/* Modais */}
       <AddColumnModal open={isAddColumnModalOpen} onOpenChange={setIsAddColumnModalOpen} onAddColumn={handleColumnCreate} isDarkMode={isDarkMode} />
@@ -1875,19 +1931,21 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     }
   }} dealName={selectedCardForDeletion?.name} />
 
-      <ExportCSVModal 
-        isOpen={isExportCSVModalOpen} 
+      <ExportCSVModal
+        isOpen={isExportCSVModalOpen}
         onClose={() => {
           setIsExportCSVModalOpen(false);
           setSelectedColumnForExport(null);
-        }} 
-        columnName={selectedColumnForExport?.name || ''} 
+        }}
+        columnName={selectedColumnForExport?.name || ''}
         cards={selectedColumnForExport ? getCardsByColumn(selectedColumnForExport.id).map(card => ({
           ...card,
           pipeline: { name: selectedPipeline?.name || '' }
-        })) : []} 
+        })) : []}
       />
-    </DndContext>;
+      </div>
+    </div>
+  );
 }
 
 // Componente exportado com Provider
