@@ -1219,49 +1219,55 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
   // Show debug panel if loading or no pipelines found
   if (isLoading || pipelines.length === 0) {
-    return <div className="p-6">
+    return (
+      <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Negócios</h1>
             <p className="text-muted-foreground">Gerencie seus negócios no pipeline de vendas</p>
           </div>
-          {!isLoading && canManagePipelines(effectiveWorkspaceId) && <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
+          {!isLoading && canManagePipelines(effectiveWorkspaceId) && (
+            <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
               Criar Pipeline
-            </Button>}
+            </Button>
+          )}
         </div>
         
-        {isLoading ? <div className="flex items-center justify-center h-64">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div> : <div className="text-center py-12">
+          </div>
+        ) : (
+          <div className="text-center py-12">
             <h3 className="text-lg font-medium text-muted-foreground mb-2">
               Nenhum pipeline encontrado
             </h3>
             <p className="text-muted-foreground mb-4">
               {canManagePipelines(selectedWorkspace?.workspace_id) ? "Crie seu primeiro pipeline para começar a gerenciar seus negócios" : "Nenhum pipeline disponível no momento"}
             </p>
-            {canManagePipelines(selectedWorkspace?.workspace_id) && <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
+            {canManagePipelines(selectedWorkspace?.workspace_id) && (
+              <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar Pipeline
-              </Button>}
-          </div>}
+              </Button>
+            )}
+          </div>
+        )}
         
         <CriarPipelineModal isOpen={isCriarPipelineModalOpen} onClose={() => setIsCriarPipelineModalOpen(false)} onSave={handlePipelineCreate} />
-      </div>;
-  }
-
-  // Mostrar loading quando estiver carregando pipelines
-  if (isLoading) {
-    return <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-muted-foreground text-sm">Carregando pipelines...</p>
-          </div>
-        </div>
       </div>
+    );
   }
-  return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
+  
+  return (
+    <DndContext 
+      sensors={sensors} 
+      collisionDetection={closestCenter} 
+      onDragStart={handleDragStart} 
+      onDragEnd={handleDragEnd} 
+      onDragOver={handleDragOver}
+    >
       <main className="h-screen flex flex-col w-full overflow-hidden">
         
         {/* CARD DE FILTROS */}
@@ -1434,8 +1440,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
         {/* CONTAINER DO PIPELINE */}
         <div className="flex-1 min-h-0">
-          <div className="mx-auto h-full w-full max-w-screen-xl px-4 pb-4">
-            <div className="h-full overflow-x-auto">
+          <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
               {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
                 {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
                     <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
@@ -1932,7 +1937,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
           pipeline: { name: selectedPipeline?.name || '' }
         })) : []} 
       />
-    </DndContext>;
+    </DndContext>
+  );
 }
 
 // Componente exportado com Provider
