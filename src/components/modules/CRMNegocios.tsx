@@ -1259,7 +1259,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             <p className="text-muted-foreground text-sm">Carregando pipelines...</p>
           </div>
         </div>
-      </div>;
+      </div>
   }
   return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
       <main className="h-screen flex flex-col w-full overflow-hidden">
