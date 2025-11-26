@@ -57,10 +57,11 @@ const GoogleAgendaCallback = () => {
         setMessage("Confirmando as permissões junto ao Google. Aguarde alguns segundos...");
 
         const { error: exchangeError } = await supabase.functions.invoke(
-          "google-calendar-integration/exchange-code",
+          "google-calendar-integration",
           {
             headers,
             body: {
+              action: "exchange-code",
               code,
               state,
               redirectUri: `${window.location.origin}/google-agenda/callback`,

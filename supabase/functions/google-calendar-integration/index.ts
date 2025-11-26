@@ -502,9 +502,25 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const segments = url.pathname.split("/").filter(Boolean);
-    const action = segments[segments.length - 1] ?? "status";
-    const body =
+    const lastSegment = segments[segments.length - 1] ?? "";
+    const rawBody =
       req.method === "GET" ? {} : await req.json().catch(() => ({}));
+    let action = url.searchParams.get("action")
+      || (typeof (rawBody as any)?.action === "string"
+        ? (rawBody as any).action
+        : "")
+      || lastSegment;
+
+    if (!action || action === "google-calendar-integration") {
+      action = "status";
+    }
+
+    const body = (rawBody && typeof rawBody === "object")
+      ? { ...(rawBody as Record<string, unknown>) }
+      : {};
+    if ("action" in body) {
+      delete (body as Record<string, unknown>).action;
+    }
 
     await cleanupExpiredStates(supabaseClient);
 

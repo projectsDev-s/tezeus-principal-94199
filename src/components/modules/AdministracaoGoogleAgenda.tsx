@@ -66,10 +66,10 @@ export function AdministracaoGoogleAgenda() {
         data,
         error,
       } = await supabase.functions.invoke<IntegrationStatus>(
-        "google-calendar-integration/status",
+        "google-calendar-integration",
         {
           headers,
-          body: {},
+          body: { action: "status" },
         }
       );
 
@@ -101,9 +101,9 @@ export function AdministracaoGoogleAgenda() {
     try {
       const { data, error } = await supabase.functions.invoke<{
         authUrl: string;
-      }>("google-calendar-integration/auth-url", {
+      }>("google-calendar-integration", {
         headers,
-        body: { redirectUri },
+        body: { action: "auth-url", redirectUri },
       });
 
       if (error) throw error;
@@ -129,10 +129,10 @@ export function AdministracaoGoogleAgenda() {
 
     try {
       const { error } = await supabase.functions.invoke(
-        "google-calendar-integration/disconnect",
+        "google-calendar-integration",
         {
           headers,
-          body: {},
+          body: { action: "disconnect" },
         }
       );
 
