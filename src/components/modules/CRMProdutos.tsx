@@ -121,7 +121,7 @@ export function CRMProdutos() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-foreground">Produtos Comerciais</h1>
+        <h1 className="text-2xl font-bold text-foreground">Produtos</h1>
         
         <Button 
           onClick={() => {

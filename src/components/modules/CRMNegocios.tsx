@@ -1223,8 +1223,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Negócios</h1>
-            <p className="text-muted-foreground">Gerencie seus negócios no pipeline de vendas</p>
+            <h1 className="text-2xl font-bold text-foreground">Pipeline</h1>
           </div>
           {!isLoading && canManagePipelines(effectiveWorkspaceId) && (
             <Button onClick={() => setIsCriarPipelineModalOpen(true)} className="bg-primary hover:bg-primary/90">
@@ -1268,14 +1267,14 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       onDragEnd={handleDragEnd} 
       onDragOver={handleDragOver}
     >
-      <main className="h-screen flex flex-col w-full overflow-hidden">
+      {/* 2️⃣ Hierarquia Correta: Container Principal (.app-container) */}
+      <div className="h-full flex flex-col w-full overflow-hidden bg-background/50">
         
-        {/* CARD DE FILTROS */}
-        <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
-          <div className="mx-auto w-full max-w-screen-xl px-4 py-2">
-            <div className={cn("w-full bg-background border rounded-lg p-3 shadow-sm", isDarkMode ? "bg-card border-border" : "bg-background border-border")}>
-              <div className="flex w-full flex-wrap items-center gap-3">
-                <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+        {/* 2️⃣ Hierarquia Correta: Área Fixa Superior (.fixed-header) */}
+        {/* 3️⃣ Regras: overflow: hidden; Não deve haver scroll. */}
+        <div className="flex-shrink-0 z-10 bg-background border-b flex items-center px-4 py-2 shadow-sm w-full overflow-hidden">
+          <div className="flex w-full flex-wrap items-center gap-2 overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
                   {/* Settings Button */}
                   {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
                     <Button
@@ -1433,16 +1432,17 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                     + Coluna
                   </Button>
                 )}
-              </div>
-            </div>
-          </div>
+                </div>
         </div>
 
-        {/* CONTAINER DO PIPELINE */}
-        <div className="flex-1 min-h-0">
-          <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
-              {isLoading ? <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
-                {[...Array(4)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
+        {/* 2️⃣ Hierarquia Correta: Área de Pipeline com Scroll (.pipeline-scroll-area) */}
+        {/* 3️⃣ Regras: overflow-x: auto; overflow-y: hidden; Gera o scroll horizontal. */}
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-muted/10">
+          {/* 2️⃣ Hierarquia Correta: Container de Colunas (.pipeline-columns-container) */}
+          {/* 3️⃣ Regras: display: flex; flex-wrap: nowrap; */}
+          <div className="flex h-full px-6 pt-4 pb-2 gap-4 min-w-max">
+              {isLoading ? <div className="flex gap-4 h-full min-w-full">
+                {[...Array(4)].map((_, index) => <div key={index} className="w-[300px] flex-shrink-0 h-full">
                     <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                       <div className="p-4 pb-3">
                         <div className="flex items-center justify-between">
@@ -1477,8 +1477,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               </div>
               </div> : isLoadingColumns ?
           // Skeleton loading para colunas
-          <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
-              {[...Array(3)].map((_, index) => <div key={index} className="w-60 sm:w-68 flex-shrink-0 h-full">
+          <div className="flex gap-4 h-full min-w-full">
+              {[...Array(3)].map((_, index) => <div key={index} className="w-[300px] flex-shrink-0 h-full">
                   <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
                     <div className="p-4 pb-3 flex-shrink-0">
                       <div className="flex items-center justify-between">
@@ -1515,7 +1515,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                     </div>
                   </div>
                 </div>)}
-              </div> : <div className="flex gap-1.5 sm:gap-3 h-full min-w-full">
+              </div> : <div className="flex gap-4 h-full w-full">
                 {columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
@@ -1530,9 +1530,12 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               }).format(value);
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
-                    <div className="w-60 sm:w-72 flex-shrink-0 h-full">
-                       <div className={cn("bg-card rounded-lg border border-t-4 h-full flex flex-col border-b-2 border-b-primary", `border-t-[${column.color}]`)} style={{
-                  borderTopColor: column.color
+                    {/* 2️⃣ Hierarquia Correta: Colunas Individuais (.pipeline-column) */}
+                    {/* 3️⃣ Regras: Largura Fixa (width: [valor];) flex-shrink: 0; */}
+                    <div className="w-[300px] flex-shrink-0 h-full flex flex-col pb-2">
+                       <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20", `border-t-[${column.color}]`)} style={{
+                  borderTopColor: column.color,
+                  borderTopWidth: '4px'
                 }}>
                         {/* Cabeçalho da coluna - fundo branco/claro */}
                         <div className="bg-white p-4 pb-3 flex-shrink-0 rounded-t border-b border-border/20">
@@ -1781,7 +1784,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               product_value: productValue ?? null,
               hasProduct: !!productId
             };
-            return <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} workspaceId={effectiveWorkspaceId} onChatClick={dealData => {
+            return <div className="w-[300px]">
+              <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} workspaceId={effectiveWorkspaceId} onChatClick={dealData => {
               console.log('🎯 CRM DragOverlay: Abrindo chat para deal:', dealData);
               setSelectedChatCard(dealData);
               setIsChatModalOpen(true);
@@ -1804,12 +1808,13 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             }} onConfigureAgent={(conversationId) => {
               setSelectedConversationForAgent(conversationId);
               setAgentModalOpen(true);
-            }} />;
+            }} />
+            </div>;
           }
           return null;
         })()}
         </DragOverlay>
-      </main>
+      </div>
 
       {/* Modais */}
       <AddColumnModal open={isAddColumnModalOpen} onOpenChange={setIsAddColumnModalOpen} onAddColumn={handleColumnCreate} isDarkMode={isDarkMode} />

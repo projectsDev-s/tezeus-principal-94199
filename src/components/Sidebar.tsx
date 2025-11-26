@@ -153,7 +153,7 @@ export function Sidebar({
     icon: <Building2 className="w-5 h-5" />
   }, {
     id: "crm-negocios",
-    label: "Negócios",
+    label: "Pipeline",
     icon: <DollarSign className="w-5 h-5" />,
     group: "crm"
   }, {
@@ -168,7 +168,7 @@ export function Sidebar({
     group: "crm"
   }, {
     id: "crm-produtos",
-    label: "Produtos Comerciais",
+    label: "Produtos",
     icon: <Package className="w-5 h-5" />,
     group: "crm"
   }, {
