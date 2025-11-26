@@ -1424,7 +1424,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
             {/* Pipeline Scroll Area */}
             <div className="flex-1 min-h-0">
-              <div className="h-full pl-4 pr-5 overflow-x-auto">
+              <div className="h-full pl-4 pr-5 overflow-x-auto w-[95%]">
                 <div className="h-full overflow-x-auto overflow-y-hidden">
                   {isLoading ? (
                     <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
