@@ -1424,7 +1424,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
             {/* Pipeline Scroll Area */}
             <div className="flex-1 min-h-0">
-              <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
+              <div className="h-full w-full px-4">
+                <div className="h-full max-w-screen-xl mx-auto overflow-x-auto">
                   {isLoading ? (
                     <div className="flex gap-4 h-full min-w-full">
                       {[...Array(4)].map((_, index) => (
@@ -1749,6 +1750,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                   )}
                 </div>
               </div>
+            </div>
           </div>
         </main>
       </div>
