@@ -1267,11 +1267,10 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       onDragEnd={handleDragEnd} 
       onDragOver={handleDragOver}
     >
-      {/* 2️⃣ Hierarquia Correta: Container Principal (.app-container) */}
+      {/* Container principal - ocupa toda viewport */}
       <div className="h-full flex flex-col w-full overflow-hidden bg-background/50">
         
-        {/* 2️⃣ Hierarquia Correta: Área Fixa Superior (.fixed-header) */}
-        {/* 3️⃣ Regras: overflow: hidden; Não deve haver scroll. */}
+        {/* Header fixo - não rola */}
         <div className="flex-shrink-0 z-10 bg-background border-b flex items-center px-4 py-2 shadow-sm w-full overflow-hidden">
           <div className="flex w-full flex-wrap items-center gap-2 overflow-hidden">
                   <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
@@ -1435,12 +1434,10 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                 </div>
         </div>
 
-        {/* 2️⃣ Hierarquia Correta: Área de Pipeline com Scroll (.pipeline-scroll-area) */}
-        {/* 3️⃣ Regras: overflow-x: auto; overflow-y: hidden; Gera o scroll horizontal. */}
+        {/* Área de scroll isolado - APENAS HORIZONTAL */}
         <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-muted/10">
-          {/* 2️⃣ Hierarquia Correta: Container de Colunas (.pipeline-columns-container) */}
-          {/* 3️⃣ Regras: display: flex; flex-wrap: nowrap; */}
-          <div className="flex h-full px-6 pt-4 pb-2 gap-4 min-w-max">
+          {/* Container de colunas - sem quebra de linha */}
+          <div className="flex h-full px-6 pt-4 pb-2 gap-4" style={{ minWidth: 'max-content' }}>
               {isLoading ? <div className="flex gap-4 h-full min-w-full">
                 {[...Array(4)].map((_, index) => <div key={index} className="w-[300px] flex-shrink-0 h-full">
                     <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
@@ -1530,8 +1527,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               }).format(value);
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
-                    {/* 2️⃣ Hierarquia Correta: Colunas Individuais (.pipeline-column) */}
-                    {/* 3️⃣ Regras: Largura Fixa (width: [valor];) flex-shrink: 0; */}
+                    {/* Coluna individual - largura fixa, sem encolher */}
                     <div className="w-[300px] flex-shrink-0 h-full flex flex-col pb-2">
                        <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color,

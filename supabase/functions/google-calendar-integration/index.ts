@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -9,8 +9,6 @@ const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
 const REQUIRED_SCOPES = ["https://www.googleapis.com/auth/calendar"];
 const TOKEN_HEALTHCHECK_INTERVAL_MS = 1000 * 60 * 60 * 6; // 6 horas
-
-type SupabaseClient = ReturnType<typeof createClient>;
 
 const getEnvOrThrow = (key: string) => {
   const value = Deno.env.get(key);
@@ -38,7 +36,7 @@ const generateCodeChallenge = async (verifier: string) => {
   return base64UrlEncode(digest);
 };
 
-const cleanupExpiredStates = async (client: SupabaseClient) => {
+const cleanupExpiredStates = async (client: SupabaseClient<any>) => {
   const now = new Date().toISOString();
   const { error: expiredError } = await client
     .from("google_calendar_oauth_states")
@@ -138,7 +136,7 @@ interface GoogleAuthorization {
 }
 
 const handleStatus = async (
-  client: SupabaseClient,
+  client: SupabaseClient<any>,
   workspaceId: string,
   userId: string,
 ) => {
@@ -227,7 +225,7 @@ const handleStatus = async (
 };
 
 const handleAuthUrl = async (
-  client: SupabaseClient,
+  client: SupabaseClient<any>,
   workspaceId: string,
   userId: string,
   body: Record<string, unknown>,
@@ -320,7 +318,7 @@ const exchangeAuthorizationCode = async (
 };
 
 const handleExchangeCode = async (
-  client: SupabaseClient,
+  client: SupabaseClient<any>,
   workspaceId: string,
   userId: string,
   body: Record<string, unknown>,
@@ -439,7 +437,7 @@ const handleExchangeCode = async (
 };
 
 const handleDisconnect = async (
-  client: SupabaseClient,
+  client: SupabaseClient<any>,
   workspaceId: string,
   userId: string,
 ) => {
