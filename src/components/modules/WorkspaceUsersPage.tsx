@@ -470,7 +470,6 @@ export function WorkspaceUsersPage({
                   <SelectContent>
                     <SelectItem value="user">Usuário</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
-                    {(userRole === 'master' || isMaster) && <SelectItem value="master">Usuário Tezeus</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>

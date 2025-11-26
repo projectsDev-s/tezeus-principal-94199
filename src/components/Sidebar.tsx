@@ -433,7 +433,7 @@ export function Sidebar({
                 <div className="text-sm font-medium text-foreground truncate">{user?.name}</div>
                 <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
                 <div className="text-xs text-primary font-medium capitalize">
-                  {userRole === 'master' ? 'Usuário Tezeus' : userRole}
+                  {userRole === 'master' ? 'Master' : userRole}
                 </div>
               </div>
               <DropdownMenu>

@@ -69,7 +69,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    profile: 'user',
     senha: '',
     default_channel: '',
     phone: ''
@@ -116,7 +115,7 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
   }, [defaultInstance, connections, formData.default_channel]);
 
   const handleCreateUser = async () => {
-    if (!formData.name || !formData.email || !formData.profile || !formData.senha) {
+    if (!formData.name || !formData.email || !formData.senha) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -126,7 +125,7 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
     }
 
     // Set default_channel if not selected
-    let finalFormData = { ...formData };
+    let finalFormData = { ...formData, profile: selectedRole };
     if (!finalFormData.default_channel) {
       // Try to use default instance
       if (defaultInstance && connections.some(conn => conn.id === defaultInstance)) {
@@ -150,7 +149,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
       setFormData({
         name: '',
         email: '',
-        profile: 'user',
         senha: '',
         default_channel: '',
         phone: ''
@@ -174,7 +172,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
     setFormData({
       name: '',
       email: '',
-      profile: 'user',
       senha: '',
       default_channel: '',
       phone: ''
@@ -294,20 +291,6 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="profile">Perfil *</Label>
-                    <Select value={formData.profile} onValueChange={(value) => setFormData(prev => ({ ...prev, profile: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="master">Usuário Tezeus</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
                     <Label htmlFor="senha">Senha *</Label>
                     <div className="relative">
                       <Input
@@ -387,7 +370,7 @@ export function WorkspaceUsersModal({ open, onOpenChange, workspaceId, workspace
               <div className="flex gap-2 pt-4">
                 <Button 
                   onClick={handleCreateUser}
-                  disabled={isSubmitting || !formData.name || !formData.email || !formData.profile || !formData.senha}
+                  disabled={isSubmitting || !formData.name || !formData.email || !formData.senha}
                 >
                   {isSubmitting ? "Criando..." : "Criar Usuário"}
                 </Button>
