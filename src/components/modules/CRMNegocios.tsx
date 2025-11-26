@@ -1274,7 +1274,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             
             {/* Sticky Header */}
             <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
-              <div className="mx-auto w-full max-w-screen-xl px-4 py-2">
+              <div className="w-full pl-4 pr-5 py-2">
                 <div className="w-full border rounded-lg p-3 shadow-sm bg-background border-border">
                   <div className="flex w-full flex-wrap items-center gap-3">
                     <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
