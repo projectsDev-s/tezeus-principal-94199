@@ -1267,237 +1267,253 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       onDragEnd={handleDragEnd} 
       onDragOver={handleDragOver}
     >
-      {/* Container principal - mesma estrutura do Dashboard */}
-      <div className="h-full flex flex-col w-full bg-background">
-        
-        {/* Header fixo - uma linha única */}
-        <div className="flex-shrink-0 z-10 bg-background border-b px-4 py-3 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2">
-            {/* Settings Button */}
-            {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 text-primary hover:bg-primary/10 flex-shrink-0"
-                onClick={() => setIsConfigModalOpen(true)}
-                disabled={!selectedPipeline}
-              >
-                <Settings className="w-5 h-5" />
-              </Button>
-            )}
+      {/* Estrutura do layout conforme imagem fornecida */}
+      <div className="flex-1 flex flex-col max-h-screen">
+        <main className="flex-1 overflow-y-auto">
+          <main className="h-screen flex flex-col w-full overflow-hidden">
             
-            {/* Pipeline Selector */}
-            <div className="flex-shrink-0">
-              {isLoading ? (
-                <Skeleton className="h-10 w-[200px]" />
-              ) : pipelines && pipelines.length > 0 ? (
-                <Select
-                  value={selectedPipeline?.id || ""}
-                  onValueChange={(value) => {
-                    const pipeline = pipelines.find(p => p.id === value);
-                    if (pipeline) {
-                      selectPipeline(pipeline);
-                    }
-                  }}
-                >
-                  <SelectTrigger className={cn("w-[200px] h-10 font-bold", isDarkMode ? "bg-card text-white border-border" : "bg-background")}>
-                    <SelectValue placeholder="Selecione um pipeline" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 bg-background">
-                    {pipelines.map((pipeline) => (
-                      <SelectItem key={pipeline.id} value={pipeline.id}>
-                        {pipeline.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
-              )}
-            </div>
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
+              <div className="mx-auto w-full max-w-screen-xl px-4 py-2">
+                <div className="w-full border rounded-lg p-3 shadow-sm bg-background border-border">
+                  <div className="flex w-full flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                      
+                      {/* Settings Button */}
+                      {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsConfigModalOpen(true)}
+                          className="text-primary hover:bg-primary/10"
+                          disabled={!selectedPipeline}
+                        >
+                          <Settings className="w-5 h-5" />
+                        </Button>
+                      )}
 
-            {/* Criar Pipeline Button */}
-            {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-10 w-10 p-0 text-primary hover:bg-primary/10 flex-shrink-0"
-                onClick={() => setIsCriarPipelineModalOpen(true)}
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-            )}
+                      {/* Pipeline Selector */}
+                      <div className="flex-shrink-0">
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-[200px]" />
+                        ) : pipelines && pipelines.length > 0 ? (
+                          <Select
+                            value={selectedPipeline?.id || ""}
+                            onValueChange={(value) => {
+                              const pipeline = pipelines.find(p => p.id === value);
+                              if (pipeline) {
+                                selectPipeline(pipeline);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-[200px] h-10 font-bold bg-background">
+                              <SelectValue placeholder="Selecione um pipeline" />
+                            </SelectTrigger>
+                            <SelectContent className="z-50 bg-background">
+                              {pipelines.map((pipeline) => (
+                                <SelectItem key={pipeline.id} value={pipeline.id}>
+                                  {pipeline.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
+                        )}
+                      </div>
 
-            {/* Botão Filtrar */}
-            <Button
-              size="sm"
-              className={cn(
-                "font-medium relative flex-shrink-0",
-                appliedFilters?.tags && appliedFilters.tags.length > 0 ||
-                appliedFilters?.queues && appliedFilters.queues.length > 0 ||
-                appliedFilters?.status && appliedFilters.status.length > 0 ||
-                appliedFilters?.selectedDate ||
-                appliedFilters?.dateRange
-                  ? "bg-warning text-warning-foreground hover:bg-warning/90"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-              onClick={() => setIsFilterModalOpen(true)}
-              disabled={!selectedPipeline}
-            >
-              <ListFilter className="w-4 h-4 mr-2" />
-              Filtrar
-              {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
-                appliedFilters?.queues && appliedFilters.queues.length > 0 ||
-                appliedFilters?.status && appliedFilters.status.length > 0 ||
-                appliedFilters?.selectedDate ||
-                appliedFilters?.dateRange) && (
-                  <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
-                    {(appliedFilters?.tags?.length || 0) +
-                      (appliedFilters?.queues?.length || 0) +
-                      (appliedFilters?.status?.length || 0) +
-                      (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
-                  </Badge>
-                )}
-            </Button>
+                      {/* Criar Pipeline + Filtrar Buttons */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsCriarPipelineModalOpen(true)}
+                            className="text-primary hover:bg-primary/10 rounded-md h-10 w-10 p-0"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </Button>
+                        )}
 
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4", isDarkMode ? "text-gray-400" : "text-gray-500")} />
-              <Input
-                placeholder="Buscar negócios..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className={cn("pl-10 h-10 border-gray-300 bg-transparent", isDarkMode ? "border-gray-600 text-white placeholder:text-gray-400" : "")}
-              />
-            </div>
-            
-            {/* Filtro por responsável */}
-            <div className="w-[220px] flex-shrink-0">
-              <Select
-                value={responsibleFilter}
-                onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Todos os responsáveis" />
-                </SelectTrigger>
-                <SelectContent align="end" className="min-w-[220px]">
-                  <SelectItem value="ALL">Todos os responsáveis</SelectItem>
-                  <SelectItem value="UNASSIGNED">
-                    Sem responsável ({unassignedCount})
-                  </SelectItem>
-                  {isLoadingActiveUsers ? (
-                    <SelectItem value="__loading" disabled>
-                      Carregando responsáveis...
-                    </SelectItem>
-                  ) : responsibleOptions.length > 0 ? (
-                    responsibleOptions.map(option => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name}
-                        {option.dealCount ? ` (${option.dealCount})` : ""}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="__empty" disabled>
-                      Nenhum responsável encontrado
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => setIsFilterModalOpen(true)}
+                          className="font-medium relative"
+                          disabled={!selectedPipeline}
+                        >
+                          <ListFilter className="w-4 h-4 mr-2" />
+                          Filtrar
+                          {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                            appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                            appliedFilters?.status && appliedFilters.status.length > 0 ||
+                            appliedFilters?.selectedDate ||
+                            appliedFilters?.dateRange) && (
+                              <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
+                                {(appliedFilters?.tags?.length || 0) +
+                                  (appliedFilters?.queues?.length || 0) +
+                                  (appliedFilters?.status?.length || 0) +
+                                  (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                              </Badge>
+                            )}
+                        </Button>
+                      </div>
 
-            {/* + Coluna Button */}
-            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
-              <Button
-                size="sm"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium flex-shrink-0"
-                onClick={() => setIsAddColumnModalOpen(true)}
-              >
-                + Coluna
-              </Button>
-            )}
-          </div>
-        </div>
+                      {/* Search Input */}
+                      <div className="relative flex-1 min-w-[200px] max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <Input
+                          type="text"
+                          placeholder="Buscar negócios..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 h-10 border-gray-300 bg-transparent"
+                        />
+                      </div>
 
-        {/* Área de scroll isolado - APENAS HORIZONTAL */}
-        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-muted/10">
-          {/* Container de colunas - sem quebra de linha */}
-          <div className="flex h-full px-6 pt-4 pb-2 gap-4" style={{ minWidth: 'max-content' }}>
-              {isLoading ? <div className="flex gap-4 h-full min-w-full">
-                {[...Array(4)].map((_, index) => <div key={index} className="w-[300px] flex-shrink-0 h-full">
-                    <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
-                      <div className="p-4 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Skeleton className="w-3 h-3 rounded-full" />
-                            <Skeleton className="h-5 w-24" />
-                            <Skeleton className="h-5 w-8 rounded-full" />
-                          </div>
-                          <Skeleton className="h-4 w-16" />
+                      {/* Filtro por responsável */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-[220px]">
+                          <Select
+                            value={responsibleFilter}
+                            onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Todos os responsáveis" />
+                            </SelectTrigger>
+                            <SelectContent align="end" className="min-w-[220px]">
+                              <SelectItem value="ALL">Todos os responsáveis</SelectItem>
+                              <SelectItem value="UNASSIGNED">
+                                Sem responsável ({unassignedCount})
+                              </SelectItem>
+                              {isLoadingActiveUsers ? (
+                                <SelectItem value="__loading" disabled>
+                                  Carregando responsáveis...
+                                </SelectItem>
+                              ) : responsibleOptions.length > 0 ? (
+                                responsibleOptions.map(option => (
+                                  <SelectItem key={option.id} value={option.id}>
+                                    {option.name}
+                                    {option.dealCount ? ` (${option.dealCount})` : ""}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="__empty" disabled>
+                                  Nenhum responsável encontrado
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
-                      <div className="p-3 pt-0 space-y-3">
-                        {[...Array(3)].map((_, cardIndex) => <div key={cardIndex} className="bg-muted/20 rounded-lg p-4 space-y-2">
-                            <Skeleton className="h-5 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
-                            <Skeleton className="h-4 w-1/2" />
-                            <div className="flex justify-between items-center mt-3">
-                              <Skeleton className="h-4 w-16" />
-                              <Skeleton className="h-4 w-20" />
-                            </div>
-                          </div>)}
-                      </div>
                     </div>
-                  </div>)}
-              </div> : !selectedPipeline ? <div className="flex items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-4">Nenhum pipeline selecionado</p>
-                <Button onClick={() => setIsCriarPipelineModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Pipeline
-                </Button>
+
+                    {/* + Coluna Button */}
+                    {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                      <Button
+                        onClick={() => setIsAddColumnModalOpen(true)}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto"
+                      >
+                        + Coluna
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
-              </div> : isLoadingColumns ?
-          // Skeleton loading para colunas
-          <div className="flex gap-4 h-full min-w-full">
-              {[...Array(3)].map((_, index) => <div key={index} className="w-[300px] flex-shrink-0 h-full">
-                  <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
-                    <div className="p-4 pb-3 flex-shrink-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="w-3 h-3 rounded-full" />
-                          <Skeleton className="h-5 w-24" />
-                          <Skeleton className="h-5 w-8 rounded-full" />
-                        </div>
-                        <Skeleton className="h-6 w-6" />
-                      </div>
-                    </div>
-                    <div className="flex-1 p-3 pt-0 space-y-3">
-                      {[...Array(3)].map((_, cardIndex) => <div key={cardIndex} className="bg-muted/20 rounded-lg p-4 space-y-2">
-                          <div className="flex items-start gap-3 mb-3">
-                            <Skeleton className="w-10 h-10 rounded-full" />
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start mb-2">
-                                <Skeleton className="h-5 w-32" />
-                                <Skeleton className="h-5 w-20" />
+            </div>
+
+            {/* Pipeline Scroll Area */}
+            <div className="flex-1 min-h-0">
+              <div className="h-full w-full max-w-screen-xl mx-auto overflow-x-auto px-4">
+                  {isLoading ? (
+                    <div className="flex gap-4 h-full min-w-full">
+                      {[...Array(4)].map((_, index) => (
+                        <div key={index} className="w-60 sm:w-72 flex-shrink-0 h-full">
+                          <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
+                            <div className="p-4 pb-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Skeleton className="w-3 h-3 rounded-full" />
+                                  <Skeleton className="h-5 w-24" />
+                                  <Skeleton className="h-5 w-8 rounded-full" />
+                                </div>
+                                <Skeleton className="h-4 w-16" />
                               </div>
                             </div>
-                          </div>
-                          <div className="mb-3">
-                            <Skeleton className="h-4 w-16" />
-                          </div>
-                          <div className="flex justify-between items-center pt-2">
-                            <div className="flex gap-1">
-                              <Skeleton className="h-6 w-6" />
-                              <Skeleton className="h-6 w-6" />
+                            <div className="p-3 pt-0 space-y-3">
+                              {[...Array(3)].map((_, cardIndex) => (
+                                <div key={cardIndex} className="bg-muted/20 rounded-lg p-4 space-y-2">
+                                  <Skeleton className="h-5 w-full" />
+                                  <Skeleton className="h-4 w-3/4" />
+                                  <Skeleton className="h-4 w-1/2" />
+                                  <div className="flex justify-between items-center mt-3">
+                                    <Skeleton className="h-4 w-16" />
+                                    <Skeleton className="h-4 w-20" />
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                            <Skeleton className="h-4 w-12" />
                           </div>
-                        </div>)}
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>)}
-              </div> : <div className="flex gap-4 h-full w-full">
-                {columns.map(column => {
+                  ) : !selectedPipeline ? (
+                    <div className="flex items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
+                      <div className="text-center">
+                        <p className="text-muted-foreground mb-4">Nenhum pipeline selecionado</p>
+                        <Button onClick={() => setIsCriarPipelineModalOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Criar Pipeline
+                        </Button>
+                      </div>
+                    </div>
+                  ) : isLoadingColumns ? (
+                    <div className="flex gap-4 h-full min-w-full">
+                      {[...Array(3)].map((_, index) => (
+                        <div key={index} className="w-60 sm:w-72 flex-shrink-0 h-full">
+                          <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
+                            <div className="p-4 pb-3 flex-shrink-0">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Skeleton className="w-3 h-3 rounded-full" />
+                                  <Skeleton className="h-5 w-24" />
+                                  <Skeleton className="h-5 w-8 rounded-full" />
+                                </div>
+                                <Skeleton className="h-6 w-6" />
+                              </div>
+                            </div>
+                            <div className="flex-1 p-3 pt-0 space-y-3">
+                              {[...Array(3)].map((_, cardIndex) => (
+                                <div key={cardIndex} className="bg-muted/20 rounded-lg p-4 space-y-2">
+                                  <div className="flex items-start gap-3 mb-3">
+                                    <Skeleton className="w-10 h-10 rounded-full" />
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start mb-2">
+                                        <Skeleton className="h-5 w-32" />
+                                        <Skeleton className="h-5 w-20" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mb-3">
+                                    <Skeleton className="h-4 w-16" />
+                                  </div>
+                                  <div className="flex justify-between items-center pt-2">
+                                    <div className="flex gap-1">
+                                      <Skeleton className="h-6 w-6" />
+                                      <Skeleton className="h-6 w-6" />
+                                    </div>
+                                    <Skeleton className="h-4 w-12" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex gap-4 h-full w-full">
+                      {columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
             // Calculate total value of cards in this column
@@ -1727,13 +1743,18 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         </div>
                        </div>
                      </div>
-                   </DroppableColumn>;
-          })}
-            </div>}
-          </div>
-        </div>
+                    </DroppableColumn>;
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </main>
+        </main>
+      </div>
 
-        <DragOverlay>
+      <DragOverlay>
           {activeId && (() => {
           const activeCard = cards.find(card => `card-${card.id}` === activeId);
           if (activeCard) {
@@ -1793,8 +1814,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
           }
           return null;
         })()}
-        </DragOverlay>
-      </div>
+      </DragOverlay>
 
       {/* Modais */}
       <AddColumnModal open={isAddColumnModalOpen} onOpenChange={setIsAddColumnModalOpen} onAddColumn={handleColumnCreate} isDarkMode={isDarkMode} />
