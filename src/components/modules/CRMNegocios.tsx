@@ -1270,10 +1270,9 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       {/* Container principal - mesma estrutura do Dashboard */}
       <div className="h-full flex flex-col w-full bg-background">
         
-        {/* Header fixo - responsivo como Dashboard */}
-        <div className="flex-shrink-0 z-10 bg-background border-b px-4 py-3 shadow-sm">
-          {/* Primeira linha: Controles principais */}
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+        {/* Header fixo - uma linha única */}
+        <div className="flex-shrink-0 z-10 bg-background border-b px-4 py-3 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2">
             {/* Settings Button */}
             {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
               <Button
@@ -1317,64 +1316,50 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               )}
             </div>
 
-            {/* Criar Pipeline e Filtrar Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-10 w-10 p-0 text-primary hover:bg-primary/10"
-                  onClick={() => setIsCriarPipelineModalOpen(true)}
-                >
-                  <Plus className="w-5 h-5" />
-                </Button>
-              )}
+            {/* Criar Pipeline Button */}
+            {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
               <Button
                 size="sm"
-                className={cn(
-                  "font-medium relative flex-shrink-0",
-                  appliedFilters?.tags && appliedFilters.tags.length > 0 ||
-                  appliedFilters?.queues && appliedFilters.queues.length > 0 ||
-                  appliedFilters?.status && appliedFilters.status.length > 0 ||
-                  appliedFilters?.selectedDate ||
-                  appliedFilters?.dateRange
-                    ? "bg-warning text-warning-foreground hover:bg-warning/90"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                )}
-                onClick={() => setIsFilterModalOpen(true)}
-                disabled={!selectedPipeline}
+                variant="ghost"
+                className="h-10 w-10 p-0 text-primary hover:bg-primary/10 flex-shrink-0"
+                onClick={() => setIsCriarPipelineModalOpen(true)}
               >
-                <ListFilter className="w-4 h-4 mr-2" />
-                Filtrar
-                {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
-                  appliedFilters?.queues && appliedFilters.queues.length > 0 ||
-                  appliedFilters?.status && appliedFilters.status.length > 0 ||
-                  appliedFilters?.selectedDate ||
-                  appliedFilters?.dateRange) && (
-                    <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
-                      {(appliedFilters?.tags?.length || 0) +
-                        (appliedFilters?.queues?.length || 0) +
-                        (appliedFilters?.status?.length || 0) +
-                        (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
-                    </Badge>
-                  )}
-              </Button>
-            </div>
-
-            {/* + Coluna Button */}
-            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
-              <Button
-                size="sm"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto flex-shrink-0"
-                onClick={() => setIsAddColumnModalOpen(true)}
-              >
-                + Coluna
+                <Plus className="w-5 h-5" />
               </Button>
             )}
-          </div>
 
-          {/* Segunda linha: Busca e filtros */}
-          <div className="flex flex-wrap items-center gap-2">
+            {/* Botão Filtrar */}
+            <Button
+              size="sm"
+              className={cn(
+                "font-medium relative flex-shrink-0",
+                appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                appliedFilters?.status && appliedFilters.status.length > 0 ||
+                appliedFilters?.selectedDate ||
+                appliedFilters?.dateRange
+                  ? "bg-warning text-warning-foreground hover:bg-warning/90"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+              onClick={() => setIsFilterModalOpen(true)}
+              disabled={!selectedPipeline}
+            >
+              <ListFilter className="w-4 h-4 mr-2" />
+              Filtrar
+              {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                appliedFilters?.status && appliedFilters.status.length > 0 ||
+                appliedFilters?.selectedDate ||
+                appliedFilters?.dateRange) && (
+                  <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
+                    {(appliedFilters?.tags?.length || 0) +
+                      (appliedFilters?.queues?.length || 0) +
+                      (appliedFilters?.status?.length || 0) +
+                      (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                  </Badge>
+                )}
+            </Button>
+
             {/* Search Input */}
             <div className="relative flex-1 min-w-[200px]">
               <Search className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4", isDarkMode ? "text-gray-400" : "text-gray-500")} />
@@ -1387,52 +1372,49 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             </div>
             
             {/* Filtro por responsável */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-[220px]">
-                <Select
-                  value={responsibleFilter}
-                  onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Filtrar responsável" />
-                  </SelectTrigger>
-                  <SelectContent align="end" className="min-w-[220px]">
-                    <SelectItem value="ALL">Todos os responsáveis</SelectItem>
-                    <SelectItem value="UNASSIGNED">
-                      Sem responsável ({unassignedCount})
+            <div className="w-[220px] flex-shrink-0">
+              <Select
+                value={responsibleFilter}
+                onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Todos os responsáveis" />
+                </SelectTrigger>
+                <SelectContent align="end" className="min-w-[220px]">
+                  <SelectItem value="ALL">Todos os responsáveis</SelectItem>
+                  <SelectItem value="UNASSIGNED">
+                    Sem responsável ({unassignedCount})
+                  </SelectItem>
+                  {isLoadingActiveUsers ? (
+                    <SelectItem value="__loading" disabled>
+                      Carregando responsáveis...
                     </SelectItem>
-                    {isLoadingActiveUsers ? (
-                      <SelectItem value="__loading" disabled>
-                        Carregando responsáveis...
+                  ) : responsibleOptions.length > 0 ? (
+                    responsibleOptions.map(option => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                        {option.dealCount ? ` (${option.dealCount})` : ""}
                       </SelectItem>
-                    ) : responsibleOptions.length > 0 ? (
-                      responsibleOptions.map(option => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.name}
-                          {option.dealCount ? ` (${option.dealCount})` : ""}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="__empty" disabled>
-                        Nenhum responsável encontrado
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {responsibleFilter !== 'ALL' && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setResponsibleFilter('ALL')}
-                  className="text-xs flex-shrink-0"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Limpar
-                </Button>
-              )}
+                    ))
+                  ) : (
+                    <SelectItem value="__empty" disabled>
+                      Nenhum responsável encontrado
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* + Coluna Button */}
+            {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+              <Button
+                size="sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium flex-shrink-0"
+                onClick={() => setIsAddColumnModalOpen(true)}
+              >
+                + Coluna
+              </Button>
+            )}
           </div>
         </div>
 
