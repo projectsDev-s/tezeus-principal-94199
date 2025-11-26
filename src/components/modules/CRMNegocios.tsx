@@ -1429,7 +1429,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                   {isLoading ? (
                     <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
                       {[...Array(4)].map((_, index) => (
-                        <div key={index} className="w-56 flex-shrink-0 h-full">
+                        <div key={index} className="w-60 sm:w-72 flex-shrink-0 h-full">
                           <div className="bg-card rounded-lg border border-t-4 border-t-gray-400 h-full">
                             <div className="p-4 pb-3">
                               <div className="flex items-center justify-between">
@@ -1471,7 +1471,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                   ) : isLoadingColumns ? (
                     <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
                       {[...Array(3)].map((_, index) => (
-                        <div key={index} className="w-56 flex-shrink-0 h-full">
+                        <div key={index} className="w-60 sm:w-72 flex-shrink-0 h-full">
                           <div className="bg-card rounded-lg border border-t-4 h-full flex flex-col">
                             <div className="p-4 pb-3 flex-shrink-0">
                               <div className="flex items-center justify-between">
@@ -1529,7 +1529,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
                     {/* Coluna individual - largura fixa, sem encolher */}
-                    <div className="w-56 flex-shrink-0 h-full flex flex-col pb-2">
+                    <div className="w-[300px] flex-shrink-0 h-full flex flex-col pb-2">
                        <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color,
                   borderTopWidth: '4px'
