@@ -12,6 +12,7 @@ import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 import { Login } from "./pages/Login";
 import MasterDashboard from "./pages/MasterDashboard";
 import TesteNotificacao from "./pages/TesteNotificacao";
+import GoogleAgendaCallback from "./pages/GoogleAgendaCallback";
 import { SystemCustomizationProvider } from "./contexts/SystemCustomizationContext";
 import { RealtimeNotificationProvider } from "./components/RealtimeNotificationProvider";
 
@@ -192,6 +193,13 @@ const App = () => (
                 </RoleProtectedRoute>
               </ProtectedRoute>
             } />
+            <Route path="/workspace/:workspaceId/administracao-google-agenda" element={
+              <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['master']}>
+                  <TezeusCRM />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            } />
             <Route path="/workspace/:workspaceId/parceiros-clientes" element={
               <ProtectedRoute>
                 <RoleProtectedRoute allowedRoles={['master']}>
@@ -334,11 +342,19 @@ const App = () => (
             <Route path="/administracao-financeiro" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
             <Route path="/administracao-configuracoes" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
             <Route path="/administracao-dashboard" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
+            <Route path="/administracao-google-agenda" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master','admin']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
             <Route path="/workspace-empresas" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master', 'admin']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
             <Route path="/workspace-empresas/:workspaceId/usuarios" element={<ProtectedRoute><RoleProtectedRoute allowedRoles={['master', 'admin']}><TezeusCRM /></RoleProtectedRoute></ProtectedRoute>} />
             <Route path="/workspace-relatorios" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/editar-agente/:agentId" element={<ProtectedRoute><TezeusCRM /></ProtectedRoute>} />
             <Route path="/teste-notificacao" element={<ProtectedRoute><TesteNotificacao /></ProtectedRoute>} />
+            <Route path="/google-agenda/callback" element={
+              <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['master', 'admin', 'user']}>
+                  <GoogleAgendaCallback />
+                </RoleProtectedRoute>
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

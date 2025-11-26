@@ -129,7 +129,7 @@ export function Sidebar({
 
   // Garantir que o grupo "administracao" fique expandido quando os módulos de administração estiverem ativos
   useEffect(() => {
-    if (activeModule === "administracao-financeiro" || activeModule === "administracao-usuarios" || activeModule === "administracao-configuracoes" || activeModule === "administracao-dashboard" || activeModule === "automacoes-agente" || activeModule === "automacoes-filas") {
+    if (activeModule === "administracao-financeiro" || activeModule === "administracao-usuarios" || activeModule === "administracao-configuracoes" || activeModule === "administracao-dashboard" || activeModule === "administracao-google-agenda" || activeModule === "automacoes-agente" || activeModule === "automacoes-filas") {
       setExpandedGroups(prev => prev.includes("administracao") ? prev : [...prev, "administracao"]);
     }
   }, [activeModule]);
@@ -175,6 +175,11 @@ export function Sidebar({
     id: "automacoes-filas",
     label: "Filas",
     icon: <Users className="w-5 h-5" />,
+    group: "administracao"
+  }, {
+    id: "administracao-google-agenda",
+    label: "Google Agenda",
+    icon: <Calendar className="w-5 h-5" />,
     group: "administracao"
   }];
   const toggleGroup = (group: string) => {

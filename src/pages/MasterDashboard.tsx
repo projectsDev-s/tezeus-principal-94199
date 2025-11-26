@@ -11,9 +11,6 @@ import { useWorkspace, Workspace } from '@/contexts/WorkspaceContext';
 import { WorkspaceCard } from '@/components/master/WorkspaceCard';
 import { useAuth } from '@/hooks/useAuth';
 import { DSAgenteMaster } from '@/components/modules/master/DSAgenteMaster';
-import { MasterAgentStatsCard } from '@/components/dashboard/MasterAgentStatsCard';
-import { AgentPerformanceComparison } from '@/components/dashboard/AgentPerformanceComparison';
-import { AgentPerformanceChart } from "@/components/dashboard/AgentPerformanceChart";
 import { AutomacoesFilasMaster } from '@/components/modules/master/AutomacoesFilasMaster';
 import { WhatsAppProvidersMaster } from '@/components/modules/master/WhatsAppProvidersMaster';
 import { AdministracaoUsuarios } from '@/components/modules/AdministracaoUsuarios';
@@ -29,12 +26,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { WorkspaceRelatorios } from '@/components/modules/WorkspaceRelatorios';
 import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
 import { WorkspaceConfigModal } from '@/components/modals/WorkspaceConfigModal';
 import { CreateWorkspaceModal } from '@/components/modals/CreateWorkspaceModal';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { RelatoriosAvancados } from '@/components/relatorios-avancados/RelatoriosAvancados';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -318,7 +315,7 @@ export default function MasterDashboard() {
         )}
 
         {/* Content Area */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className={`flex-1 ${activePage === 'reports' ? 'overflow-hidden flex flex-col' : 'p-6 overflow-auto'}`}>
           {activePage === 'workspaces' ? (
             <>
               {isLoading || isRefreshing ? (
@@ -362,22 +359,15 @@ export default function MasterDashboard() {
                 </>
               )}
             </>
+          ) : activePage === 'reports' ? (
+            <RelatoriosAvancados workspaces={workspaces} />
           ) : activePage === 'ds-agent' ? (
             <DSAgenteMaster />
           ) : activePage === 'filas' ? (
             <AutomacoesFilasMaster />
           ) : activePage === 'usuarios' ? (
             <AdministracaoUsuarios />
-          ) : activePage === 'reports' ? (
-            <>
-              <WorkspaceRelatorios />
-              <div className="space-y-6 mt-6">
-                <AgentPerformanceChart />
-                <AgentPerformanceComparison />
-                <MasterAgentStatsCard />
-              </div>
-            </>
-          ) : activePage === 'configuracoes' ? (
+          )  : activePage === 'configuracoes' ? (
             <AdministracaoConfiguracoes />
           ) : null}
         </main>
