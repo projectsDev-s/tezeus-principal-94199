@@ -1270,7 +1270,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       {/* Estrutura do layout conforme imagem fornecida */}
       <div className="flex-1 flex flex-col max-h-screen">
         <main className="flex-1 overflow-y-auto">
-          <main className="h-screen flex flex-col w-full overflow-hidden">
+          <div className="h-screen flex flex-col w-full overflow-hidden">
             
             {/* Sticky Header */}
             <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
@@ -1749,8 +1749,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                   )}
                 </div>
               </div>
-            </div>
-          </main>
+          </div>
         </main>
       </div>
 
