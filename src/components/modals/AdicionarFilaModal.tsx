@@ -15,7 +15,6 @@ import { AdicionarUsuarioFilaModal } from "./AdicionarUsuarioFilaModal";
 import { QueueUsersList } from "./QueueUsersList";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useAuth } from "@/hooks/useAuth";
-
 interface AdicionarFilaModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,9 +38,15 @@ export function AdicionarFilaModal({
   onOpenChange,
   onSuccess
 }: AdicionarFilaModalProps) {
-  const { selectedWorkspace } = useWorkspace();
-  const { user } = useAuth();
-  const { workspaces } = useWorkspaces();
+  const {
+    selectedWorkspace
+  } = useWorkspace();
+  const {
+    user
+  } = useAuth();
+  const {
+    workspaces
+  } = useWorkspaces();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dados");
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
@@ -100,53 +105,45 @@ export function AdicionarFilaModal({
       toast.error("Nome é obrigatório");
       return;
     }
-
     const workspaceToUse = selectedWorkspaceId || selectedWorkspace?.workspace_id;
-    
     if (!workspaceToUse) {
       toast.error("Selecione uma empresa");
       return;
     }
-
     setShowError(false);
     setLoading(true);
     try {
-      const { data: newQueue, error } = await supabase
-        .from('queues')
-        .insert({
-          name: nome.trim(),
-          description: mensagemSaudacao.trim() || null,
-          color: cor,
-          order_position: ordem ? parseInt(ordem) : 0,
-          distribution_type: distribuicao || 'aleatoria',
-          ai_agent_id: agenteId || null,
-          greeting_message: mensagemSaudacao.trim() || null,
-          workspace_id: workspaceToUse,
-          is_active: true
-        })
-        .select()
-        .single();
-
+      const {
+        data: newQueue,
+        error
+      } = await supabase.from('queues').insert({
+        name: nome.trim(),
+        description: mensagemSaudacao.trim() || null,
+        color: cor,
+        order_position: ordem ? parseInt(ordem) : 0,
+        distribution_type: distribuicao || 'aleatoria',
+        ai_agent_id: agenteId || null,
+        greeting_message: mensagemSaudacao.trim() || null,
+        workspace_id: workspaceToUse,
+        is_active: true
+      }).select().single();
       if (error) throw error;
 
       // Adicionar usuários selecionados à fila
       if (newQueue && queueUsers.length > 0) {
-        const queueUsersData = queueUsers.map((qu) => ({
+        const queueUsersData = queueUsers.map(qu => ({
           queue_id: newQueue.id,
           user_id: qu.user_id,
           order_position: qu.order_position
         }));
-
-        const { error: usersError } = await supabase
-          .from('queue_users')
-          .insert(queueUsersData);
-
+        const {
+          error: usersError
+        } = await supabase.from('queue_users').insert(queueUsersData);
         if (usersError) {
           console.error('Erro ao adicionar usuários:', usersError);
           toast.error("Fila criada, mas houve erro ao adicionar usuários");
         }
       }
-
       toast.success("Fila criada com sucesso!");
       resetForm();
       onSuccess();
@@ -168,9 +165,7 @@ export function AdicionarFilaModal({
       resetForm();
     }
   }, [open, selectedWorkspace?.workspace_id]);
-  
-  return (
-    <>
+  return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -191,21 +186,14 @@ export function AdicionarFilaModal({
                 <Label htmlFor="nome">
                   Nome <span className="text-red-500">*</span>
                 </Label>
-                <Input 
-                  id="nome" 
-                  value={nome} 
-                  onChange={(e) => {
-                    setNome(e.target.value);
-                    setShowError(false);
-                  }} 
-                  placeholder="Nome da fila" 
-                  className={showError ? "border-red-500 focus:border-red-500" : ""} 
-                />
+                <Input id="nome" value={nome} onChange={e => {
+                  setNome(e.target.value);
+                  setShowError(false);
+                }} placeholder="Nome da fila" className={showError ? "border-red-500 focus:border-red-500" : ""} />
                 {showError && <span className="text-xs text-red-500">Nome é obrigatório</span>}
               </div>
 
-              {user?.profile === 'master' && (
-                <div className="space-y-2">
+              {user?.profile === 'master' && <div className="space-y-2">
                   <Label htmlFor="workspace">
                     Empresa <span className="text-red-500">*</span>
                   </Label>
@@ -216,18 +204,15 @@ export function AdicionarFilaModal({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {workspaces.map((workspace) => (
-                        <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
+                      {workspaces.map(workspace => <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
                           <div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-muted-foreground" />
                             {workspace.name}
                           </div>
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
+                </div>}
 
               <div className="space-y-2">
                 <Label>Cor</Label>
@@ -235,16 +220,16 @@ export function AdicionarFilaModal({
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
                       <div className="w-4 h-4 rounded mr-2" style={{
-                      backgroundColor: cor
-                    }} />
+                        backgroundColor: cor
+                      }} />
                       <Palette className="w-4 h-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64">
                     <div className="grid grid-cols-5 gap-2">
                       {colors.map(color => <button key={color} className="w-8 h-8 rounded border-2 border-gray-200 hover:border-gray-400" style={{
-                      backgroundColor: color
-                    }} onClick={() => setCor(color)} />)}
+                        backgroundColor: color
+                      }} onClick={() => setCor(color)} />)}
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -281,10 +266,7 @@ export function AdicionarFilaModal({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="mensagem">Mensagem de saudação</Label>
-              <Textarea id="mensagem" value={mensagemSaudacao} onChange={e => setMensagemSaudacao(e.target.value)} placeholder="Digite a mensagem de saudação..." rows={6} className="resize-none" />
-            </div>
+            
           </TabsContent>
 
             <TabsContent value="usuarios" className="space-y-4 mt-6">
@@ -295,67 +277,49 @@ export function AdicionarFilaModal({
                 </Button>
               </div>
 
-              <QueueUsersList 
-                users={queueUsers}
-                onRemoveUser={(userId) => {
-                  setQueueUsers(prev => prev.filter(qu => qu.user_id !== userId));
-                }}
-              />
+              <QueueUsersList users={queueUsers} onRemoveUser={userId => {
+              setQueueUsers(prev => prev.filter(qu => qu.user_id !== userId));
+            }} />
             </TabsContent>
         </Tabs>
 
           <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancelar
             </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={loading || !nome.trim()}
-            >
+            <Button onClick={handleSubmit} disabled={loading || !nome.trim()}>
               {loading ? "Criando..." : "Adicionar"}
             </Button>
           </div>
       </DialogContent>
     </Dialog>
 
-    <AdicionarUsuarioFilaModal
-      open={showAddUserModal}
-      onOpenChange={setShowAddUserModal}
-      workspaceId={selectedWorkspaceId || selectedWorkspace?.workspace_id}
-      onAddUsers={async (userIds) => {
-        // Buscar os dados dos usuários do workspace
-        const { data: usersData } = await supabase
-          .from('system_users')
-          .select('id, name, email, avatar, profile')
-          .in('id', userIds);
-
-        const newUsers = userIds.map((userId, index) => {
-          const userData = usersData?.find(u => u.id === userId);
-          return {
-            id: `temp-${userId}`, // ID temporário
-            queue_id: '', // Será preenchido ao criar a fila
-            user_id: userId,
-            order_position: queueUsers.length + index,
-            created_at: new Date().toISOString(),
-            system_users: userData ? {
-              id: userData.id,
-              name: userData.name || '',
-              email: userData.email || '',
-              avatar: userData.avatar,
-              profile: userData.profile || 'user'
-            } : undefined
-          };
-        });
-        
-        setQueueUsers(prev => [...prev, ...newUsers]);
-        setShowAddUserModal(false);
-      }}
-      excludeUserIds={queueUsers.map(qu => qu.user_id)}
-    />
-    </>
-  );
+    <AdicionarUsuarioFilaModal open={showAddUserModal} onOpenChange={setShowAddUserModal} workspaceId={selectedWorkspaceId || selectedWorkspace?.workspace_id} onAddUsers={async userIds => {
+      // Buscar os dados dos usuários do workspace
+      const {
+        data: usersData
+      } = await supabase.from('system_users').select('id, name, email, avatar, profile').in('id', userIds);
+      const newUsers = userIds.map((userId, index) => {
+        const userData = usersData?.find(u => u.id === userId);
+        return {
+          id: `temp-${userId}`,
+          // ID temporário
+          queue_id: '',
+          // Será preenchido ao criar a fila
+          user_id: userId,
+          order_position: queueUsers.length + index,
+          created_at: new Date().toISOString(),
+          system_users: userData ? {
+            id: userData.id,
+            name: userData.name || '',
+            email: userData.email || '',
+            avatar: userData.avatar,
+            profile: userData.profile || 'user'
+          } : undefined
+        };
+      });
+      setQueueUsers(prev => [...prev, ...newUsers]);
+      setShowAddUserModal(false);
+    }} excludeUserIds={queueUsers.map(qu => qu.user_id)} />
+    </>;
 }
