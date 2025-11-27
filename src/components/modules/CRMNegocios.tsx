@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, ListFilter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap } from "lucide-react";
+import { Settings, Search, Plus, ListFilter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
 import { EditarColunaModal } from "@/components/modals/EditarColunaModal";
@@ -751,6 +752,25 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
   const [columnAutomationCounts, setColumnAutomationCounts] = useState<Record<string, number>>({});
   const [isExportCSVModalOpen, setIsExportCSVModalOpen] = useState(false);
   const [selectedColumnForExport, setSelectedColumnForExport] = useState<{ id: string; name: string } | null>(null);
+  const isMobile = useIsMobile();
+  const [isTablet, setIsTablet] = useState(false);
+  const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  // Detectar tablet
+  useEffect(() => {
+    const checkTablet = () => {
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+    checkTablet();
+    window.addEventListener('resize', checkTablet);
+    return () => window.removeEventListener('resize', checkTablet);
+  }, []);
+
+  // Reset column index quando mudar de pipeline
+  useEffect(() => {
+    setCurrentColumnIndex(0);
+  }, [selectedPipeline?.id]);
 
   useEffect(() => {
     setResponsibleFilter('ALL');
@@ -1274,23 +1294,152 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             
             {/* Sticky Header */}
             <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
-              <div className="w-full pl-4 pr-5 py-2">
-                <div className="w-[95%] border rounded-lg p-3 shadow-sm bg-background border-border">
-                  <div className="flex w-full flex-wrap items-center gap-3">
-                    <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
-                      
-                      {/* Settings Button */}
-                      {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+              <div className="w-full px-2 md:px-4 py-2">
+                <div className="w-full border rounded-lg p-2 md:p-3 shadow-sm bg-background border-border">
+                  
+                  {/* Mobile Layout */}
+                  {isMobile ? (
+                    <div className="space-y-2">
+                      {/* Linha 1: Pipeline Selector e Menu */}
+                      <div className="flex items-center gap-2">
+                        {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsConfigModalOpen(true)}
+                            className="text-primary hover:bg-primary/10 h-9 w-9"
+                            disabled={!selectedPipeline}
+                          >
+                            <Settings className="w-4 h-4" />
+                          </Button>
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          {isLoading ? (
+                            <Skeleton className="h-9 w-full" />
+                          ) : pipelines && pipelines.length > 0 ? (
+                            <Select
+                              value={selectedPipeline?.id || ""}
+                              onValueChange={(value) => {
+                                const pipeline = pipelines.find(p => p.id === value);
+                                if (pipeline) {
+                                  selectPipeline(pipeline);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9 font-bold bg-background">
+                                <SelectValue placeholder="Pipeline" />
+                              </SelectTrigger>
+                              <SelectContent className="z-50 bg-background">
+                                {pipelines.map((pipeline) => (
+                                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                                    {pipeline.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : null}
+                        </div>
+
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setIsConfigModalOpen(true)}
-                          className="text-primary hover:bg-primary/10"
-                          disabled={!selectedPipeline}
+                          onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+                          className="text-primary hover:bg-primary/10 h-9 w-9"
                         >
-                          <Settings className="w-5 h-5" />
+                          <Menu className="w-4 h-4" />
                         </Button>
+                      </div>
+
+                      {/* Linha 2: Filtros (colapsável) */}
+                      {isMobileFiltersOpen && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex gap-2">
+                            {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsCriarPipelineModalOpen(true)}
+                                className="text-primary hover:bg-primary/10 h-9 w-9"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </Button>
+                            )}
+
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => setIsFilterModalOpen(true)}
+                              className="font-medium flex-1"
+                              disabled={!selectedPipeline}
+                            >
+                              <ListFilter className="w-4 h-4 mr-2" />
+                              Filtrar
+                              {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                                appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                                appliedFilters?.status && appliedFilters.status.length > 0 ||
+                                appliedFilters?.selectedDate ||
+                                appliedFilters?.dateRange) && (
+                                  <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
+                                    {(appliedFilters?.tags?.length || 0) +
+                                      (appliedFilters?.queues?.length || 0) +
+                                      (appliedFilters?.status?.length || 0) +
+                                      (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                                  </Badge>
+                                )}
+                            </Button>
+                          </div>
+
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <Input
+                              type="text"
+                              placeholder="Buscar negócios..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-10 h-9 border-gray-300 bg-transparent"
+                            />
+                          </div>
+
+                          <Select
+                            value={responsibleFilter}
+                            onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent align="end">
+                              <SelectItem value="ALL">Todos</SelectItem>
+                              <SelectItem value="UNASSIGNED">
+                                Sem responsável ({unassignedCount})
+                              </SelectItem>
+                              {!isLoadingActiveUsers && responsibleOptions.map(option => (
+                                <SelectItem key={option.id} value={option.id}>
+                                  {option.name} {option.dealCount ? `(${option.dealCount})` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
+                    </div>
+                  ) : (
+                    /* Desktop/Tablet Layout */
+                    <div className="flex w-full flex-wrap items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                        
+                        {/* Settings Button */}
+                        {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsConfigModalOpen(true)}
+                            className="text-primary hover:bg-primary/10"
+                            disabled={!selectedPipeline}
+                          >
+                            <Settings className="w-5 h-5" />
+                          </Button>
+                        )}
 
                       {/* Pipeline Selector */}
                       <div className="flex-shrink-0">
@@ -1408,24 +1557,62 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       </div>
                     </div>
 
-                    {/* + Coluna Button */}
-                    {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
-                      <Button
-                        onClick={() => setIsAddColumnModalOpen(true)}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto"
-                      >
-                        + Coluna
-                      </Button>
-                    )}
-                  </div>
+                        {/* + Coluna Button */}
+                        {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                          <Button
+                            onClick={() => setIsAddColumnModalOpen(true)}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto"
+                          >
+                            + Coluna
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Pipeline Scroll Area */}
             <div className="flex-1 min-h-0">
-              <div className="h-full pl-4 pr-5 overflow-x-auto w-[95%]">
-                <div className="h-full overflow-x-auto overflow-y-hidden">
+              {/* Mobile: Navigation Controls */}
+              {isMobile && columns.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCurrentColumnIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentColumnIndex === 0}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  
+                  <div className="text-sm font-medium">
+                    {columns[currentColumnIndex]?.name} ({currentColumnIndex + 1}/{columns.length})
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCurrentColumnIndex(prev => Math.min(columns.length - 1, prev + 1))}
+                    disabled={currentColumnIndex === columns.length - 1}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+              )}
+
+              <div className={cn(
+                "h-full",
+                isMobile ? "px-2" : "px-4",
+                !isMobile && "overflow-x-auto"
+              )}>
+                <div className={cn(
+                  "h-full",
+                  !isMobile && "overflow-x-auto overflow-y-hidden"
+                )}>
                   {isLoading ? (
                     <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
                       {[...Array(4)].map((_, index) => (
@@ -1513,8 +1700,103 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       ))}
                     </div>
                   ) : (
-                    <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
-                      {columns.map(column => {
+                    <div className={cn(
+                      "h-full",
+                      isMobile && "flex justify-center",
+                      !isMobile && "flex gap-4",
+                      !isMobile && isTablet && "overflow-x-auto",
+                      !isMobile && !isTablet && "overflow-x-auto"
+                    )} style={!isMobile ? { minWidth: 'max-content' } : undefined}>
+                      {/* Mobile: Single Column */}
+                      {isMobile ? (
+                        columns[currentColumnIndex] ? (() => {
+                          const column = columns[currentColumnIndex];
+                          const columnCards = getFilteredCards(column.id);
+                          const calculateColumnTotal = () => {
+                            return columnCards.reduce((total, card) => total + (card.value || 0), 0);
+                          };
+                          const formatCurrency = (value: number) => {
+                            return new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            }).format(value);
+                          };
+                          
+                          return (
+                            <DroppableColumn key={column.id} id={`column-${column.id}`}>
+                              <div className="w-full max-w-md h-full flex flex-col pb-2">
+                                <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20")} style={{
+                                  borderTopColor: column.color,
+                                  borderTopWidth: '4px'
+                                }}>
+                                  {/* Column Header */}
+                                  <div className="bg-white p-4 pb-3 flex-shrink-0 rounded-t border-b border-border/20">
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <h3 className="font-semibold text-foreground text-base mb-1">
+                                          {column.name}
+                                        </h3>
+                                        <div className="text-sm text-muted-foreground space-y-1">
+                                          <div className="font-medium">
+                                            Total: {formatCurrency(calculateColumnTotal())}
+                                          </div>
+                                          <div>
+                                            {columnCards.length} {columnCards.length === 1 ? 'negócio' : 'negócios'}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Cards Area */}
+                                  <div className="flex-1 p-3 overflow-y-auto">
+                                    <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
+                                      {columnCards.length > 0 ? columnCards.map(deal => (
+                                        <DraggableDeal
+                                          key={deal.id}
+                                          deal={deal}
+                                          onClick={() => handleDealClick(deal)}
+                                          columnColor={column.color}
+                                          onChatClick={() => handleWhatsappClick(deal)}
+                                          onValueClick={setSelectedDealForValue}
+                                          isSelectionMode={isSelectionMode && selectedColumnForAction === column.id}
+                                          isSelected={selectedCardsForTransfer.has(deal.id)}
+                                          onToggleSelection={() => handleToggleCardSelection(deal.id)}
+                                          onEditContact={setSelectedContactForEdit}
+                                          onLinkProduct={(cardId, currentValue, currentProductId) => {
+                                            setSelectedCardForProduct({ cardId, currentValue, currentProductId });
+                                            setIsVincularProdutoModalOpen(true);
+                                          }}
+                                          onDeleteCard={setSelectedCardForDelete}
+                                          onOpenTransferModal={(cardId) => {
+                                            setSelectedCardsForTransfer(new Set([cardId]));
+                                            setIsTransferirModalOpen(true);
+                                          }}
+                                          onVincularResponsavel={(cardId, conversationId, currentResponsibleId, contactId) => {
+                                            setVincularResponsavelData({ cardId, conversationId, currentResponsibleId, contactId });
+                                            setIsVincularResponsavelModalOpen(true);
+                                          }}
+                                          onConfigureAgent={(conversationId) => {
+                                            setSelectedConversationForAgent(conversationId);
+                                            setIsChangeAgentModalOpen(true);
+                                          }}
+                                          workspaceId={effectiveWorkspaceId}
+                                        />
+                                      )) : (
+                                        <div className="text-center text-muted-foreground text-sm py-8">
+                                          Nenhum negócio nesta coluna
+                                        </div>
+                                      )}
+                                    </SortableContext>
+                                  </div>
+                                </div>
+                              </div>
+                            </DroppableColumn>
+                          );
+                        })() : null
+                      ) : (
+                        /* Tablet/Desktop: Multiple Columns */
+                        columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
             // Calculate total value of cards in this column
@@ -1528,8 +1810,11 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               }).format(value);
             };
             return <DroppableColumn key={column.id} id={`column-${column.id}`}>
-                    {/* Coluna individual - largura fixa, sem encolher */}
-                    <div className="w-[300px] flex-shrink-0 h-full flex flex-col pb-2">
+                    {/* Coluna individual - responsiva */}
+                    <div className={cn(
+                      "flex-shrink-0 h-full flex flex-col pb-2",
+                      isTablet ? "w-[calc(50%-0.5rem)] min-w-[280px]" : "w-[300px]"
+                    )}>
                        <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color,
                   borderTopWidth: '4px'
