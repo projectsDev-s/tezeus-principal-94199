@@ -1154,7 +1154,7 @@ export function DealDetailsModal({
       
       setActivities(data || []);
 
-      // Buscar também os comentários (contact_observations)
+  // Buscar também os comentários (contact_observations)
       const { data: observations, error: obsError } = await supabase
         .from('contact_observations')
         .select(`
@@ -1164,10 +1164,7 @@ export function DealDetailsModal({
           created_by,
           file_url,
           file_name,
-          file_type,
-          system_users:created_by (
-            name
-          )
+          file_type
         `)
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false });
@@ -1617,11 +1614,11 @@ export function DealDetailsModal({
     ...contactObservations.map(obs => ({
       type: 'comment' as const,
       id: obs.id,
-      activity_type: 'Comentário',
-      subject: 'Comentário',
+      activity_type: 'Observação',
+      subject: 'Observação',
       description: obs.content,
       date: obs.created_at,
-      responsible_name: obs.system_users?.name,
+      responsible_name: users.find(u => u.id === obs.created_by)?.name,
       attachment_url: undefined,
       attachment_name: undefined,
       file_url: obs.file_url || undefined,
@@ -2019,7 +2016,7 @@ export function DealDetailsModal({
                               { value: "Ligação", label: "Ligação", icon: Phone },
                               { value: "Reunião", label: "Reunião", icon: User },
                               { value: "Agendamento", label: "Agendamento", icon: CalendarIcon },
-                              { value: "Comentários", label: "Comentários", icon: MessageCircle },
+                              { value: "Comentários", label: "Observações", icon: MessageCircle },
                             ];
                             const selectedType = activityTypes.find(t => t.value === activityForm.type);
                             const Icon = selectedType?.icon || Clock;
@@ -2039,7 +2036,7 @@ export function DealDetailsModal({
                           { value: "Ligação", label: "Ligação", icon: Phone },
                           { value: "Reunião", label: "Reunião", icon: User },
                           { value: "Agendamento", label: "Agendamento", icon: CalendarIcon },
-                          { value: "Comentários", label: "Comentários", icon: MessageCircle },
+                          { value: "Comentários", label: "Observações", icon: MessageCircle },
                         ].map((type) => {
                           const Icon = type.icon;
                           return (
@@ -2163,10 +2160,10 @@ export function DealDetailsModal({
                   {/* Descrição - obrigatória para comentários */}
                   <div className="space-y-2">
                     <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                      {activityForm.type === "Comentários" ? "Comentário *" : "Descrição"}
+                      {activityForm.type === "Comentários" ? "Observação *" : "Descrição"}
                     </label>
                     <Textarea 
-                      placeholder={activityForm.type === "Comentários" ? "Digite o comentário..." : "Descrição"} 
+                      placeholder={activityForm.type === "Comentários" ? "Digite a observação..." : "Descrição"} 
                       rows={4} 
                       value={activityForm.description}
                       onChange={(e) => setActivityForm({...activityForm, description: e.target.value})}
