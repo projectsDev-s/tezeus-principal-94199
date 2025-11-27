@@ -21,6 +21,13 @@ interface PipelineTimelineProps {
 export function PipelineTimeline({ columns, currentColumnId, className }: PipelineTimelineProps) {
   const currentIndex = columns.findIndex(col => col.id === currentColumnId);
 
+  console.log('🎨 Timeline renderizada com colunas:', columns.map(c => ({ 
+    id: c.id, 
+    name: c.name, 
+    icon: c.icon,
+    color: c.color 
+  })));
+
   return (
     <div className={cn("flex items-center justify-center py-12 px-8", className)}>
       {columns.map((column, index) => {

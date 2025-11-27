@@ -106,6 +106,8 @@ export function EditarColunaModal({
       setIsLoading(true);
       const headers = getHeaders();
 
+      console.log('🔍 Salvando coluna com dados:', { name: name.trim(), color, icon });
+
       const { error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
         method: 'PUT',
         headers,
