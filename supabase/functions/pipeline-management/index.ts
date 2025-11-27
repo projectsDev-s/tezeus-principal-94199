@@ -1479,6 +1479,15 @@ serve(async (req) => {
 
         if (method === 'POST') {
           const body = await req.json();
+
+          // Ícone é obrigatório na criação da coluna
+          if (!body.icon || typeof body.icon !== 'string' || !body.icon.trim()) {
+            console.error('❌ Column icon is required on create');
+            return new Response(
+              JSON.stringify({ error: 'Icon is required to create a column' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
           
           // Get next order position
           const { data: lastColumn } = await supabaseClient
@@ -1497,7 +1506,7 @@ serve(async (req) => {
               pipeline_id: body.pipeline_id,
               name: body.name,
               color: body.color || '#808080',
-              icon: body.icon || 'Circle',
+              icon: body.icon.trim(),
               order_position: nextPosition,
             } as any)
             .select()
@@ -1519,6 +1528,22 @@ serve(async (req) => {
           }
 
           const body = await req.json();
+
+          // Se estiver atualizando configurações básicas (nome/cor/ícone), o ícone é obrigatório
+          const isSettingsUpdate =
+            body.name !== undefined ||
+            body.color !== undefined ||
+            body.icon !== undefined;
+
+          if (isSettingsUpdate) {
+            if (!body.icon || typeof body.icon !== 'string' || !body.icon.trim()) {
+              console.error('❌ Column icon is required when updating settings');
+              return new Response(
+                JSON.stringify({ error: 'Icon is required when updating column settings' }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
           
           // Prepare update data - accept permissions, order_position, name, color, and icon
           const updateData: any = {};
