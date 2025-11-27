@@ -23,6 +23,7 @@ import { CreateActivityModal } from "./CreateActivityModal";
 import { TimePickerModal } from "./TimePickerModal";
 import { MinutePickerModal } from "./MinutePickerModal";
 import { AttachmentPreviewModal } from "./AttachmentPreviewModal";
+import { MarkAsLostModal } from "./MarkAsLostModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
@@ -370,6 +371,8 @@ export function DealDetailsModal({
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   const [confirmLossAction, setConfirmLossAction] = useState<any>(null);
   const [isExecutingAction, setIsExecutingAction] = useState(false);
+  const [isMarkAsLostModalOpen, setIsMarkAsLostModalOpen] = useState(false);
+  const [isMarkingAsLost, setIsMarkingAsLost] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [conversationId, setConversationId] = useState<string>("");
   
@@ -690,14 +693,49 @@ export function DealDetailsModal({
   };
 
   const executeAction = async (action: any) => {
-    // Se for ação de "Perda", mostrar modal de confirmação
+    // Se for ação de "Perda", abrir modal de motivo de perda
     if (action.deal_state === 'Perda') {
       setConfirmLossAction(action);
+      setIsMarkAsLostModalOpen(true);
       return;
     }
 
     // Se for "Ganho", executar direto
     await processActionExecution(action);
+  };
+
+  const handleMarkAsLost = async (lossReasonId: string | null, comments: string) => {
+    if (!confirmLossAction) return;
+
+    setIsMarkingAsLost(true);
+    try {
+      // Primeiro executar a ação de perda (mover para coluna de perda)
+      await processActionExecution(confirmLossAction);
+
+      // Depois atualizar os campos de motivo de perda
+      const { error } = await supabase
+        .from('pipeline_cards')
+        .update({
+          loss_reason_id: lossReasonId,
+          loss_comments: comments,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedCardId);
+
+      if (error) throw error;
+
+      console.log('✅ Motivo de perda salvo com sucesso');
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar motivo de perda:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível salvar o motivo de perda',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsMarkingAsLost(false);
+      setConfirmLossAction(null);
+    }
   };
 
   const processActionExecution = async (action: any) => {
@@ -2518,27 +2556,19 @@ export function DealDetailsModal({
       </AlertDialogContent>
     </AlertDialog>
 
-    {/* Modal de confirmação para ação de Perda */}
-    <AlertDialog open={!!confirmLossAction} onOpenChange={() => setConfirmLossAction(null)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Deseja mesmo transferir?</AlertDialogTitle>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={async () => {
-              if (confirmLossAction) {
-                await processActionExecution(confirmLossAction);
-                setConfirmLossAction(null);
-              }
-            }}
-          >
-            Confirmar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    {/* Modal de marcar como perdido com motivo */}
+    <MarkAsLostModal
+      open={isMarkAsLostModalOpen}
+      onOpenChange={(open) => {
+        setIsMarkAsLostModalOpen(open);
+        if (!open) {
+          setConfirmLossAction(null);
+        }
+      }}
+      onConfirm={handleMarkAsLost}
+      workspaceId={workspaceId}
+      isLoading={isMarkingAsLost}
+    />
     </>
   );
 }

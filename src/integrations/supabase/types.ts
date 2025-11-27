@@ -1589,6 +1589,45 @@ export type Database = {
           },
         ]
       }
+      loss_reasons: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loss_reasons_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_reasons_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces_view"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
@@ -1924,6 +1963,8 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          loss_comments: string | null
+          loss_reason_id: string | null
           moved_to_column_at: string | null
           pipeline_id: string
           responsible_user_id: string | null
@@ -1939,6 +1980,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          loss_comments?: string | null
+          loss_reason_id?: string | null
           moved_to_column_at?: string | null
           pipeline_id: string
           responsible_user_id?: string | null
@@ -1954,6 +1997,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          loss_comments?: string | null
+          loss_reason_id?: string | null
           moved_to_column_at?: string | null
           pipeline_id?: string
           responsible_user_id?: string | null
@@ -1982,6 +2027,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_cards_loss_reason_id_fkey"
+            columns: ["loss_reason_id"]
+            isOneToOne: false
+            referencedRelation: "loss_reasons"
             referencedColumns: ["id"]
           },
           {

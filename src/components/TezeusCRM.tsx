@@ -28,6 +28,7 @@ import { AdministracaoFinanceiro } from "./modules/AdministracaoFinanceiro";
 import { AdministracaoConfiguracoes } from "./modules/AdministracaoConfiguracoes";
 import { AdministracaoDashboard } from "./modules/AdministracaoDashboard";
 import { AdministracaoGoogleAgenda } from "./modules/AdministracaoGoogleAgenda";
+import { ConfiguracaoAcoes } from "./modules/ConfiguracaoAcoes";
 import { ParceirosClientes } from "./modules/ParceirosClientes";
 import { WorkspaceEmpresas } from "./modules/WorkspaceEmpresas";
 import { WorkspaceUsersPage } from "./modules/WorkspaceUsersPage";
@@ -58,6 +59,7 @@ export type ModuleType =
   | "administracao-configuracoes"
   | "administracao-dashboard"
   | "administracao-google-agenda"
+  | "administracao-acoes"
   | "editar-agente";
 
 export function TezeusCRM() {
@@ -178,6 +180,8 @@ export function TezeusCRM() {
         return <AdministracaoDashboard />;
       case "administracao-google-agenda":
         return <AdministracaoGoogleAgenda />;
+      case "administracao-acoes":
+        return <ConfiguracaoAcoes />;
       case "editar-agente":
         return editingAgentId ? <EditarAgente agentId={editingAgentId} /> : <Dashboard />;
       default:
