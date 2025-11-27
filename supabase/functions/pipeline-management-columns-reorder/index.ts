@@ -9,6 +9,31 @@ serve(async (req) => {
   }
 
   try {
+    // Get authentication headers
+    const userId = req.headers.get('x-system-user-id')
+    const userEmail = req.headers.get('x-system-user-email')
+    const workspaceId = req.headers.get('x-workspace-id')
+
+    console.log('🔐 Authentication check:', { userId, userEmail, workspaceId })
+
+    // Verify authentication
+    if (!userId || !userEmail) {
+      console.error('❌ Missing user authentication headers')
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
+    // Verify workspace
+    if (!workspaceId) {
+      console.error('❌ Missing workspace ID')
+      return new Response(JSON.stringify({ error: 'Workspace não especificado' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -18,27 +43,6 @@ serve(async (req) => {
         },
       }
     )
-
-    // Verify authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser()
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      })
-    }
-
-    // Get workspace ID from headers
-    const workspaceId = req.headers.get('x-workspace-id')
-    if (!workspaceId) {
-      return new Response(JSON.stringify({ error: 'Workspace não especificado' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      })
-    }
 
     // Parse request body
     const { columns } = await req.json()
@@ -50,6 +54,8 @@ serve(async (req) => {
       })
     }
 
+    console.log('📝 Updating column order:', { columnCount: columns.length })
+
     // Update each column's order_position
     const updates = columns.map((col: { id: string; order_position: number }) =>
       supabaseClient
@@ -58,8 +64,22 @@ serve(async (req) => {
         .eq('id', col.id)
     )
 
-    await Promise.all(updates)
+    const results = await Promise.all(updates)
+    
+    // Check for errors
+    const errors = results.filter(r => r.error)
+    if (errors.length > 0) {
+      console.error('❌ Error updating columns:', errors)
+      return new Response(
+        JSON.stringify({ error: 'Erro ao atualizar colunas', details: errors }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
+    }
 
+    console.log('✅ Columns reordered successfully')
     return new Response(
       JSON.stringify({ success: true, message: 'Colunas reordenadas com sucesso' }),
       {
