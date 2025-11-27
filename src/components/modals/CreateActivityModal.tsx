@@ -255,7 +255,7 @@ export function CreateActivityModal({
             "text-xl font-semibold",
             isDarkMode ? "text-white" : "text-gray-900"
           )}>
-            {formData.type === "Comentários" ? "Adicionar Comentário" : "Criar Atividade"}
+            {formData.type === "Comentários" ? "Adicionar Observação" : "Criar Atividade"}
           </DialogTitle>
         </DialogHeader>
 
@@ -283,7 +283,7 @@ export function CreateActivityModal({
                 <SelectItem value="Ligação">Ligação</SelectItem>
                 <SelectItem value="Reunião">Reunião</SelectItem>
                 <SelectItem value="Agendamento">Agendamento</SelectItem>
-                <SelectItem value="Comentários">Comentários</SelectItem>
+                <SelectItem value="Comentários">Observações</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -495,10 +495,10 @@ export function CreateActivityModal({
               "text-sm font-medium",
               isDarkMode ? "text-gray-300" : "text-gray-700"
             )}>
-              {formData.type === "Comentários" ? "Comentário *" : "Descrição"}
+              {formData.type === "Comentários" ? "Observação *" : "Descrição"}
             </label>
             <Textarea
-              placeholder={formData.type === "Comentários" ? "Digite o comentário..." : "Detalhes adicionais da atividade"}
+              placeholder={formData.type === "Comentários" ? "Digite a observação..." : "Detalhes adicionais da atividade"}
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               className={cn(
@@ -525,7 +525,7 @@ export function CreateActivityModal({
               disabled={isLoading}
               className="bg-yellow-400 text-black hover:bg-yellow-500"
             >
-              {isLoading ? (formData.type === "Comentários" ? "Salvando..." : "Criando...") : (formData.type === "Comentários" ? "Salvar Comentário" : "Criar Atividade")}
+              {isLoading ? (formData.type === "Comentários" ? "Salvando..." : "Criando...") : (formData.type === "Comentários" ? "Salvar Observação" : "Criar Atividade")}
             </Button>
           </div>
         </div>
