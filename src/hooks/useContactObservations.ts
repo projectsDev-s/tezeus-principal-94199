@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useWorkspaces } from '@/hooks/useWorkspaces';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useToast } from '@/hooks/use-toast';
 
 export interface ContactObservation {
@@ -17,12 +17,11 @@ export const useContactObservations = (contactId: string) => {
   const [observations, setObservations] = useState<ContactObservation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const { workspaces } = useWorkspaces();
-  const currentWorkspace = workspaces?.[0]; // Usar o primeiro workspace por enquanto
+  const { selectedWorkspace } = useWorkspace();
   const { toast } = useToast();
 
   const fetchObservations = async () => {
-    if (!contactId || !currentWorkspace?.workspace_id) return;
+    if (!contactId || !selectedWorkspace?.workspace_id) return;
 
     setIsLoading(true);
     try {
@@ -30,10 +29,11 @@ export const useContactObservations = (contactId: string) => {
         .from('contact_observations')
         .select('*')
         .eq('contact_id', contactId)
-        .eq('workspace_id', currentWorkspace.workspace_id)
+        .eq('workspace_id', selectedWorkspace.workspace_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('📥 Observações carregadas no hook:', data?.length || 0);
       setObservations(data || []);
     } catch (error) {
       console.error('Erro ao buscar observações:', error);
@@ -48,7 +48,7 @@ export const useContactObservations = (contactId: string) => {
   };
 
   const addObservation = async (content: string, file?: File) => {
-    if (!contactId || !currentWorkspace?.workspace_id || !content.trim()) return;
+    if (!contactId || !selectedWorkspace?.workspace_id || !content.trim()) return;
 
     setIsUploading(true);
     try {
@@ -89,7 +89,7 @@ export const useContactObservations = (contactId: string) => {
         .from('contact_observations')
         .insert({
           contact_id: contactId,
-          workspace_id: currentWorkspace.workspace_id,
+          workspace_id: selectedWorkspace.workspace_id,
           content: content.trim(),
           file_name: fileData.name,
           file_url: fileData.url,
@@ -126,7 +126,7 @@ export const useContactObservations = (contactId: string) => {
   };
 
   const updateObservation = async (id: string, content: string, file?: File | null) => {
-    if (!contactId || !currentWorkspace?.workspace_id || !content.trim()) return false;
+    if (!contactId || !selectedWorkspace?.workspace_id || !content.trim()) return false;
 
     setIsUploading(true);
     try {
@@ -172,7 +172,7 @@ export const useContactObservations = (contactId: string) => {
         .from('contact_observations')
         .update(updateData)
         .eq('id', id)
-        .eq('workspace_id', currentWorkspace.workspace_id);
+        .eq('workspace_id', selectedWorkspace.workspace_id);
 
       if (error) throw error;
 
@@ -209,7 +209,7 @@ export const useContactObservations = (contactId: string) => {
   };
 
   const removeObservationFile = async (id: string) => {
-    if (!contactId || !currentWorkspace?.workspace_id) return false;
+    if (!contactId || !selectedWorkspace?.workspace_id) return false;
 
     try {
       const { error } = await supabase
@@ -221,7 +221,7 @@ export const useContactObservations = (contactId: string) => {
           updated_at: new Date().toISOString() 
         })
         .eq('id', id)
-        .eq('workspace_id', currentWorkspace.workspace_id);
+        .eq('workspace_id', selectedWorkspace.workspace_id);
 
       if (error) throw error;
 
@@ -252,14 +252,14 @@ export const useContactObservations = (contactId: string) => {
   };
 
   const deleteObservation = async (id: string) => {
-    if (!contactId || !currentWorkspace?.workspace_id) return false;
+    if (!contactId || !selectedWorkspace?.workspace_id) return false;
 
     try {
       const { error } = await supabase
         .from('contact_observations')
         .delete()
         .eq('id', id)
-        .eq('workspace_id', currentWorkspace.workspace_id);
+        .eq('workspace_id', selectedWorkspace.workspace_id);
 
       if (error) throw error;
 
@@ -308,7 +308,33 @@ export const useContactObservations = (contactId: string) => {
 
   useEffect(() => {
     fetchObservations();
-  }, [contactId, currentWorkspace?.workspace_id]);
+  }, [contactId, selectedWorkspace?.workspace_id]);
+
+  // Adicionar subscription para atualizar em tempo real
+  useEffect(() => {
+    if (!contactId || !selectedWorkspace?.workspace_id) return;
+
+    const channel = supabase
+      .channel(`contact_observations:${contactId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'contact_observations',
+          filter: `contact_id=eq.${contactId}`
+        },
+        (payload) => {
+          console.log('🔄 Observação atualizada em tempo real:', payload);
+          fetchObservations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [contactId, selectedWorkspace?.workspace_id]);
 
   return {
     observations,
