@@ -365,6 +365,7 @@ export function DealDetailsModal({
   const [workspaceId, setWorkspaceId] = useState<string>("");
   const [contactTags, setContactTags] = useState<Tag[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [contactObservations, setContactObservations] = useState<any[]>([]);
   // Estado cardHistory removido - agora usamos fullHistory do useCardHistory
   // Estados removidos - agora usamos apenas useCardHistory que já busca tudo
   const [showAddTagModal, setShowAddTagModal] = useState(false);
@@ -1152,6 +1153,31 @@ export function DealDetailsModal({
       });
       
       setActivities(data || []);
+
+      // Buscar também os comentários (contact_observations)
+      const { data: observations, error: obsError } = await supabase
+        .from('contact_observations')
+        .select(`
+          id,
+          content,
+          created_at,
+          created_by,
+          file_url,
+          file_name,
+          file_type,
+          system_users:created_by (
+            name
+          )
+        `)
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: false });
+
+      if (obsError) {
+        console.error('❌ Erro ao buscar comentários:', obsError);
+      } else {
+        console.log('📥 Comentários carregados:', observations?.length || 0);
+        setContactObservations(observations || []);
+      }
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
     }
@@ -1531,6 +1557,38 @@ export function DealDetailsModal({
   };
   const pendingActivities = activities.filter(activity => !activity.is_completed);
   const completedActivities = activities.filter(activity => activity.is_completed);
+  
+  // Combinar atividades concluídas com comentários para o histórico
+  const completedActivitiesWithComments = [
+    ...completedActivities.map(act => ({
+      type: 'activity' as const,
+      id: act.id,
+      activity_type: act.type,
+      subject: act.subject,
+      description: act.description,
+      date: act.scheduled_for,
+      responsible_name: act.users?.name,
+      attachment_url: act.attachment_url || undefined,
+      attachment_name: act.attachment_name || undefined,
+      file_url: undefined,
+      file_name: undefined,
+      file_type: undefined,
+    })),
+    ...contactObservations.map(obs => ({
+      type: 'comment' as const,
+      id: obs.id,
+      activity_type: 'Comentário',
+      subject: 'Comentário',
+      description: obs.content,
+      date: obs.created_at,
+      responsible_name: obs.system_users?.name,
+      attachment_url: undefined,
+      attachment_name: undefined,
+      file_url: obs.file_url || undefined,
+      file_name: obs.file_name || undefined,
+      file_type: obs.file_type || undefined,
+    }))
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Função para mudar o pipeline/negócio selecionado
   const handlePipelineChange = (newPipelineId: string) => {
@@ -2332,53 +2390,55 @@ export function DealDetailsModal({
                 Histórico de Atividades
               </h3>
               
-              {completedActivities.length > 0 ? (
+              {completedActivitiesWithComments.length > 0 ? (
                 <div className="space-y-3">
-                  {completedActivities.map(activity => (
-                    <div key={activity.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                  {completedActivitiesWithComments.map(item => (
+                    <div key={item.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline" className="text-xs">
-                          {activity.type}
+                          {item.activity_type}
                         </Badge>
-                        <Badge className="bg-green-100 text-green-800 text-xs">
-                          Concluída
-                        </Badge>
+                        {item.type === 'activity' && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">
+                            Concluída
+                          </Badge>
+                        )}
                         <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                          {activity.users?.name}
+                          {item.responsible_name}
                         </span>
                       </div>
                       <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
-                        {activity.subject}
+                        {item.subject}
                       </h4>
                       <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        {format(new Date(activity.scheduled_for), "dd/MM/yyyy 'às' HH:mm", {
+                        {format(new Date(item.date), "dd/MM/yyyy 'às' HH:mm", {
                   locale: ptBR
                 })}
                       </p>
                       
-                      {/* Descrição da atividade */}
-                      {activity.description && (
+                      {/* Descrição/Comentário */}
+                      {item.description && (
                         <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                          {activity.description}
+                          {item.description}
                         </p>
                       )}
                       
-                      {/* Imagens anexadas */}
-                      {activity.attachment_url && (
+                      {/* Anexos de atividades */}
+                      {item.type === 'activity' && item.attachment_url && (
                         <div className="mt-3">
                           {(() => {
-                            const fileName = activity.attachment_name || activity.attachment_url || "";
+                            const fileName = item.attachment_name || item.attachment_url || "";
                             const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileName);
                             
                             if (isImg) {
                               return (
                                 <img 
-                                  src={activity.attachment_url} 
-                                  alt={activity.attachment_name || "Anexo"}
+                                  src={item.attachment_url} 
+                                  alt={item.attachment_name || "Anexo"}
                                   className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
                                   onClick={() => setSelectedAttachment({ 
-                                    url: activity.attachment_url!, 
-                                    name: activity.attachment_name || "Anexo" 
+                                    url: item.attachment_url!, 
+                                    name: item.attachment_name || "Anexo" 
                                   })}
                                 />
                               );
@@ -2390,7 +2450,7 @@ export function DealDetailsModal({
                                   "w-full sm:w-64 p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-colors",
                                   isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                                 )}
-                                onClick={() => window.open(activity.attachment_url!, '_blank')}
+                                onClick={() => window.open(item.attachment_url!, '_blank')}
                               >
                                 <div className={cn(
                                   "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
@@ -2400,7 +2460,56 @@ export function DealDetailsModal({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
-                                    {activity.attachment_name || "Anexo"}
+                                    {item.attachment_name || "Anexo"}
+                                  </p>
+                                  <p className={cn("text-xs truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                                    Clique para visualizar
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Anexos de comentários */}
+                      {item.type === 'comment' && item.file_url && (
+                        <div className="mt-3">
+                          {(() => {
+                            const fileName = item.file_name || item.file_url || "";
+                            const isImg = item.file_type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileName);
+                            
+                            if (isImg) {
+                              return (
+                                <img 
+                                  src={item.file_url} 
+                                  alt={item.file_name || "Anexo"}
+                                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                                  onClick={() => setSelectedAttachment({ 
+                                    url: item.file_url!, 
+                                    name: item.file_name || "Anexo" 
+                                  })}
+                                />
+                              );
+                            }
+                            
+                            return (
+                              <div 
+                                className={cn(
+                                  "w-full sm:w-64 p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-colors",
+                                  isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                                )}
+                                onClick={() => window.open(item.file_url!, '_blank')}
+                              >
+                                <div className={cn(
+                                  "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                                  isDarkMode ? "bg-gray-700" : "bg-white border border-gray-200"
+                                )}>
+                                  <FileText className={cn("w-5 h-5", isDarkMode ? "text-blue-400" : "text-blue-600")} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
+                                    {item.file_name || "Anexo"}
                                   </p>
                                   <p className={cn("text-xs truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                                     Clique para visualizar
