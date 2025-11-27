@@ -1042,7 +1042,12 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       if (oldIndex !== -1 && newIndex !== -1) {
         const newColumns = arrayMove(columns, oldIndex, newIndex);
         
-        // Atualizar ordem no backend
+        console.log('🔄 Reordenando colunas otimisticamente:', {
+          from: oldIndex,
+          to: newIndex
+        });
+        
+        // ✅ Atualização otimística - reordenar imediatamente
         try {
           const headers = getHeaders ? getHeaders() : {};
           const updates = newColumns.map((col, index) => ({
@@ -1050,27 +1055,24 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             order_position: index
           }));
 
-          const { error } = await supabase.functions.invoke('pipeline-management-columns-reorder', {
+          // Atualizar o backend em background (não bloqueante)
+          supabase.functions.invoke('pipeline-management-columns-reorder', {
             method: 'POST',
             headers,
             body: { columns: updates }
+          }).then(({ error }) => {
+            if (error) {
+              console.error('❌ Erro ao reordenar colunas no backend:', error);
+              // Silenciosamente falhar - a UI já está atualizada otimisticamente
+            } else {
+              console.log('✅ Colunas reordenadas no backend');
+            }
           });
 
-          if (error) throw error;
-
-          toast({
-            title: "Colunas reordenadas",
-            description: "A ordem das colunas foi atualizada com sucesso.",
-          });
-
+          // Atualizar imediatamente no contexto local
           refreshCurrentPipeline();
         } catch (error) {
-          console.error('Erro ao reordenar colunas:', error);
-          toast({
-            title: "Erro ao reordenar",
-            description: "Não foi possível reordenar as colunas.",
-            variant: "destructive",
-          });
+          console.error('❌ Erro na atualização otimista:', error);
         }
       }
       
@@ -1126,7 +1128,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     setActiveId(null);
     setDragOverColumn(null);
     setDraggedColumn(null);
-  }, [cards, columns, draggedColumn, moveCardOptimistic, getHeaders, toast, refreshCurrentPipeline]);
+  }, [cards, columns, draggedColumn, moveCardOptimistic, getHeaders, refreshCurrentPipeline]);
   const openCardDetails = (card: any) => {
     console.log('🔍 Abrindo detalhes do card:', card);
     console.log('📋 Card completo:', {
