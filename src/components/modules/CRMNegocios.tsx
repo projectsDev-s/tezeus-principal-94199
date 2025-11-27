@@ -2299,7 +2299,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
         columnId={selectedColumnForAction} 
         columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''} 
         columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'} 
-        columnIcon={columns.find(c => c.id === selectedColumnForAction)?.icon || 'Circle'}
+        columnIcon={columns.find(c => c.id === selectedColumnForAction)?.icon}
         onUpdate={() => {
           refreshCurrentPipeline();
         }} 

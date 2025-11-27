@@ -24,6 +24,7 @@ import { TimePickerModal } from "./TimePickerModal";
 import { MinutePickerModal } from "./MinutePickerModal";
 import { AttachmentPreviewModal } from "./AttachmentPreviewModal";
 import { MarkAsLostModal } from "./MarkAsLostModal";
+import { PipelineTimeline } from "@/components/crm/PipelineTimeline";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
@@ -90,6 +91,7 @@ interface PipelineStep {
   id: string;
   name: string;
   color: string;
+  icon?: string;
   isActive: boolean;
   isCompleted: boolean;
 }
@@ -601,6 +603,7 @@ export function DealDetailsModal({
         id: column.id,
         name: column.name,
         color: column.color,
+        icon: column.icon,
         isActive: index === currentIndex,
         isCompleted: currentIndex >= 0 && index < currentIndex
       }));
@@ -1859,20 +1862,6 @@ export function DealDetailsModal({
                   </div>
                 ) : pipelineSteps.length > 0 ? (
                   <div className="w-full space-y-4">
-                    {/* Debug: renderização dos steps */}
-                    {(() => {
-                      console.log('🎨 Renderizando pipeline steps:', {
-                        currentColumnId,
-                        stepsLength: pipelineSteps.length,
-                        steps: pipelineSteps.map(s => ({ 
-                          name: s.name, 
-                          isActive: s.isActive, 
-                          isCompleted: s.isCompleted 
-                        }))
-                      });
-                      return null;
-                    })()}
-                    
                     {/* Informação da posição atual */}
                     {selectedColumnId && (
                       <div className={cn("mb-4 p-3 rounded-lg border",
@@ -1886,76 +1875,18 @@ export function DealDetailsModal({
                       </div>
                     )}
                     
-                    {/* Pipeline Visual */}
-                    <div className="relative pt-6 pb-16">
-                      {/* Container das etapas com linha */}
-                      <div className="relative flex justify-between items-start">
-                        {/* Linha de fundo - contínua */}
-                        <div 
-                          className={cn("absolute left-0 right-0 h-1 z-0", 
-                            isDarkMode ? "bg-gray-600" : "bg-gray-300"
-                          )} 
-                          style={{ top: '24px' }}
-                        ></div>
-                        
-                        {/* Linha de progresso */}
-                        {pipelineSteps.length > 1 && (
-                          <div 
-                            className="absolute left-0 h-1 bg-yellow-400 z-10 transition-all duration-500"
-                            style={{ 
-                              top: '24px',
-                              width: `${Math.max(0, Math.min(100, ((pipelineSteps.findIndex(step => step.isActive) + 0.5) / Math.max(1, pipelineSteps.length - 1)) * 100))}%`
-                            }}
-                          ></div>
-                        )}
-                        
-                        {/* Etapas */}
-                        {pipelineSteps.map((step, index) => {
-                          const currentStepIndex = pipelineSteps.findIndex(s => s.isActive);
-                          const isActive = index === currentStepIndex;
-                          const isFuture = currentStepIndex >= 0 && index > currentStepIndex;
-                          const isPast = currentStepIndex >= 0 && index < currentStepIndex;
-                          const isAnimating = targetStepAnimation === step.id;
-                          
-                          return (
-                            <div 
-                              key={step.id} 
-                              className="flex flex-col items-center justify-start z-20"
-                              style={{ flex: '1' }}
-                            >
-                              <button
-                                onClick={() => !isMovingCard && handleMoveToColumn(step.id, index)}
-                                disabled={isMovingCard || isActive}
-                                className={cn(
-                                  "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-4 transition-all duration-500",
-                                  "focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2",
-                                  isActive && "bg-yellow-400 border-yellow-400 text-black shadow-lg",
-                                  isAnimating && "animate-pulse bg-yellow-300 border-yellow-300 scale-110",
-                                  (isPast || isFuture) && !isAnimating && "bg-white border-gray-300 text-gray-500 hover:bg-yellow-100 hover:border-yellow-300 hover:scale-105 cursor-pointer",
-                                  isDarkMode && (isPast || isFuture) && !isAnimating && "bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600 hover:border-yellow-500",
-                                  (isMovingCard || isActive) && "cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <span className="font-bold">{index + 1}</span>
-                              </button>
-                              
-                              <div className="mt-3 text-center" style={{ maxWidth: '90px' }}>
-                                <p 
-                                  className={cn(
-                                    "text-xs font-medium leading-tight transition-colors duration-300",
-                                    isActive && "text-yellow-600 font-bold",
-                                    isAnimating && "text-yellow-500 font-bold",
-                                    (isPast || isFuture) && !isAnimating && "text-gray-500"
-                                  )}
-                                >
-                                  {step.name}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    {/* Pipeline Visual com Ícones */}
+                    <PipelineTimeline 
+                      columns={pipelineSteps.map(step => ({
+                        id: step.id,
+                        name: step.name,
+                        color: step.color,
+                        icon: step.icon,
+                        isActive: step.isActive
+                      }))}
+                      currentColumnId={selectedColumnId}
+                      className="py-6"
+                    />
                   </div>
                 ) : (
                   <div className="text-center py-8">
