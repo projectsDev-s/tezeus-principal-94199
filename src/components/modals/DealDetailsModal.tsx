@@ -1337,8 +1337,24 @@ export function DealDetailsModal({
   };
 
   const handleCreateActivity = async () => {
+    console.log('🔵 handleCreateActivity chamado', {
+      type: activityForm.type,
+      contactId,
+      responsibleId: activityForm.responsibleId,
+      description: activityForm.description
+    });
+
     // Validação diferente para comentários
     if (activityForm.type === "Comentários") {
+      if (!contactId) {
+        toast({
+          title: "Erro",
+          description: "Contato não identificado. Tente reabrir o card.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (!activityForm.responsibleId || !activityForm.description.trim()) {
         toast({
           title: "Campos obrigatórios",
@@ -1360,29 +1376,51 @@ export function DealDetailsModal({
 
     setIsCreatingActivity(true);
     try {
+      console.log('📋 Buscando workspace do contato:', contactId);
       // Get workspace_id from the contact
-      const { data: contactDataForActivity } = await supabase
+      const { data: contactDataForActivity, error: contactError } = await supabase
         .from('contacts')
         .select('workspace_id')
         .eq('id', contactId)
         .single();
 
+      if (contactError) {
+        console.error('❌ Erro ao buscar contato:', contactError);
+        throw contactError;
+      }
+
       if (!contactDataForActivity?.workspace_id) {
         throw new Error('Workspace não encontrado para este contato');
       }
 
+      console.log('✅ Workspace encontrado:', contactDataForActivity.workspace_id);
+
       // Se for comentário, salvar em contact_observations
       if (activityForm.type === "Comentários") {
-        const { error } = await supabase
+        console.log('💾 Salvando comentário...', {
+          contact_id: contactId,
+          workspace_id: contactDataForActivity.workspace_id,
+          content: activityForm.description.trim(),
+          created_by: activityForm.responsibleId
+        });
+
+        const { data: insertedComment, error } = await supabase
           .from('contact_observations')
           .insert({
             contact_id: contactId,
             workspace_id: contactDataForActivity.workspace_id,
             content: activityForm.description.trim(),
             created_by: activityForm.responsibleId
-          });
+          })
+          .select()
+          .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro ao inserir comentário:', error);
+          throw error;
+        }
+
+        console.log('✅ Comentário salvo com sucesso:', insertedComment);
 
         toast({
           title: "Comentário adicionado com sucesso!",
@@ -1400,12 +1438,14 @@ export function DealDetailsModal({
         setSelectedDate(undefined);
         setSelectedTime("13:00");
         setAttachedFile(null);
-        setIsCreatingActivity(false);
         
-        // Recarregar atividades para mostrar o novo comentário no histórico se necessário
+        // Recarregar atividades para mostrar o novo comentário no histórico
+        console.log('🔄 Recarregando atividades...');
         if (contactId) {
           await fetchActivities(contactId);
         }
+        
+        setIsCreatingActivity(false);
         return;
       }
 
