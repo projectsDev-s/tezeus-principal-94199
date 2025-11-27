@@ -266,12 +266,12 @@ function DraggableDeal({
   return <Card ref={setNodeRef} style={cardStyle} {...!isSelectionMode && {
     ...attributes,
     ...listeners
-  }} className={cn("hover:shadow-md transition-shadow mb-2 md:mb-2.5 border-l-4 relative min-h-[100px] md:min-h-[110px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30", isDarkMode ? "bg-card border-border" : "bg-card border-border")} onClick={isSelectionMode ? e => {
+  }} className={cn("hover:shadow-md transition-shadow mb-1.5 md:mb-2 border-l-4 relative min-h-[85px] md:min-h-[95px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30", isDarkMode ? "bg-card border-border" : "bg-card border-border")} onClick={isSelectionMode ? e => {
     e.preventDefault();
     e.stopPropagation();
     onToggleSelection?.();
   } : onClick}>
-    <CardContent className="p-2 md:p-2.5">
+    <CardContent className="p-1.5 md:p-2">
       {isSelectionMode && <div className="absolute top-2 right-2 z-10">
           <input type="checkbox" checked={isSelected} onChange={e => {
           e.stopPropagation();
@@ -326,14 +326,14 @@ function DraggableDeal({
           
           {/* Avatar do contato - SEGUNDO */}
           <div className="flex-shrink-0">
-            {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover border border-primary/20" onError={e => {
+            {deal.contact?.profile_image_url ? <img src={deal.contact.profile_image_url} alt={deal.contact.name || deal.name} className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover border border-primary/20" onError={e => {
             // Fallback para iniciais se a imagem falhar
             const target = e.currentTarget as HTMLImageElement;
             target.style.display = 'none';
             const fallback = target.nextElementSibling as HTMLElement;
             if (fallback) fallback.style.display = 'flex';
           }} /> : null}
-            <div className={cn("w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
+            <div className={cn("w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-medium", "bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/20", deal.contact?.profile_image_url ? "hidden" : "")}>
               {getAvatarInitials(deal.contact?.name || deal.name || "Contato")}
             </div>
           </div>
@@ -371,7 +371,7 @@ function DraggableDeal({
         </div>
         
         {/* Área central para tags do contato */}
-        <div className="mb-2 min-h-[24px] flex items-center justify-between gap-2">
+        <div className="mb-1.5 min-h-[20px] flex items-center justify-between gap-2">
           <div className="flex items-center flex-wrap gap-1 flex-1 min-w-0">
           {contactTags.map(tag => (
             <div
@@ -480,7 +480,7 @@ function DraggableDeal({
         </div>
         
         {/* Footer com ícones de ação e prioridade */}
-        <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
+        <div className="flex items-center justify-between pt-1 border-t border-border/50">
           <div className="flex items-center gap-1">
             <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-green-100 hover:text-green-600" onClick={async e => {
             e.stopPropagation();
@@ -1718,13 +1718,13 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                                   borderTopWidth: '4px'
                                 }}>
                                   {/* Column Header */}
-                                  <div className="bg-white p-4 pb-3 flex-shrink-0 rounded-t border-b border-border/20">
+                                  <div className="bg-white p-3 pb-2 flex-shrink-0 rounded-t border-b border-border/20">
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1">
-                                        <h3 className="font-semibold text-foreground text-base mb-1">
+                                        <h3 className="font-semibold text-foreground text-sm mb-1">
                                           {column.name}
                                         </h3>
-                                        <div className="text-sm text-muted-foreground space-y-1">
+                                        <div className="text-xs text-muted-foreground space-y-0.5">
                                           <div className="font-medium">
                                             Total: {formatCurrency(calculateColumnTotal())}
                                           </div>
@@ -1737,7 +1737,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                                   </div>
 
                                   {/* Cards Area */}
-                                  <div className="flex-1 p-3 overflow-y-auto">
+                                  <div className="flex-1 p-2 overflow-y-auto">
                                      <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
                                        {columnCards.length > 0 ? columnCards.map(card => {
                                          const deal: Deal = {
@@ -1848,14 +1848,14 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                     {/* Coluna individual - responsiva */}
                     <div className={cn(
                       "flex-shrink-0 h-full flex flex-col pb-2",
-                      isTablet ? "w-[calc(50%-0.5rem)] min-w-[280px]" : "w-[300px]"
+                      isTablet ? "w-[calc(50%-0.5rem)] min-w-[220px]" : "w-[240px]"
                     )}>
                        <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20", `border-t-[${column.color}]`)} style={{
                   borderTopColor: column.color,
                   borderTopWidth: '4px'
                 }}>
                         {/* Cabeçalho da coluna - fundo branco/claro */}
-                        <div className="bg-white p-4 pb-3 flex-shrink-0 rounded-t border-b border-border/20">
+                        <div className="bg-white p-3 pb-2 flex-shrink-0 rounded-t border-b border-border/20">
                           {isSelectionMode && selectedColumnForAction === column.id ? <div className="mb-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -1886,10 +1886,10 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                               </div> : null}
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h3 className="font-semibold text-foreground text-base mb-1">
+                              <h3 className="font-semibold text-foreground text-sm mb-1">
                                 {column.name}
                               </h3>
-                              <div className="text-sm text-muted-foreground space-y-1">
+                              <div className="text-xs text-muted-foreground space-y-0.5">
                                 <div className="font-medium">
                                   Total: {formatCurrency(calculateColumnTotal())}
                                 </div>
@@ -1965,7 +1965,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         </div>
                         
                         {/* Corpo da coluna - fundo colorido */}
-                        <div className={cn("flex-1 p-3 pt-4 overflow-y-auto min-h-0", dragOverColumn === column.id ? "opacity-90" : "")} style={{
+                        <div className={cn("flex-1 p-2 pt-3 overflow-y-auto min-h-0", dragOverColumn === column.id ? "opacity-90" : "")} style={{
                     backgroundColor: `${column.color}10`
                   }}>
                         {columnCards.length === 0 ? (
@@ -1975,7 +1975,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                             </p>
                           </div>
                         ) : (
-                          <div className="space-y-2 md:space-y-2.5">
+                          <div className="space-y-1.5 md:space-y-2">
                             <SortableContext
                               items={columnCards.map(card => `card-${card.id}`)}
                               strategy={verticalListSortingStrategy}
