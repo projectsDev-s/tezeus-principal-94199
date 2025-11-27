@@ -1288,14 +1288,11 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       onDragOver={handleDragOver}
     >
       {/* Estrutura do layout conforme imagem fornecida */}
-      <div className="flex-1 flex flex-col max-h-screen">
-        <main className="flex-1 overflow-y-auto">
-          <div className="h-screen flex flex-col w-full overflow-hidden">
-            
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-10 flex-shrink-0 bg-background">
-              <div className="w-full px-2 md:px-4 py-2">
-                <div className="w-full border rounded-lg p-2 md:p-3 shadow-sm bg-background border-border">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Sticky Header - Fora do scroll horizontal */}
+        <div className="flex-shrink-0 bg-background border-b border-border">
+          <div className="w-full px-2 md:px-4 py-2">
+            <div className="w-full border rounded-lg p-2 md:p-3 shadow-sm bg-background border-border">
                   
                   {/* Mobile Layout */}
                   {isMobile ? (
@@ -1571,9 +1568,9 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                 </div>
               </div>
             </div>
-
-{/* Pipeline Scroll Area */}
-<div className="flex-1 min-h-0">
+        
+        {/* Pipeline Scroll Area - Com scroll horizontal independente */}
+        <div className="flex-1 overflow-hidden">
               {/* Mobile: Navigation Controls */}
               {isMobile && columns.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
@@ -1603,15 +1600,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                 </div>
               )}
 
-              <div className={cn(
-                "h-full",
-                isMobile ? "px-2" : "px-4",
-                !isMobile && "overflow-x-auto"
-              )}>
-                <div className={cn(
-                  "h-full",
-                  !isMobile && "overflow-x-auto overflow-y-hidden"
-                )}>
+              <div className="h-full px-2 md:px-4 overflow-x-auto overflow-y-hidden">
                   {isLoading ? (
                     <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
                       {[...Array(4)].map((_, index) => (
@@ -2091,11 +2080,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     </div>
   </div>
 </div>
-</div>
-</main>
-</div>
 
-      <DragOverlay>
+<DragOverlay>
           {activeId && (() => {
           const activeCard = cards.find(card => `card-${card.id}` === activeId);
           if (activeCard) {
