@@ -1422,8 +1422,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                     </div>
                   ) : (
                     /* Desktop/Tablet Layout */
-                    <div className="flex w-full flex-wrap items-center gap-3">
-                      <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+                    <div className="flex w-full items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         
                         {/* Settings Button */}
                         {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
