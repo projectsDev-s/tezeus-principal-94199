@@ -2025,7 +2025,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         {/* Invisible drop zone for empty columns and bottom of lists */}
                         <div className="min-h-[40px] w-full" />
                       </SortableContext>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               </div>
@@ -2033,9 +2033,11 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
           );
         })
       )}
-      </div>
     </div>
+  )}
   </div>
+</div>
+</div>
 </div>
 </main>
 </div>
