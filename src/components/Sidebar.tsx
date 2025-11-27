@@ -130,7 +130,7 @@ export function Sidebar({
     group?: string;
   })[] = [{
     id: "dashboard",
-    label: "Dashboard",
+    label: "Relatórios",
     icon: <LayoutDashboard className="w-5 h-5" />
   }, {
     id: "conversas",
