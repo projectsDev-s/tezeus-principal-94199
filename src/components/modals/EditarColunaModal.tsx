@@ -100,6 +100,15 @@ export function EditarColunaModal({
       return;
     }
 
+    if (!icon || icon.trim() === '') {
+      toast({
+        title: "Erro",
+        description: "Você precisa selecionar um ícone para a coluna",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!columnId) return;
 
     try {
@@ -265,7 +274,7 @@ export function EditarColunaModal({
               </div>
 
               <div className="space-y-2">
-                <Label>Ícone</Label>
+                <Label>Ícone *</Label>
                 <IconSelector 
                   selectedIcon={icon}
                   onIconSelect={setIcon}
@@ -307,7 +316,7 @@ export function EditarColunaModal({
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Fechar
                   </Button>
-                  <Button onClick={handleSave} disabled={isLoading}>
+                  <Button onClick={handleSave} disabled={isLoading || !icon || !name.trim()}>
                     {isLoading ? "Salvando..." : "Salvar Configurações"}
                   </Button>
                 </div>
