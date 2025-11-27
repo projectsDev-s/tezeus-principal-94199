@@ -102,22 +102,29 @@ export function CreateActivityModal({
   };
 
   const handleCreateActivity = async () => {
-    if (!selectedDate || !formData.responsibleId || !formData.subject.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
+    // Validação diferente para comentários
+    if (formData.type === "Comentários") {
+      if (!formData.responsibleId || !formData.description.trim()) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Preencha o responsável e o comentário.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      if (!selectedDate || !formData.responsibleId || !formData.subject.trim()) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Preencha todos os campos obrigatórios.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
-      // Combinar data e hora
-      const [hour, minute] = selectedTime.split(':').map(Number);
-      const scheduledDateTime = new Date(selectedDate);
-      scheduledDateTime.setHours(hour, minute, 0, 0);
-
       // Get workspace_id from the contact
       const { data: contactData } = await supabase
         .from('contacts')
@@ -128,6 +135,41 @@ export function CreateActivityModal({
       if (!contactData?.workspace_id) {
         throw new Error('Workspace não encontrado para este contato');
       }
+
+      // Se for comentário, salvar em contact_observations
+      if (formData.type === "Comentários") {
+        const { error } = await supabase
+          .from('contact_observations')
+          .insert({
+            contact_id: contactId,
+            workspace_id: contactData.workspace_id,
+            content: formData.description.trim(),
+            created_by: formData.responsibleId
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Comentário adicionado com sucesso!",
+          description: "O comentário foi salvo no perfil do contato.",
+        });
+
+        // Resetar formulário
+        setFormData({
+          type: "Lembrete",
+          responsibleId: "",
+          subject: "",
+          description: "",
+          durationMinutes: 30,
+        });
+        onClose();
+        return;
+      }
+
+      // Lógica normal para atividades
+      const [hour, minute] = selectedTime.split(':').map(Number);
+      const scheduledDateTime = new Date(selectedDate);
+      scheduledDateTime.setHours(hour, minute, 0, 0);
 
       const activityData: any = {
         contact_id: contactId,
@@ -213,7 +255,7 @@ export function CreateActivityModal({
             "text-xl font-semibold",
             isDarkMode ? "text-white" : "text-gray-900"
           )}>
-            Criar Atividade
+            {formData.type === "Comentários" ? "Adicionar Comentário" : "Criar Atividade"}
           </DialogTitle>
         </DialogHeader>
 
@@ -241,6 +283,7 @@ export function CreateActivityModal({
                 <SelectItem value="Ligação">Ligação</SelectItem>
                 <SelectItem value="Reunião">Reunião</SelectItem>
                 <SelectItem value="Agendamento">Agendamento</SelectItem>
+                <SelectItem value="Comentários">Comentários</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -272,182 +315,190 @@ export function CreateActivityModal({
             </Select>
           </div>
 
-          {/* Assunto */}
-          <div className="space-y-2">
-            <label className={cn(
-              "text-sm font-medium",
-              isDarkMode ? "text-gray-300" : "text-gray-700"
-            )}>
-              Assunto *
-            </label>
-            <Input
-              placeholder="Assunto da atividade"
-              value={formData.subject}
-              onChange={(e) => setFormData({...formData, subject: e.target.value})}
-              className={cn(
-                isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
-              )}
-            />
-          </div>
-
-          {/* Data e Hora */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Assunto - não mostrar para comentários */}
+          {formData.type !== "Comentários" && (
             <div className="space-y-2">
               <label className={cn(
                 "text-sm font-medium",
                 isDarkMode ? "text-gray-300" : "text-gray-700"
               )}>
-                Agendar para *
+                Assunto *
               </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground",
-                      isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? (
-                      format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
-                    ) : (
-                      <span>Selecione a data</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                placeholder="Assunto da atividade"
+                value={formData.subject}
+                onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                className={cn(
+                  isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
+                )}
+              />
             </div>
+          )}
 
+          {/* Data e Hora - não mostrar para comentários */}
+          {formData.type !== "Comentários" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className={cn(
+                  "text-sm font-medium",
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                )}>
+                  Agendar para *
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground",
+                        isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? (
+                        format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
+                      ) : (
+                        <span>Selecione a data</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <label className={cn(
+                  "text-sm font-medium",
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                )}>
+                  Hora
+                </label>
+                <Popover open={showTimePicker} onOpenChange={setShowTimePicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
+                      )}
+                      onClick={handleTimeClick}
+                    >
+                      <Clock className="mr-2 h-4 w-4" />
+                      {selectedTime}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="max-h-60 overflow-y-auto p-2">
+                      {timeOptions.map((time) => (
+                        <Button
+                          key={time.display}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => handleTimeSelect(time.hour, time.minute)}
+                        >
+                          {time.display}
+                        </Button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
+
+          {/* Duração - não mostrar para comentários */}
+          {formData.type !== "Comentários" && (
             <div className="space-y-2">
               <label className={cn(
                 "text-sm font-medium",
                 isDarkMode ? "text-gray-300" : "text-gray-700"
               )}>
-                Hora
+                Duração (minutos)
               </label>
-              <Popover open={showTimePicker} onOpenChange={setShowTimePicker}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
-                    )}
-                    onClick={handleTimeClick}
-                  >
-                    <Clock className="mr-2 h-4 w-4" />
-                    {selectedTime}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="max-h-60 overflow-y-auto p-2">
-                    {timeOptions.map((time) => (
-                      <Button
-                        key={time.display}
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => handleTimeSelect(time.hour, time.minute)}
-                      >
-                        {time.display}
-                      </Button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <Input
+                type="number"
+                value={formData.durationMinutes}
+                onChange={(e) => setFormData({...formData, durationMinutes: Number(e.target.value)})}
+                className={cn(
+                  isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
+                )}
+              />
             </div>
-          </div>
+          )}
 
-          {/* Duração */}
-          <div className="space-y-2">
-            <label className={cn(
-              "text-sm font-medium",
-              isDarkMode ? "text-gray-300" : "text-gray-700"
-            )}>
-              Duração (minutos)
-            </label>
-            <Input
-              type="number"
-              value={formData.durationMinutes}
-              onChange={(e) => setFormData({...formData, durationMinutes: Number(e.target.value)})}
-              className={cn(
-                isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white"
-              )}
-            />
-          </div>
-
-          {/* Anexo */}
-          <div className="space-y-2">
-            <label className={cn(
-              "text-sm font-medium",
-              isDarkMode ? "text-gray-300" : "text-gray-700"
-            )}>
-              Anexo
-            </label>
-            <div className={cn(
-              "border-2 border-dashed rounded-md p-4",
-              isDarkMode ? "border-gray-600" : "border-gray-300"
-            )}>
-              {attachedFile ? (
-                <div className="flex items-center justify-between">
-                  <span className={cn(
-                    "text-sm",
-                    isDarkMode ? "text-gray-300" : "text-gray-700"
-                  )}>
-                    {attachedFile.name}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={removeFile}
-                    className="h-6 w-6 p-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    accept="*/*"
-                  />
-                  <div className="flex items-center justify-center space-x-2">
-                    <Upload className="w-4 h-4" />
+          {/* Anexo - não mostrar para comentários */}
+          {formData.type !== "Comentários" && (
+            <div className="space-y-2">
+              <label className={cn(
+                "text-sm font-medium",
+                isDarkMode ? "text-gray-300" : "text-gray-700"
+              )}>
+                Anexo
+              </label>
+              <div className={cn(
+                "border-2 border-dashed rounded-md p-4",
+                isDarkMode ? "border-gray-600" : "border-gray-300"
+              )}>
+                {attachedFile ? (
+                  <div className="flex items-center justify-between">
                     <span className={cn(
                       "text-sm",
-                      isDarkMode ? "text-gray-400" : "text-gray-600"
+                      isDarkMode ? "text-gray-300" : "text-gray-700"
                     )}>
-                      Clique aqui ou arraste o documento a ser salvo
+                      {attachedFile.name}
                     </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={removeFile}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                </label>
-              )}
+                ) : (
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      accept="*/*"
+                    />
+                    <div className="flex items-center justify-center space-x-2">
+                      <Upload className="w-4 h-4" />
+                      <span className={cn(
+                        "text-sm",
+                        isDarkMode ? "text-gray-400" : "text-gray-600"
+                      )}>
+                        Clique aqui ou arraste o documento a ser salvo
+                      </span>
+                    </div>
+                  </label>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Descrição */}
+          {/* Descrição - obrigatória para comentários */}
           <div className="space-y-2">
             <label className={cn(
               "text-sm font-medium",
               isDarkMode ? "text-gray-300" : "text-gray-700"
             )}>
-              Descrição
+              {formData.type === "Comentários" ? "Comentário *" : "Descrição"}
             </label>
             <Textarea
-              placeholder="Detalhes adicionais da atividade"
+              placeholder={formData.type === "Comentários" ? "Digite o comentário..." : "Detalhes adicionais da atividade"}
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               className={cn(
@@ -474,7 +525,7 @@ export function CreateActivityModal({
               disabled={isLoading}
               className="bg-yellow-400 text-black hover:bg-yellow-500"
             >
-              {isLoading ? "Criando..." : "Criar Atividade"}
+              {isLoading ? (formData.type === "Comentários" ? "Salvando..." : "Criando...") : (formData.type === "Comentários" ? "Salvar Comentário" : "Criar Atividade")}
             </Button>
           </div>
         </div>
