@@ -2,26 +2,30 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Pipette } from "lucide-react";
 import { ColorPickerModal } from "./ColorPickerModal";
+import { IconSelector } from "@/components/ui/icon-selector";
 
 interface AddColumnModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddColumn: (name: string, color: string) => void;
+  onAddColumn: (name: string, color: string, icon: string) => void;
   isDarkMode?: boolean;
 }
 
 export function AddColumnModal({ open, onOpenChange, onAddColumn, isDarkMode = false }: AddColumnModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#ff0000");
+  const [icon, setIcon] = useState("Circle");
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   const handleSubmit = () => {
-    if (name.trim()) {
-      onAddColumn(name.trim(), color);
+    if (name.trim() && icon) {
+      onAddColumn(name.trim(), color, icon);
       setName("");
       setColor("#ff0000");
+      setIcon("Circle");
       onOpenChange(false);
     }
   };
@@ -42,19 +46,30 @@ export function AddColumnModal({ open, onOpenChange, onAddColumn, isDarkMode = f
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
+              <Label htmlFor="column-name">Nome da Coluna *</Label>
               <Input
+                id="column-name"
                 placeholder="Nome"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="bg-input border-border text-foreground"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Ícone *</Label>
+              <IconSelector 
+                selectedIcon={icon}
+                onIconSelect={setIcon}
+              />
+              <p className="text-xs text-muted-foreground">
+                Selecione um ícone para representar esta etapa do pipeline
+              </p>
+            </div>
             
-            <div>
-              <label className="block text-sm mb-2 text-muted-foreground">
-                Cor
-              </label>
+            <div className="space-y-2">
+              <Label>Cor</Label>
               <div className="flex items-center gap-2">
                 <div 
                   className="w-8 h-8 rounded border border-gray-300 cursor-pointer flex items-center justify-center"
@@ -86,7 +101,7 @@ export function AddColumnModal({ open, onOpenChange, onAddColumn, isDarkMode = f
               <Button 
                 onClick={handleSubmit}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={!name.trim()}
+                disabled={!name.trim() || !icon}
               >
                 Adicionar
               </Button>

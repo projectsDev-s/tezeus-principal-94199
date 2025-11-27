@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ColorPickerModal } from "./ColorPickerModal";
+import { IconSelector } from "@/components/ui/icon-selector";
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { ColumnAutomationsTab } from "./ColumnAutomationsTab";
@@ -24,6 +25,7 @@ interface EditarColunaModalProps {
   columnId: string | null;
   columnName: string;
   columnColor: string;
+  columnIcon?: string;
   onUpdate: () => void;
 }
 
@@ -33,10 +35,12 @@ export function EditarColunaModal({
   columnId,
   columnName,
   columnColor,
+  columnIcon = 'Circle',
   onUpdate,
 }: EditarColunaModalProps) {
   const [name, setName] = useState(columnName);
   const [color, setColor] = useState(columnColor);
+  const [icon, setIcon] = useState(columnIcon);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('settings');
@@ -53,10 +57,11 @@ export function EditarColunaModal({
     if (open && columnId) {
       setName(columnName);
       setColor(columnColor);
+      setIcon(columnIcon || 'Circle');
       setActiveTab('settings');
       loadPermissions();
     }
-  }, [open, columnName, columnColor, columnId]);
+  }, [open, columnName, columnColor, columnIcon, columnId]);
 
   const loadPermissions = async () => {
     if (!columnId) return;
@@ -107,6 +112,7 @@ export function EditarColunaModal({
         body: {
           name: name.trim(),
           color,
+          icon,
         },
       });
 
@@ -254,6 +260,17 @@ export function EditarColunaModal({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Digite o nome da coluna"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ícone</Label>
+                <IconSelector 
+                  selectedIcon={icon}
+                  onIconSelect={setIcon}
+                />
+                <p className="text-xs text-muted-foreground">
+                  O ícone será exibido no timeline do pipeline
+                </p>
               </div>
 
               <div className="space-y-2">

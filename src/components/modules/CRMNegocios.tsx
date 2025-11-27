@@ -1159,8 +1159,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       });
     }
   };
-  const handleColumnCreate = async (nome: string, cor: string) => {
-    await createColumn(nome, cor);
+  const handleColumnCreate = async (nome: string, cor: string, icon: string) => {
+    await createColumn(nome, cor, icon);
   };
   const handleSetCardValue = async (value: number) => {
     if (!selectedCardForValue) return;
@@ -2293,9 +2293,17 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       setSelectedCardForValue(null);
     }} onSave={handleSetCardValue} currentValue={selectedCardForValue?.value || 0} isDarkMode={isDarkMode} canEdit={!selectedCardForValue?.hasProduct} />
 
-      <EditarColunaModal open={isEditarColunaModalOpen} onOpenChange={setIsEditarColunaModalOpen} columnId={selectedColumnForAction} columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''} columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'} onUpdate={() => {
-      refreshCurrentPipeline();
-    }} />
+      <EditarColunaModal 
+        open={isEditarColunaModalOpen} 
+        onOpenChange={setIsEditarColunaModalOpen} 
+        columnId={selectedColumnForAction} 
+        columnName={columns.find(c => c.id === selectedColumnForAction)?.name || ''} 
+        columnColor={columns.find(c => c.id === selectedColumnForAction)?.color || '#000000'} 
+        columnIcon={columns.find(c => c.id === selectedColumnForAction)?.icon || 'Circle'}
+        onUpdate={() => {
+          refreshCurrentPipeline();
+        }} 
+      />
 
       <EditarContatoModal isOpen={isEditarContatoModalOpen} onClose={() => {
       setIsEditarContatoModalOpen(false);

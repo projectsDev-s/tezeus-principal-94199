@@ -39,7 +39,7 @@ export function usePipelineColumns(pipelineId: string | null, workspaceId?: stri
     }
   };
 
-  const createColumn = async (name: string, color: string) => {
+  const createColumn = async (name: string, color: string, icon: string = 'Circle') => {
     if (!pipelineId) return;
 
     try {
@@ -51,7 +51,8 @@ export function usePipelineColumns(pipelineId: string | null, workspaceId?: stri
         body: { 
           pipeline_id: pipelineId,
           name,
-          color 
+          color,
+          icon
         }
       });
 
