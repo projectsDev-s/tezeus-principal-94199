@@ -4,11 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ColorPickerModal } from "./ColorPickerModal";
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { ColumnAutomationsTab } from "./ColumnAutomationsTab";
+import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Users, User } from "lucide-react";
 
 interface EditarColunaModalProps {
   open: boolean;
@@ -32,16 +38,43 @@ export function EditarColunaModal({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('settings');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [viewAllDealsUsers, setViewAllDealsUsers] = useState<string[]>([]);
   const { toast } = useToast();
   const { getHeaders } = useWorkspaceHeaders();
+  const { selectedWorkspace } = useWorkspace();
+  const { members } = useWorkspaceMembers(selectedWorkspace?.workspace_id);
 
   useEffect(() => {
-    if (open) {
+    if (open && columnId) {
       setName(columnName);
       setColor(columnColor);
       setActiveTab('settings');
+      loadPermissions();
     }
-  }, [open, columnName, columnColor]);
+  }, [open, columnName, columnColor, columnId]);
+
+  const loadPermissions = async () => {
+    if (!columnId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('pipeline_columns')
+        .select('permissions, view_all_deals_permissions')
+        .eq('id', columnId)
+        .single();
+
+      if (error) throw error;
+      
+      const permissions = data?.permissions;
+      const viewAllPermissions = data?.view_all_deals_permissions;
+      
+      setSelectedUsers(Array.isArray(permissions) ? permissions.filter((p): p is string => typeof p === 'string') : []);
+      setViewAllDealsUsers(Array.isArray(viewAllPermissions) ? viewAllPermissions.filter((p): p is string => typeof p === 'string') : []);
+    } catch (error) {
+      console.error('Erro ao carregar permissões:', error);
+    }
+  };
 
   const handleColorSelect = (selectedColor: string) => {
     setColor(selectedColor);
@@ -94,6 +127,66 @@ export function EditarColunaModal({
     }
   };
 
+  const handleUpdatePermissions = async () => {
+    if (!columnId) return;
+
+    try {
+      const headers = getHeaders();
+      const { error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
+        method: 'PUT',
+        headers,
+        body: {
+          permissions: selectedUsers,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Permissões atualizadas com sucesso",
+      });
+      onUpdate();
+    } catch (error) {
+      console.error('Erro ao atualizar permissões:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar permissões",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateViewAllDealsPermissions = async () => {
+    if (!columnId) return;
+
+    try {
+      const headers = getHeaders();
+      const { error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
+        method: 'PUT',
+        headers,
+        body: {
+          view_all_deals_permissions: viewAllDealsUsers,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Permissões de visualização atualizadas com sucesso",
+      });
+      onUpdate();
+    } catch (error) {
+      console.error('Erro ao atualizar permissões:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar permissões de visualização",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,8 +196,9 @@ export function EditarColunaModal({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="settings">Configurações</TabsTrigger>
+              <TabsTrigger value="permissions">Permissões</TabsTrigger>
               <TabsTrigger value="automations">Automações</TabsTrigger>
             </TabsList>
 
@@ -144,6 +238,102 @@ export function EditarColunaModal({
                   {isLoading ? "Salvando..." : "Salvar Configurações"}
                 </Button>
               </DialogFooter>
+            </TabsContent>
+
+            <TabsContent value="permissions" className="space-y-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium mb-3">Usuários que podem ver a coluna</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {selectedUsers.length === 0 
+                      ? 'Todos os usuários podem ver esta coluna' 
+                      : `${selectedUsers.length} usuário${selectedUsers.length > 1 ? 's' : ''} selecionado${selectedUsers.length > 1 ? 's' : ''}`
+                    }
+                  </p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-3">
+                    {members?.filter(member => !member.is_hidden).map(member => (
+                      <div key={member.id} className="flex items-center space-x-3">
+                        <Checkbox 
+                          id={`user-${member.id}`}
+                          checked={selectedUsers.includes(member.user_id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedUsers([...selectedUsers, member.user_id]);
+                            } else {
+                              setSelectedUsers(selectedUsers.filter(id => id !== member.user_id));
+                            }
+                          }}
+                        />
+                        <div className="flex items-center space-x-2 flex-1">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <label 
+                            htmlFor={`user-${member.id}`} 
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            {member.user?.name}
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    className="w-full mt-3" 
+                    onClick={handleUpdatePermissions}
+                  >
+                    Salvar Permissões de Visualização
+                  </Button>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-medium mb-3">Usuários que podem ver todos os negócios</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Usuários selecionados verão todos os negócios desta coluna independente do responsável
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {viewAllDealsUsers.length} usuário{viewAllDealsUsers.length !== 1 ? 's' : ''} selecionado{viewAllDealsUsers.length !== 1 ? 's' : ''}
+                  </p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-3">
+                    {members?.filter(member => !member.is_hidden).map(member => (
+                      <div key={member.id} className="flex items-center space-x-3">
+                        <Checkbox 
+                          id={`view-all-${member.id}`}
+                          checked={viewAllDealsUsers.includes(member.user_id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setViewAllDealsUsers([...viewAllDealsUsers, member.user_id]);
+                            } else {
+                              setViewAllDealsUsers(viewAllDealsUsers.filter(id => id !== member.user_id));
+                            }
+                          }}
+                        />
+                        <div className="flex items-center space-x-2 flex-1">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <label 
+                            htmlFor={`view-all-${member.id}`} 
+                            className="text-sm font-medium cursor-pointer"
+                          >
+                            {member.user?.name}
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    className="w-full mt-3" 
+                    onClick={handleUpdateViewAllDealsPermissions}
+                  >
+                    Salvar Permissões de Todos os Negócios
+                  </Button>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="automations" className="py-4">
