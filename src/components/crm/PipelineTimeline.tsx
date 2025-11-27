@@ -2,6 +2,7 @@ import React from 'react';
 import * as LucideIcons from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 export interface TimelineColumn {
   id: string;
@@ -21,7 +22,7 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
   const currentIndex = columns.findIndex(col => col.id === currentColumnId);
 
   return (
-    <div className={cn("flex items-center justify-center gap-0 py-8", className)}>
+    <div className={cn("flex items-center justify-center py-12 px-8", className)}>
       {columns.map((column, index) => {
         const IconComponent = (column.icon && LucideIcons[column.icon as keyof typeof LucideIcons]) as LucideIcon;
         const Icon = IconComponent || LucideIcons.Circle;
@@ -29,44 +30,88 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
         const isPast = currentIndex !== -1 && index < currentIndex;
         const isCurrent = index === currentIndex;
         const isFuture = currentIndex !== -1 && index > currentIndex;
+        
+        // Determina o gradiente da linha baseado nos estados
+        const nextColumn = columns[index + 1];
+        let lineClass = '';
+        let lineStyle: React.CSSProperties = {};
+        
+        if (index < columns.length - 1) {
+          const nextIndex = index + 1;
+          const isNextPast = currentIndex !== -1 && nextIndex < currentIndex;
+          const isNextCurrent = nextIndex === currentIndex;
+          
+          if (isPast && isNextPast) {
+            // Ambos completados - linha sólida escura
+            lineStyle = { background: 'hsl(var(--muted-foreground))' };
+          } else if (isPast && isNextCurrent) {
+            // De completado para atual - gradiente para verde
+            lineStyle = { background: `linear-gradient(to right, hsl(var(--muted-foreground)), ${column.color})` };
+          } else if (isCurrent && !isNextPast) {
+            // De atual para futuro - gradiente para cinza
+            lineStyle = { background: `linear-gradient(to right, ${column.color}, hsl(var(--border)))` };
+          } else {
+            // Linha padrão cinza
+            lineStyle = { background: 'hsl(var(--border))' };
+          }
+        }
 
         return (
           <React.Fragment key={column.id}>
-            <div className="flex flex-col items-center gap-3 relative">
-              {/* Círculo do ícone */}
-              <div className="relative">
-                <div
-                  className={cn(
-                    "flex items-center justify-center rounded-full w-16 h-16 transition-all border-2",
-                    isCurrent && "scale-110"
-                  )}
-                  style={{
-                    backgroundColor: isPast || isCurrent ? column.color : 'hsl(var(--muted))',
-                    borderColor: isPast || isCurrent ? column.color : 'hsl(var(--border))',
-                    color: isPast || isCurrent ? '#ffffff' : 'hsl(var(--muted-foreground))'
-                  }}
-                >
-                  <Icon className="h-7 w-7" strokeWidth={2.5} />
-                </div>
-                
-                {/* Check mark para etapas concluídas */}
+            <div className="flex flex-col items-center relative" style={{ minWidth: '80px' }}>
+              {/* Ícone grande acima */}
+              <div 
+                className={cn(
+                  "absolute -top-14 transition-all duration-200",
+                  isCurrent && "scale-105"
+                )}
+                style={{
+                  color: isPast || isCurrent ? (isPast ? 'hsl(var(--muted-foreground))' : column.color) : 'hsl(var(--muted))',
+                }}
+              >
+                <Icon className="h-10 w-10" strokeWidth={2} />
+              </div>
+              
+              {/* Círculo do step */}
+              <div className="relative flex items-center justify-center">
                 {isPast && (
+                  // Step completado com checkmark
                   <div
-                    className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full w-6 h-6 border-2 border-background"
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center transition-all duration-200"
+                    style={{ backgroundColor: 'hsl(var(--muted-foreground))' }}
+                  >
+                    <LucideIcons.Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                  </div>
+                )}
+                
+                {isCurrent && (
+                  // Step atual com loading spinner
+                  <div
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center transition-all duration-200"
                     style={{ backgroundColor: column.color }}
                   >
-                    <LucideIcons.Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                    <Loader2 className="h-2.5 w-2.5 text-white animate-spin" strokeWidth={3} />
                   </div>
+                )}
+                
+                {isFuture && (
+                  // Step futuro - círculo vazio com borda
+                  <div
+                    className="w-[15px] h-[15px] rounded-full transition-all duration-200"
+                    style={{ 
+                      border: '4px solid hsl(var(--border))',
+                      backgroundColor: 'transparent'
+                    }}
+                  />
                 )}
               </div>
 
-              {/* Nome da coluna */}
+              {/* Label abaixo */}
               <span
                 className={cn(
-                  "text-sm text-center max-w-[100px] transition-all",
-                  isCurrent && "font-semibold text-foreground",
-                  isFuture && "text-muted-foreground font-medium",
-                  isPast && "text-muted-foreground font-medium"
+                  "absolute top-8 text-xs font-bold text-center max-w-[100px] transition-all duration-200 whitespace-nowrap",
+                  isPast && "text-muted-foreground",
+                  isFuture && "text-muted"
                 )}
                 style={isCurrent ? { color: column.color } : {}}
               >
@@ -74,19 +119,17 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
               </span>
             </div>
 
-            {/* Linha conectora */}
+            {/* Linha conectora com gradientes */}
             {index < columns.length - 1 && (
-              <div className="flex items-center" style={{ width: '80px', marginTop: '-35px' }}>
-                <div
-                  className={cn(
-                    "h-1 w-full transition-all rounded-full"
-                  )}
-                  style={{
-                    backgroundColor: isPast ? column.color : 'hsl(var(--border))',
-                    opacity: isPast ? 1 : 0.3
-                  }}
-                />
-              </div>
+              <div 
+                className="h-0.5 transition-all duration-200" 
+                style={{ 
+                  width: '120px',
+                  maxWidth: '120px',
+                  flexGrow: 1,
+                  ...lineStyle
+                }}
+              />
             )}
           </React.Fragment>
         );
