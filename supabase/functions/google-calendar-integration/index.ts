@@ -231,13 +231,7 @@ const handleAuthUrl = async (
   body: Record<string, unknown>,
 ) => {
   const redirectUriEnv = getEnvOrThrow("GOOGLE_OAUTH_REDIRECT_URI");
-  const requestedRedirectUri = typeof body?.redirectUri === "string"
-    ? (body.redirectUri as string)
-    : redirectUriEnv;
-
-  if (requestedRedirectUri !== redirectUriEnv) {
-    throw new Error("Redirect URI inválido para Google OAuth");
-  }
+  console.log("🔐 [Google Calendar] Usando redirect URI configurado:", redirectUriEnv);
 
   const clientId = getEnvOrThrow("GOOGLE_OAUTH_CLIENT_ID");
   const state = crypto.randomUUID();
@@ -331,13 +325,7 @@ const handleExchangeCode = async (
   }
 
   const redirectUriEnv = getEnvOrThrow("GOOGLE_OAUTH_REDIRECT_URI");
-  const providedRedirectUri = typeof body?.redirectUri === "string"
-    ? (body.redirectUri as string)
-    : redirectUriEnv;
-
-  if (providedRedirectUri !== redirectUriEnv) {
-    throw new Error("Redirect URI inválido para finalizar o OAuth");
-  }
+  console.log("🔐 [Google Calendar] Finalizando OAuth com redirect URI:", redirectUriEnv);
 
   const { data: oauthState, error: stateError } = await client
     .from("google_calendar_oauth_states")

@@ -64,7 +64,6 @@ const GoogleAgendaCallback = () => {
               action: "exchange-code",
               code,
               state,
-              redirectUri: `${window.location.origin}/google-agenda/callback`,
             },
           }
         );

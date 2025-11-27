@@ -103,7 +103,7 @@ export function AdministracaoGoogleAgenda() {
         authUrl: string;
       }>("google-calendar-integration", {
         headers,
-        body: { action: "auth-url", redirectUri },
+        body: { action: "auth-url" },
       });
 
       if (error) throw error;
