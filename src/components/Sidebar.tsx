@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, ChevronLeft, MoreVertical, ArrowLeft } from "lucide-react";
+import { ChevronLeft, MoreVertical, ArrowLeft } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,6 @@ export function Sidebar({
   onNavigateToConversation
 }: SidebarProps) {
   const navigate = useNavigate();
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [shouldLoadNotifications, setShouldLoadNotifications] = useState(false);
   const [isPerfilModalOpen, setIsPerfilModalOpen] = useState(false);
@@ -127,12 +126,6 @@ export function Sidebar({
     };
   }, []);
 
-  // Garantir que o grupo "administracao" fique expandido quando os módulos de administração estiverem ativos
-  useEffect(() => {
-    if (activeModule === "administracao-financeiro" || activeModule === "administracao-usuarios" || activeModule === "administracao-configuracoes" || activeModule === "administracao-dashboard" || activeModule === "administracao-google-agenda" || activeModule === "automacoes-agente" || activeModule === "automacoes-filas") {
-      setExpandedGroups(prev => prev.includes("administracao") ? prev : [...prev, "administracao"]);
-    }
-  }, [activeModule]);
   const menuItems: (MenuItem & {
     group?: string;
   })[] = [{
@@ -182,9 +175,6 @@ export function Sidebar({
     icon: <Calendar className="w-5 h-5" />,
     group: "administracao"
   }];
-  const toggleGroup = (group: string) => {
-    setExpandedGroups(prev => prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]);
-  };
   const renderMenuItem = (item: MenuItem & {
     group?: string;
   }) => {
@@ -194,7 +184,7 @@ export function Sidebar({
     const iconElement = React.cloneElement(item.icon as React.ReactElement, {
       className: cn("transition-all duration-300", isCollapsed ? "w-5 h-5" : "w-5 h-5")
     });
-    const menuButton = <button key={item.id} onClick={() => onModuleChange(item.id)} className={cn("w-full flex items-center rounded-md transition-colors relative", isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3", item.group && !isCollapsed && "pl-8", isActive ? "bg-sidebar-active text-sidebar-active-foreground hover:bg-sidebar-active" : "hover:bg-sidebar-accent text-sidebar-foreground")}>
+    const menuButton = <button key={item.id} onClick={() => onModuleChange(item.id)} className={cn("w-full flex items-center rounded-md transition-colors relative", isCollapsed ? "justify-center p-3" : "gap-3 px-4 py-3", isActive ? "bg-sidebar-active text-sidebar-active-foreground hover:bg-sidebar-active" : "hover:bg-sidebar-accent text-sidebar-foreground")}>
         {iconElement}
         {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
       </button>;
@@ -212,51 +202,6 @@ export function Sidebar({
     }
     return menuButton;
   };
-  const renderGroup = (groupName: string, label: string, items: (MenuItem & {
-    group?: string;
-  })[]) => {
-    const isExpanded = expandedGroups.includes(groupName);
-
-    // No modo colapsado, mostrar nome + setinha
-    if (isCollapsed) {
-      return <TooltipProvider key={groupName}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button onClick={() => {
-              onToggleCollapse(); // Expandir sidebar
-              setExpandedGroups(prev => prev.includes(groupName) ? prev : [...prev, groupName]); // Expandir grupo
-            }} className="w-full flex flex-col items-center p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-all duration-200 hover:scale-105">
-                {/* Setinha */}
-                <ChevronRight className={cn("w-4 h-4 mb-1 transition-transform duration-300", isExpanded && "rotate-90")} />
-                
-                {/* Nome do grupo em texto pequeno */}
-                <span className="text-[10px] font-medium text-center leading-tight">
-                  {label}
-                </span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="ml-2 animate-scale-in">
-              <p>{label}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>;
-    }
-
-    // Modo expandido - comportamento normal
-    return <div key={groupName} className="animate-fade-in">
-        <button onClick={() => toggleGroup(groupName)} className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-sidebar-accent rounded-md text-sidebar-foreground transition-all duration-200 hover:scale-[1.01]">
-          <ChevronDown className={cn("w-5 h-5 transition-transform duration-300", !isExpanded && "-rotate-90")} />
-          <span>{label}</span>
-        </button>
-        {isExpanded && <div className="space-y-1 animate-fade-in">
-            {items.map(renderMenuItem)}
-          </div>}
-      </div>;
-  };
-  const ungroupedItems = menuItems.filter(item => !item.group);
-  const crmItems = menuItems.filter(item => item.group === "crm");
-  const parceirosItems = menuItems.filter(item => item.group === "parceiros");
-  const administracaoItems = menuItems.filter(item => item.group === "administracao");
   const handleNotificationClick = (conversationId: string) => {
     console.log('🔔 Sidebar - Clique na notificação:', conversationId);
     setIsNotificationOpen(false);
@@ -319,8 +264,8 @@ export function Sidebar({
       )}
       
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {ungroupedItems.filter(item => {
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {menuItems.filter(item => {
           // Dashboard - sempre visível
           if (item.id === 'dashboard') return canView('dashboard-item');
           // Conversas - sempre visível
@@ -329,19 +274,15 @@ export function Sidebar({
           if (item.id === 'ds-voice') return true;
           // Empresas - apenas master e admin
           if (item.id === 'workspace-empresas') return hasRole(['master', 'admin']);
+          // CRM items
+          if (item.id === 'crm-negocios') return canView('crm-negocios-item');
+          if (item.id === 'crm-contatos') return canView('crm-contatos-item');
+          if (item.id === 'crm-tags') return canView('crm-tags-item');
+          if (item.id === 'crm-produtos') return canView('crm-produtos-item');
+          // Administração items - apenas master e admin
+          if (item.group === 'administracao') return hasRole(['master', 'admin']);
           return true;
         }).map(renderMenuItem)}
-        
-        {canViewAnyIn(['crm-negocios-item', 'crm-contatos-item', 'crm-tags-item', 'crm-produtos-item']) && 
-          renderGroup("crm", "CRM", crmItems.filter(item => {
-            if (item.id === 'crm-negocios') return canView('crm-negocios-item');
-            if (item.id === 'crm-contatos') return canView('crm-contatos-item');
-            if (item.id === 'crm-tags') return canView('crm-tags-item');
-            if (item.id === 'crm-produtos') return canView('crm-produtos-item');
-            return false;
-          }))}
-        
-        {hasRole(['master', 'admin']) && renderGroup("administracao", "Administração", administracaoItems)}
       </nav>
 
       {/* Action Icons */}
