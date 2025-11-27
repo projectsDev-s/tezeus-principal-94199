@@ -11,6 +11,8 @@ interface ColorPickerModalProps {
 
 export function ColorPickerModal({ open, onOpenChange, onColorSelect, isDarkMode = false }: ColorPickerModalProps) {
   const [selectedColor, setSelectedColor] = useState("#ff0000");
+  const [pickerPosition, setPickerPosition] = useState<{ x: number; y: number } | null>(null);
+  const [huePosition, setHuePosition] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hueCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -88,6 +90,9 @@ export function ColorPickerModal({ open, onOpenChange, onColorSelect, isDarkMode
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
 
+    // Armazena a posição do clique
+    setPickerPosition({ x, y });
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -109,6 +114,9 @@ export function ColorPickerModal({ open, onOpenChange, onColorSelect, isDarkMode
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const x = (event.clientX - rect.left) * scaleX;
+
+    // Armazena a posição do clique no hue bar
+    setHuePosition(x);
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -187,6 +195,18 @@ export function ColorPickerModal({ open, onOpenChange, onColorSelect, isDarkMode
               className="border border-gray-300 rounded cursor-crosshair"
               onClick={handleCanvasClick}
             />
+            {/* Indicador de posição no picker */}
+            {pickerPosition && (
+              <div
+                className="absolute w-4 h-4 border-2 border-white rounded-full pointer-events-none"
+                style={{
+                  left: `${(pickerPosition.x / 300) * 100}%`,
+                  top: `${(pickerPosition.y / 200) * 100}%`,
+                  transform: 'translate(-50%, -50%)',
+                  boxShadow: '0 0 0 1px rgba(0,0,0,0.3)',
+                }}
+              />
+            )}
           </div>
           
           {/* Hue bar */}
@@ -199,6 +219,17 @@ export function ColorPickerModal({ open, onOpenChange, onColorSelect, isDarkMode
               className="border border-gray-300 rounded cursor-crosshair"
               onClick={handleHueClick}
             />
+            {/* Indicador de posição no hue bar */}
+            {huePosition !== null && (
+              <div
+                className="absolute w-1 h-full bg-white pointer-events-none"
+                style={{
+                  left: `${(huePosition / 300) * 100}%`,
+                  transform: 'translateX(-50%)',
+                  boxShadow: '0 0 0 1px rgba(0,0,0,0.5)',
+                }}
+              />
+            )}
           </div>
           
           {/* Selected color preview */}
