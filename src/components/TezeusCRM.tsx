@@ -210,8 +210,8 @@ export function TezeusCRM() {
             });
           }}
         />
-        <div className={`flex-1 flex flex-col max-h-screen ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'p-4' : ''}`}>
-          <main className={`flex-1 overflow-y-auto overflow-x-hidden ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'bg-card text-card-foreground shadow-lg rounded-lg border p-5' : ''}`}>
+        <div className={`flex-1 flex flex-col h-screen overflow-hidden ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'p-4' : ''}`}>
+          <main className={`flex-1 flex flex-col overflow-hidden ${activeModule === 'conversas' || activeModule === 'conexoes' ? 'bg-card text-card-foreground shadow-lg rounded-lg border p-5' : ''}`}>
             {renderModule()}
           </main>
         </div>

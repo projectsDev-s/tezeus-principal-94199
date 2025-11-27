@@ -1288,10 +1288,10 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       onDragOver={handleDragOver}
     >
       {/* Estrutura do layout conforme imagem fornecida */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Sticky Header - Fora do scroll horizontal */}
-        <div className="flex-shrink-0 bg-background border-b border-border">
-          <div className="w-full px-2 md:px-4 py-2">
+      <div className="flex flex-col h-full w-full overflow-hidden">
+        {/* Sticky Header - Fixo no topo, sem scroll horizontal */}
+        <div className="flex-shrink-0 bg-background border-b border-border w-full">
+          <div className="px-2 md:px-4 py-2">
             <div className="w-full border rounded-lg p-2 md:p-3 shadow-sm bg-background border-border">
                   
                   {/* Mobile Layout */}
@@ -1570,7 +1570,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
             </div>
         
         {/* Pipeline Scroll Area - Com scroll horizontal independente */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 w-full overflow-hidden">
               {/* Mobile: Navigation Controls */}
               {isMobile && columns.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
