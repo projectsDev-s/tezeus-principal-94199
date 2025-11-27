@@ -14,7 +14,9 @@ import { useWorkspaceHeaders } from '@/lib/workspaceHeaders';
 import { ColumnAutomationsTab } from "./ColumnAutomationsTab";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Users, User } from "lucide-react";
+import { Users, User, Trash2 } from "lucide-react";
+import { DeletarColunaModal } from "./DeletarColunaModal";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EditarColunaModalProps {
   open: boolean;
@@ -40,10 +42,12 @@ export function EditarColunaModal({
   const [activeTab, setActiveTab] = useState('settings');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [viewAllDealsUsers, setViewAllDealsUsers] = useState<string[]>([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { toast } = useToast();
   const { getHeaders } = useWorkspaceHeaders();
   const { selectedWorkspace } = useWorkspace();
   const { members } = useWorkspaceMembers(selectedWorkspace?.workspace_id);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && columnId) {
@@ -157,6 +161,45 @@ export function EditarColunaModal({
     }
   };
 
+  const handleDelete = async () => {
+    if (!columnId) return;
+
+    try {
+      const headers = getHeaders();
+      const { error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Coluna excluída com sucesso",
+      });
+
+      onUpdate();
+      onOpenChange(false);
+      setIsDeleteModalOpen(false);
+    } catch (error: any) {
+      console.error('Erro ao excluir coluna:', error);
+      
+      if (error.message?.includes('existing cards')) {
+        toast({
+          title: "Erro ao excluir coluna",
+          description: "Não é possível excluir uma coluna que contém negócios. Mova os negócios para outra coluna primeiro.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao excluir coluna",
+          description: "Erro ao excluir coluna",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleUpdateViewAllDealsPermissions = async () => {
     if (!columnId) return;
 
@@ -230,13 +273,25 @@ export function EditarColunaModal({
                 </div>
               </div>
 
-              <DialogFooter className="pt-4">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Fechar
-                </Button>
-                <Button onClick={handleSave} disabled={isLoading}>
-                  {isLoading ? "Salvando..." : "Salvar Configurações"}
-                </Button>
+              <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
+                <div className="flex gap-2 sm:mr-auto">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir Coluna
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Fechar
+                  </Button>
+                  <Button onClick={handleSave} disabled={isLoading}>
+                    {isLoading ? "Salvando..." : "Salvar Configurações"}
+                  </Button>
+                </div>
               </DialogFooter>
             </TabsContent>
 
@@ -358,6 +413,13 @@ export function EditarColunaModal({
         open={showColorPicker}
         onOpenChange={setShowColorPicker}
         onColorSelect={handleColorSelect}
+      />
+
+      <DeletarColunaModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        columnName={name}
       />
     </>
   );
