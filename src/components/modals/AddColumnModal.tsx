@@ -22,6 +22,7 @@ export function AddColumnModal({ open, onOpenChange, onAddColumn, isDarkMode = f
 
   const handleSubmit = () => {
     if (name.trim() && icon) {
+      console.log('🔍 Criando coluna com dados:', { name: name.trim(), color, icon });
       onAddColumn(name.trim(), color, icon);
       setName("");
       setColor("#ff0000");
