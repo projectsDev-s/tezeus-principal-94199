@@ -919,8 +919,9 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
         const titleMatch = (card.title?.toLowerCase() ?? '').includes(normalizedSearchTerm);
         const descriptionMatch = (card.description?.toLowerCase() ?? '').includes(normalizedSearchTerm);
         const phoneMatch = String(card.contact?.phone ?? '').toLowerCase().includes(normalizedSearchTerm);
+        const nameMatch = (card.contact?.name?.toLowerCase() ?? '').includes(normalizedSearchTerm);
 
-        return titleMatch || descriptionMatch || phoneMatch;
+        return titleMatch || descriptionMatch || phoneMatch || nameMatch;
       });
     }
 
