@@ -1259,22 +1259,22 @@ export function CRMContatos() {
 
         {/* Search and Filter inputs close to title */}
         <div className="flex items-center gap-2 mr-8">
-          <div className="relative w-40">
+          <div className="relative w-32">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3 w-3" />
             <Input
               placeholder="Pesquisar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 text-xs h-8"
+              className="pl-8 text-[10px] h-7"
             />
           </div>
 
-          <div className="w-40">
+          <div className="w-32">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal text-xs h-8">
+                <Button variant="outline" className="w-full justify-start text-left font-normal text-[10px] h-7">
                   {selectedTagIds.length === 0 ? (
-                    <span className="text-muted-foreground">Filtrar por Tags</span>
+                    <span className="text-muted-foreground">Filtrar Tags</span>
                   ) : (
                     <span>{selectedTagIds.length} tag(s)</span>
                   )}
