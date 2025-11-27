@@ -1557,24 +1557,24 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       </div>
                     </div>
 
-                        {/* + Coluna Button */}
-                        {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
-                          <Button
-                            onClick={() => setIsAddColumnModalOpen(true)}
-                            className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto"
-                          >
-                            + Coluna
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                    {/* + Coluna Button */}
+                    {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                      <Button
+                        onClick={() => setIsAddColumnModalOpen(true)}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto"
+                      >
+                        + Coluna
+                      </Button>
+                    )}
+                  </div>
+       )}
+       </div>
+     </div>
+   </div>
+</div>
 
-            {/* Pipeline Scroll Area */}
-            <div className="flex-1 min-h-0">
+{/* Pipeline Scroll Area */}
+<div className="flex-1 min-h-0">
               {/* Mobile: Navigation Controls */}
               {isMobile && columns.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
@@ -2019,26 +2019,26 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                               name: card?.title || 'este negócio'
                             });
                             setIsDeleteDealModalOpen(true);
-                          }} />;
+                          }} />
                         })}
                                 
-                                {/* Invisible drop zone for empty columns and bottom of lists */}
-                                <div className="min-h-[40px] w-full" />
-                              </SortableContext>
-                            </div>}
-                        </div>
-                       </div>
-                     </div>
-                    </DroppableColumn>;
-                      })}
+                        {/* Invisible drop zone for empty columns and bottom of lists */}
+                        <div className="min-h-[40px] w-full" />
+                      </SortableContext>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </main>
+            </DroppableColumn>
+          );
+        })
+      )}
       </div>
+    </div>
+  </div>
+</div>
+</main>
+</div>
 
       <DragOverlay>
           {activeId && (() => {
