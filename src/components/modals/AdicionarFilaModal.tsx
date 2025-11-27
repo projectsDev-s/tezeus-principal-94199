@@ -77,14 +77,27 @@ export function AdicionarFilaModal({
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const loadAIAgents = async () => {
     try {
+      const workspaceToUse = selectedWorkspaceId || selectedWorkspace?.workspace_id;
+      if (!workspaceToUse) {
+        setAiAgents([]);
+        return;
+      }
+
       const {
         data,
         error
-      } = await supabase.from('ai_agents').select('id, name, is_active').eq('is_active', true).order('name');
+      } = await supabase
+        .from('ai_agents')
+        .select('id, name, is_active')
+        .eq('workspace_id', workspaceToUse)
+        .eq('is_active', true)
+        .order('name');
+      
       if (error) throw error;
       setAiAgents(data || []);
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);
+      setAiAgents([]);
     }
   };
   const resetForm = () => {
@@ -156,7 +169,6 @@ export function AdicionarFilaModal({
   };
   useEffect(() => {
     if (open) {
-      loadAIAgents();
       // Se há um workspace selecionado no contexto, pré-selecionar
       if (selectedWorkspace?.workspace_id) {
         setSelectedWorkspaceId(selectedWorkspace.workspace_id);
@@ -165,6 +177,13 @@ export function AdicionarFilaModal({
       resetForm();
     }
   }, [open, selectedWorkspace?.workspace_id]);
+
+  // Recarregar agentes quando o workspace selecionado mudar
+  useEffect(() => {
+    if (open) {
+      loadAIAgents();
+    }
+  }, [open, selectedWorkspaceId, selectedWorkspace?.workspace_id]);
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
