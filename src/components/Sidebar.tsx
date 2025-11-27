@@ -174,6 +174,11 @@ export function Sidebar({
     label: "Google Agenda",
     icon: <Calendar className="w-5 h-5" />,
     group: "administracao"
+  }, {
+    id: "administracao-acoes",
+    label: "Configuração de Ações",
+    icon: <Settings className="w-5 h-5" />,
+    group: "administracao"
   }];
   const renderMenuItem = (item: MenuItem & {
     group?: string;
