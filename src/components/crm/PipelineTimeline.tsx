@@ -64,7 +64,7 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
         }
 
         return (
-          <React.Fragment key={column.id}>
+          <div key={column.id} className="contents">
             <div className="flex flex-col items-center relative" style={{ minWidth: '80px' }}>
               {/* Ícone grande acima */}
               <div 
@@ -138,7 +138,7 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
                 }}
               />
             )}
-          </React.Fragment>
+          </div>
         );
       })}
     </div>
