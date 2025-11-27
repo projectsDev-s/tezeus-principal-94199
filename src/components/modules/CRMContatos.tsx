@@ -1339,7 +1339,7 @@ export function CRMContatos() {
             onClick={() => setIsFieldConfigModalOpen(true)}
           >
             <Pin className="h-3 w-3 mr-1" />
-            Campo
+            Add Campo Personalizado
           </Button>
 
           <Button
