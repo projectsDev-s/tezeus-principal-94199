@@ -1749,44 +1749,90 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 
                                   {/* Cards Area */}
                                   <div className="flex-1 p-3 overflow-y-auto">
-                                    <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
-                                      {columnCards.length > 0 ? columnCards.map(deal => (
-                                        <DraggableDeal
-                                          key={deal.id}
-                                          deal={deal}
-                                          onClick={() => handleDealClick(deal)}
-                                          columnColor={column.color}
-                                          onChatClick={() => handleWhatsappClick(deal)}
-                                          onValueClick={setSelectedDealForValue}
-                                          isSelectionMode={isSelectionMode && selectedColumnForAction === column.id}
-                                          isSelected={selectedCardsForTransfer.has(deal.id)}
-                                          onToggleSelection={() => handleToggleCardSelection(deal.id)}
-                                          onEditContact={setSelectedContactForEdit}
-                                          onLinkProduct={(cardId, currentValue, currentProductId) => {
-                                            setSelectedCardForProduct({ cardId, currentValue, currentProductId });
-                                            setIsVincularProdutoModalOpen(true);
-                                          }}
-                                          onDeleteCard={setSelectedCardForDelete}
-                                          onOpenTransferModal={(cardId) => {
-                                            setSelectedCardsForTransfer(new Set([cardId]));
-                                            setIsTransferirModalOpen(true);
-                                          }}
-                                          onVincularResponsavel={(cardId, conversationId, currentResponsibleId, contactId) => {
-                                            setVincularResponsavelData({ cardId, conversationId, currentResponsibleId, contactId });
-                                            setIsVincularResponsavelModalOpen(true);
-                                          }}
-                                          onConfigureAgent={(conversationId) => {
-                                            setSelectedConversationForAgent(conversationId);
-                                            setIsChangeAgentModalOpen(true);
-                                          }}
-                                          workspaceId={effectiveWorkspaceId}
-                                        />
-                                      )) : (
-                                        <div className="text-center text-muted-foreground text-sm py-8">
-                                          Nenhum negócio nesta coluna
-                                        </div>
-                                      )}
-                                    </SortableContext>
+                                     <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
+                                       {columnCards.length > 0 ? columnCards.map(card => {
+                                         const deal: Deal = {
+                                           id: card.id,
+                                           name: card.title,
+                                           value: card.value || 0,
+                                           stage: column.name,
+                                           status: card.status,
+                                           responsible: card.responsible_user?.name || 'Não atribuído',
+                                           responsible_user_id: card.responsible_user_id,
+                                           tags: Array.isArray(card.tags) ? card.tags : [],
+                                           priority: 'medium',
+                                           created_at: card.created_at,
+                                           contact: card.contact,
+                                           conversation: card.conversation || (card.conversation_id ? { id: card.conversation_id } : undefined),
+                                         };
+
+                                         return (
+                                           <DraggableDeal
+                                             key={card.id}
+                                             deal={deal}
+                                             isDarkMode={isDarkMode}
+                                             onClick={() => !isSelectionMode && openCardDetails(card)}
+                                             columnColor={column.color}
+                                             workspaceId={effectiveWorkspaceId}
+                                             onChatClick={(dealData) => {
+                                               setSelectedChatCard(dealData);
+                                               setIsChatModalOpen(true);
+                                             }}
+                                             onValueClick={(dealData) => {
+                                               setSelectedCardForValue(dealData);
+                                               setIsSetValueModalOpen(true);
+                                             }}
+                                             isSelectionMode={isSelectionMode && selectedColumnForAction === column.id}
+                                             isSelected={selectedCardsForTransfer.has(card.id)}
+                                             onToggleSelection={() => {
+                                               const newSet = new Set(selectedCardsForTransfer);
+                                               if (newSet.has(card.id)) {
+                                                 newSet.delete(card.id);
+                                               } else {
+                                                 newSet.add(card.id);
+                                               }
+                                               setSelectedCardsForTransfer(newSet);
+                                             }}
+                                             onEditContact={(contactId) => {
+                                               setSelectedContactId(contactId);
+                                               setIsEditarContatoModalOpen(true);
+                                             }}
+                                             onLinkProduct={(cardId, currentValue, currentProductId) => {
+                                               setSelectedCardForProduct({
+                                                 id: cardId,
+                                                 value: currentValue,
+                                                 productId: currentProductId || null,
+                                               });
+                                               setIsVincularProdutoModalOpen(true);
+                                             }}
+                                             onDeleteCard={(cardId) => {
+                                               const cardToDelete = cards.find((c) => c.id === cardId);
+                                               setSelectedCardForDeletion({
+                                                 id: cardId,
+                                                 name: cardToDelete?.title || 'este negócio',
+                                               });
+                                               setIsDeleteDealModalOpen(true);
+                                             }}
+                                             onOpenTransferModal={(cardId) => {
+                                               setSelectedCardsForTransfer(new Set([cardId]));
+                                               setIsTransferirModalOpen(true);
+                                             }}
+                                             onVincularResponsavel={(cardId, conversationId, currentResponsibleId, contactId) => {
+                                               setSelectedCardForResponsavel({ cardId, conversationId, currentResponsibleId, contactId });
+                                               setIsVincularResponsavelModalOpen(true);
+                                             }}
+                                             onConfigureAgent={(conversationId) => {
+                                               setSelectedConversationForAgent(conversationId);
+                                               setAgentModalOpen(true);
+                                             }}
+                                           />
+                                         );
+                                       }) : (
+                                         <div className="text-center text-muted-foreground text-sm py-8">
+                                           Nenhum negócio nesta coluna
+                                         </div>
+                                       )}
+                                     </SortableContext>
                                   </div>
                                 </div>
                               </div>
@@ -1808,7 +1854,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                 currency: 'BRL'
               }).format(value);
             };
-            return <DroppableColumn key={column.id} id={`column-${column.id}`}>
+            return (
+              <DroppableColumn key={column.id} id={`column-${column.id}`}>
                     {/* Coluna individual - responsiva */}
                     <div className={cn(
                       "flex-shrink-0 h-full flex flex-col pb-2",
@@ -1932,12 +1979,18 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         <div className={cn("flex-1 p-3 pt-4 overflow-y-auto min-h-0", dragOverColumn === column.id ? "opacity-90" : "")} style={{
                     backgroundColor: `${column.color}10`
                   }}>
-                          {columnCards.length === 0 ? <div className="flex items-center justify-center h-32 text-center">
-                              <p className="text-muted-foreground text-sm">
-                                Nenhum negócio encontrado nesta etapa
-                              </p>
-                            </div> : <div className="space-y-2 md:space-y-2.5">
-                              <SortableContext items={columnCards.map(card => `card-${card.id}`)} strategy={verticalListSortingStrategy}>
+                        {columnCards.length === 0 ? (
+                          <div className="flex items-center justify-center h-32 text-center">
+                            <p className="text-muted-foreground text-sm">
+                              Nenhum negócio encontrado nesta etapa
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 md:space-y-2.5">
+                            <SortableContext
+                              items={columnCards.map(card => `card-${card.id}`)}
+                              strategy={verticalListSortingStrategy}
+                            >
                                 {columnCards.map(card => {
                           const productRelations = Array.isArray((card as any).products) ? (card as any).products : [];
                           const primaryProduct = productRelations.length > 0 ? productRelations[0] : null;
@@ -2021,21 +2074,22 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                           }} />
                         })}
                                 
-                        {/* Invisible drop zone for empty columns and bottom of lists */}
-                        <div className="min-h-[40px] w-full" />
-                      </SortableContext>
-                    </div>}
+                              {/* Invisible drop zone for empty columns and bottom of lists */}
+                              <div className="min-h-[40px] w-full" />
+                            </SortableContext>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </DroppableColumn>
-          );
-        })
+                </DroppableColumn>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
-  )}
   </div>
-</div>
 </div>
 </div>
 </main>
