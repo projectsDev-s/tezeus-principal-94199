@@ -30,6 +30,7 @@ import { ContactTagSelector } from "@/components/crm/ContactTagSelector";
 import { IniciarConversaContatoModal } from "@/components/modals/IniciarConversaContatoModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProfileImageDebug } from "@/components/debug/ProfileImageDebug";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1331,44 +1332,61 @@ export function CRMContatos() {
         </div>
 
         {/* Other controls */}
-        <div className="flex items-center gap-2 ml-auto">
-          <Button
-            size="sm"
-            variant="outline"
-            className="whitespace-nowrap text-xs h-8 px-3"
-            onClick={() => setIsFieldConfigModalOpen(true)}
-          >
-            <Pin className="h-3 w-3 mr-1" />
-            Criar Campo Padrão
-          </Button>
+        <div className="flex items-center gap-1 ml-auto flex-wrap">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-8 px-2"
+                onClick={() => setIsFieldConfigModalOpen(true)}
+              >
+                <Pin className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Criar Campo Padrão</TooltipContent>
+          </Tooltip>
 
-          <Button
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap text-xs h-8 px-2"
-            onClick={handleAddContact}
-          >
-            Adicionar
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2"
+                onClick={handleAddContact}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Adicionar</TooltipContent>
+          </Tooltip>
 
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="whitespace-nowrap text-xs h-8 px-2"
-            onClick={handleExportCSV}
-          >
-            <Download className="h-3 w-3 mr-1" />
-            Exportar
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-xs h-8 px-2"
+                onClick={handleExportCSV}
+              >
+                <Download className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Exportar</TooltipContent>
+          </Tooltip>
 
-          <Button 
-            size="sm" 
-            className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap text-xs h-8 px-2"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            {isImporting ? "Importando..." : "Importar"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                size="sm" 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+              >
+                <Upload className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isImporting ? "Importando..." : "Importar"}</TooltipContent>
+          </Tooltip>
 
           <input
             ref={fileInputRef}
@@ -1378,15 +1396,20 @@ export function CRMContatos() {
             onChange={handleImportCSV}
           />
 
-          <Button
-            variant="destructive"
-            size="sm"
-            className="whitespace-nowrap text-xs h-8 px-2"
-            disabled={selectedIds.length === 0}
-            onClick={() => setIsBulkDeleteOpen(true)}
-          >
-            Excluir
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="text-xs h-8 px-2"
+                disabled={selectedIds.length === 0}
+                onClick={() => setIsBulkDeleteOpen(true)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Excluir</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
