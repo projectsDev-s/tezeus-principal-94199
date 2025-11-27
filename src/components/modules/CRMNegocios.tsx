@@ -6,14 +6,14 @@ import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Search, Plus, ListFilter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { Settings, Search, Plus, ListFilter, Eye, MoreHorizontal, Phone, MessageCircle, MessageSquare, Calendar, DollarSign, EyeOff, Folder, AlertTriangle, Check, MoreVertical, Edit, Download, ArrowRight, X, Tag, Bot, Zap, ChevronLeft, ChevronRight, Menu, GripVertical } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddColumnModal } from "@/components/modals/AddColumnModal";
 import { PipelineConfigModal } from "@/components/modals/PipelineConfigModal";
@@ -598,6 +598,39 @@ function DraggableDeal({
       </CardContent>
     </Card>;
 }
+
+// Componente para tornar a coluna draggable
+interface SortableColumnWrapperProps {
+  id: string;
+  children: React.ReactNode;
+}
+
+function SortableColumnWrapper({ id, children }: SortableColumnWrapperProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
+      {children}
+      <div {...listeners} className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 rounded hover:bg-background">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
 interface CRMNegociosProps {
   isDarkMode?: boolean;
 }
@@ -672,6 +705,7 @@ function CRMNegociosContent({
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [appliedFilters, setAppliedFilters] = useState<{
     tags: string[];
     queues: string[];
@@ -972,7 +1006,17 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     return columnCards;
   };
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const activeId = event.active.id as string;
+    
+    // Verificar se é uma coluna sendo arrastada
+    if (activeId.startsWith('column-')) {
+      const columnId = activeId.replace('column-', '');
+      setDraggedColumn(columnId);
+      console.log('✅ Coluna sendo arrastada:', columnId);
+      return;
+    }
+    
+    setActiveId(activeId);
   }, []);
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const {
@@ -989,9 +1033,55 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       active,
       over
     } = event;
+    
+    // Verificar se é reordenamento de colunas
+    if (draggedColumn && over && active.id !== over.id) {
+      const oldIndex = columns.findIndex(col => `column-${col.id}` === active.id);
+      const newIndex = columns.findIndex(col => `column-${col.id}` === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newColumns = arrayMove(columns, oldIndex, newIndex);
+        
+        // Atualizar ordem no backend
+        try {
+          const headers = getHeaders ? getHeaders() : {};
+          const updates = newColumns.map((col, index) => ({
+            id: col.id,
+            order_position: index
+          }));
+
+          const { error } = await supabase.functions.invoke('pipeline-management-columns-reorder', {
+            method: 'POST',
+            headers,
+            body: { columns: updates }
+          });
+
+          if (error) throw error;
+
+          toast({
+            title: "Colunas reordenadas",
+            description: "A ordem das colunas foi atualizada com sucesso.",
+          });
+
+          refreshCurrentPipeline();
+        } catch (error) {
+          console.error('Erro ao reordenar colunas:', error);
+          toast({
+            title: "Erro ao reordenar",
+            description: "Não foi possível reordenar as colunas.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      setDraggedColumn(null);
+      return;
+    }
+    
     if (!over) {
       setActiveId(null);
       setDragOverColumn(null);
+      setDraggedColumn(null);
       return;
     }
     const activeId = active.id as string;
@@ -1035,7 +1125,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     // Limpar estados do drag imediatamente
     setActiveId(null);
     setDragOverColumn(null);
-  }, [cards, moveCardOptimistic]);
+    setDraggedColumn(null);
+  }, [cards, columns, draggedColumn, moveCardOptimistic, getHeaders, toast, refreshCurrentPipeline]);
   const openCardDetails = (card: any) => {
     console.log('🔍 Abrindo detalhes do card:', card);
     console.log('📋 Card completo:', {
@@ -1830,7 +1921,11 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         })() : null
                       ) : (
                         /* Tablet/Desktop: Multiple Columns */
-                        columns.map(column => {
+                        <SortableContext 
+                          items={columns.map(col => `column-${col.id}`)}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          {columns.map(column => {
             const columnCards = getFilteredCards(column.id);
 
             // Calculate total value of cards in this column
@@ -1844,7 +1939,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
               }).format(value);
             };
             return (
-              <DroppableColumn key={column.id} id={`column-${column.id}`}>
+              <SortableColumnWrapper key={column.id} id={`column-${column.id}`}>
+                <DroppableColumn id={`column-${column.id}`}>
                     {/* Coluna individual - responsiva */}
                     <div className={cn(
                       "flex-shrink-0 h-full flex flex-col pb-2",
@@ -2071,10 +2167,13 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       </div>
                     </div>
                   </div>
-                </DroppableColumn>
-              );
+                            </DroppableColumn>
+                          </SortableColumnWrapper>
+                        );
             })
-          )}
+          }
+          </SortableContext>
+        )}
         </div>
       )}
     </div>
