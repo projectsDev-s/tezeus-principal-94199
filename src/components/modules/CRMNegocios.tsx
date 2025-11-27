@@ -1567,11 +1567,10 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       </Button>
                     )}
                   </div>
-       )}
-       </div>
-     </div>
-   </div>
-</div>
+                  )}
+                </div>
+              </div>
+            </div>
 
 {/* Pipeline Scroll Area */}
 <div className="flex-1 min-h-0">
