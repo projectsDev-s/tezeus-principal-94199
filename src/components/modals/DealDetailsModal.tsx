@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info, FileSpreadsheet, File as FileIcon } from "lucide-react";
+import { ArrowLeft, MessageSquare, User, Phone, Plus, Check, X, Clock, Upload, CalendarIcon, Mail, FileText, Info, FileSpreadsheet, File as FileIcon, MessageCircle } from "lucide-react";
 import { ChatModal } from "./ChatModal";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -1311,22 +1311,29 @@ export function DealDetailsModal({
   };
 
   const handleCreateActivity = async () => {
-    if (!selectedDate || !activityForm.responsibleId || !activityForm.subject.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
+    // Validação diferente para comentários
+    if (activityForm.type === "Comentários") {
+      if (!activityForm.responsibleId || !activityForm.description.trim()) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Preencha o responsável e o comentário.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      if (!selectedDate || !activityForm.responsibleId || !activityForm.subject.trim()) {
+        toast({
+          title: "Campos obrigatórios",
+          description: "Preencha todos os campos obrigatórios.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsCreatingActivity(true);
     try {
-      // Combinar data e hora
-      const [hour, minute] = selectedTime.split(':').map(Number);
-      const scheduledDateTime = new Date(selectedDate);
-      scheduledDateTime.setHours(hour, minute, 0, 0);
-
       // Get workspace_id from the contact
       const { data: contactDataForActivity } = await supabase
         .from('contacts')
@@ -1337,6 +1344,50 @@ export function DealDetailsModal({
       if (!contactDataForActivity?.workspace_id) {
         throw new Error('Workspace não encontrado para este contato');
       }
+
+      // Se for comentário, salvar em contact_observations
+      if (activityForm.type === "Comentários") {
+        const { error } = await supabase
+          .from('contact_observations')
+          .insert({
+            contact_id: contactId,
+            workspace_id: contactDataForActivity.workspace_id,
+            content: activityForm.description.trim(),
+            created_by: activityForm.responsibleId
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Comentário adicionado com sucesso!",
+          description: "O comentário foi salvo no perfil do contato.",
+        });
+
+        // Resetar formulário
+        setActivityForm({
+          type: "Lembrete",
+          responsibleId: "",
+          subject: "",
+          description: "",
+          durationMinutes: 30,
+        });
+        setSelectedDate(undefined);
+        setSelectedTime("13:00");
+        setAttachedFile(null);
+        setIsCreatingActivity(false);
+        
+        // Recarregar atividades para mostrar o novo comentário no histórico se necessário
+        if (contactId) {
+          await fetchActivities(contactId);
+        }
+        return;
+      }
+
+      // Lógica normal para atividades
+      // Combinar data e hora
+      const [hour, minute] = selectedTime.split(':').map(Number);
+      const scheduledDateTime = new Date(selectedDate!);
+      scheduledDateTime.setHours(hour, minute, 0, 0);
 
       // Upload do arquivo se houver
       let attachmentUrl = null;
@@ -1870,6 +1921,7 @@ export function DealDetailsModal({
                               { value: "Ligação", label: "Ligação", icon: Phone },
                               { value: "Reunião", label: "Reunião", icon: User },
                               { value: "Agendamento", label: "Agendamento", icon: CalendarIcon },
+                              { value: "Comentários", label: "Comentários", icon: MessageCircle },
                             ];
                             const selectedType = activityTypes.find(t => t.value === activityForm.type);
                             const Icon = selectedType?.icon || Clock;
@@ -1889,6 +1941,7 @@ export function DealDetailsModal({
                           { value: "Ligação", label: "Ligação", icon: Phone },
                           { value: "Reunião", label: "Reunião", icon: User },
                           { value: "Agendamento", label: "Agendamento", icon: CalendarIcon },
+                          { value: "Comentários", label: "Comentários", icon: MessageCircle },
                         ].map((type) => {
                           const Icon = type.icon;
                           return (
@@ -1923,94 +1976,99 @@ export function DealDetailsModal({
                     </Select>
                   </div>
 
-                  {/* Assunto */}
-                  <div className="space-y-2">
-                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                      Assunto
-                    </label>
-                    <Input 
-                      placeholder="Digite o assunto da atividade" 
-                      value={activityForm.subject}
-                      onChange={(e) => setActivityForm({...activityForm, subject: e.target.value})}
-                      className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
-                    />
-                  </div>
-
-                  {/* Data e Duração em linha */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Assunto - não mostrar para comentários */}
+                  {activityForm.type !== "Comentários" && (
                     <div className="space-y-2">
                       <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                        Agendar para
+                        Assunto
                       </label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
-                            onClick={handleDateTimeClick}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate && selectedTime ? 
-                              `${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} ${selectedTime}` : 
-                              "Selecionar data e hora"
-                            }
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar 
-                            mode="single" 
-                            selected={selectedDate} 
-                            onSelect={handleDateSelect} 
-                            initialFocus 
-                            className="pointer-events-auto" 
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input 
+                        placeholder="Digite o assunto da atividade" 
+                        value={activityForm.subject}
+                        onChange={(e) => setActivityForm({...activityForm, subject: e.target.value})}
+                        className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
+                      />
                     </div>
+                  )}
 
-                  </div>
-
-                  {/* Upload de arquivo */}
-                  <div className="space-y-2">
-                    <div className={cn("border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors", isDarkMode ? "border-gray-600 hover:border-gray-500 bg-[#1f1f1f]" : "border-gray-300 hover:border-gray-400 bg-gray-50")}>
-                      {attachedFile ? (
-                        <div className="flex items-center justify-between">
-                          <span className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                            {attachedFile.name}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={removeFile}
-                            className="h-6 w-6 p-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            accept="*/*"
-                          />
-                          <Upload className={cn("w-8 h-8 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
-                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            Clique aqui ou arraste o documento a ser salvo
-                          </p>
+                  {/* Data e Duração em linha - não mostrar para comentários */}
+                  {activityForm.type !== "Comentários" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                          Agendar para
                         </label>
-                      )}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
+                              onClick={handleDateTimeClick}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {selectedDate && selectedTime ? 
+                                `${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} ${selectedTime}` : 
+                                "Selecionar data e hora"
+                              }
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar 
+                              mode="single" 
+                              selected={selectedDate} 
+                              onSelect={handleDateSelect} 
+                              initialFocus 
+                              className="pointer-events-auto" 
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Descrição */}
+                  {/* Upload de arquivo - não mostrar para comentários */}
+                  {activityForm.type !== "Comentários" && (
+                    <div className="space-y-2">
+                      <div className={cn("border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors", isDarkMode ? "border-gray-600 hover:border-gray-500 bg-[#1f1f1f]" : "border-gray-300 hover:border-gray-400 bg-gray-50")}>
+                        {attachedFile ? (
+                          <div className="flex items-center justify-between">
+                            <span className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                              {attachedFile.name}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={removeFile}
+                              className="h-6 w-6 p-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                              accept="*/*"
+                            />
+                            <Upload className={cn("w-8 h-8 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
+                            <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                              Clique aqui ou arraste o documento a ser salvo
+                            </p>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Descrição - obrigatória para comentários */}
                   <div className="space-y-2">
                     <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                      Descrição
+                      {activityForm.type === "Comentários" ? "Comentário *" : "Descrição"}
                     </label>
                     <Textarea 
-                      placeholder="Descrição" 
+                      placeholder={activityForm.type === "Comentários" ? "Digite o comentário..." : "Descrição"} 
                       rows={4} 
                       value={activityForm.description}
                       onChange={(e) => setActivityForm({...activityForm, description: e.target.value})}
