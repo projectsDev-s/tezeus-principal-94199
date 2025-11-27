@@ -4,37 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Plus, Trash2, ChevronDown, Menu, Users, User } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePipelinesContext } from "@/contexts/PipelinesContext";
-import { useWorkspaceMembers } from "@/hooks/useWorkspaceMembers";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspaceHeaders } from "@/lib/workspaceHeaders";
-import { DeletarColunaModal } from "@/components/modals/DeletarColunaModal";
 import { DeletarPipelineModal } from "@/components/modals/DeletarPipelineModal";
-import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
-import { SortableContext, useSortable, horizontalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+
 interface PipelineConfigProps {
   isDarkMode?: boolean;
   onColumnsReorder?: (newOrder: any[]) => void;
 }
-interface SortableColumnProps {
-  column: any;
-  isDarkMode: boolean;
-  onDelete: (column: { id: string; name: string }) => void;
-  onUpdatePermissions: (columnId: string, userIds: string[]) => void;
-  onUpdateViewAllDealsPermissions: (columnId: string, userIds: string[]) => void;
-  onUpdateColumnName: (columnId: string, newName: string) => void;
-  isLoading?: boolean;
-}
+
 interface Action {
   id: string;
   actionName: string;
@@ -52,270 +36,7 @@ const initialActions: Action[] = [{
   targetColumn: "",
   dealState: ""
 }];
-function SortableColumn({
-  column,
-  isDarkMode,
-  onDelete,
-  onUpdatePermissions,
-  onUpdateViewAllDealsPermissions,
-  onUpdateColumnName,
-  isLoading = false
-}: SortableColumnProps) {
-  const {
-    getCardsByColumn
-  } = usePipelinesContext();
-  const {
-    selectedWorkspace
-  } = useWorkspace();
-  const {
-    members
-  } = useWorkspaceMembers(selectedWorkspace?.workspace_id);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>(column.permissions || []);
-  const [viewAllDealsUsers, setViewAllDealsUsers] = useState<string[]>(column.view_all_deals_permissions || []);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [columnName, setColumnName] = useState(column.name);
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({
-    id: column.id
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1
-  };
 
-  // Calcular estatísticas da coluna baseado nos cards
-  const columnCards = getCardsByColumn(column.id);
-  const totalValue = columnCards.reduce((sum, card) => sum + (card.value || 0), 0);
-  const formattedTotal = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(totalValue);
-
-  const handleSaveColumnName = () => {
-    if (columnName.trim() && columnName !== column.name) {
-      onUpdateColumnName(column.id, columnName.trim());
-    }
-    setIsEditingName(false);
-  };
-
-  const handleCancelEdit = () => {
-    setColumnName(column.name);
-    setIsEditingName(false);
-  };
-
-  if (isLoading) {
-    return (
-      <div ref={setNodeRef} style={style} className="grid-item">
-        <div className="bg-white rounded-lg shadow-md p-4 relative flex flex-col overflow-hidden border-t-4 border-gray-300">
-          {/* Header skeleton */}
-          <div className="flex items-start justify-between mb-2">
-            <Skeleton className="h-4 w-24" />
-            <div className="flex items-center gap-1">
-              <Skeleton className="h-6 w-6" />
-              <Skeleton className="h-6 w-6" />
-              <Skeleton className="h-6 w-6" />
-            </div>
-          </div>
-
-          {/* Statistics skeleton */}
-          <div className="flex justify-between items-center mb-3">
-            <div className="space-y-1">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-          </div>
-
-          {/* Users section skeleton */}
-          <Skeleton className="h-3 w-40 mt-2 mb-1" />
-          <div className="flex items-center mt-1 mb-1">
-            <Skeleton className="h-3 w-3 mr-2" />
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-6 w-6 ml-2" />
-          </div>
-
-          <Skeleton className="h-3 w-48 mt-1 mb-1" />
-          <div className="flex items-center mt-1 mb-2">
-            <Skeleton className="h-3 w-3 mr-2" />
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-6 w-6 ml-2" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return <div ref={setNodeRef} style={style} className="grid-item">
-      <div className="bg-white rounded-lg shadow-md p-4 relative flex flex-col overflow-hidden" style={{
-      borderTop: `4px solid ${column.color}`
-    }}>
-         {/* Header com nome e botões */}
-         <div className="flex items-start justify-between mb-2">
-           {isEditingName ? (
-             <div className="flex-1 mr-2">
-               <Input
-                 value={columnName}
-                 onChange={(e) => setColumnName(e.target.value)}
-                 className="text-xs h-6 px-2"
-                 onKeyDown={(e) => {
-                   if (e.key === 'Enter') {
-                     e.preventDefault();
-                     handleSaveColumnName();
-                   }
-                   if (e.key === 'Escape') {
-                     handleCancelEdit();
-                   }
-                 }}
-                 autoFocus
-               />
-               <Button
-                 size="sm"
-                 className="mt-2 h-6 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
-                 onClick={handleSaveColumnName}
-               >
-                 salvar
-               </Button>
-             </div>
-           ) : (
-             <p className="text-xs font-bold w-30 overflow-hidden text-ellipsis whitespace-nowrap">
-               {column.name}
-             </p>
-           )}
-           <div className="flex items-center">
-             <Button 
-               variant="ghost" 
-               size="sm" 
-               className="h-6 w-6 p-0 mr-1.5" 
-               onClick={() => {
-                 if (isEditingName) {
-                   handleCancelEdit();
-                 } else {
-                   setIsEditingName(true);
-                 }
-               }}
-             >
-               <Pencil className="h-3 w-3" />
-             </Button>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 mr-1.5" onClick={() => onDelete({ id: column.id, name: column.name })}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
-            <Button className="h-6 w-6 p-0" variant="ghost" size="sm" {...attributes} {...listeners}>
-              <Menu className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Estatísticas */}
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            <p className="text-xs text-gray-500">{columnCards.length} negócios</p>
-            <p className="text-xs text-gray-500">{formattedTotal}</p>
-          </div>
-          <div></div>
-        </div>
-
-        {/* Usuários que podem ver a coluna */}
-        <p className="text-xs text-gray-500 mt-2">Usuarios que podem ver a coluna</p>
-        <div className="flex items-center mt-1 mb-1">
-          <Users className="h-3 w-3 mr-2 text-gray-400" />
-          <span className="text-xs text-gray-500">
-            {selectedUsers.length === 0 ? 'Todos podem ver' : `${selectedUsers.length} usuário${selectedUsers.length > 1 ? 's' : ''}`}
-          </span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
-                <Pencil className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-4">
-                <h4 className="font-medium">Selecionar Usuários</h4>
-                <div className="flex flex-wrap gap-2">
-                  {members?.filter(member => !member.is_hidden).map(member => <div key={member.id} className="flex items-center space-x-2">
-                      <Checkbox id={`user-${member.id}`} checked={selectedUsers.includes(member.user_id)} onCheckedChange={checked => {
-                    if (checked) {
-                      setSelectedUsers([...selectedUsers, member.user_id]);
-                    } else {
-                      setSelectedUsers(selectedUsers.filter(id => id !== member.user_id));
-                    }
-                  }} />
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <label htmlFor={`user-${member.id}`} className="text-sm font-medium cursor-pointer">
-                          {member.user?.name}
-                        </label>
-                      </div>
-                    </div>)}
-                </div>
-                <Button className="w-full" onClick={() => {
-                onUpdatePermissions(column.id, selectedUsers);
-              }}>
-                  Salvar
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* Usuários que podem ver todos os negócios */}
-        <p className="text-xs text-gray-500 mt-1">Usuarios que podem ver todos os negócios</p>
-        <div className="flex items-center mt-1 mb-2">
-          <Users className="h-3 w-3 mr-2 text-gray-400" />
-          <span className="text-xs text-gray-500">{viewAllDealsUsers.length} usuário{viewAllDealsUsers.length !== 1 ? 's' : ''}</span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
-                <Pencil className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-4">
-                <h4 className="font-medium">Usuários que veem todos os negócios</h4>
-                <p className="text-sm text-muted-foreground">
-                  Usuários selecionados verão todos os negócios desta coluna
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {members?.filter(member => !member.is_hidden).map(member => <div key={member.id} className="flex items-center space-x-2">
-                      <Checkbox id={`view-all-${member.id}`} checked={viewAllDealsUsers.includes(member.user_id)} onCheckedChange={checked => {
-                    if (checked) {
-                      setViewAllDealsUsers([...viewAllDealsUsers, member.user_id]);
-                    } else {
-                      setViewAllDealsUsers(viewAllDealsUsers.filter(id => id !== member.user_id));
-                    }
-                  }} />
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <label htmlFor={`view-all-${member.id}`} className="text-sm font-medium cursor-pointer">
-                          {member.user?.name}
-                        </label>
-                      </div>
-                    </div>)}
-                </div>
-                <Button className="w-full" onClick={() => {
-                onUpdateViewAllDealsPermissions(column.id, viewAllDealsUsers);
-              }}>
-                  Salvar
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-    </div>;
-}
 export default function PipelineConfiguracao({
   isDarkMode,
   onColumnsReorder
@@ -323,9 +44,6 @@ export default function PipelineConfiguracao({
   const [activeTab, setActiveTab] = useState('geral');
   const [actions, setActions] = useState<Action[]>(initialActions);
   const [actionColumns, setActionColumns] = useState<{[key: string]: any[]}>({});
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [columnToDelete, setColumnToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [isLoadingColumns, setIsLoadingColumns] = useState(false);
   const { getHeaders } = useWorkspaceHeaders();
   const [isDeletePipelineModalOpen, setIsDeletePipelineModalOpen] = useState(false);
   const [isDeletingPipeline, setIsDeletingPipeline] = useState(false);
@@ -352,118 +70,6 @@ export default function PipelineConfiguracao({
   const [selectedColumn, setSelectedColumn] = useState("qualificar");
   const [selectedAutomation, setSelectedAutomation] = useState("");
   const canConfigureOpenStatus = userRole === 'master' || userRole === 'admin';
-  const handleUpdateColumnPermissions = async (columnId: string, userIds: string[]) => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
-        method: 'PUT',
-        headers: {
-          'x-system-user-id': user?.id || '',
-          'x-system-user-email': user?.email || '',
-          'x-workspace-id': selectedWorkspace?.workspace_id || ''
-        },
-        body: {
-          permissions: userIds
-        }
-      });
-      if (error) throw error;
-      console.log('Column permissions updated successfully:', {
-        columnId,
-        userIds
-      });
-
-      // Atualizar o estado local das colunas se necessário
-      // (Pode ser implementado posteriormente se precisar)
-    } catch (error) {
-      console.error('Error updating column permissions:', error);
-    }
-  };
-
-  const handleUpdateViewAllDealsPermissions = async (columnId: string, userIds: string[]) => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
-        method: 'PUT',
-        headers: {
-          'x-system-user-id': user?.id || '',
-          'x-system-user-email': user?.email || '',
-          'x-workspace-id': selectedWorkspace?.workspace_id || ''
-        },
-        body: {
-          view_all_deals_permissions: userIds
-        }
-      });
-      if (error) throw error;
-      console.log('View all deals permissions updated successfully:', {
-        columnId,
-        userIds
-      });
-
-      toast({
-        title: "Sucesso",
-        description: "Permissões de visualização de negócios atualizadas",
-      });
-    } catch (error) {
-      console.error('Error updating view all deals permissions:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar permissões de visualização de negócios",
-        variant: "destructive",
-      });
-    }
-  };
-  const handleDeleteColumn = (column: { id: string; name: string }) => {
-    setColumnToDelete(column);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleUpdateColumnName = async (columnId: string, newName: string) => {
-    try {
-      // Set local loading state for this specific column
-      setIsLoadingColumns(true);
-      
-      const { data, error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
-        method: 'PUT',
-        headers: {
-          'x-system-user-id': user?.id || '',
-          'x-system-user-email': user?.email || '',
-          'x-workspace-id': selectedWorkspace?.workspace_id || ''
-        },
-        body: {
-          name: newName
-        }
-      });
-
-      if (error) throw error;
-
-      console.log('✅ Column name updated successfully');
-      
-      // Update the local columns state immediately to avoid flickering
-      if (selectedPipeline) {
-        // Use refreshCurrentPipeline instead of selectPipeline to avoid clearing state
-        await refreshCurrentPipeline();
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Nome da coluna atualizado com sucesso.",
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Error updating column name:', error);
-      toast({
-        title: "Erro ao atualizar nome",
-        description: "Ocorreu um erro ao tentar atualizar o nome da coluna. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingColumns(false);
-    }
-  };
 
   const handleDeletePipeline = async () => {
     if (!selectedPipeline) return;
@@ -494,9 +100,6 @@ export default function PipelineConfiguracao({
   const deleteColumn = async (columnId: string) => {
     try {
       console.log('🗑️ Deleting column:', columnId);
-      
-      // Mostrar loading state
-      setIsLoadingColumns(true);
       
       const { data, error } = await supabase.functions.invoke(`pipeline-management/columns?id=${columnId}`, {
         method: 'DELETE',
@@ -536,10 +139,9 @@ export default function PipelineConfiguracao({
           variant: "destructive",
         });
       }
-    } finally {
-      setIsLoadingColumns(false);
     }
   };
+  
   // Carregar ações salvas quando selecionar um pipeline
   useEffect(() => {
     if (selectedPipeline?.id) {
@@ -830,71 +432,12 @@ export default function PipelineConfiguracao({
       [actionId]: columns
     }));
   };
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates
-  }));
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const {
-      active,
-      over
-    } = event;
-    if (active.id !== over?.id) {
-      const oldIndex = columns.findIndex(col => col.id === active.id);
-      const newIndex = columns.findIndex(col => col.id === over?.id);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        // Reorganizar as colunas localmente
-        const newColumns = [...columns];
-        const [reorderedColumn] = newColumns.splice(oldIndex, 1);
-        newColumns.splice(newIndex, 0, reorderedColumn);
 
-        // Atualizar as posições no backend
-        const updates = newColumns.map((col, index) => ({
-          id: col.id,
-          order_position: index
-        }));
-      try {
-        for (const update of updates) {
-          await supabase.functions.invoke(`pipeline-management/columns?id=${update.id}`, {
-            method: 'PUT',
-            headers: {
-              'x-system-user-id': user?.id || '',
-              'x-system-user-email': user?.email || '',
-              'x-workspace-id': selectedWorkspace?.workspace_id || ''
-            },
-            body: {
-              order_position: update.order_position
-            }
-          });
-        }
-        console.log('✅ Colunas reordenadas com sucesso');
-
-        // Usar a função do contexto para sincronizar
-        if (reorderColumns) {
-          await reorderColumns(newColumns);
-        }
-
-        // Notificar o componente pai sobre a mudança
-        if (onColumnsReorder) {
-          onColumnsReorder(newColumns);
-        }
-      } catch (error) {
-        console.error('❌ Erro ao reordenar colunas:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível reordenar as colunas",
-          variant: "destructive",
-        });
-      }
-      }
-    }
-  };
   return <div className={cn("min-h-screen", isDarkMode ? "bg-background" : "bg-muted/30")}>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="geral">Configurações Gerais</TabsTrigger>
-          <TabsTrigger value="colunas">Colunas</TabsTrigger>
           <TabsTrigger value="acoes">Ações</TabsTrigger>
-          
         </TabsList>
 
         {/* Configurações Gerais Tab */}
@@ -1013,64 +556,6 @@ export default function PipelineConfiguracao({
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Colunas Tab */}
-        <TabsContent value="colunas" className="space-y-4">
-          {(contextIsLoadingColumns || isLoadingColumns) ? (
-            // Skeleton loading para colunas
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {[...Array(3)].map((_, index) => (
-                <SortableColumn
-                  key={`skeleton-${index}`}
-                  column={{ id: `skeleton-${index}`, name: '', color: '#gray' }}
-                  isDarkMode={isDarkMode}
-                   onDelete={() => {}}
-                   onUpdatePermissions={() => {}}
-                   onUpdateViewAllDealsPermissions={() => {}}
-                   onUpdateColumnName={() => {}}
-                   isLoading={true}
-                />
-              ))}
-            </div>
-          ) : columns.length === 0 ? (
-            // Estado vazio - pipeline novo
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <Menu className="h-12 w-12 mx-auto" />
-              </div>
-              <h3 className={cn("text-lg font-medium mb-2", isDarkMode ? "text-white" : "text-gray-900")}>
-                Nenhuma coluna encontrada
-              </h3>
-              <p className={cn("text-sm mb-4", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-                Este pipeline ainda não possui colunas configuradas.
-              </p>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Primeira Coluna
-              </Button>
-            </div>
-          ) : (
-            // Estado normal - pipeline com colunas
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-              <SortableContext items={columns.map(col => col.id)} strategy={horizontalListSortingStrategy}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {columns.map(column => (
-                    <SortableColumn 
-                      key={column.id} 
-                      column={column} 
-                      isDarkMode={isDarkMode} 
-                       onDelete={handleDeleteColumn}
-                       onUpdatePermissions={handleUpdateColumnPermissions}
-                       onUpdateViewAllDealsPermissions={handleUpdateViewAllDealsPermissions}
-                       onUpdateColumnName={handleUpdateColumnName}
-                      isLoading={false}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          )}
         </TabsContent>
 
         {/* Ações Tab */}
@@ -1266,22 +751,6 @@ export default function PipelineConfiguracao({
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Modal de confirmação para deletar coluna */}
-      <DeletarColunaModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setColumnToDelete(null);
-        }}
-        onConfirm={() => {
-          if (columnToDelete) {
-            deleteColumn(columnToDelete.id);
-          }
-        }}
-        columnName={columnToDelete?.name || ''}
-        isDarkMode={isDarkMode}
-      />
 
       {/* Modal de confirmação para deletar pipeline */}
       <DeletarPipelineModal
