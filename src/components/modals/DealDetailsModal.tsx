@@ -45,6 +45,7 @@ interface Activity {
   subject: string;
   description?: string | null;
   scheduled_for: string;
+  completed_at?: string | null;
   responsible_id: string;
   is_completed: boolean;
   attachment_url?: string | null;
@@ -1604,6 +1605,7 @@ export function DealDetailsModal({
       subject: act.subject,
       description: act.description,
       date: act.scheduled_for,
+      completed_at: act.completed_at,
       responsible_name: act.users?.name,
       attachment_url: act.attachment_url || undefined,
       attachment_name: act.attachment_name || undefined,
@@ -2447,11 +2449,16 @@ export function DealDetailsModal({
                       <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
                         {item.subject}
                       </h4>
-                      <p className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        {format(new Date(item.date), "dd/MM/yyyy 'às' HH:mm", {
-                  locale: ptBR
-                })}
-                      </p>
+                      <div className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                        <p className="mb-1">Criado em:</p>
+                        <p className="mb-2">{format(new Date(item.date), "dd/MM/yyyy", { locale: ptBR })}</p>
+                        {item.type === 'activity' && item.completed_at && (
+                          <>
+                            <p className="mb-1">Concluído em:</p>
+                            <p>{format(new Date(item.completed_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                          </>
+                        )}
+                      </div>
                       
                       {/* Descrição/Comentário */}
                       {item.description && (
