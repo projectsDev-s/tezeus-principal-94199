@@ -1165,7 +1165,10 @@ export function DealDetailsModal({
           created_by,
           file_url,
           file_name,
-          file_type
+          file_type,
+          system_users:created_by (
+            name
+          )
         `)
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false });
@@ -1620,7 +1623,7 @@ export function DealDetailsModal({
       subject: 'Observação',
       description: obs.content,
       date: obs.created_at,
-      responsible_name: users.find(u => u.id === obs.created_by)?.name,
+      responsible_name: obs.system_users?.name,
       attachment_url: undefined,
       attachment_name: undefined,
       file_url: obs.file_url || undefined,
