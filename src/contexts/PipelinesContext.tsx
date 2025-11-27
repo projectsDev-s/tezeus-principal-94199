@@ -41,6 +41,7 @@ export interface PipelineColumn {
   pipeline_id: string;
   name: string;
   color: string;
+  icon?: string;
   order_position: number;
   created_at: string;
   permissions?: string[]; // Array de user_ids que podem ver esta coluna
@@ -92,7 +93,7 @@ interface PipelinesContextType {
   deletePipeline: (pipelineId: string) => Promise<void>;
   selectPipeline: (pipeline: Pipeline) => void;
   refreshCurrentPipeline: () => Promise<void>;
-  createColumn: (name: string, color: string) => Promise<PipelineColumn>;
+  createColumn: (name: string, color: string, icon?: string) => Promise<PipelineColumn>;
   createCard: (cardData: Partial<PipelineCard>) => Promise<PipelineCard>;
   updateCard: (cardId: string, updates: Partial<PipelineCard>) => Promise<void>;
   moveCard: (cardId: string, newColumnId: string) => Promise<void>;
@@ -380,7 +381,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedPipeline?.id, fetchColumns, fetchCards]);
 
-  const createColumn = useCallback(async (name: string, color: string) => {
+  const createColumn = useCallback(async (name: string, color: string, icon: string = 'Circle') => {
     if (!getHeaders || !selectedPipeline) throw new Error('Requirements not met');
 
     try {
@@ -390,7 +391,8 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         body: { 
           pipeline_id: selectedPipeline.id,
           name,
-          color 
+          color,
+          icon
         }
       });
 

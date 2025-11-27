@@ -33,6 +33,7 @@ interface Database {
           pipeline_id: string;
           name: string;
           color: string;
+          icon: string;
           order_position: number;
           created_at: string;
           permissions: string[]; // Array de user_ids
@@ -41,12 +42,14 @@ interface Database {
           pipeline_id: string;
           name: string;
           color?: string;
+          icon?: string;
           order_position?: number;
           permissions?: string[];
         };
         Update: {
           name?: string;
           color?: string;
+          icon?: string;
           permissions?: string[];
           order_position?: number;
         };
@@ -1494,6 +1497,7 @@ serve(async (req) => {
               pipeline_id: body.pipeline_id,
               name: body.name,
               color: body.color || '#808080',
+              icon: body.icon || 'Circle',
               order_position: nextPosition,
             } as any)
             .select()
@@ -1516,7 +1520,7 @@ serve(async (req) => {
 
           const body = await req.json();
           
-          // Prepare update data - accept permissions, order_position, name, and color
+          // Prepare update data - accept permissions, order_position, name, color, and icon
           const updateData: any = {};
           if (body.permissions !== undefined) {
             updateData.permissions = body.permissions;
@@ -1532,6 +1536,9 @@ serve(async (req) => {
           }
           if (body.color !== undefined) {
             updateData.color = body.color;
+          }
+          if (body.icon !== undefined) {
+            updateData.icon = body.icon;
           }
           
           console.log('🔄 Updating column:', columnId, 'with data:', updateData);
