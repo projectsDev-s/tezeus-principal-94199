@@ -112,7 +112,7 @@ export function CRMProdutos() {
         <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            <span className="font-semibold">Produtos</span>
+            <span className="font-semibold text-sm">Produtos</span>
           </div>
           <div className="text-[10px] opacity-80">
             {isLoading ? "Carregando..." : `${filteredProducts.length} itens`}
@@ -147,15 +147,6 @@ export function CRMProdutos() {
             >
               <Plus className="h-4 w-4 text-primary" />
               <span className="text-[9px]">Novo Produto</span>
-            </Button>
-
-             <Button 
-              size="sm" 
-              variant="ghost"
-              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
-            >
-              <Download className="h-4 w-4 text-primary" />
-              <span className="text-[9px]">Exportar</span>
             </Button>
           </div>
         </div>

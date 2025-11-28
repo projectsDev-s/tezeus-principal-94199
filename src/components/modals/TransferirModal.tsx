@@ -409,37 +409,37 @@ export function TransferirModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn(
-        "max-w-md",
+        "max-w-md p-0 gap-0 border shadow-sm rounded-none",
         isDarkMode 
           ? "bg-gray-800 border-gray-600 text-white" 
-          : "bg-white border-gray-200 text-gray-900"
+          : "bg-white border-[#d4d4d4] text-gray-900"
       )}>
-        <DialogHeader>
+        <DialogHeader className="bg-primary p-4 rounded-none m-0">
           <DialogTitle className={cn(
-            "text-lg font-semibold",
-            isDarkMode ? "text-white" : "text-gray-900"
+            "text-sm font-bold",
+            isDarkMode ? "text-white" : "text-primary-foreground"
           )}>
             Transferir Negócios Selecionados
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 p-6">
           {/* Origem */}
           <div>
             <Label className={cn(
-              "text-sm font-medium",
+              "text-xs font-bold",
               isDarkMode ? "text-gray-200" : "text-gray-700"
             )}>
               Origem:
             </Label>
             <p className={cn(
-              "mt-1 text-sm font-semibold",
+              "mt-1 text-xs",
               isDarkMode ? "text-white" : "text-gray-900"
             )}>
               {currentPipelineName}
             </p>
             <p className={cn(
-              "text-xs mt-1",
+              "text-[10px] mt-1",
               isDarkMode ? "text-gray-400" : "text-gray-500"
             )}>
               {selectedCards.length} negócio(s) selecionado(s) será(ão) transferido(s)
@@ -449,14 +449,14 @@ export function TransferirModal({
           {/* Pipeline de Destino */}
           <div>
             <Label className={cn(
-              "text-sm font-medium",
+              "text-xs font-bold",
               isDarkMode ? "text-gray-200" : "text-gray-700"
             )}>
               Pipeline de Destino
             </Label>
             <Select value={targetPipelineId} onValueChange={setTargetPipelineId}>
               <SelectTrigger className={cn(
-                "mt-1",
+                "mt-1 h-8 text-xs rounded-none",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600 text-white" 
                   : "bg-white border-gray-300 text-gray-900"
@@ -464,6 +464,7 @@ export function TransferirModal({
                 <SelectValue placeholder="Selecione o pipeline" />
               </SelectTrigger>
               <SelectContent className={cn(
+                "rounded-none border",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600" 
                   : "bg-white border-gray-300"
@@ -475,9 +476,10 @@ export function TransferirModal({
                       key={pipeline.id} 
                       value={pipeline.id}
                       className={cn(
+                        "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                         isDarkMode 
                           ? "text-white hover:bg-gray-600" 
-                          : "text-gray-900 hover:bg-gray-100"
+                          : "text-gray-900"
                       )}
                     >
                       {pipeline.name}
@@ -490,7 +492,7 @@ export function TransferirModal({
           {/* Etapa de Destino */}
           <div>
             <Label className={cn(
-              "text-sm font-medium",
+              "text-xs font-bold",
               isDarkMode ? "text-gray-200" : "text-gray-700"
             )}>
               Etapa de Destino
@@ -501,7 +503,7 @@ export function TransferirModal({
               disabled={!targetPipelineId}
             >
               <SelectTrigger className={cn(
-                "mt-1",
+                "mt-1 h-8 text-xs rounded-none",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600 text-white" 
                   : "bg-white border-gray-300 text-gray-900"
@@ -509,6 +511,7 @@ export function TransferirModal({
                 <SelectValue placeholder="Selecione a etapa" />
               </SelectTrigger>
               <SelectContent className={cn(
+                "rounded-none border",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600" 
                   : "bg-white border-gray-300"
@@ -518,9 +521,10 @@ export function TransferirModal({
                     key={column.id} 
                     value={column.id}
                     className={cn(
+                      "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                       isDarkMode 
                         ? "text-white hover:bg-gray-600" 
-                        : "text-gray-900 hover:bg-gray-100"
+                        : "text-gray-900"
                     )}
                   >
                     {column.name}
@@ -533,7 +537,7 @@ export function TransferirModal({
           {/* Fila (Opcional) */}
           <div>
             <Label className={cn(
-              "text-sm font-medium",
+              "text-xs font-bold",
               isDarkMode ? "text-gray-200" : "text-gray-700"
             )}>
               Fila
@@ -544,7 +548,7 @@ export function TransferirModal({
               disabled={isQueueDisabled}
             >
               <SelectTrigger className={cn(
-                "mt-1",
+                "mt-1 h-8 text-xs rounded-none",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600 text-white" 
                   : "bg-white border-gray-300 text-gray-900"
@@ -552,6 +556,7 @@ export function TransferirModal({
                 <SelectValue placeholder="Sem ações a serem executadas" />
               </SelectTrigger>
               <SelectContent className={cn(
+                "rounded-none border",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600" 
                   : "bg-white border-gray-300"
@@ -559,9 +564,10 @@ export function TransferirModal({
                 <SelectItem 
                   value="none"
                   className={cn(
+                    "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
-                      : "text-gray-900 hover:bg-gray-100"
+                      : "text-gray-900"
                   )}
                 >
                   Sem ações a serem executadas
@@ -569,9 +575,10 @@ export function TransferirModal({
                 <SelectItem 
                   value="remove"
                   className={cn(
+                    "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
-                      : "text-gray-900 hover:bg-gray-100"
+                      : "text-gray-900"
                   )}
                 >
                   Remover fila
@@ -581,9 +588,10 @@ export function TransferirModal({
                     key={queue.id} 
                     value={queue.id}
                     className={cn(
+                      "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                       isDarkMode 
                         ? "text-white hover:bg-gray-600" 
-                        : "text-gray-900 hover:bg-gray-100"
+                        : "text-gray-900"
                     )}
                   >
                     {queue.name}
@@ -596,7 +604,7 @@ export function TransferirModal({
           {/* Responsável (Opcional) */}
           <div>
             <Label className={cn(
-              "text-sm font-medium",
+              "text-xs font-bold",
               isDarkMode ? "text-gray-200" : "text-gray-700"
             )}>
               Responsável
@@ -607,7 +615,7 @@ export function TransferirModal({
               disabled={isResponsibleDisabled}
             >
               <SelectTrigger className={cn(
-                "mt-1",
+                "mt-1 h-8 text-xs rounded-none",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600 text-white" 
                   : "bg-white border-gray-300 text-gray-900"
@@ -615,6 +623,7 @@ export function TransferirModal({
                 <SelectValue placeholder="Sem ações a serem executadas" />
               </SelectTrigger>
               <SelectContent className={cn(
+                "rounded-none border",
                 isDarkMode 
                   ? "bg-gray-700 border-gray-600" 
                   : "bg-white border-gray-300"
@@ -622,9 +631,10 @@ export function TransferirModal({
                 <SelectItem 
                   value="none"
                   className={cn(
+                    "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
-                      : "text-gray-900 hover:bg-gray-100"
+                      : "text-gray-900"
                   )}
                 >
                   Sem ações a serem executadas
@@ -632,9 +642,10 @@ export function TransferirModal({
                 <SelectItem 
                   value="remove"
                   className={cn(
+                    "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                     isDarkMode 
                       ? "text-white hover:bg-gray-600" 
-                      : "text-gray-900 hover:bg-gray-100"
+                      : "text-gray-900"
                   )}
                 >
                   Remover responsável
@@ -646,9 +657,10 @@ export function TransferirModal({
                       key={user.id} 
                       value={user.id}
                       className={cn(
+                        "text-xs focus:bg-[#e6f2ff] focus:text-black cursor-pointer",
                         isDarkMode 
                           ? "text-white hover:bg-gray-600" 
-                          : "text-gray-900 hover:bg-gray-100"
+                          : "text-gray-900"
                       )}
                     >
                       {user.name || user.email}
@@ -660,15 +672,16 @@ export function TransferirModal({
         </div>
 
         {/* Botões de ação */}
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex justify-end gap-2 p-4 bg-gray-50 border-t border-gray-200">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
             className={cn(
+              "h-8 text-xs rounded-none",
               isDarkMode 
                 ? "border-gray-600 text-gray-300 hover:bg-gray-700" 
-                : "border-gray-300 text-gray-700 hover:bg-gray-100"
+                : "border-gray-300 text-gray-700 hover:bg-gray-200"
             )}
           >
             Cancelar
@@ -676,7 +689,7 @@ export function TransferirModal({
           <Button
             onClick={handleTransfer}
             disabled={isLoading || !targetPipelineId || !targetColumnId}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="h-8 text-xs rounded-none bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
           >
             {isLoading ? "Transferindo..." : `Transferir ${selectedCards.length} Negócio(s)`}
           </Button>

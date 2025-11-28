@@ -39,69 +39,69 @@ export function AddColumnModal({ open, onOpenChange, onAddColumn, isDarkMode = f
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-card-foreground">
+        <DialogContent className="sm:max-w-md p-0 gap-0 border border-[#d4d4d4] shadow-sm rounded-none bg-white">
+          <DialogHeader className="bg-primary p-4 rounded-none m-0 border-b border-[#d4d4d4]">
+            <DialogTitle className="text-primary-foreground text-base font-bold">
               Adicionar Coluna
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-4 p-6">
             <div className="space-y-2">
-              <Label htmlFor="column-name">Nome da Coluna *</Label>
+              <Label htmlFor="column-name" className="text-xs font-bold text-gray-700">Nome da Coluna *</Label>
               <Input
                 id="column-name"
                 placeholder="Nome"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-input border-border text-foreground"
+                className="h-8 text-xs rounded-none border-gray-300 bg-white text-gray-900 focus-visible:ring-0"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Ícone *</Label>
+              <Label className="text-xs font-bold text-gray-700">Ícone *</Label>
               <IconSelector 
                 selectedIcon={icon}
                 onIconSelect={setIcon}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 Selecione um ícone para representar esta etapa do pipeline
               </p>
             </div>
             
             <div className="space-y-2">
-              <Label>Cor</Label>
+              <Label className="text-xs font-bold text-gray-700">Cor</Label>
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-8 h-8 rounded border border-gray-300 cursor-pointer flex items-center justify-center"
+                  className="w-8 h-8 rounded-none border border-gray-300 cursor-pointer flex items-center justify-center"
                   style={{ backgroundColor: color }}
                   onClick={() => setShowColorPicker(true)}
                 >
                   <Pipette 
-                    className="w-4 h-4 text-white drop-shadow-lg" 
+                    className="w-3.5 h-3.5 text-white drop-shadow-lg" 
                     onClick={() => setShowColorPicker(true)}
                   />
                 </div>
                 <Input
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="flex-1 bg-input border-border text-foreground"
+                  className="flex-1 h-8 text-xs rounded-none border-gray-300 bg-white text-gray-900 focus-visible:ring-0"
                   placeholder="#000000"
                 />
               </div>
             </div>
             
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-2 pt-4 border-t border-[#d4d4d4] mt-4 -mx-6 -mb-6 p-4 bg-gray-50">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                className="border-border text-card-foreground hover:bg-muted"
+                className="h-8 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100 text-gray-700"
               >
                 Cancelar
               </Button>
               <Button 
                 onClick={handleSubmit}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="h-8 text-xs rounded-none bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={!name.trim() || !icon}
               >
                 Adicionar

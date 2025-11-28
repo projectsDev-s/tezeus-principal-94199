@@ -867,66 +867,68 @@ export function AutomationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto p-0 gap-0 border border-[#d4d4d4] bg-white shadow-sm rounded-none">
+        <DialogHeader className="bg-primary p-4 rounded-none m-0">
+          <DialogTitle className="text-primary-foreground text-base font-bold">
             {automation ? 'Editar Automação' : 'Nova Automação'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 p-6">
           {/* Nome e Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="automation-name">Nome da Automação *</Label>
+            <Label htmlFor="automation-name" className="text-xs font-bold text-gray-700">Nome da Automação *</Label>
             <Input
               id="automation-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Mensagem de boas-vindas quando entrar na coluna 'Pré-venda'"
+              className="h-8 text-xs rounded-none border-gray-300 focus-visible:ring-0"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="automation-description">Descrição</Label>
+            <Label htmlFor="automation-description" className="text-xs font-bold text-gray-700">Descrição</Label>
             <Textarea
               id="automation-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descreva o propósito desta automação (opcional)"
               rows={2}
+              className="text-xs rounded-none border-gray-300 focus-visible:ring-0 min-h-[60px]"
             />
           </div>
 
           {/* Gatilhos */}
-          <Card>
-            <CardHeader>
+          <Card className="rounded-none border border-[#d4d4d4] shadow-none">
+            <CardHeader className="bg-[#f0f0f0] border-b border-[#d4d4d4] p-3 rounded-none">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Gatilhos</CardTitle>
-                <Button variant="outline" size="sm" onClick={addTrigger}>
-                  <Plus className="w-4 h-4 mr-2" />
+                <CardTitle className="text-sm font-bold text-gray-800">Gatilhos</CardTitle>
+                <Button variant="outline" size="sm" onClick={addTrigger} className="h-7 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Adicionar gatilho
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 p-4">
               {triggers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-xs text-muted-foreground text-center py-4">
                   Nenhum gatilho adicionado. Clique em "Adicionar gatilho" para começar.
                 </p>
               ) : (
                 triggers.map((trigger) => (
-                  <div key={trigger.id} className="space-y-3 p-3 border rounded-lg">
+                  <div key={trigger.id} className="space-y-3 p-3 border border-[#d4d4d4] rounded-none bg-gray-50">
                     <div className="flex items-center gap-2">
                       <Select
                         value={trigger.trigger_type}
                         onValueChange={(value) => updateTrigger(trigger.id, 'trigger_type', value)}
                       >
-                        <SelectTrigger className="flex-1">
+                        <SelectTrigger className="flex-1 h-8 text-xs rounded-none border-gray-300 bg-white focus:ring-0">
                           <SelectValue placeholder="Selecione o tipo de gatilho" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-none border-gray-300">
                           {TRIGGER_TYPES.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
+                            <SelectItem key={type.value} value={type.value} className="text-xs rounded-none cursor-pointer">
                               {type.label}
                             </SelectItem>
                           ))}
@@ -937,7 +939,7 @@ export function AutomationModal({
                           type="number"
                           placeholder="Qtd."
                           min="1"
-                          className="w-20"
+                          className="w-20 h-8 text-xs rounded-none border-gray-300 focus-visible:ring-0 bg-white"
                           value={trigger.trigger_config?.message_count || ''}
                           onChange={(e) => updateTriggerConfig(trigger.id, 'message_count', parseInt(e.target.value) || 1)}
                         />
@@ -946,7 +948,7 @@ export function AutomationModal({
                         variant="ghost"
                         size="sm"
                         onClick={() => removeTrigger(trigger.id)}
-                        className="text-destructive"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-none"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -961,6 +963,7 @@ export function AutomationModal({
                             min="1"
                             value={trigger.trigger_config?.time_value || ''}
                             onChange={(e) => updateTriggerConfig(trigger.id, 'time_value', e.target.value)}
+                            className="h-8 text-xs rounded-none border-gray-300 focus-visible:ring-0 bg-white"
                           />
                         </div>
                         <div className="flex-1">
@@ -968,12 +971,12 @@ export function AutomationModal({
                             value={trigger.trigger_config?.time_unit || 'minutes'}
                             onValueChange={(value) => updateTriggerConfig(trigger.id, 'time_unit', value)}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="h-8 text-xs rounded-none border-gray-300 bg-white focus:ring-0">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-none border-gray-300">
                               {TIME_UNITS.map(unit => (
-                                <SelectItem key={unit.value} value={unit.value}>
+                                <SelectItem key={unit.value} value={unit.value} className="text-xs rounded-none cursor-pointer">
                                   {unit.label}
                                 </SelectItem>
                               ))}
@@ -984,15 +987,15 @@ export function AutomationModal({
                     )}
                     
                     {trigger.trigger_type === 'time_in_column' && (
-                      <p className="text-xs text-muted-foreground flex items-start gap-2">
-                        <span className="text-yellow-500">⚠</span>
+                      <p className="text-[10px] text-muted-foreground flex items-start gap-2 pl-1">
+                        <span className="text-yellow-500 font-bold">⚠</span>
                         Executa apenas uma vez quando o card atinge o tempo configurado na coluna
                       </p>
                     )}
                     
                     {trigger.trigger_type === 'message_received' && (
-                      <p className="text-xs text-muted-foreground flex items-start gap-2">
-                        <span className="text-blue-500">ℹ</span>
+                      <p className="text-[10px] text-muted-foreground flex items-start gap-2 pl-1">
+                        <span className="text-blue-500 font-bold">ℹ</span>
                         Executa quando o contato enviar o número de mensagens especificado
                       </p>
                     )}
@@ -1003,50 +1006,50 @@ export function AutomationModal({
           </Card>
 
           {/* Ações */}
-          <Card>
-            <CardHeader>
+          <Card className="rounded-none border border-[#d4d4d4] shadow-none">
+            <CardHeader className="bg-[#f0f0f0] border-b border-[#d4d4d4] p-3 rounded-none">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Ações</CardTitle>
-                <Button variant="outline" size="sm" onClick={addAction}>
-                  <Plus className="w-4 h-4 mr-2" />
+                <CardTitle className="text-sm font-bold text-gray-800">Ações</CardTitle>
+                <Button variant="outline" size="sm" onClick={addAction} className="h-7 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Adicionar ação
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4">
               {actions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-xs text-muted-foreground text-center py-4">
                   Nenhuma ação adicionada. Clique em "Adicionar ação" para começar.
                 </p>
               ) : (
                 actions.map((action) => (
-                  <Card key={action.id} className="border">
-                    <CardHeader className="pb-3">
+                  <Card key={action.id} className="border border-[#d4d4d4] rounded-none shadow-sm">
+                    <CardHeader className="pb-3 bg-gray-50 border-b border-[#d4d4d4] p-3 rounded-none">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm">Ação #{action.action_order + 1}</CardTitle>
+                        <CardTitle className="text-xs font-bold text-gray-700">Ação #{action.action_order + 1}</CardTitle>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => removeAction(action.id)}
-                          className="text-destructive"
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-none"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-3 p-3">
                       <div>
-                        <Label>Tipo de ação</Label>
+                        <Label className="text-xs font-bold text-gray-700 mb-1.5 block">Tipo de ação</Label>
                         <Select
                           value={action.action_type}
                           onValueChange={(value) => updateAction(action.id, 'action_type', value)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs rounded-none border-gray-300 bg-white focus:ring-0">
                             <SelectValue placeholder="Selecione o tipo de ação" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-none border-gray-300">
                             {ACTION_TYPES.map(type => (
-                              <SelectItem key={type.value} value={type.value}>
+                              <SelectItem key={type.value} value={type.value} className="text-xs rounded-none cursor-pointer">
                                 {type.label}
                               </SelectItem>
                             ))}
@@ -1062,11 +1065,11 @@ export function AutomationModal({
           </Card>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="bg-gray-50 border-t border-[#d4d4d4] p-4 m-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100">
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
+          <Button onClick={handleSave} disabled={isLoading} className="h-8 text-xs rounded-none bg-primary hover:bg-primary/90 text-primary-foreground">
             {isLoading ? "Salvando..." : automation ? "Atualizar" : "Criar"} Automação
           </Button>
         </DialogFooter>

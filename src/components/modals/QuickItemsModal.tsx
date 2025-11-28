@@ -366,115 +366,256 @@ export function QuickItemsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-auto">
-        <DialogHeader>
-          <DialogTitle className="text-center">Mensagens Rápidas</DialogTitle>
+      <DialogContent className="max-w-md w-full p-0 gap-0 overflow-hidden border border-[#d4d4d4] shadow-lg sm:rounded-none bg-white h-[600px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="mx-0 mt-0 px-4 py-2 mb-0 bg-primary text-primary-foreground border-b border-[#d4d4d4] rounded-t-none flex-shrink-0">
+          <DialogTitle className="text-left text-[15px] font-bold flex items-center gap-2">
+            <span>Mensagens Rápidas</span>
+          </DialogTitle>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="messages" className="p-2" title="Mensagens">
-              <MessageSquare className="w-4 h-4" />
-            </TabsTrigger>
-            <TabsTrigger value="audios" className="p-2" title="Áudios">
-              <Music className="w-4 h-4" />
-            </TabsTrigger>
-            <TabsTrigger value="media" className="p-2" title="Imagens/Vídeos">
-              <Image className="w-4 h-4" />
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="p-2" title="Documentos">
-              <FileText className="w-4 h-4" />
-            </TabsTrigger>
-          <TabsTrigger value="funnels" className="p-2" title="Funis">
-            <Workflow className="w-4 h-4" />
-          </TabsTrigger>
-          </TabsList>
-
-          <div className="mt-4">
-            <TabsContent value="messages" className="mt-0">
-              <ScrollArea className="h-80">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          {/* Content Area */}
+          <div className="flex-1 bg-white overflow-hidden relative">
+            <TabsContent value="messages" className="mt-0 h-full absolute inset-0">
+              <ScrollArea className="h-full">
                 {messagesLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="text-sm text-muted-foreground">Carregando...</div>
+                    <div className="text-xs text-muted-foreground">Carregando...</div>
                   </div>
                 ) : messages && messages.length > 0 ? (
-                  <div className="space-y-0">
-                    {messages.map(renderMessageItem)}
-                  </div>
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      {messages.map(message => (
+                        <tr 
+                          key={message.id} 
+                          className="border-b border-[#d4d4d4] hover:bg-[#e6f2ff] cursor-pointer group"
+                          onClick={() => handleSendMessage(message)}
+                        >
+                          <td className="p-2 align-top w-8">
+                            <MessageSquare className="w-4 h-4 text-gray-500" />
+                          </td>
+                          <td className="p-2 align-top">
+                            <div className="font-semibold text-gray-900">{message.title}</div>
+                            <div className="text-gray-600 truncate max-w-[280px]">{message.content}</div>
+                          </td>
+                          <td className="p-2 align-middle text-right w-10">
+                             <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                               <Send className="w-3 h-3" />
+                             </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   renderEmptyState('messages')
                 )}
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="audios" className="mt-0">
-              <ScrollArea className="h-80">
+            <TabsContent value="audios" className="mt-0 h-full absolute inset-0">
+              <ScrollArea className="h-full">
                 {audiosLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="text-sm text-muted-foreground">Carregando...</div>
+                    <div className="text-xs text-muted-foreground">Carregando...</div>
                   </div>
                 ) : audios && audios.length > 0 ? (
-                  <div className="space-y-0">
-                    {audios.map(renderAudioItem)}
-                  </div>
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      {audios.map(audio => (
+                         <tr 
+                          key={audio.id} 
+                          className="border-b border-[#d4d4d4] hover:bg-[#e6f2ff] cursor-pointer group"
+                          onClick={() => handleSendAudio(audio)}
+                        >
+                          <td className="p-2 align-top w-8">
+                            <Music className="w-4 h-4 text-gray-500" />
+                          </td>
+                          <td className="p-2 align-top">
+                            <div className="font-semibold text-gray-900">{audio.title}</div>
+                            <div className="text-gray-500">{audio.duration_seconds ? `${audio.duration_seconds}s` : 'Áudio'}</div>
+                          </td>
+                          <td className="p-2 align-middle text-right w-10">
+                             <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                               <Send className="w-3 h-3" />
+                             </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   renderEmptyState('audios')
                 )}
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="media" className="mt-0">
-              <ScrollArea className="h-80">
+            <TabsContent value="media" className="mt-0 h-full absolute inset-0">
+              <ScrollArea className="h-full">
                 {mediaLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="text-sm text-muted-foreground">Carregando...</div>
+                    <div className="text-xs text-muted-foreground">Carregando...</div>
                   </div>
                 ) : media && media.length > 0 ? (
-                  <div className="space-y-0">
-                    {media.map(renderMediaItem)}
-                  </div>
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      {media.map(mediaItem => (
+                        <tr 
+                          key={mediaItem.id} 
+                          className="border-b border-[#d4d4d4] hover:bg-[#e6f2ff] cursor-pointer group"
+                          onClick={() => handleSendMedia(mediaItem)}
+                        >
+                          <td className="p-2 align-top w-8">
+                            <Image className="w-4 h-4 text-gray-500" />
+                          </td>
+                          <td className="p-2 align-top">
+                            <div className="font-semibold text-gray-900">{mediaItem.title}</div>
+                            <div className="text-gray-500">{mediaItem.file_type}</div>
+                          </td>
+                          <td className="p-2 align-middle text-right w-10">
+                             <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                               <Send className="w-3 h-3" />
+                             </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   renderEmptyState('media')
                 )}
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="documents" className="mt-0">
-              <ScrollArea className="h-80">
+            <TabsContent value="documents" className="mt-0 h-full absolute inset-0">
+              <ScrollArea className="h-full">
                 {documentsLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="text-sm text-muted-foreground">Carregando...</div>
+                    <div className="text-xs text-muted-foreground">Carregando...</div>
                   </div>
                 ) : documents && documents.length > 0 ? (
-                  <div className="space-y-0">
-                    {documents.map(renderDocumentItem)}
-                  </div>
+                  <table className="w-full text-xs border-collapse">
+                    <tbody>
+                      {documents.map(doc => (
+                        <tr 
+                          key={doc.id} 
+                          className="border-b border-[#d4d4d4] hover:bg-[#e6f2ff] cursor-pointer group"
+                          onClick={() => handleSendDocument(doc)}
+                        >
+                          <td className="p-2 align-top w-8">
+                            <FileText className="w-4 h-4 text-gray-500" />
+                          </td>
+                          <td className="p-2 align-top">
+                            <div className="font-semibold text-gray-900">{doc.title}</div>
+                            <div className="text-gray-500">{doc.file_type}</div>
+                          </td>
+                          <td className="p-2 align-middle text-right w-10">
+                             <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                               <Send className="w-3 h-3" />
+                             </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   renderEmptyState('documents')
                 )}
               </ScrollArea>
             </TabsContent>
 
-          <TabsContent value="funnels" className="mt-0">
-            <ScrollArea className="h-80">
-              {funnelsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-sm text-muted-foreground">Carregando...</div>
-                </div>
-              ) : funnels && funnels.length > 0 ? (
-                <div className="space-y-0">
-                  {funnels.map(renderFunnelItem)}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
-                    <Workflow className="w-6 h-6 text-muted-foreground" />
+            <TabsContent value="funnels" className="mt-0 h-full absolute inset-0">
+              <ScrollArea className="h-full">
+                {funnelsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-xs text-muted-foreground">Carregando...</div>
                   </div>
-                  <p className="text-sm text-muted-foreground">Nenhum funil encontrado</p>
+                ) : funnels && funnels.length > 0 ? (
+                  <table className="w-full text-xs border-collapse">
+                     <tbody>
+                      {funnels.map(funnel => (
+                        <tr 
+                          key={funnel.id} 
+                          className="border-b border-[#d4d4d4] hover:bg-[#e6f2ff] cursor-pointer group"
+                          onClick={() => handleSendFunnel(funnel)}
+                        >
+                          <td className="p-2 align-top w-8">
+                            <Workflow className="w-4 h-4 text-gray-500" />
+                          </td>
+                          <td className="p-2 align-top">
+                            <div className="font-semibold text-gray-900">{funnel.title}</div>
+                            <div className="text-gray-500">{(funnel.steps || []).length} etapas</div>
+                          </td>
+                          <td className="p-2 align-middle text-right w-10">
+                             <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                               <Send className="w-3 h-3" />
+                             </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center mb-2">
+                      <Workflow className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Nenhum funil encontrado</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </TabsContent>
+          </div>
+          
+          {/* Footer Tabs (Leaves) */}
+          <div className="bg-[#f0f0f0] border-t border-[#d4d4d4] p-1 flex-shrink-0 overflow-x-auto">
+            <TabsList className="flex justify-start gap-1 bg-transparent h-auto p-0 rounded-none w-full">
+              <TabsTrigger 
+                value="messages" 
+                className="rounded-none rounded-t border-x border-t border-transparent data-[state=active]:border-[#d4d4d4] data-[state=active]:bg-white data-[state=active]:shadow-sm px-3 py-1 text-xs text-gray-600 data-[state=active]:text-black shadow-none min-w-[80px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare className="w-3 h-3" />
+                  <span>Mensagens</span>
                 </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="audios" 
+                className="rounded-none rounded-t border-x border-t border-transparent data-[state=active]:border-[#d4d4d4] data-[state=active]:bg-white data-[state=active]:shadow-sm px-3 py-1 text-xs text-gray-600 data-[state=active]:text-black shadow-none min-w-[80px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Music className="w-3 h-3" />
+                  <span>Áudios</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="media" 
+                className="rounded-none rounded-t border-x border-t border-transparent data-[state=active]:border-[#d4d4d4] data-[state=active]:bg-white data-[state=active]:shadow-sm px-3 py-1 text-xs text-gray-600 data-[state=active]:text-black shadow-none min-w-[80px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Image className="w-3 h-3" />
+                  <span>Mídia</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="documents" 
+                className="rounded-none rounded-t border-x border-t border-transparent data-[state=active]:border-[#d4d4d4] data-[state=active]:bg-white data-[state=active]:shadow-sm px-3 py-1 text-xs text-gray-600 data-[state=active]:text-black shadow-none min-w-[80px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3 h-3" />
+                  <span>Docs</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="funnels" 
+                className="rounded-none rounded-t border-x border-t border-transparent data-[state=active]:border-[#d4d4d4] data-[state=active]:bg-white data-[state=active]:shadow-sm px-3 py-1 text-xs text-gray-600 data-[state=active]:text-black shadow-none min-w-[80px]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Workflow className="w-3 h-3" />
+                  <span>Funis</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
           </div>
         </Tabs>
       </DialogContent>

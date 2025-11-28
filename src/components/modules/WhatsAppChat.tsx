@@ -1614,24 +1614,24 @@ export function WhatsAppChat({
   return <div className="flex h-full bg-white overflow-hidden w-full">
       {/* Sidebar de Filtros */}
       {(!onlyMessages) && (
-      <div className={cn("border-r border-border flex flex-col transition-all duration-300 bg-background", sidebarCollapsed ? "w-14" : "w-40 lg:w-48")}>
+      <div className={cn("border-r border-[#d4d4d4] flex flex-col transition-all duration-300 bg-[#f0f0f0]", sidebarCollapsed ? "w-14" : "w-40 lg:w-48")}>
         {/* Header da sidebar */}
-        <div className="p-3 border-b border-border flex items-center justify-between bg-white">
-          {!sidebarCollapsed && <h2 className="text-sm font-semibold">Conversas</h2>}
-          <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="h-8 w-8">
-            <PanelLeft className="h-4 w-4" />
+        <div className="p-3 border-b border-[#d4d4d4] flex items-center justify-between bg-[#f0f0f0]">
+          {!sidebarCollapsed && <h2 className="text-xs font-bold text-gray-800">Conversas</h2>}
+          <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="h-6 w-6 hover:bg-gray-200 rounded-none">
+            <PanelLeft className="h-3.5 w-3.5 text-gray-600" />
           </Button>
         </div>
 
         {/* Select de Canais */}
-        {!sidebarCollapsed && <div className="p-3 border-b border-border bg-white">
+        {!sidebarCollapsed && <div className="p-3 border-b border-[#d4d4d4] bg-[#f0f0f0]">
             <Select value={selectedConnection || "all"} onValueChange={value => setSelectedConnection(value === "all" ? "" : value)}>
-              <SelectTrigger className="w-full h-9 text-xs">
+              <SelectTrigger className="w-full h-8 text-xs rounded-none border-gray-300 bg-white focus:ring-0 text-gray-800">
                 <SelectValue placeholder="Todas as conexões" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as conexões</SelectItem>
-                {connectionsLoading ? <SelectItem value="__loading__" disabled>Carregando...</SelectItem> : workspaceConnections.length === 0 ? <SelectItem value="__empty__" disabled>Nenhuma conexão</SelectItem> : workspaceConnections.map(connection => <SelectItem key={connection.id} value={connection.id}>
+              <SelectContent className="rounded-none border-[#d4d4d4]">
+                <SelectItem value="all" className="text-xs rounded-none cursor-pointer">Todas as conexões</SelectItem>
+                {connectionsLoading ? <SelectItem value="__loading__" disabled className="text-xs">Carregando...</SelectItem> : workspaceConnections.length === 0 ? <SelectItem value="__empty__" disabled className="text-xs">Nenhuma conexão</SelectItem> : workspaceConnections.map(connection => <SelectItem key={connection.id} value={connection.id} className="text-xs rounded-none cursor-pointer">
                       {connection.instance_name}
                     </SelectItem>)}
               </SelectContent>
@@ -1639,23 +1639,23 @@ export function WhatsAppChat({
           </div>}
 
         {/* Categorias de Navegação */}
-        <nav className="flex-1 pr-2 pt-2 pb-2 pl-1 bg-white">
+        <nav className="flex-1 p-2 bg-[#f0f0f0]">
           <div className="space-y-1">
             {/* Todos */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => setActiveTab('all')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'all' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                    <Circle className={cn("h-4 w-4", activeTab === 'all' && "fill-primary text-primary")} />
+                  <button onClick={() => setActiveTab('all')} className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-none transition-all text-xs border", activeTab === 'all' ? "bg-[#FEF3C7] border-gray-300 text-black font-bold shadow-sm" : "border-transparent text-gray-700 hover:bg-[#e1e1e1] hover:border-gray-300")}>
+                    <Circle className={cn("h-3.5 w-3.5", activeTab === 'all' ? "fill-black text-black" : "text-gray-500")} />
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Todos</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                        <span className={cn("text-[10px] px-1 py-0 rounded-none border", activeTab === 'all' ? "bg-white border-gray-300" : "bg-gray-200 border-transparent")}>
                           {conversations.filter(c => c.status !== 'closed').length}
                         </span>
                       </>}
                   </button>
                 </TooltipTrigger>
-                {sidebarCollapsed && <TooltipContent side="right">Todos</TooltipContent>}
+                {sidebarCollapsed && <TooltipContent side="right" className="text-xs rounded-none border-[#d4d4d4]">Todos</TooltipContent>}
               </Tooltip>
             </TooltipProvider>
 
@@ -1663,17 +1663,17 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => setActiveTab('mine')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'mine' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                    <UserCircle className="h-4 w-4" />
+                  <button onClick={() => setActiveTab('mine')} className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-none transition-all text-xs border", activeTab === 'mine' ? "bg-[#FEF3C7] border-gray-300 text-black font-bold shadow-sm" : "border-transparent text-gray-700 hover:bg-[#e1e1e1] hover:border-gray-300")}>
+                    <UserCircle className={cn("h-3.5 w-3.5", activeTab === 'mine' ? "text-black" : "text-gray-500")} />
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Minhas conversas</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                        <span className={cn("text-[10px] px-1 py-0 rounded-none border", activeTab === 'mine' ? "bg-white border-gray-300" : "bg-gray-200 border-transparent")}>
                           {conversations.filter(c => c.assigned_user_id === user?.id && c.status !== 'closed').length}
                         </span>
                       </>}
                   </button>
                 </TooltipTrigger>
-                {sidebarCollapsed && <TooltipContent side="right">Minhas conversas</TooltipContent>}
+                {sidebarCollapsed && <TooltipContent side="right" className="text-xs rounded-none border-[#d4d4d4]">Minhas conversas</TooltipContent>}
               </Tooltip>
             </TooltipProvider>
 
@@ -1681,17 +1681,17 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => setActiveTab('unassigned')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'unassigned' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                    <UserX className="h-4 w-4" />
+                  <button onClick={() => setActiveTab('unassigned')} className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-none transition-all text-xs border", activeTab === 'unassigned' ? "bg-[#FEF3C7] border-gray-300 text-black font-bold shadow-sm" : "border-transparent text-gray-700 hover:bg-[#e1e1e1] hover:border-gray-300")}>
+                    <UserX className={cn("h-3.5 w-3.5", activeTab === 'unassigned' ? "text-black" : "text-gray-500")} />
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Não atribuídas</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                        <span className={cn("text-[10px] px-1 py-0 rounded-none border", activeTab === 'unassigned' ? "bg-white border-gray-300" : "bg-gray-200 border-transparent")}>
                           {conversations.filter(c => !c.assigned_user_id && c.status !== 'closed').length}
                         </span>
                       </>}
                   </button>
                 </TooltipTrigger>
-                {sidebarCollapsed && <TooltipContent side="right">Não atribuídas</TooltipContent>}
+                {sidebarCollapsed && <TooltipContent side="right" className="text-xs rounded-none border-[#d4d4d4]">Não atribuídas</TooltipContent>}
               </Tooltip>
             </TooltipProvider>
 
@@ -1699,17 +1699,17 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => setActiveTab('unread')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'unread' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                    <MessageCircle className="h-4 w-4" />
+                  <button onClick={() => setActiveTab('unread')} className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-none transition-all text-xs border", activeTab === 'unread' ? "bg-[#FEF3C7] border-gray-300 text-black font-bold shadow-sm" : "border-transparent text-gray-700 hover:bg-[#e1e1e1] hover:border-gray-300")}>
+                    <MessageCircle className={cn("h-3.5 w-3.5", activeTab === 'unread' ? "text-black" : "text-gray-500")} />
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Não lidas</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                        <span className={cn("text-[10px] px-1 py-0 rounded-none border", activeTab === 'unread' ? "bg-white border-gray-300" : "bg-gray-200 border-transparent")}>
                           {conversations.filter(c => conversationNotifications.has(c.id) && c.status !== 'closed').length}
                         </span>
                       </>}
                   </button>
                 </TooltipTrigger>
-                {sidebarCollapsed && <TooltipContent side="right">Não lidas</TooltipContent>}
+                {sidebarCollapsed && <TooltipContent side="right" className="text-xs rounded-none border-[#d4d4d4]">Não lidas</TooltipContent>}
               </Tooltip>
             </TooltipProvider>
 
@@ -1717,44 +1717,44 @@ export function WhatsAppChat({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => setActiveTab('groups')} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm bg-white", activeTab === 'groups' ? "text-primary font-medium border border-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-                    <UsersRound className="h-4 w-4" />
+                  <button onClick={() => setActiveTab('groups')} className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-none transition-all text-xs border", activeTab === 'groups' ? "bg-[#FEF3C7] border-gray-300 text-black font-bold shadow-sm" : "border-transparent text-gray-700 hover:bg-[#e1e1e1] hover:border-gray-300")}>
+                    <UsersRound className={cn("h-3.5 w-3.5", activeTab === 'groups' ? "text-black" : "text-gray-500")} />
                     {!sidebarCollapsed && <>
                         <span className="flex-1 text-left">Grupos</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted">
+                        <span className={cn("text-[10px] px-1 py-0 rounded-none border", activeTab === 'groups' ? "bg-white border-gray-300" : "bg-gray-200 border-transparent")}>
                           0
                         </span>
                       </>}
                   </button>
                 </TooltipTrigger>
-                {sidebarCollapsed && <TooltipContent side="right">Grupos</TooltipContent>}
+                {sidebarCollapsed && <TooltipContent side="right" className="text-xs rounded-none border-[#d4d4d4]">Grupos</TooltipContent>}
               </Tooltip>
             </TooltipProvider>
           </div>
             </nav>
 
             {/* Seção Customizado */}
-        {!sidebarCollapsed && <div className="border-t border-border p-2">
+        {!sidebarCollapsed && <div className="border-t border-[#d4d4d4] p-2 bg-[#f0f0f0]">
             <Collapsible open={customFiltersOpen} onOpenChange={setCustomFiltersOpen}>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between h-9 px-3 text-sm font-medium">
+                <Button variant="ghost" className="w-full justify-between h-8 px-2 text-xs font-bold text-gray-700 hover:bg-[#e1e1e1] rounded-none">
                   <div className="flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
+                    <Tag className="h-3.5 w-3.5" />
                     <span>Customizado</span>
                   </div>
-                  <Plus className={cn("h-4 w-4 transition-transform", customFiltersOpen && "rotate-45")} />
+                  <Plus className={cn("h-3.5 w-3.5 transition-transform", customFiltersOpen && "rotate-45")} />
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-1 mt-1">
                 {/* Filtro por Tag */}
-                <div className="px-2">
+                <div className="px-1">
                   <Select value={selectedTag || "all"} onValueChange={value => setSelectedTag(value === "all" ? "" : value)}>
-                    <SelectTrigger className="w-full h-8 text-xs">
+                    <SelectTrigger className="w-full h-8 text-xs rounded-none border-gray-300 bg-white focus:ring-0">
                       <SelectValue placeholder="Filtrar por tag" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas as tags</SelectItem>
-                      {tags.map(tag => <SelectItem key={tag.id} value={tag.id}>
+                    <SelectContent className="rounded-none border-[#d4d4d4]">
+                      <SelectItem value="all" className="text-xs rounded-none cursor-pointer">Todas as tags</SelectItem>
+                      {tags.map(tag => <SelectItem key={tag.id} value={tag.id} className="text-xs rounded-none cursor-pointer">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{
                         backgroundColor: tag.color || '#808080'
@@ -1767,10 +1767,10 @@ export function WhatsAppChat({
                 </div>
 
                 {/* Botão Limpar */}
-                {selectedTag && <div className="px-2 pt-1">
+                {selectedTag && <div className="px-1 pt-1">
                     <Button variant="outline" size="sm" onClick={() => {
                 setSelectedTag("");
-              }} className="w-full h-7 text-xs">
+              }} className="w-full h-7 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100 text-gray-700">
                       Limpar filtros
                     </Button>
                   </div>}
@@ -1784,12 +1784,12 @@ export function WhatsAppChat({
       {(!onlyMessages) && (
       <div className="w-full md:w-72 lg:w-72 md:min-w-72 lg:min-w-72 border-r border-border flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-border space-y-3">
+        <div className="p-3 border-b border-[#d4d4d4] space-y-3 bg-white">
           {/* Search bar */}
           <div className="flex items-center gap-2">
             <div className="flex items-center flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 pr-3 border-0 shadow-none bg-muted/30" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input placeholder="Buscar" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 pr-3 h-8 text-xs rounded-none border border-[#d4d4d4] shadow-none bg-white focus-visible:ring-0" />
             </div>
             
             {/* Botão de atualizar */}
@@ -1804,12 +1804,12 @@ export function WhatsAppChat({
                       await fetchConversations();
                     }}
                     disabled={loading}
-                    className="h-9 w-9 shrink-0"
+                    className="h-8 w-8 shrink-0 rounded-none border border-[#d4d4d4] hover:bg-gray-100"
                   >
-                    <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                    <RefreshCw className={cn("h-3.5 w-3.5 text-gray-600", loading && "animate-spin")} />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Atualizar conversas</TooltipContent>
+                <TooltipContent className="rounded-none border-[#d4d4d4]">Atualizar conversas</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -1840,12 +1840,12 @@ export function WhatsAppChat({
                   <li key={cardKey} className="list-none">
                   <ContextMenu>
                     <ContextMenuTrigger asChild>
-                      <div className={cn("relative flex items-center px-4 py-2 cursor-pointer rounded-lg transition-all duration-300 ease-in-out border-b border-border/50", "group-hover/list:opacity-30 hover:!opacity-100 hover:shadow-lg hover:scale-[1.02] hover:translate-x-1 hover:bg-white hover:z-10", selectedConversation?.id === conversation.id && "bg-muted !opacity-100")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
+                      <div className={cn("relative flex items-center px-3 py-2 cursor-pointer rounded-none transition-all duration-300 ease-in-out border-b border-[#d4d4d4] bg-white", "group-hover/list:opacity-70 hover:!opacity-100 hover:bg-[#e6f2ff] hover:z-10", selectedConversation?.id === conversation.id && "bg-[#e6f2ff] !opacity-100")} onClick={() => handleSelectConversation(conversation)} role="button" tabIndex={0}>
                   {/* Status indicator bar - cor da conexão */}
                   {/* Barra de status/identificação da conexão com tooltip detalhado */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="absolute left-0 top-0 bottom-0 w-1 rounded-r" style={{
+                      <span className="absolute left-0 top-0 bottom-0 w-1" style={{
                     backgroundColor: (() => {
                       // Se tem conexão, usa cor da conexão (salva ou gerada por hash)
                       if (conversation.connection) {
@@ -1859,10 +1859,10 @@ export function WhatsAppChat({
                     })()
                   }} />
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
+                    <TooltipContent side="right" className="max-w-xs rounded-none border-[#d4d4d4]">
                       {conversation.connection ? (
                         <div className="space-y-1">
-                          <p className="text-xs font-semibold">{conversation.connection.instance_name || 'Instância'}</p>
+                          <p className="text-xs font-bold">{conversation.connection.instance_name || 'Instância'}</p>
                           {conversation.connection.phone_number && (
                             <p className="text-xs text-muted-foreground">{conversation.connection.phone_number}</p>
                           )}
@@ -1888,7 +1888,7 @@ export function WhatsAppChat({
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          <p className="text-xs font-semibold">{conversation.agente_ativo ? 'AGENTE IA' : 'ATIVO'}</p>
+                          <p className="text-xs font-bold">{conversation.agente_ativo ? 'AGENTE IA' : 'ATIVO'}</p>
                           <p className="text-[10px] text-muted-foreground">Sem conexão vinculada</p>
                         </div>
                       )}
@@ -1898,10 +1898,10 @@ export function WhatsAppChat({
                     {/* Avatar container */}
                     <div className="flex-shrink-0 mr-3 ml-2">
                       <div className="relative">
-                        <div className="relative w-10 h-10">
-                          <Avatar className="h-10 w-10">
-                            {conversation.contact?.profile_image_url && <AvatarImage src={conversation.contact.profile_image_url} alt={conversation.contact?.name || conversation.contact?.phone} className="object-cover" />}
-                            <AvatarFallback className="text-white font-medium text-sm" style={{
+                        <div className="relative w-9 h-9">
+                          <Avatar className="h-9 w-9 rounded-none">
+                            {conversation.contact?.profile_image_url && <AvatarImage src={conversation.contact.profile_image_url} alt={conversation.contact?.name || conversation.contact?.phone} className="object-cover rounded-none" />}
+                            <AvatarFallback className="text-white font-bold text-xs rounded-none" style={{
                               backgroundColor: avatarColor
                             }}>
                               {initials}
@@ -1910,15 +1910,15 @@ export function WhatsAppChat({
                           
                           {/* Badge de mensagens não lidas - baseado em notificações */}
                           {conversationNotifications.has(conversation.id) && (
-                            <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                              <span className="text-white text-xs font-semibold">
+                            <div className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-sm">
+                              <span className="text-white text-[10px] font-bold leading-none">
                                 {conversationNotifications.get(conversation.id)! > 99 ? '99+' : conversationNotifications.get(conversation.id)}
                               </span>
                             </div>
                           )}
                           
                           {/* WhatsApp status icon */}
-                          <svg className="absolute -bottom-1 -right-1 w-5 h-5 text-green-500 bg-white rounded-full p-0.5" viewBox="0 0 24 24" fill="currentColor">
+                          <svg className="absolute -bottom-1 -right-1 w-4 h-4 text-green-600 bg-white rounded-full p-0.5 shadow-sm" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M16.75 13.96c.25.13.41.2.46.3.06.11.04.61-.21 1.18-.2.56-1.24 1.1-1.7 1.12-.46.02-.47.36-2.96-.73-2.49-1.09-3.99-3.75-4.11-3.92-.12-.17-.96-1.38-.92-2.61.05-1.22.69-1.8.95-2.04.24-.26.51-.29.68-.26h.47c.15 0 .36-.06.55.45l.69 1.87c.06.13.1.28.01.44l-.27.41-.39.42c-.12.12-.26.25-.12.5.12.26.62 1.09 1.32 1.78.91.88 1.71 1.17 1.95 1.3.24.14.39.12.54-.04l.81-.94c.19-.25.35-.19.58-.11l1.67.88M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10c-1.97 0-3.8-.57-5.35-1.55L2 22l1.55-4.65A9.969 9.969 0 0 1 2 12 10 10 0 0 1 12 2m0 2a8 8 0 0 0-8 8c0 1.72.54 3.31 1.46 4.61L4.5 19.5l2.89-.96A7.95 7.95 0 0 0 12 20a8 8 0 0 0 8-8 8 8 0 0 0-8-8z" />
                           </svg>
                         </div>
@@ -1929,11 +1929,7 @@ export function WhatsAppChat({
                     <div className="flex-1 min-w-0">
                        {/* First line: Name with connection badge */}
                        <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
-                        <span className="text-xs font-normal text-foreground tracking-tight truncate whitespace-nowrap overflow-hidden text-ellipsis block" style={{
-                          fontWeight: 400,
-                          letterSpacing: '-0.2px',
-                          fontSize: '12px'
-                        }}>
+                        <span className="text-xs font-bold text-gray-900 tracking-tight truncate whitespace-nowrap overflow-hidden text-ellipsis block">
                           {conversation.contact?.name || conversation.contact?.phone}
                         </span>
                           <ConnectionBadge 
@@ -1945,13 +1941,9 @@ export function WhatsAppChat({
                         {/* ✅ Última mensagem da conversa */}
                       <div className="flex items-center min-w-0">
                         <span className={cn(
-                          "text-foreground/87 truncate whitespace-nowrap overflow-hidden text-ellipsis block",
-                          conversationNotifications.has(conversation.id) && "font-bold text-foreground"
-                        )} style={{
-                          fontSize: '11px',
-                          fontWeight: conversationNotifications.has(conversation.id) ? 600 : 400,
-                          letterSpacing: '0px'
-                        }}>
+                          "text-gray-600 truncate whitespace-nowrap overflow-hidden text-ellipsis block text-[11px]",
+                          conversationNotifications.has(conversation.id) && "font-bold text-gray-900"
+                        )}>
                           {conversation.last_message?.[0] ? <>
                               {conversation.last_message[0].sender_type === 'contact' ? '' : 'Você: '}
                               {conversation.last_message[0].message_type === 'text' ? conversation.last_message[0].content : `${conversation.last_message[0].message_type === 'image' ? '📷' : conversation.last_message[0].message_type === 'video' ? '🎥' : conversation.last_message[0].message_type === 'audio' ? '🎵' : '📄'} ${conversation.last_message[0].message_type.charAt(0).toUpperCase() + conversation.last_message[0].message_type.slice(1)}`}
@@ -1964,36 +1956,37 @@ export function WhatsAppChat({
                 <div className="flex flex-col items-end gap-1 ml-2">
                   {/* Timestamp - ACIMA */}
                   <div className="text-right">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] text-gray-500">
                       {lastActivity}
                     </span>
                   </div>
                   
                   {/* Tag/Label system + Avatar */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {/* Tags */}
                     {conversation.tags && conversation.tags.length > 0 && <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1">
-                              {conversation.tags.slice(0, 2).map((tag: any) => <Badge key={tag.id} variant="outline" className="text-[10px] px-1 py-0 h-4" style={{
+                            <div className="flex items-center gap-0.5">
+                              {conversation.tags.slice(0, 2).map((tag: any) => <Badge key={tag.id} variant="outline" className="text-[9px] px-1 py-0 h-3.5 rounded-none border" style={{
                                   borderColor: tag.color || '#8B5CF6',
-                                  color: tag.color || '#8B5CF6'
+                                  color: tag.color || '#8B5CF6',
+                                  backgroundColor: 'transparent'
                                 }}>
                                   {tag.name}
                                 </Badge>)}
-                              {conversation.tags.length > 2 && <span className="text-[10px] text-muted-foreground">
+                              {conversation.tags.length > 2 && <span className="text-[9px] text-gray-400">
                                   +{conversation.tags.length - 2}
                                 </span>}
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent className="rounded-none border-[#d4d4d4]">
                             <div className="space-y-1">
                               {conversation.tags.map((tag: any) => <div key={tag.id} className="flex items-center gap-2">
-                                  <div className="w-3 h-3 rounded-full" style={{
+                                  <div className="w-2.5 h-2.5 rounded-full" style={{
                                     backgroundColor: tag.color || '#8B5CF6'
                                   }} />
-                                  <span>{tag.name}</span>
+                                  <span className="text-xs">{tag.name}</span>
                                 </div>)}
                             </div>
                           </TooltipContent>
@@ -2004,7 +1997,7 @@ export function WhatsAppChat({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Avatar className="w-6 h-6 rounded-full">
+                          <Avatar className="w-5 h-5 rounded-none">
                             {conversation.assigned_user_id && assignedUsersMap.get(conversation.assigned_user_id)?.avatar ? (
                               <AvatarImage
                                 src={assignedUsersMap.get(conversation.assigned_user_id)!.avatar || ''}
@@ -2012,7 +2005,7 @@ export function WhatsAppChat({
                                 className="object-cover"
                               />
                             ) : null}
-                            <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-medium">
+                            <AvatarFallback className="bg-gray-100 text-gray-500 text-[9px] font-bold rounded-none border border-gray-200">
                               {(() => {
                                 const displayName = conversation.assigned_user_name || assignedUsersMap.get(conversation.assigned_user_id || '')?.name;
                                 return displayName ? displayName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '?';
@@ -2020,8 +2013,8 @@ export function WhatsAppChat({
                             </AvatarFallback>
                           </Avatar>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{(conversation.assigned_user_name || assignedUsersMap.get(conversation.assigned_user_id || '')?.name)?.split(' ')[0] || 'Não atribuído'}</p>
+                        <TooltipContent className="rounded-none border-[#d4d4d4]">
+                          <p className="text-xs">{(conversation.assigned_user_name || assignedUsersMap.get(conversation.assigned_user_id || '')?.name)?.split(' ')[0] || 'Não atribuído'}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -2029,13 +2022,13 @@ export function WhatsAppChat({
                 </div>
                   </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent>
+                    <ContextMenuContent className="rounded-none border-[#d4d4d4]">
                       <ContextMenuItem onClick={e => {
                     e.stopPropagation();
                     setPeekConversationId(conversation.id);
                     setPeekModalOpen(true);
-                  }}>
-                        <Eye className="h-4 w-4 mr-2" />
+                  }} className="text-xs rounded-none focus:bg-[#e6f2ff]">
+                        <Eye className="h-3.5 w-3.5 mr-2" />
                         Espiar
                       </ContextMenuItem>
                     </ContextMenuContent>
@@ -2048,19 +2041,19 @@ export function WhatsAppChat({
         </ScrollArea>
 
         {/* Campo para nova conversa */}
-        <div className="p-4 border-t border-border">
+        <div className="p-3 border-t border-[#d4d4d4] bg-gray-50">
           <div className="flex gap-2">
-            <div className="flex-1 flex gap-0 border rounded-md overflow-hidden">
+            <div className="flex-1 flex gap-0 border border-[#d4d4d4] rounded-none bg-white overflow-hidden">
               {/* Prefixo fixo +55 */}
-              <div className="flex items-center bg-muted px-3 border-r">
-                <span className="text-sm font-medium text-muted-foreground">+55</span>
+              <div className="flex items-center bg-[#f0f0f0] px-3 border-r border-[#d4d4d4]">
+                <span className="text-xs font-bold text-gray-600">+55</span>
               </div>
               
               {/* Input do número */}
               <div className="relative flex-1">
-                <Input placeholder="21999999999" value={quickPhoneNumber} onChange={e => setQuickPhoneNumber(e.target.value.replace(/\D/g, ''))} onKeyPress={handleQuickConversationKeyPress} className="border-0 focus-visible:ring-0 pr-10" disabled={isCreatingQuickConversation} maxLength={11} />
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8" disabled={!quickPhoneNumber.trim() || isCreatingQuickConversation} onClick={handleCreateQuickConversation}>
-                  {isCreatingQuickConversation ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <ArrowRight className="w-4 h-4" />}
+                <Input placeholder="21999999999" value={quickPhoneNumber} onChange={e => setQuickPhoneNumber(e.target.value.replace(/\D/g, ''))} onKeyPress={handleQuickConversationKeyPress} className="border-0 focus-visible:ring-0 pr-10 h-8 text-xs rounded-none bg-white shadow-none" disabled={isCreatingQuickConversation} maxLength={11} />
+                <Button variant="ghost" size="icon" className="absolute right-0 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-none hover:bg-gray-200" disabled={!quickPhoneNumber.trim() || isCreatingQuickConversation} onClick={handleCreateQuickConversation}>
+                  {isCreatingQuickConversation ? <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <ArrowRight className="w-3.5 h-3.5" />}
                 </Button>
               </div>
             </div>
@@ -2073,7 +2066,7 @@ export function WhatsAppChat({
       <div className="flex-1 flex flex-col">
         {selectedConversation ? <>
             {/* Cabeçalho do chat */}
-            <div className="p-4 border-b border-border bg-white">
+            <div className="px-4 py-3 border-b border-[#d4d4d4] bg-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {!onlyMessages && (
@@ -2084,29 +2077,29 @@ export function WhatsAppChat({
                           variant="ghost"
                           size="icon"
                           onClick={handleBackToList}
-                          className="h-9 w-9 hover:bg-muted"
+                          className="h-8 w-8 hover:bg-gray-100 rounded-none border border-[#d4d4d4]"
                         >
-                          <ArrowRight className="h-5 w-5 rotate-180" />
+                          <ArrowRight className="h-4 w-4 rotate-180 text-gray-600" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>
+                      <TooltipContent className="rounded-none border-[#d4d4d4]">
                         <p>Voltar à lista (ESC)</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                   )}
 
-                   <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all" onClick={() => setContactPanelOpen(true)}>
+                   <Avatar className="w-9 h-9 cursor-pointer rounded-none border border-[#d4d4d4] shadow-sm" onClick={() => setContactPanelOpen(true)}>
                     {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
                     <AvatarFallback style={{
                   backgroundColor: getAvatarColor(selectedConversation.contact?.name || '')
-                }} className="text-white">
+                }} className="text-white font-bold text-xs rounded-none">
                       {getInitials(selectedConversation.contact?.name || '')}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-gray-900 text-base">
+                    <h3 className="font-bold text-gray-900 text-sm tracking-tight">
                       {selectedConversation.contact?.name}
                     </h3>
                     <div className="flex items-center gap-2">
@@ -2128,28 +2121,28 @@ export function WhatsAppChat({
                     {selectedConversation.agente_ativo && agent ? (
                       <button
                         onClick={() => setChangeAgentModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 group"
+                        className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-green-50 to-emerald-50 border border-[#d4d4d4] rounded-none shadow-sm hover:shadow-md transition-all group h-8"
                         title="Agente ativo - clique para trocar"
                       >
                         <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50" />
                           <Bot className="w-3.5 h-3.5 text-green-600 group-hover:scale-110 transition-transform" />
                         </div>
-                        <span className="text-xs font-semibold text-green-700 leading-none">
+                        <span className="text-xs font-bold text-green-700 leading-none">
                           {agent.name}
                         </span>
                       </button>
                     ) : (
                       <button
                         onClick={() => setChangeAgentModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all hover:border-green-300 hover:from-green-50 hover:to-emerald-50 group"
+                        className="flex items-center gap-2 px-3 py-1 bg-gray-50 border border-[#d4d4d4] rounded-none shadow-sm hover:shadow-md transition-all hover:bg-gray-100 group h-8"
                         title="Clique para ativar um agente"
                       >
                         <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full group-hover:bg-green-500 transition-colors" />
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full group-hover:bg-green-500 transition-colors" />
                           <Bot className="w-3.5 h-3.5 text-gray-600 group-hover:text-green-600 group-hover:scale-110 transition-all" />
                         </div>
-                        <span className="text-xs font-semibold text-gray-700 group-hover:text-green-700 leading-none transition-colors">
+                        <span className="text-xs font-bold text-gray-700 group-hover:text-green-700 leading-none transition-colors">
                           Ativar
                         </span>
                       </button>
@@ -2157,10 +2150,10 @@ export function WhatsAppChat({
                     
                     <button
                       onClick={() => setAssignmentHistoryModalOpen(true)}
-                      className="p-2 hover:bg-accent rounded-full transition-colors"
+                      className="p-1.5 hover:bg-gray-100 rounded-none border border-[#d4d4d4] h-8 w-8 flex items-center justify-center transition-colors"
                       title="Ver histórico de agentes e transferências"
                     >
-                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Clock className="h-3.5 w-3.5 text-gray-500" />
                     </button>
                   </div>
                   
@@ -2187,9 +2180,9 @@ export function WhatsAppChat({
 
                 // Refresh conversations to sync with server and update the list
                 await fetchConversations();
-              }} className="h-8 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md" />
+              }} className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-none" />
                   
-                  <EndConversationButton conversation={selectedConversation} className="h-8 px-4" />
+                  <EndConversationButton conversation={selectedConversation} className="h-8 px-3 rounded-none text-xs font-bold border-[#d4d4d4]" />
                   
                   {selectedConversation && (
                     <DropdownMenu>
@@ -2197,18 +2190,19 @@ export function WhatsAppChat({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 rounded-none border-[#d4d4d4] hover:bg-gray-100"
                           title="Mais ações"
                         >
-                          <MoreVertical className="h-4 w-4" />
+                          <MoreVertical className="h-3.5 w-3.5 text-gray-600" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuContent align="end" className="w-44 rounded-none border-[#d4d4d4]">
                         <DropdownMenuItem
                           onSelect={(event) => {
                             event.preventDefault();
                             setTransferModalOpen(true);
                           }}
+                          className="rounded-none text-xs font-medium focus:bg-[#e6f2ff]"
                         >
                           Transferir
                         </DropdownMenuItem>
@@ -2217,7 +2211,7 @@ export function WhatsAppChat({
                             event.preventDefault();
                             setDeleteDialogOpen(true);
                           }}
-                          className="text-destructive focus:text-destructive"
+                          className="text-destructive focus:text-destructive rounded-none text-xs font-medium focus:bg-red-50"
                         >
                           Deletar
                         </DropdownMenuItem>
@@ -2236,7 +2230,7 @@ export function WhatsAppChat({
           )}
           
           <ScrollArea 
-            className="h-full px-4 py-2" 
+            className="h-full bg-white" 
             ref={node => {
               if (node) {
                 const scrollContainer = node.querySelector('[data-radix-scroll-area-viewport]');
@@ -2247,6 +2241,7 @@ export function WhatsAppChat({
             }}
             onScroll={handleScroll}
           >
+            <div className="p-4">
               {/* Botão Carregar Mais Mensagens */}
               {hasMore && !loadingMore && messages.length > 0 && (
                 <div className="flex justify-center py-3">
@@ -2257,7 +2252,7 @@ export function WhatsAppChat({
                       console.log('🔘 Clicou em Carregar Mais - scroll atual:', messagesScrollRef.current?.scrollTop);
                       loadMoreMessages();
                     }}
-                    className="text-xs"
+                    className="text-xs rounded-none border-[#d4d4d4] hover:bg-gray-100"
                   >
                     Carregar mais mensagens
                   </Button>
@@ -2268,8 +2263,8 @@ export function WhatsAppChat({
               {loadingMore && (
                 <div className="flex justify-center py-3">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
-                    <span className="text-sm">Carregando mensagens...</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                    <span className="text-xs">Carregando mensagens...</span>
                   </div>
                 </div>
               )}
@@ -2281,17 +2276,18 @@ export function WhatsAppChat({
                 </div>
               )}
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {Array.from(messagesByDate.entries()).map(([dateKey, dateMessages]) => {
                   const firstMessage = dateMessages[0];
                   const dateLabel = formatMessageDate(firstMessage.created_at);
                   
                   return (
-                    <div key={dateKey}>
+                    <div key={dateKey} className="space-y-4">
                       {/* Separador de data */}
                       <DateSeparator date={dateLabel} />
                       
                       {/* Mensagens do dia */}
+                      <div className="space-y-2">
                       {dateMessages.map(message => {
                         const displayStatus = getDisplayMessageStatus(message);
                         const isContactMessage = message.sender_type === 'contact';
@@ -2305,48 +2301,51 @@ export function WhatsAppChat({
                             key={message.id} 
                             data-message-id={message.id} 
                             className={cn(
-                              "flex items-start gap-3 max-w-[80%] relative mb-3",
+                              "flex items-start gap-2 max-w-[85%] relative group/message",
                               isContactMessage ? "flex-row" : "flex-row-reverse ml-auto",
                               selectionMode && "cursor-pointer",
-                              selectedMessages.has(message.id) && "bg-gray-200 dark:bg-gray-700/50 rounded-lg"
+                              selectedMessages.has(message.id) && "bg-blue-50/50 ring-1 ring-blue-200"
                             )}
                             onClick={() => selectionMode && toggleMessageSelection(message.id)}
                           >
-                    {isContactMessage && <Avatar className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-1 transition-all" onClick={() => setContactPanelOpen(true)}>
+                    {isContactMessage && <Avatar className="w-6 h-6 flex-shrink-0 cursor-pointer hover:ring-1 hover:ring-primary rounded-none border border-[#d4d4d4]" onClick={() => setContactPanelOpen(true)}>
                         {selectedConversation.contact?.profile_image_url && <AvatarImage src={selectedConversation.contact.profile_image_url} alt={selectedConversation.contact?.name} className="object-cover" />}
-                        <AvatarFallback className={cn("text-white text-xs", getAvatarColor(selectedConversation.contact?.name || ''))}>
+                        <AvatarFallback className={cn("text-white text-[9px] font-bold rounded-none", getAvatarColor(selectedConversation.contact?.name || ''))}>
                           {getInitials(selectedConversation.contact?.name || '')}
                         </AvatarFallback>
                       </Avatar>}
                      
                      <div className={cn(
-                       "max-w-full group relative",
-                       message.message_type === 'audio' ? "" : "rounded-lg",
+                       "max-w-full group relative shadow-sm border",
+                       message.message_type === 'audio' ? "border-transparent shadow-none" : "rounded-none",
                        // Mensagens de contato
                        isContactMessage 
                          ? message.message_type === 'audio' 
                            ? "" 
                            : message.message_type === 'image' || message.message_type === 'video' 
-                             ? "bg-transparent" 
-                             : "bg-muted px-2 py-1.5"
+                             ? "bg-transparent border-none shadow-none" 
+                             : "bg-white border-[#d4d4d4]"
                        // Mensagens do agente IA (origem_resposta: automatica)
                        : message.origem_resposta === 'automatica'
                          ? message.message_type === 'audio'
                            ? ""
                            : message.message_type === 'image' || message.message_type === 'video'
-                             ? "bg-transparent"
-                             : "bg-green-50 dark:bg-green-950/20 px-2 py-1.5"
+                             ? "bg-transparent border-none shadow-none"
+                             : "bg-[#f0fdf4] border-green-200"
                        // Mensagens normais do agente
                        : message.message_type !== 'text' && message.file_url 
                          ? message.message_type === 'audio' 
                            ? "" 
                            : message.message_type === 'image' || message.message_type === 'video' 
-                             ? "bg-transparent" 
-                             : "bg-primary px-2 py-1.5" 
-                         : "bg-primary text-primary-foreground px-2 py-1.5"
+                             ? "bg-transparent border-none shadow-none" 
+                             : "bg-[#e6f2ff] border-[#d4d4d4]" 
+                         : "bg-[#e6f2ff] border-[#d4d4d4]",
+                         // Padding base
+                         message.message_type !== 'audio' && !(message.message_type === 'image' || message.message_type === 'video') && "px-3 py-2"
                      )}>
                       {/* Menu de contexto */}
-                      {!selectionMode && <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => handleReply(message)} onDownload={message.file_url ? () => {
+                      {!selectionMode && <div className="opacity-0 group-hover/message:opacity-100 transition-opacity absolute top-0 right-0 z-10">
+                        <MessageContextMenu onForward={() => handleMessageForward(message.id)} onReply={() => handleReply(message)} onDownload={message.file_url ? () => {
                   const link = document.createElement('a');
                   link.href = message.file_url!;
                   link.download = message.file_name || 'download';
@@ -2354,7 +2353,8 @@ export function WhatsAppChat({
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
-                } : undefined} hasDownload={!!message.file_url} />}
+                } : undefined} hasDownload={!!message.file_url} />
+                      </div>}
                       
                       {/* Mostrar mensagem quotada se existir */}
                       {message.quoted_message && message.reply_to_message_id && (
@@ -2383,36 +2383,25 @@ export function WhatsAppChat({
                           caption={message.content}
                         />
                       ) : (
-                        <div className="flex items-end justify-between gap-2 min-w-0">
+                        <div className="flex flex-col min-w-[120px]">
                     <p className={cn(
-                      "text-sm break-words flex-1",
-                      message.origem_resposta === 'automatica' && "text-green-900 dark:text-green-100"
+                      "text-xs leading-relaxed text-gray-900 break-words",
+                      message.origem_resposta === 'automatica' && "text-green-900"
                     )}>{message.content}</p>
                     
-                    <div className="flex items-center gap-1 flex-shrink-0 self-end" style={{ fontSize: '11px' }}>
-                      <span className={cn(
-                        isContactMessage 
-                          ? "text-muted-foreground"
-                          : message.origem_resposta === 'automatica'
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-primary-foreground/70"
-                      )}>
+                    <div className="flex items-center justify-end gap-1 mt-1 select-none">
+                      <span className="text-[9px] text-gray-400 font-medium">
                         {new Date(message.created_at).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
                       </span>
-                      {displayStatus && (
-                        <>
-                          {console.log('📊 [RENDER] MessageStatusIndicator:', {
-                            messageId: message.id,
-                            displayStatus,
-                            timestamp: new Date().toISOString()
-                          })}
+                      {displayStatus && !isContactMessage && (
+                        <div className="scale-75 origin-right">
                           <MessageStatusIndicator 
                             status={displayStatus} 
                           />
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2421,12 +2410,14 @@ export function WhatsAppChat({
                   </div>
                         );
                       })}
+                      </div>
                     </div>
                   );
                 })}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
+          </ScrollArea>
           </div>
 
             {/* Reply Preview */}
@@ -2439,29 +2430,29 @@ export function WhatsAppChat({
             )}
 
             {/* Campo de entrada de mensagem */}
-            <div className="p-4 border-t border-border relative">
-              {isRecording ? <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+            <div className="p-3 border-t border-[#d4d4d4] relative bg-gray-50">
+              {isRecording ? <div className="flex items-center gap-3 bg-white border border-[#d4d4d4] p-2 rounded-none shadow-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-bold text-gray-700">
                       Gravando...
                     </span>
                   </div>
                   
                   <div className="flex-1 text-center">
-                    <span className="text-lg font-mono font-semibold text-gray-900 dark:text-white">
+                    <span className="text-sm font-mono font-bold text-gray-900">
                       {String(Math.floor(recordingTime / 60)).padStart(2, '0')}:
                       {String(recordingTime % 60).padStart(2, '0')}
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Button onClick={cancelRecording} size="icon" variant="ghost" className="h-10 w-10 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50" title="Cancelar gravação">
-                      <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <Button onClick={cancelRecording} size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-red-50 text-red-600" title="Cancelar gravação">
+                      <X className="w-4 h-4" />
                     </Button>
                     
-                    <Button onClick={stopRecording} size="icon" className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600" title="Enviar áudio">
-                      <Check className="w-5 h-5 text-white" />
+                    <Button onClick={stopRecording} size="icon" className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-white" title="Enviar áudio">
+                      <Check className="w-4 h-4" />
                     </Button>
                   </div>
                 </div> : <div className="flex items-end gap-2">
@@ -2557,8 +2548,8 @@ export function WhatsAppChat({
               }
             }} />
                   
-                  <Button variant="ghost" size="sm" title="Mensagens Rápidas" onClick={() => setQuickItemsModalOpen(true)}>
-                    <svg className="w-4 h-4" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                  <Button variant="ghost" size="sm" title="Mensagens Rápidas" onClick={() => setQuickItemsModalOpen(true)} className="h-9 w-9 p-0 rounded-none border border-[#d4d4d4] hover:bg-gray-200 bg-white">
+                    <svg className="w-4 h-4 text-gray-600" focusable="false" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
                       <circle cx="9" cy="9" r="4"></circle>
                       <path d="M9 15c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm7.76-9.64l-1.68 1.69c.84 1.18.84 2.71 0 3.89l1.68 1.69c2.02-2.02 2.02-5.07 0-7.27zM20.07 2l-1.63 1.63c2.77 3.02 2.77 7.56 0 10.74L20.07 16c3.9-3.89 3.91-9.95 0-14z"></path>
                     </svg>
@@ -2574,13 +2565,13 @@ export function WhatsAppChat({
                           handleSendMessage();
                         }
                       }} 
-                      className="resize-none" 
+                      className="resize-none h-9 text-xs rounded-none border-gray-300 focus-visible:ring-0 focus-visible:border-primary bg-white shadow-sm" 
                     />
                   </div>
-                  <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio">
-                    <Mic className="w-4 h-4" />
+                  <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio" className="h-9 w-9 rounded-none border border-[#d4d4d4] hover:bg-gray-200 bg-white shadow-none">
+                    <Mic className="w-4 h-4 text-gray-600" />
                   </Button>
-                  <Button onClick={handleSendMessage} disabled={!messageText.trim() || isSending} size="icon">
+                  <Button onClick={handleSendMessage} disabled={!messageText.trim() || isSending} size="icon" className="h-9 w-9 rounded-none bg-primary hover:bg-primary/90 shadow-none">
                     {isSending ? (
                       <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                     ) : (

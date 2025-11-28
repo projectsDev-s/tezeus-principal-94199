@@ -243,10 +243,17 @@ export function ColorPickerModal({ open, onOpenChange, onColorSelect, isDarkMode
             </span>
           </div>
           
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2 pt-4 border-t border-[#d4d4d4] mt-4 -mx-6 -mb-6 p-4 bg-gray-50">
+            <Button 
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="h-8 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100 text-gray-700"
+            >
+              Cancelar
+            </Button>
             <Button 
               onClick={handleConfirm}
-              className="bg-warning hover:bg-yellow-500 text-black"
+              className="h-8 text-xs rounded-none bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Concluir
             </Button>

@@ -118,23 +118,24 @@ export function AssignmentHistoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-2xl p-0 gap-0 border border-[#d4d4d4] bg-white shadow-sm rounded-none">
+        <DialogHeader className="bg-primary text-primary-foreground p-4 m-0 rounded-none border-b border-[#d4d4d4]">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold text-primary-foreground">
             <Clock className="h-5 w-5" />
             Histórico de Agentes e Transferências
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <ScrollArea className="h-[60vh] bg-white">
+          <div className="p-4">
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-start gap-3 p-4 border rounded-lg">
-                  <Skeleton className="w-10 h-10 rounded-full" />
+                <div key={i} className="flex items-start gap-3 p-4 border border-[#d4d4d4] rounded-none bg-gray-50">
+                  <Skeleton className="w-10 h-10 rounded-full bg-gray-200" />
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-4 w-3/4 bg-gray-200" />
+                    <Skeleton className="h-3 w-1/2 bg-gray-200" />
                   </div>
                 </div>
               ))}
@@ -145,9 +146,9 @@ export function AssignmentHistoryModal({
                 if (entry.type === 'assignment') {
                   const assignment = entry.data;
                   const assignmentConfig = assignmentActionConfig[assignment.action] ?? {
-                    icon: <UserCircle className="h-4 w-4 text-muted-foreground" />,
+                    icon: <UserCircle className="h-4 w-4 text-gray-500" />,
                     label: assignment.action ?? 'Ação desconhecida',
-                    badgeClass: 'bg-muted text-foreground',
+                    badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
                   };
                   const fromUserName = assignment.from_user_name || 'Não atribuído';
                   const toUserName = assignment.to_user_name || 'Não atribuído';
@@ -157,7 +158,7 @@ export function AssignmentHistoryModal({
                   return (
                     <div
                       key={`assignment-${assignment.id}`}
-                      className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                      className="flex items-start gap-4 p-4 rounded-none border border-[#d4d4d4] bg-white hover:bg-gray-50 transition-colors shadow-none"
                     >
                       <div className="mt-1">
                         {assignmentConfig.icon}
@@ -165,10 +166,10 @@ export function AssignmentHistoryModal({
                       
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={assignmentConfig.badgeClass}>
+                          <Badge variant="outline" className={`rounded-none border text-xs font-medium ${assignmentConfig.badgeClass}`}>
                             {assignmentConfig.label}
                           </Badge>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1 text-xs text-gray-600">
                             {isQueueTransfer ? (
                               <GitBranch className="h-3 w-3" />
                             ) : (
@@ -176,21 +177,21 @@ export function AssignmentHistoryModal({
                             )}
                             <span>
                               {isQueueTransfer ? 'da fila ' : 'de '}
-                              <span className="font-medium text-foreground">
+                              <span className="font-bold text-gray-900">
                                 {isQueueTransfer ? fromQueueName : fromUserName}
                               </span>
                             </span>
                             <ArrowRight className="h-3 w-3 mx-1" />
                             <span>
                               {isQueueTransfer ? 'para a fila ' : 'para '}
-                              <span className="font-medium text-foreground">
+                              <span className="font-bold text-gray-900">
                                 {isQueueTransfer ? toQueueName : toUserName}
                               </span>
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             <span>
@@ -210,7 +211,7 @@ export function AssignmentHistoryModal({
                         </div>
                       </div>
 
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[10px] text-gray-400 font-medium">
                         {new Date(assignment.changed_at).toLocaleString('pt-BR')}
                       </div>
                     </div>
@@ -221,7 +222,7 @@ export function AssignmentHistoryModal({
                   return (
                     <div
                       key={`agent-${agent.id}`}
-                      className="flex items-start gap-4 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                      className="flex items-start gap-4 p-4 rounded-none border border-[#d4d4d4] bg-white hover:bg-gray-50 transition-colors shadow-none"
                     >
                       <div className="mt-1">
                         {agentActionIcons[displayAction]}
@@ -229,17 +230,17 @@ export function AssignmentHistoryModal({
                       
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={agentActionColors[displayAction]}>
+                          <Badge variant="outline" className={`rounded-none border text-xs font-medium ${agentActionColors[displayAction]}`}>
                             {agentActionLabels[displayAction]}
                           </Badge>
                           
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1 text-xs text-gray-600">
                             <Bot className="h-3 w-3" />
-                            <span className="font-medium text-foreground">{agent.agent_name}</span>
+                            <span className="font-bold text-gray-900">{agent.agent_name}</span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-[10px] text-gray-500 font-medium">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             <span>
@@ -258,15 +259,22 @@ export function AssignmentHistoryModal({
                           )}
                         </div>
 
-                        {agent.metadata && Object.keys(agent.metadata).length > 0 && 
-                         !(agent.metadata.old_agent_id === null && Object.keys(agent.metadata).length === 1) && (
-                          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-                            {JSON.stringify(agent.metadata, null, 2)}
+                        {agent.metadata && agent.metadata.old_agent_name ? (
+                          <div className="text-[10px] text-gray-600 mt-1 flex items-center gap-1">
+                             <span className="text-gray-400">Agente anterior:</span>
+                             <span className="font-medium text-gray-800">{agent.metadata.old_agent_name}</span>
                           </div>
+                        ) : (
+                          agent.metadata && Object.keys(agent.metadata).length > 0 && 
+                          !(agent.metadata.old_agent_id === null && Object.keys(agent.metadata).length === 1) && (
+                            <div className="text-[10px] text-gray-600 bg-gray-50 border border-[#d4d4d4] p-2 rounded-none font-mono mt-1">
+                              {JSON.stringify(agent.metadata, null, 2)}
+                            </div>
+                          )
                         )}
                       </div>
 
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[10px] text-gray-400 font-medium">
                         {new Date(agent.created_at).toLocaleString('pt-BR')}
                       </div>
                     </div>
@@ -276,13 +284,14 @@ export function AssignmentHistoryModal({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">Nenhum histórico encontrado</p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <Clock className="h-12 w-12 text-gray-300 mb-4" />
+              <p className="text-gray-500 font-medium">Nenhum histórico encontrado</p>
+              <p className="text-xs text-gray-400 mt-1">
                 As mudanças de agentes e transferências serão registradas aqui
               </p>
             </div>
           )}
+          </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>

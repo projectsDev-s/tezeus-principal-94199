@@ -1258,7 +1258,7 @@ export function CRMContatos() {
         <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            <span className="font-semibold">Contatos</span>
+            <span className="font-semibold text-sm">Contatos</span>
           </div>
           <div className="text-[10px] opacity-80">
             {isLoading ? "Carregando..." : `${filteredContacts.length} registros`}

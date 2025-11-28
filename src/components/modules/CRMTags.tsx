@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Edit, Trash2, RotateCcw, X, Tag, Search, Plus, Filter, User } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, Trash2, RotateCcw, X, Tag, Search, Plus, Filter, User, Check, ChevronsUpDown } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -25,10 +26,7 @@ export function CRMTags() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<{ id: string; name: string; color: string } | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
   
   const { selectedWorkspace } = useWorkspace();
   const { userRole } = useAuth();
@@ -42,30 +40,13 @@ export function CRMTags() {
 
   const selectedUser = members.find(m => m.user_id === selectedUserId);
   
-  // Filtrar usuários master e aplicar busca por nome
-  const filteredMembers = members
-    .filter(member => member.role !== 'master')
-    .filter(member => 
-      member.user?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  // Filtrar usuários master
+  const filteredMembers = members.filter(member => member.role !== 'master');
 
   const handleResetFilters = () => {
     setSelectedUserId("");
     setStartDate(undefined);
     setEndDate(undefined);
-    setSearchTerm("");
-  };
-  
-  const handleSelectUser = (userId: string) => {
-    setSelectedUserId(userId);
-    setIsDropdownOpen(false);
-    setSearchTerm("");
-  };
-  
-  const handleClearUser = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedUserId("");
-    setSearchTerm("");
   };
   
   const handleEditTag = (tag: { id: string; name: string; color: string }) => {
@@ -78,18 +59,6 @@ export function CRMTags() {
     setIsDeleteModalOpen(true);
   };
   
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
     <div className="flex flex-col h-full bg-white border border-gray-300 m-2 shadow-sm font-sans text-xs">
       {/* Excel-like Toolbar (Ribbonish) */}
@@ -98,7 +67,7 @@ export function CRMTags() {
         <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
-            <span className="font-semibold">Tags</span>
+            <span className="font-semibold text-sm">Tags</span>
           </div>
           <div className="text-[10px] opacity-80">
             {isLoading ? "Carregando..." : `${tags.length} registros`}
@@ -109,45 +78,68 @@ export function CRMTags() {
         <div className="flex items-center gap-2 p-2 overflow-x-auto">
           {/* User Filter Group (Admin only) */}
           {(userRole === 'admin' || userRole === 'master') && (
-            <div className="flex items-center gap-2 border-r border-gray-300 pr-3 mr-1 relative" ref={dropdownRef}>
-              <div className="relative w-48">
-                <User className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 h-3 w-3" />
-                <Input
-                  placeholder={loadingMembers ? "Carregando..." : (selectedUser?.user?.name || "Filtrar por usuário...")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onClick={() => setIsDropdownOpen(true)}
-                  disabled={loadingMembers}
-                  className="pl-8 h-7 text-xs border-gray-300 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
-                />
-                {selectedUser && (
-                  <button
-                    onClick={handleClearUser}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500"
+            <div className="flex items-center gap-2 border-r border-gray-300 pr-3 mr-1">
+              <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isUserPopoverOpen}
+                    className="h-7 px-2 text-xs border-gray-300 rounded-sm hover:bg-gray-100 text-gray-700 justify-between w-[200px]"
+                    disabled={loadingMembers}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-              
-              {isDropdownOpen && !loadingMembers && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-sm shadow-lg z-50 max-h-[300px] overflow-y-auto">
-                  {filteredMembers.length === 0 ? (
-                    <div className="p-2 text-xs text-gray-500 text-center">
-                      Nenhum usuário encontrado
+                    <div className="flex items-center truncate">
+                      <User className="mr-2 h-3 w-3 shrink-0 opacity-50" />
+                      {loadingMembers 
+                        ? "Carregando..." 
+                        : selectedUser 
+                          ? selectedUser.user?.name 
+                          : "Filtrar por usuário..."}
                     </div>
-                  ) : (
-                    filteredMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        onClick={() => handleSelectUser(member.user_id)}
-                        className="px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-100 transition-colors"
-                      >
-                        {member.user?.name}
-                      </div>
-                    ))
-                  )}
-                </div>
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar usuário..." className="h-8 text-xs" />
+                    <CommandList>
+                      <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredMembers.map((member) => (
+                          <CommandItem
+                            key={member.id}
+                            value={member.user?.name || ""}
+                            onSelect={() => {
+                              setSelectedUserId(member.user_id === selectedUserId ? "" : member.user_id);
+                              setIsUserPopoverOpen(false);
+                            }}
+                            className="text-xs"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-3 w-3",
+                                selectedUserId === member.user_id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {member.user?.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              
+              {selectedUserId && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => setSelectedUserId("")}
+                  title="Limpar filtro de usuário"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               )}
             </div>
           )}

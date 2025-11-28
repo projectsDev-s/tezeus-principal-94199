@@ -459,24 +459,24 @@ export function ColumnAutomationsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-gray-50 border border-[#d4d4d4] p-3 rounded-none">
         <div>
-          <h3 className="text-lg font-semibold">Automações desta coluna</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="text-sm font-bold text-gray-800">Automações desta coluna</h3>
+          <p className="text-xs text-muted-foreground">
             Configure automações que disparam ações quando cards entram, saem ou ficam nesta coluna
           </p>
         </div>
-        <Button onClick={handleNewAutomation}>
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={handleNewAutomation} className="h-8 text-xs rounded-none bg-primary hover:bg-primary/90">
+          <Plus className="w-3.5 h-3.5 mr-2" />
           Nova automação
         </Button>
       </div>
 
       {automations.length === 0 ? (
-        <Card>
+        <Card className="border border-[#d4d4d4] rounded-none shadow-none bg-white">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Settings className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground text-center">
+            <Settings className="w-10 h-10 text-muted-foreground mb-4 opacity-50" />
+            <p className="text-xs text-muted-foreground text-center">
               Nenhuma automação configurada ainda.
               <br />
               Clique em "Nova automação" para começar.
@@ -493,117 +493,119 @@ export function ColumnAutomationsTab({
             const executionsCount = automation.executionsCount ?? 0;
 
             return (
-              <Card key={automation.id} className="border border-amber-200/80 shadow-sm">
-                <CardHeader className="pb-4 bg-amber-50/60 border-b border-amber-100">
+              <Card key={automation.id} className="border border-[#d4d4d4] shadow-sm rounded-none overflow-hidden">
+                <CardHeader className="pb-3 bg-[#f0f0f0] border-b border-[#d4d4d4] p-3">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base text-slate-900">{automation.name}</CardTitle>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-sm font-bold text-gray-800">{automation.name}</CardTitle>
                       {automation.description && (
-                        <CardDescription>{automation.description}</CardDescription>
+                        <CardDescription className="text-xs">{automation.description}</CardDescription>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-xs font-medium ${automation.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                        className={`text-[10px] font-medium ${automation.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}
                       >
                         {automation.is_active ? 'Ativa' : 'Inativa'}
                       </span>
                       <Switch
                         checked={automation.is_active}
                         onCheckedChange={() => handleToggleActive(automation)}
+                        className="scale-75"
                       />
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 p-4">
                   <div className="grid gap-6 md:grid-cols-3">
                     <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-700 mb-2">
                         <span>Gatilhos</span>
                         <Badge
                           variant="outline"
-                          className="rounded-full border-amber-200 bg-amber-100/80 text-amber-700"
+                          className="rounded-none border-amber-200 bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0"
                         >
                           {triggersCount}
                         </Badge>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {triggers.length > 0 ? (
                           triggers.map((trigger, index) => (
                             <Badge
                               key={trigger.id || `trigger-${index}`}
                               variant="outline"
-                              className="border border-amber-200 bg-amber-50 text-amber-700"
+                              className="border border-amber-200 bg-amber-50 text-amber-700 rounded-none text-[10px] font-normal"
                             >
                               {formatTriggerLabel(trigger)}
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground">
                             Nenhum gatilho configurado
                           </span>
                         )}
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-700 mb-2">
                         <span>Ações</span>
                         <Badge
                           variant="outline"
-                          className="rounded-full border-blue-200 bg-blue-100/80 text-blue-700"
+                          className="rounded-none border-blue-200 bg-blue-50 text-blue-700 text-[10px] px-1.5 py-0"
                         >
                           {actionsCount}
                         </Badge>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {actions.length > 0 ? (
                           actions.map((action, index) => (
                             <Badge
                               key={action.id || `action-${index}`}
                               variant="outline"
-                              className="border border-blue-200 bg-blue-50 text-blue-700"
+                              className="border border-blue-200 bg-blue-50 text-blue-700 rounded-none text-[10px] font-normal"
                             >
                               {formatActionLabel(action)}
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground">
                             Nenhuma ação configurada
                           </span>
                         )}
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-700 mb-2">
                         <span>Execuções</span>
                         <Badge
                           variant="outline"
-                          className="rounded-full border-slate-200 bg-slate-100 text-slate-700"
+                          className="rounded-none border-gray-200 bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0"
                         >
                           {executionsCount}
                         </Badge>
                       </div>
-                      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center">
-                        <div className="text-2xl font-semibold text-slate-900">{executionsCount}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">total de execuções</div>
+                      <div className="mt-1 rounded-none border border-[#d4d4d4] bg-gray-50 px-3 py-2 text-center">
+                        <div className="text-lg font-bold text-gray-900">{executionsCount}</div>
+                        <div className="text-[10px] text-muted-foreground">total de execuções</div>
                       </div>
                     </div>
                   </div>
-                  <div className="mt-6 flex justify-end gap-2">
+                  <div className="mt-4 flex justify-end gap-1 pt-3 border-t border-[#d4d4d4]">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleEditAutomation(automation)}
+                      className="h-6 w-6 p-0 rounded-none border-gray-300 hover:bg-gray-100"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5 text-gray-600" />
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleDelete(automation.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="h-6 w-6 p-0 rounded-none border-gray-300 hover:bg-red-50 text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </CardContent>

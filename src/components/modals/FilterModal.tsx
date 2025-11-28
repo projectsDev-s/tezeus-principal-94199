@@ -97,22 +97,22 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Filtros</DialogTitle>
+      <DialogContent className="sm:max-w-md p-0 gap-0 border border-[#d4d4d4] bg-white shadow-sm rounded-none">
+        <DialogHeader className="bg-primary p-4 rounded-none m-0">
+          <DialogTitle className="text-primary-foreground">Filtros</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 p-6">
           {/* Selecionar tags */}
           <div>
-            <Label htmlFor="tags" className="text-sm font-medium">
+            <Label htmlFor="tags" className="text-xs font-bold text-gray-700">
               Selecionar tags
             </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal mt-1"
+                  className="w-full justify-start text-left font-normal mt-1 h-8 text-xs rounded-none border-gray-300 bg-white"
                   disabled={tagsLoading}
                 >
                   {tagsLoading ? (
@@ -124,33 +124,34 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="start">
-                <div className="max-h-60 overflow-y-auto p-2">
+              <PopoverContent className="w-80 p-0 rounded-none border-[#d4d4d4]" align="start">
+                <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-transparent">
                   {tagsLoading ? (
-                    <div className="p-4 text-center text-muted-foreground">
+                    <div className="p-4 text-center text-muted-foreground text-xs">
                       Carregando tags...
                     </div>
                   ) : availableTags.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground">
+                    <div className="p-4 text-center text-muted-foreground text-xs">
                       Nenhuma tag encontrada
                     </div>
                   ) : (
                     availableTags.map((tag) => (
                       <div
                         key={tag.id}
-                        className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                        className="flex items-center space-x-2 p-2 hover:bg-[#e6f2ff] rounded-none cursor-pointer"
                         onClick={() => toggleTag(tag.id)}
                       >
                         <Checkbox
                           checked={selectedTags.includes(tag.id)}
                           onCheckedChange={() => toggleTag(tag.id)}
+                          className="rounded-none border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                         />
                         <div className="flex items-center space-x-2">
                           <div
-                            className="w-3 h-3 rounded-full"
+                            className="w-3 h-3 rounded-full border border-gray-200"
                             style={{ backgroundColor: tag.color }}
                           />
-                          <span className="text-sm">{tag.name}</span>
+                          <span className="text-xs">{tag.name}</span>
                         </div>
                       </div>
                     ))
@@ -162,14 +163,14 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
 
           {/* Selecionar filas */}
           <div>
-            <Label htmlFor="queues" className="text-sm font-medium">
+            <Label htmlFor="queues" className="text-xs font-bold text-gray-700">
               Selecionar filas
             </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal mt-1"
+                  className="w-full justify-start text-left font-normal mt-1 h-8 text-xs rounded-none border-gray-300 bg-white"
                   disabled={queuesLoading}
                 >
                   {queuesLoading ? (
@@ -181,28 +182,29 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="start">
-                <div className="max-h-60 overflow-y-auto p-2">
+              <PopoverContent className="w-80 p-0 rounded-none border-[#d4d4d4]" align="start">
+                <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-transparent">
                   {queuesLoading ? (
-                    <div className="p-4 text-center text-muted-foreground">
+                    <div className="p-4 text-center text-muted-foreground text-xs">
                       Carregando filas...
                     </div>
                   ) : availableQueues.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground">
+                    <div className="p-4 text-center text-muted-foreground text-xs">
                       Nenhuma fila encontrada
                     </div>
                   ) : (
                     availableQueues.map((queue) => (
                       <div
                         key={queue.id}
-                        className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                        className="flex items-center space-x-2 p-2 hover:bg-[#e6f2ff] rounded-none cursor-pointer"
                         onClick={() => toggleQueue(queue.id)}
                       >
                         <Checkbox
                           checked={selectedQueues.includes(queue.id)}
                           onCheckedChange={() => toggleQueue(queue.id)}
+                          className="rounded-none border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                         />
-                        <span className="text-sm">{queue.name}</span>
+                        <span className="text-xs">{queue.name}</span>
                       </div>
                     ))
                   )}
@@ -213,14 +215,14 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
 
           {/* Selecionar status */}
           <div>
-            <Label htmlFor="status" className="text-sm font-medium">
+            <Label htmlFor="status" className="text-xs font-bold text-gray-700">
               Status do negócio
             </Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal mt-1"
+                  className="w-full justify-start text-left font-normal mt-1 h-8 text-xs rounded-none border-gray-300 bg-white"
                 >
                   {selectedStatuses.length === 0 ? (
                     <span className="text-muted-foreground">Selecionar status</span>
@@ -229,12 +231,12 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="start">
+              <PopoverContent className="w-80 p-0 rounded-none border-[#d4d4d4]" align="start">
                 <div className="p-2 space-y-1">
                   {['Aberto', 'Ganho', 'Perda'].map(status => (
                     <label
                       key={status}
-                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                      className="flex items-center space-x-2 p-2 hover:bg-[#e6f2ff] rounded-none cursor-pointer"
                     >
                       <Checkbox
                         checked={selectedStatuses.includes(status)}
@@ -245,8 +247,9 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                               : [...prev, status]
                           );
                         }}
+                        className="rounded-none border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                       />
-                      <span className="text-sm">{status}</span>
+                      <span className="text-xs">{status}</span>
                     </label>
                   ))}
                 </div>
@@ -256,16 +259,16 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
 
           {/* Seleção de data */}
           <div>
-            <Label htmlFor="date-filter" className="text-sm font-medium">
+            <Label htmlFor="date-filter" className="text-xs font-bold text-gray-700">
               Filtrar por data de Criação
             </Label>
             <Popover open={showCalendar} onOpenChange={setShowCalendar}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal mt-1"
+                  className="w-full justify-start text-left font-normal mt-1 h-8 text-xs rounded-none border-gray-300 bg-white"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
                   {selectedDate ? (
                     format(selectedDate, "dd/MM/yyyy")
                   ) : dateRange ? (
@@ -275,7 +278,7 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 rounded-none border-[#d4d4d4]" align="start">
                 <Calendar
                   mode="range"
                   selected={dateRange || (selectedDate ? { from: selectedDate, to: selectedDate } : undefined)}
@@ -303,24 +306,23 @@ export function FilterModal({ open, onOpenChange, onApplyFilters }: FilterModalP
                     }
                   }}
                   initialFocus
-                  className="pointer-events-auto"
+                  className="pointer-events-auto rounded-none border-0"
                 />
               </PopoverContent>
             </Popover>
           </div>
+        </div>
 
-          {/* Botões */}
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="ghost" onClick={handleClear}>
-              Limpar
-            </Button>
-            <Button 
-              onClick={handleApply}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              Aplicar
-            </Button>
-          </div>
+        <div className="flex justify-end space-x-2 p-4 bg-gray-50 border-t border-gray-200">
+          <Button variant="ghost" onClick={handleClear} className="h-8 text-xs rounded-none hover:bg-gray-200">
+            Limpar
+          </Button>
+          <Button 
+            onClick={handleApply}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 text-xs rounded-none font-medium px-4"
+          >
+            Aplicar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -1119,7 +1119,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
           <div className="flex items-center gap-2">
             <Smartphone className="h-4 w-4" />
-            <span className="font-semibold">Conexões WhatsApp</span>
+            <span className="font-semibold text-sm">Conexões WhatsApp</span>
           </div>
           <div className="text-[10px] opacity-80">
             {isLoading ? "Carregando..." : `${connections.length} conexões`}
@@ -1179,13 +1179,13 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               
               {/* Modal Content Wrapper */}
               {isCreateModalOpen && (
-                <DialogContent className="max-w-4xl p-0">
-                  {/* Same Modal Logic as before */}
-                   <div className="flex items-center justify-between p-6 border-b border-border">
-                      <h2 className="text-lg font-semibold text-foreground">
+                <DialogContent className="max-w-4xl p-0 gap-0 border border-[#d4d4d4] shadow-lg sm:rounded-none bg-white">
+                  {/* Excel-like Header */}
+                   <DialogHeader className="mx-0 mt-0 px-6 py-4 bg-primary text-primary-foreground border-b border-[#d4d4d4] flex flex-row items-center justify-between">
+                      <DialogTitle className="text-lg font-semibold">
                         {isEditMode ? 'Editar Instância' : 'Adicionar Canal de Atendimento'}
-                      </h2>
-                    </div>
+                      </DialogTitle>
+                    </DialogHeader>
 
                     <div className="px-6 pt-6">
                       <div className="flex items-center justify-center mb-6">
@@ -1263,8 +1263,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                        </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-6 border-t border-border mt-6">
-                      <Button variant="outline" disabled={isCreating} onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+                    <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-[#d4d4d4] mt-auto">
+                      <Button variant="outline" disabled={isCreating} onClick={() => setIsCreateModalOpen(false)} className="bg-white">Cancelar</Button>
                       <Button 
                         onClick={isEditMode ? editConnection : () => createInstance()} 
                         disabled={isCreating || loadingProvider}

@@ -32,34 +32,36 @@ export const PdfModal: React.FC<PdfModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 gap-0 border border-[#d4d4d4] bg-white shadow-sm rounded-none">
+        <DialogHeader className="flex-shrink-0 bg-primary text-primary-foreground p-3 m-0 rounded-none border-b border-[#d4d4d4]">
           <div className="flex items-center justify-between">
-            <DialogTitle className="truncate">
+            <DialogTitle className="truncate text-sm font-bold text-primary-foreground">
               {fileName || 'Documento PDF'}
             </DialogTitle>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleOpenInNewTab}
+                className="h-7 text-xs rounded-none bg-white/10 text-primary-foreground hover:bg-white/20 border-none"
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <ExternalLink className="h-3.5 w-3.5 mr-2" />
                 Abrir em nova aba
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleDownload}
+                className="h-7 text-xs rounded-none bg-white/10 text-primary-foreground hover:bg-white/20 border-none"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-3.5 w-3.5 mr-2" />
                 Baixar
               </Button>
             </div>
           </div>
         </DialogHeader>
         
-        <div className="flex-1 flex items-center justify-center bg-muted/20 rounded-lg overflow-hidden">
+        <div className="flex-1 flex items-center justify-center bg-gray-100 overflow-hidden">
           <iframe
             src={pdfUrl}
             title={fileName || 'PDF Viewer'}

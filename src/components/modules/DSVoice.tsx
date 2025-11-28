@@ -685,7 +685,7 @@ export function DSVoice() {
         <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            <span className="font-semibold">Respostas Rápidas</span>
+            <span className="font-semibold text-sm">Respostas Rápidas</span>
           </div>
           <div className="text-[10px] opacity-80">
              {activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)}

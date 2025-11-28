@@ -269,18 +269,18 @@ export function TransferConversationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Transferir Atendimento</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[480px] p-0 gap-0 border border-[#d4d4d4] bg-white shadow-sm rounded-none">
+        <DialogHeader className="bg-primary text-primary-foreground p-4 m-0 rounded-none border-b border-[#d4d4d4]">
+          <DialogTitle className="text-base font-bold text-primary-foreground">Transferir Atendimento</DialogTitle>
+          <DialogDescription className="text-primary-foreground/90 text-xs">
             Escolha o novo responsável, fila (opcional) e conexão para este
             atendimento.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
+        <div className="space-y-4 p-6">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">
               Usuário responsável <span className="text-destructive">*</span>
             </Label>
             <Select
@@ -288,18 +288,18 @@ export function TransferConversationModal({
               onValueChange={setSelectedUserId}
               disabled={isUserSelectDisabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-8 text-xs rounded-none border-gray-300 focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Selecione um usuário" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem responsável</SelectItem>
+              <SelectContent className="rounded-none border-gray-300">
+                <SelectItem value="none" className="text-xs rounded-none cursor-pointer">Sem responsável</SelectItem>
                 {userOptions.length === 0 ? (
-                  <SelectItem value="__empty" disabled>
+                  <SelectItem value="__empty" disabled className="text-xs rounded-none">
                     Nenhum usuário disponível
                   </SelectItem>
                 ) : (
                   userOptions.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
+                    <SelectItem key={user.id} value={user.id} className="text-xs rounded-none cursor-pointer">
                       {user.name}
                     </SelectItem>
                   ))
@@ -308,8 +308,8 @@ export function TransferConversationModal({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">
               Fila (opcional)
             </Label>
             <Select
@@ -317,13 +317,13 @@ export function TransferConversationModal({
               onValueChange={setSelectedQueueId}
               disabled={isQueueSelectDisabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-8 text-xs rounded-none border-gray-300 focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Selecione uma fila (opcional)" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem fila</SelectItem>
+              <SelectContent className="rounded-none border-gray-300">
+                <SelectItem value="none" className="text-xs rounded-none cursor-pointer">Sem fila</SelectItem>
                 {queueOptions.map((queue) => (
-                  <SelectItem key={queue.id} value={queue.id}>
+                  <SelectItem key={queue.id} value={queue.id} className="text-xs rounded-none cursor-pointer">
                     {queue.name}
                   </SelectItem>
                 ))}
@@ -331,8 +331,8 @@ export function TransferConversationModal({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">
               Conexão <span className="text-destructive">*</span>
             </Label>
             <Select
@@ -340,17 +340,17 @@ export function TransferConversationModal({
               onValueChange={setSelectedConnectionId}
               disabled={isProcessing || isLoadingConnections}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-8 text-xs rounded-none border-gray-300 focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Selecione uma conexão" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-none border-gray-300">
                 {connectionOptions.length === 0 ? (
-                  <SelectItem value="__empty" disabled>
+                  <SelectItem value="__empty" disabled className="text-xs rounded-none">
                     Nenhuma conexão disponível
                   </SelectItem>
                 ) : (
                   connectionOptions.map((connection) => (
-                    <SelectItem key={connection.id} value={connection.id}>
+                    <SelectItem key={connection.id} value={connection.id} className="text-xs rounded-none cursor-pointer">
                       {connection.name}
                     </SelectItem>
                   ))
@@ -360,12 +360,13 @@ export function TransferConversationModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="bg-gray-50 border-t border-[#d4d4d4] p-4 m-0 rounded-none gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isProcessing}
+            className="h-8 text-xs rounded-none"
           >
             Cancelar
           </Button>
@@ -373,11 +374,11 @@ export function TransferConversationModal({
             type="button"
             onClick={handleSubmit}
             disabled={isProcessing}
-            className="min-w-[120px]"
+            className="h-8 text-xs rounded-none min-w-[120px]"
           >
             {isProcessing ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3 w-3 animate-spin" />
                 Transferindo...
               </span>
             ) : (

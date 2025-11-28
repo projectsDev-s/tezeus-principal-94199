@@ -21,23 +21,23 @@ export function MessageContextMenu({
         <Button
           variant="ghost"
           size="sm"
-          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1 h-6 w-6 p-0 z-[999]"
+          className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1 h-5 w-5 p-0 z-[999] rounded-none bg-white/80 hover:bg-white border border-transparent hover:border-[#d4d4d4] shadow-sm"
         >
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="h-3 w-3 text-gray-500" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48 bg-popover z-[999]">
-        <DropdownMenuItem onClick={onForward} className="cursor-pointer">
-          <Forward className="h-4 w-4 mr-2" />
+      <DropdownMenuContent align="end" className="w-48 bg-white z-[999] rounded-none border-[#d4d4d4]">
+        <DropdownMenuItem onClick={onForward} className="cursor-pointer rounded-none focus:bg-[#e6f2ff] text-xs">
+          <Forward className="h-3.5 w-3.5 mr-2 text-gray-500" />
           Encaminhar
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onReply} className="cursor-pointer">
-          <Reply className="h-4 w-4 mr-2" />
+        <DropdownMenuItem onClick={onReply} className="cursor-pointer rounded-none focus:bg-[#e6f2ff] text-xs">
+          <Reply className="h-3.5 w-3.5 mr-2 text-gray-500" />
           Responder
         </DropdownMenuItem>
         {hasDownload && onDownload && (
-          <DropdownMenuItem onClick={onDownload} className="cursor-pointer">
-            <Download className="h-4 w-4 mr-2" />
+          <DropdownMenuItem onClick={onDownload} className="cursor-pointer rounded-none focus:bg-[#e6f2ff] text-xs">
+            <Download className="h-3.5 w-3.5 mr-2 text-gray-500" />
             Download
           </DropdownMenuItem>
         )}

@@ -155,30 +155,40 @@ export function CriarNegocioModal({
   return (
     <Dialog open={modalOpen} onOpenChange={handleClose}>
       <DialogContent className={cn(
-        "max-w-md",
+        "max-w-md p-0 gap-0 border border-[#d4d4d4] shadow-sm rounded-none",
         isDarkMode 
           ? "bg-gray-800 border-gray-600 text-white" 
-          : "bg-white border-gray-200 text-gray-900"
+          : "bg-white text-gray-900"
       )}>
-        <DialogHeader>
+        <DialogHeader className={cn(
+          "p-4 m-0 rounded-none border-b",
+          isDarkMode ? "bg-gray-700 border-gray-600" : "bg-primary border-[#d4d4d4]"
+        )}>
           <DialogTitle className={cn(
-            "text-lg font-semibold",
-            isDarkMode ? "text-white" : "text-gray-900"
+            "text-base font-bold",
+            isDarkMode ? "text-white" : "text-primary-foreground"
           )}>
             Criar Negócio
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 p-6">
           {/* Seleção de Lead */}
           <div>
+            <Label className={cn("text-xs font-bold mb-1.5 block", isDarkMode ? "text-gray-300" : "text-gray-700")}>Lead</Label>
             <Select value={selectedLead} onValueChange={setSelectedLead} disabled={!!preSelectedContactId}>
-              <SelectTrigger className="border-input">
+              <SelectTrigger className={cn(
+                "h-8 text-xs rounded-none focus:ring-0",
+                isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
+              )}>
                 <SelectValue placeholder={preSelectedContactName || "Selecione o Lead"} />
               </SelectTrigger>
-              <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+              <SelectContent className={cn(
+                "max-h-48 overflow-auto z-50 rounded-none",
+                isDarkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+              )}>
                 {contacts.map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
+                  <SelectItem key={contact.id} value={contact.id} className={cn("text-xs rounded-none cursor-pointer", isDarkMode ? "text-gray-300 focus:bg-gray-700" : "text-gray-700")}>
                     {contact.name} - {contact.phone || contact.email || 'Sem contato'}
                   </SelectItem>
                 ))}
@@ -188,8 +198,12 @@ export function CriarNegocioModal({
 
           {/* Seleção de responsável */}
           <div>
+            <Label className={cn("text-xs font-bold mb-1.5 block", isDarkMode ? "text-gray-300" : "text-gray-700")}>Responsável</Label>
             <Select value={selectedResponsible} onValueChange={setSelectedResponsible} disabled={isLoadingUsers}>
-              <SelectTrigger className="border-input">
+              <SelectTrigger className={cn(
+                "h-8 text-xs rounded-none focus:ring-0",
+                isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
+              )}>
                 <SelectValue placeholder={
                   isLoadingUsers 
                     ? "Carregando usuários..." 
@@ -199,9 +213,12 @@ export function CriarNegocioModal({
                 } />
               </SelectTrigger>
               {users.length > 0 && (
-                <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                <SelectContent className={cn(
+                  "max-h-48 overflow-auto z-50 rounded-none",
+                  isDarkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+                )}>
                   {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
+                    <SelectItem key={user.id} value={user.id} className={cn("text-xs rounded-none cursor-pointer", isDarkMode ? "text-gray-300 focus:bg-gray-700" : "text-gray-700")}>
                       {user.name}
                     </SelectItem>
                   ))}
@@ -212,13 +229,20 @@ export function CriarNegocioModal({
 
           {/* Seleção de pipeline */}
           <div>
+            <Label className={cn("text-xs font-bold mb-1.5 block", isDarkMode ? "text-gray-300" : "text-gray-700")}>Pipeline</Label>
             <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-              <SelectTrigger className="border-input">
+              <SelectTrigger className={cn(
+                "h-8 text-xs rounded-none focus:ring-0",
+                isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
+              )}>
                 <SelectValue placeholder="Selecione o pipeline" />
               </SelectTrigger>
-              <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+              <SelectContent className={cn(
+                "max-h-48 overflow-auto z-50 rounded-none",
+                isDarkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+              )}>
                 {pipelines.map((pipeline) => (
-                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                  <SelectItem key={pipeline.id} value={pipeline.id} className={cn("text-xs rounded-none cursor-pointer", isDarkMode ? "text-gray-300 focus:bg-gray-700" : "text-gray-700")}>
                     {pipeline.name}
                   </SelectItem>
                 ))}
@@ -228,12 +252,16 @@ export function CriarNegocioModal({
 
           {/* Seleção de coluna */}
           <div>
+            <Label className={cn("text-xs font-bold mb-1.5 block", isDarkMode ? "text-gray-300" : "text-gray-700")}>Coluna</Label>
             <Select 
               value={selectedColumn} 
               onValueChange={setSelectedColumn}
               disabled={!selectedPipeline || columns.length === 0}
             >
-              <SelectTrigger className="border-input">
+              <SelectTrigger className={cn(
+                "h-8 text-xs rounded-none focus:ring-0",
+                isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
+              )}>
                 <SelectValue placeholder={
                   !selectedPipeline 
                     ? "Selecione um pipeline primeiro" 
@@ -243,9 +271,12 @@ export function CriarNegocioModal({
                 } />
               </SelectTrigger>
               {columns.length > 0 && (
-                <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                <SelectContent className={cn(
+                  "max-h-48 overflow-auto z-50 rounded-none",
+                  isDarkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+                )}>
                   {columns.map((column) => (
-                    <SelectItem key={column.id} value={column.id}>
+                    <SelectItem key={column.id} value={column.id} className={cn("text-xs rounded-none cursor-pointer", isDarkMode ? "text-gray-300 focus:bg-gray-700" : "text-gray-700")}>
                       {column.name}
                     </SelectItem>
                   ))}
@@ -256,20 +287,27 @@ export function CriarNegocioModal({
 
           {/* Seleção de produto (opcional) */}
           <div>
+            <Label className={cn("text-xs font-bold mb-1.5 block", isDarkMode ? "text-gray-300" : "text-gray-700")}>Produto (Opcional)</Label>
             <Select value={selectedProduct} onValueChange={setSelectedProduct} disabled={isLoadingProducts}>
-              <SelectTrigger className="border-input">
+              <SelectTrigger className={cn(
+                "h-8 text-xs rounded-none focus:ring-0",
+                isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
+              )}>
                 <SelectValue placeholder={
                   isLoadingProducts 
                     ? "Carregando produtos..." 
                     : products.length === 0 
                       ? "Nenhum produto disponível" 
-                      : "Selecione o produto (Opcional)"
+                      : "Selecione o produto"
                 } />
               </SelectTrigger>
               {products.length > 0 && (
-                <SelectContent className="max-h-48 overflow-auto bg-popover z-50">
+                <SelectContent className={cn(
+                  "max-h-48 overflow-auto z-50 rounded-none",
+                  isDarkMode ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+                )}>
                   {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
+                    <SelectItem key={product.id} value={product.id} className={cn("text-xs rounded-none cursor-pointer", isDarkMode ? "text-gray-300 focus:bg-gray-700" : "text-gray-700")}>
                       {product.name}
                     </SelectItem>
                   ))}
@@ -280,11 +318,11 @@ export function CriarNegocioModal({
 
           {/* Campo de preço */}
           <div>
-            <Label htmlFor="value" className="text-sm text-muted-foreground">
+            <Label htmlFor="value" className={cn("text-xs font-bold mb-1.5 block", isDarkMode ? "text-gray-300" : "text-gray-700")}>
               Preço (Opcional)
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+              <span className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 text-xs font-medium", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                 R$
               </span>
               <Input
@@ -294,18 +332,27 @@ export function CriarNegocioModal({
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="0,00"
-                className="pl-8 border-input"
+                className={cn(
+                  "pl-8 h-8 text-xs rounded-none focus-visible:ring-0",
+                  isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
+                )}
               />
             </div>
           </div>
         </div>
 
         {/* Botões de ação */}
-        <div className="flex justify-end gap-2 mt-6">
+        <div className={cn(
+          "flex justify-end gap-2 p-4 border-t mt-0",
+          isDarkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-[#d4d4d4]"
+        )}>
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-red-500 hover:text-red-600"
+            className={cn(
+              "h-8 text-xs rounded-none",
+              isDarkMode ? "bg-gray-600 border-gray-500 text-white hover:bg-gray-500" : "bg-white border-gray-300 hover:bg-gray-100 text-gray-700"
+            )}
           >
             Cancelar
           </Button>
@@ -313,7 +360,8 @@ export function CriarNegocioModal({
             onClick={handleSubmit}
             disabled={!canCreate}
             className={cn(
-              "transition-opacity",
+              "h-8 text-xs rounded-none transition-opacity",
+              isDarkMode ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-primary hover:bg-primary/90 text-primary-foreground",
               !canCreate && "opacity-50 cursor-not-allowed"
             )}
           >

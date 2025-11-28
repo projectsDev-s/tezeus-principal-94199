@@ -250,45 +250,46 @@ export function EditarColunaModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Coluna</DialogTitle>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0 gap-0 border border-[#d4d4d4] bg-white shadow-sm rounded-none">
+          <DialogHeader className="bg-primary p-4 rounded-none m-0">
+            <DialogTitle className="text-primary-foreground">Editar Coluna</DialogTitle>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="settings">Configurações</TabsTrigger>
-              <TabsTrigger value="permissions">Permissões</TabsTrigger>
-              <TabsTrigger value="automations">Automações</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 bg-gray-50 rounded-none border-b border-[#d4d4d4]">
+              <TabsTrigger value="settings" className="rounded-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-primary data-[state=active]:border-x data-[state=active]:border-x-[#d4d4d4] data-[state=active]:shadow-none">Configurações</TabsTrigger>
+              <TabsTrigger value="permissions" className="rounded-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-primary data-[state=active]:border-x data-[state=active]:border-x-[#d4d4d4] data-[state=active]:shadow-none">Permissões</TabsTrigger>
+              <TabsTrigger value="automations" className="rounded-none data-[state=active]:bg-white data-[state=active]:border-t-2 data-[state=active]:border-t-primary data-[state=active]:border-x data-[state=active]:border-x-[#d4d4d4] data-[state=active]:shadow-none">Automações</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="settings" className="space-y-4 py-4">
+            <TabsContent value="settings" className="space-y-4 p-6 m-0">
               <div className="space-y-2">
-                <Label htmlFor="column-name">Nome da Coluna</Label>
+                <Label htmlFor="column-name" className="text-xs font-bold text-gray-700">Nome da Coluna</Label>
                 <Input
                   id="column-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Digite o nome da coluna"
+                  className="h-8 text-xs rounded-none border-gray-300 focus-visible:ring-0"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Ícone *</Label>
+                <Label className="text-xs font-bold text-gray-700">Ícone *</Label>
                 <IconSelector 
                   selectedIcon={icon}
                   onIconSelect={setIcon}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] text-muted-foreground">
                   O ícone será exibido no timeline do pipeline
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Cor</Label>
+                <Label className="text-xs font-bold text-gray-700">Cor</Label>
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-10 h-10 rounded border cursor-pointer"
+                    className="w-8 h-8 rounded-none border cursor-pointer"
                     style={{ backgroundColor: color }}
                     onClick={() => setShowColorPicker(true)}
                   />
@@ -296,46 +297,46 @@ export function EditarColunaModal({
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#000000"
-                    className="flex-1"
+                    className="flex-1 h-8 text-xs rounded-none border-gray-300 focus-visible:ring-0"
                   />
                 </div>
               </div>
 
-              <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
+              <DialogFooter className="pt-4 flex-col sm:flex-row gap-2 bg-gray-50 border-t border-[#d4d4d4] -mx-6 -mb-6 p-4 mt-4">
                 <div className="flex gap-2 sm:mr-auto">
                   <Button 
                     variant="destructive" 
                     onClick={() => setIsDeleteModalOpen(true)}
-                    className="gap-2"
+                    className="gap-2 h-8 text-xs rounded-none"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                     Excluir Coluna
                   </Button>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs rounded-none border-gray-300 hover:bg-gray-200">
                     Fechar
                   </Button>
-                  <Button onClick={handleSave} disabled={isLoading || !icon || !name.trim()}>
+                  <Button onClick={handleSave} disabled={isLoading || !icon || !name.trim()} className="h-8 text-xs rounded-none bg-primary hover:bg-primary/90">
                     {isLoading ? "Salvando..." : "Salvar Configurações"}
                   </Button>
                 </div>
               </DialogFooter>
             </TabsContent>
 
-            <TabsContent value="permissions" className="space-y-6 py-4">
+            <TabsContent value="permissions" className="space-y-6 p-6 m-0">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium mb-3">Usuários que podem ver a coluna</h3>
+                  <h3 className="text-sm font-bold mb-3 text-gray-800">Usuários que podem ver a coluna</h3>
                   <p className="text-xs text-muted-foreground mb-3">
                     {selectedUsers.length === 0 
                       ? 'Todos os usuários podem ver esta coluna' 
                       : `${selectedUsers.length} usuário${selectedUsers.length > 1 ? 's' : ''} selecionado${selectedUsers.length > 1 ? 's' : ''}`
                     }
                   </p>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-3">
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto border border-[#d4d4d4] bg-white p-3 scrollbar-thin scrollbar-thumb-yellow-500">
                     {members?.filter(member => !member.is_hidden).map(member => (
-                      <div key={member.id} className="flex items-center space-x-3">
+                      <div key={member.id} className="flex items-center space-x-3 hover:bg-[#e6f2ff] p-1 -mx-1 rounded-none">
                         <Checkbox 
                           id={`user-${member.id}`}
                           checked={selectedUsers.includes(member.user_id)}
@@ -346,16 +347,17 @@ export function EditarColunaModal({
                               setSelectedUsers(selectedUsers.filter(id => id !== member.user_id));
                             }
                           }}
+                          className="rounded-none border-gray-300 data-[state=checked]:bg-primary"
                         />
                         <div className="flex items-center space-x-2 flex-1">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              <User className="h-4 w-4" />
+                          <Avatar className="h-6 w-6 rounded-none">
+                            <AvatarFallback className="rounded-none bg-gray-200 text-gray-600 text-xs">
+                              <User className="h-3.5 w-3.5" />
                             </AvatarFallback>
                           </Avatar>
                           <label 
                             htmlFor={`user-${member.id}`} 
-                            className="text-sm font-medium cursor-pointer"
+                            className="text-xs font-medium cursor-pointer text-gray-700"
                           >
                             {member.user?.name}
                           </label>
@@ -364,24 +366,24 @@ export function EditarColunaModal({
                     ))}
                   </div>
                   <Button 
-                    className="w-full mt-3" 
+                    className="w-full mt-3 h-8 text-xs rounded-none bg-primary hover:bg-primary/90" 
                     onClick={handleUpdatePermissions}
                   >
                     Salvar Permissões de Visualização
                   </Button>
                 </div>
 
-                <div className="border-t pt-4">
-                  <h3 className="text-sm font-medium mb-3">Usuários que podem ver todos os negócios</h3>
+                <div className="border-t border-[#d4d4d4] pt-4">
+                  <h3 className="text-sm font-bold mb-3 text-gray-800">Usuários que podem ver todos os negócios</h3>
                   <p className="text-xs text-muted-foreground mb-3">
                     Usuários selecionados verão todos os negócios desta coluna independente do responsável
                   </p>
                   <p className="text-xs text-muted-foreground mb-3">
                     {viewAllDealsUsers.length} usuário{viewAllDealsUsers.length !== 1 ? 's' : ''} selecionado{viewAllDealsUsers.length !== 1 ? 's' : ''}
                   </p>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-3">
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto border border-[#d4d4d4] bg-white p-3 scrollbar-thin scrollbar-thumb-yellow-500">
                     {members?.filter(member => !member.is_hidden).map(member => (
-                      <div key={member.id} className="flex items-center space-x-3">
+                      <div key={member.id} className="flex items-center space-x-3 hover:bg-[#e6f2ff] p-1 -mx-1 rounded-none">
                         <Checkbox 
                           id={`view-all-${member.id}`}
                           checked={viewAllDealsUsers.includes(member.user_id)}
@@ -392,16 +394,17 @@ export function EditarColunaModal({
                               setViewAllDealsUsers(viewAllDealsUsers.filter(id => id !== member.user_id));
                             }
                           }}
+                          className="rounded-none border-gray-300 data-[state=checked]:bg-primary"
                         />
                         <div className="flex items-center space-x-2 flex-1">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              <User className="h-4 w-4" />
+                          <Avatar className="h-6 w-6 rounded-none">
+                            <AvatarFallback className="rounded-none bg-gray-200 text-gray-600 text-xs">
+                              <User className="h-3.5 w-3.5" />
                             </AvatarFallback>
                           </Avatar>
                           <label 
                             htmlFor={`view-all-${member.id}`} 
-                            className="text-sm font-medium cursor-pointer"
+                            className="text-xs font-medium cursor-pointer text-gray-700"
                           >
                             {member.user?.name}
                           </label>
@@ -410,7 +413,7 @@ export function EditarColunaModal({
                     ))}
                   </div>
                   <Button 
-                    className="w-full mt-3" 
+                    className="w-full mt-3 h-8 text-xs rounded-none bg-primary hover:bg-primary/90" 
                     onClick={handleUpdateViewAllDealsPermissions}
                   >
                     Salvar Permissões de Todos os Negócios
@@ -419,7 +422,7 @@ export function EditarColunaModal({
               </div>
             </TabsContent>
 
-            <TabsContent value="automations" className="py-4">
+            <TabsContent value="automations" className="p-6 m-0">
               {columnId ? (
                 <ColumnAutomationsTab 
                   columnId={columnId} 
@@ -428,7 +431,7 @@ export function EditarColunaModal({
                   isModalOpen={open}
                 />
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground text-xs">
                   Selecione uma coluna para gerenciar automações
                 </div>
               )}

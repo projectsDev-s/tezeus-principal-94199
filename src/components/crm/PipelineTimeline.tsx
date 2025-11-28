@@ -16,9 +16,10 @@ interface PipelineTimelineProps {
   columns: TimelineColumn[];
   currentColumnId?: string;
   className?: string;
+  onStepClick?: (columnId: string) => void;
 }
 
-export function PipelineTimeline({ columns, currentColumnId, className }: PipelineTimelineProps) {
+export function PipelineTimeline({ columns, currentColumnId, className, onStepClick }: PipelineTimelineProps) {
   const currentIndex = columns.findIndex(col => col.id === currentColumnId);
 
   console.log('🎨 Timeline renderizada com colunas:', columns.map(c => ({ 
@@ -29,7 +30,7 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
   })));
 
   return (
-    <div className={cn("flex items-center justify-center py-12 px-8", className)}>
+    <div className={cn("flex items-center justify-between w-full py-8 px-4", className)}>
       {columns.map((column, index) => {
         const IconComponent = (column.icon && LucideIcons[column.icon as keyof typeof LucideIcons]) as LucideIcon;
         const Icon = IconComponent || LucideIcons.Circle;
@@ -65,18 +66,22 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
 
         return (
           <div key={column.id} className="contents">
-            <div className="flex flex-col items-center relative" style={{ minWidth: '80px' }}>
+            <div 
+              className={cn("flex flex-col items-center relative group", onStepClick && "cursor-pointer")} 
+              style={{ minWidth: '80px' }}
+              onClick={() => onStepClick?.(column.id)}
+            >
               {/* Ícone grande acima */}
               <div 
                 className={cn(
-                  "absolute -top-14 transition-all duration-200",
-                  isCurrent && "scale-105"
+                  "absolute -top-10 transition-all duration-200",
+                  isCurrent && "scale-110"
                 )}
                 style={{
                   color: isPast || isCurrent ? (isPast ? 'hsl(var(--muted-foreground))' : column.color) : 'hsl(var(--muted))',
                 }}
               >
-                <Icon className="h-10 w-10" strokeWidth={2} />
+                <Icon className="h-6 w-6" strokeWidth={2} />
               </div>
               
               {/* Círculo do step */}
@@ -94,7 +99,7 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
                 {isCurrent && (
                   // Step atual com loading spinner
                   <div
-                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center transition-all duration-200"
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center transition-all duration-200 shadow-md"
                     style={{ backgroundColor: column.color }}
                   >
                     <Loader2 className="h-2.5 w-2.5 text-white animate-spin" strokeWidth={3} />
@@ -104,9 +109,9 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
                 {isFuture && (
                   // Step futuro - círculo vazio com borda
                   <div
-                    className="w-[15px] h-[15px] rounded-full transition-all duration-200"
+                    className="w-[15px] h-[15px] rounded-full transition-all duration-200 group-hover:border-gray-400"
                     style={{ 
-                      border: '4px solid hsl(var(--border))',
+                      border: '3px solid hsl(var(--border))',
                       backgroundColor: 'transparent'
                     }}
                   />
@@ -116,9 +121,10 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
               {/* Label abaixo */}
               <span
                 className={cn(
-                  "absolute top-8 text-xs font-bold text-center max-w-[100px] transition-all duration-200 whitespace-nowrap",
+                  "absolute top-6 text-[10px] font-medium text-center max-w-[100px] transition-all duration-200 whitespace-nowrap",
                   isPast && "text-muted-foreground",
-                  isFuture && "text-muted"
+                  isFuture && "text-muted",
+                  isCurrent && "font-bold"
                 )}
                 style={isCurrent ? { color: column.color } : {}}
               >
@@ -131,9 +137,8 @@ export function PipelineTimeline({ columns, currentColumnId, className }: Pipeli
               <div 
                 className="h-0.5 transition-all duration-200" 
                 style={{ 
-                  width: '120px',
-                  maxWidth: '120px',
                   flexGrow: 1,
+                  minWidth: '40px',
                   ...lineStyle
                 }}
               />

@@ -1,9 +1,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationMessage } from '@/hooks/useNotifications';
 import { MessageCircle, Image, Video, Headphones, FileText } from 'lucide-react';
 
@@ -44,34 +42,38 @@ export function NotificationTooltip({
   };
 
   return (
-    <Card className="w-80">
-      <CardContent className="p-0">
-        {/* Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Notificações</h3>
-            <Badge variant="destructive" className="bg-destructive text-destructive-foreground">
-              {totalUnread}
-            </Badge>
-          </div>
+    <div className="w-80 bg-white">
+      {/* Header */}
+      <div className="p-3 border-b border-[#d4d4d4] bg-primary text-primary-foreground">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold">Notificações</h3>
+          <Badge variant="secondary" className="bg-white text-primary border-none rounded-none h-5 px-1.5 text-[10px] font-bold">
+            {totalUnread}
+          </Badge>
         </div>
+      </div>
 
-        {/* Lista de notificações - sem ScrollArea já que são poucas */}
-        <div className="max-h-80 overflow-y-auto">
-          <div className="p-2">
-            {notifications.map((notification) => (
-              <div key={notification.id} className="mb-1 group">
+      {/* Lista de notificações */}
+      <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+        <div>
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 text-xs">
+              Nenhuma notificação nova
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <div key={notification.id} className="border-b border-[#d4d4d4] last:border-b-0 group">
                 <Button
                   variant="ghost"
-                  className="w-full p-3 h-auto justify-start hover:bg-muted/50"
+                  className="w-full p-3 h-auto justify-start hover:bg-[#e6f2ff] rounded-none"
                   onClick={() => onNotificationClick(notification.conversationId)}
                 >
                   <div className="flex items-start gap-3 w-full">
                     {/* Avatar */}
-                    <Avatar className="w-10 h-10 flex-shrink-0">
+                    <Avatar className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200">
                       <AvatarImage src="" alt={notification.contactName} />
                       <AvatarFallback 
-                        className={`${getAvatarColor(notification.contactName)} text-primary-foreground text-xs font-semibold`}
+                        className={`${getAvatarColor(notification.contactName)} text-primary-foreground text-[10px] font-bold`}
                       >
                         {getAvatarInitials(notification.contactName)}
                       </AvatarFallback>
@@ -79,18 +81,18 @@ export function NotificationTooltip({
 
                     {/* Conteúdo */}
                     <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-sm truncate">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-bold text-xs text-gray-800 truncate">
                           {notification.contactName}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] text-gray-500">
                           {formatTimestamp(notification.timestamp)}
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-1">
-                        {getMessageIcon(notification.messageType)}
-                        <span className="text-xs text-muted-foreground truncate">
+                      <div className="flex items-center gap-1 text-gray-600">
+                        {React.cloneElement(getMessageIcon(notification.messageType) as React.ReactElement, { className: "w-3 h-3" })}
+                        <span className="text-[11px] truncate">
                           {notification.isMedia ? 'Imagem' : notification.content}
                         </span>
                       </div>
@@ -98,22 +100,23 @@ export function NotificationTooltip({
                   </div>
                 </Button>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="p-3 border-t border-border">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full"
-            onClick={onMarkAllAsRead}
-          >
-            Marcar todas como lidas
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Footer */}
+      <div className="p-2 border-t border-[#d4d4d4] bg-gray-50">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="w-full h-7 text-xs rounded-none border-gray-300 bg-white hover:bg-gray-100 text-gray-700"
+          onClick={onMarkAllAsRead}
+          disabled={notifications.length === 0}
+        >
+          Marcar todas como lidas
+        </Button>
+      </div>
+    </div>
   );
 }

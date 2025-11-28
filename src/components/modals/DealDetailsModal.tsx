@@ -162,27 +162,27 @@ function ActivityItem({
   };
 
   return (
-    <div className={cn("border-l-4 rounded-lg p-4", isDarkMode ? "border-yellow-500 bg-[#1f1f1f]" : "border-yellow-500 bg-white shadow-sm")}>
+    <div className={cn("border border-[#d4d4d4] border-l-4 rounded-none p-3", isDarkMode ? "border-l-yellow-500 bg-[#1f1f1f]" : "border-l-yellow-500 bg-white shadow-sm")}>
       {isEditingActivity ? (
         <div className="space-y-3">
           <div className="space-y-2">
-            <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+            <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
               Assunto
             </label>
             <Input
               value={editActivityForm.subject}
               onChange={(e) => setEditActivityForm({...editActivityForm, subject: e.target.value})}
-              className={isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : ""}
+              className={cn("h-8 text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "")}
             />
           </div>
           <div className="space-y-2">
-            <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+            <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
               Descrição
             </label>
             <Textarea
               value={editActivityForm.description}
               onChange={(e) => setEditActivityForm({...editActivityForm, description: e.target.value})}
-              className={isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : ""}
+              className={cn("text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "")}
               rows={3}
             />
           </div>
@@ -191,16 +191,17 @@ function ActivityItem({
               size="sm"
               variant="outline"
               onClick={() => setIsEditingActivity(false)}
+              className="h-8 text-xs rounded-none"
             >
-              <X className="w-4 h-4 mr-1" />
+              <X className="w-3.5 h-3.5 mr-1" />
               Cancelar
             </Button>
             <Button
               size="sm"
               onClick={handleSaveActivity}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white"
+              className="h-8 text-xs rounded-none bg-yellow-500 hover:bg-yellow-600 text-white"
             >
-              <Check className="w-4 h-4 mr-1" />
+              <Check className="w-3.5 h-3.5 mr-1" />
               Salvar
             </Button>
           </div>
@@ -209,16 +210,16 @@ function ActivityItem({
         <>
           <div className="flex gap-4 mb-4">
             {/* Conteúdo principal à esquerda */}
-            <div className="flex-1 space-y-2">
-              <h4 className={cn("font-semibold text-base", isDarkMode ? "text-white" : "text-gray-900")}>
+            <div className="flex-1 space-y-1">
+              <h4 className={cn("font-bold text-sm", isDarkMode ? "text-white" : "text-gray-900")}>
                 {activity.subject}
               </h4>
-              <p className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+              <p className={cn("text-[10px]", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                 {format(new Date(activity.scheduled_for), "dd/MM/yyyy HH:mm", {
                   locale: ptBR
                 })}
               </p>
-              <p className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-600")}>
+              <p className={cn("text-xs", isDarkMode ? "text-gray-300" : "text-gray-600")}>
                 {activity.description || "Sem descrição"}
               </p>
             </div>
@@ -237,26 +238,26 @@ function ActivityItem({
             <Button 
               size="sm"
               onClick={() => onComplete(activity.id)}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white flex-1"
+              className="h-8 text-xs rounded-none bg-yellow-500 hover:bg-yellow-600 text-white flex-1"
             >
-              <Check className="w-4 h-4 mr-1" />
+              <Check className="w-3.5 h-3.5 mr-1" />
               Concluir
             </Button>
             <Button 
               size="sm" 
               variant="outline"
               onClick={() => setIsEditingActivity(true)}
-              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+              className="h-8 w-8 p-0 rounded-none border-yellow-500 text-yellow-600 hover:bg-yellow-50"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-3.5 h-3.5" />
             </Button>
             <Button 
               size="sm" 
               variant="outline"
-              className="border-red-500 text-red-600 hover:bg-red-50"
+              className="h-8 w-8 p-0 rounded-none border-red-500 text-red-600 hover:bg-red-50"
               onClick={() => onDelete(activity)}
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </Button>
           </div>
         </>
@@ -1648,36 +1649,33 @@ export function DealDetailsModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn("max-w-6xl w-full h-[90vh] p-0 gap-0 flex flex-col", isDarkMode ? "bg-[#2d2d2d] border-gray-600" : "bg-white")}>
         {/* Header */}
-        <DialogHeader className={cn("px-6 py-4 border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
-          <div className="flex items-center gap-4 flex-1">
-            <Button size="icon" variant="ghost" onClick={onClose} className={cn("h-8 w-8", isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600")}>
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            
-            <Avatar className="w-12 h-12">
+        <DialogHeader className={cn("mx-0 mt-0 px-6 py-4 border-b shrink-0 bg-primary text-primary-foreground", isDarkMode ? "border-gray-600" : "border-gray-200")}>
+          <div className="flex items-center gap-4 flex-1 pr-8">
+            {/* Avatar e Info Principal */}
+            <Avatar className="w-12 h-12 border-2 border-white/20">
               <AvatarImage 
                 src={contactData?.profile_image_url} 
                 alt={contactData?.name || "Contato"}
               />
-              <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-lg">
+              <AvatarFallback className="bg-white/20 text-primary-foreground font-semibold text-lg">
                 {contactData?.name ? contactData.name.charAt(0).toUpperCase() : "?"}
               </AvatarFallback>
             </Avatar>
             
-            <div className="flex items-start gap-4">
-              <div className="flex flex-col">
-                <DialogTitle className={cn("text-xl font-semibold text-left", isDarkMode ? "text-white" : "text-gray-900")}>
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="flex flex-col min-w-0">
+                <DialogTitle className={cn("text-xl font-bold text-left truncate text-primary-foreground")}>
                   {contactData?.name || dealName}
                 </DialogTitle>
-                <div className="flex items-center gap-2">
-                  <p className={cn("text-sm text-left", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                <div className="flex items-center gap-2 text-primary-foreground/80">
+                  <p className="text-sm text-left">
                     {contactData?.phone || contactNumber}
                   </p>
                   {conversationId && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-6 w-6 hover:bg-white/20 text-primary-foreground"
                       onClick={() => setIsChatModalOpen(true)}
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -1686,40 +1684,36 @@ export function DealDetailsModal({
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Tags do contato */}
-                {contactTags.map(tag => <Badge key={tag.id} variant="outline" className={cn("border-gray-300 px-3 py-1 text-xs group relative", isDarkMode ? "text-gray-300 border-gray-600" : "text-gray-600")} style={{
-                borderColor: tag.color,
-                color: tag.color
-              }}>
+                {contactTags.map(tag => <Badge key={tag.id} variant="outline" className="border-white/40 bg-white/10 px-2 py-0.5 text-xs group relative text-primary-foreground hover:bg-white/20">
                     {tag.name}
-                    <Button size="icon" variant="ghost" className="ml-1 h-3 w-3 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveTag(tag.id)}>
+                    <Button size="icon" variant="ghost" className="ml-1 h-3 w-3 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20 text-primary-foreground" onClick={() => handleRemoveTag(tag.id)}>
                       <X className="w-2 h-2" />
                     </Button>
                   </Badge>)}
                 
-                {/* Botão "mais" para adicionar tags - funcional */}
+                {/* Botão "mais" para adicionar tags */}
                 {contactId && (
-                  <AddContactTagButton 
-                    contactId={contactId} 
-                    isDarkMode={isDarkMode}
-                    onTagAdded={(tag) => {
-                      if (contactId) {
-                        fetchContactTags(contactId);
-                      }
-                      handleTagAdded(tag);
-                    }} 
-                  />
+                  <div className="text-primary-foreground">
+                     <AddContactTagButton 
+                      contactId={contactId} 
+                      isDarkMode={isDarkMode}
+                      onTagAdded={(tag) => {
+                        if (contactId) {
+                          fetchContactTags(contactId);
+                        }
+                        handleTagAdded(tag);
+                      }} 
+                    />
+                  </div>
                 )}
               </div>
             </div>
             
             {/* Botões Ganho e Perda no canto direito */}
-            <div className="ml-auto flex gap-2">
+            <div className="ml-auto flex gap-2 items-center">
               {(() => {
-                console.log('🎨 Renderizando botões de ação. Total de ações:', pipelineActions.length);
-                console.log('📊 Ações disponíveis:', pipelineActions);
-                
                 const filteredActions = pipelineActions.filter((action: any) => {
                   if (action.deal_state === 'Aberto') {
                     return canViewOpenAction;
@@ -1727,18 +1721,19 @@ export function DealDetailsModal({
                   return action.deal_state === 'Ganho' || action.deal_state === 'Perda';
                 });
                 
-                console.log('✅ Ações filtradas (Ganho/Perda):', filteredActions);
-                
                 return filteredActions.map((action: any) => {
                   const isWin = action.deal_state === 'Ganho';
                   const isLoss = action.deal_state === 'Perda';
                   const isOpen = action.deal_state === 'Aberto';
                   const variant = isLoss ? 'destructive' : isOpen ? 'secondary' : 'default';
-                  const className = isWin
-                    ? 'bg-green-600 hover:bg-green-700'
+                  
+                  // Estilos específicos para destacar sobre o fundo amarelo
+                  const styleClass = isWin
+                    ? 'bg-green-600 hover:bg-green-700 text-white border-transparent shadow-sm rounded-none h-8 text-xs font-medium'
                     : isLoss
-                      ? 'bg-red-600 hover:bg-red-700'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white';
+                      ? 'bg-red-600 hover:bg-red-700 text-white border-transparent shadow-sm rounded-none h-8 text-xs font-medium'
+                      : 'bg-white text-primary hover:bg-gray-100 border-transparent shadow-sm rounded-none h-8 text-xs font-medium';
+
                   return (
                   <Button
                     key={action.id}
@@ -1746,7 +1741,7 @@ export function DealDetailsModal({
                     variant={variant}
                     onClick={() => executeAction(action)}
                     disabled={isExecutingAction}
-                    className={className}
+                    className={styleClass}
                   >
                     {isExecutingAction ? 'Processando...' : action.action_name}
                   </Button>
@@ -1758,8 +1753,8 @@ export function DealDetailsModal({
         </DialogHeader>
 
 
-        {/* Tabs */}
-        <div className={cn("flex border-b shrink-0", isDarkMode ? "border-gray-600" : "border-gray-200")}>
+        {/* Tabs - Excel Style (Top) */}
+        <div className={cn("flex items-end border-b shrink-0 px-2 pt-2 bg-[#f0f0f0]", isDarkMode ? "border-gray-600 bg-gray-800" : "border-[#d4d4d4]")}>
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -1786,15 +1781,12 @@ export function DealDetailsModal({
                 setActiveTab(tab.id);
               }}
               className={cn(
-                "px-6 py-3 text-sm font-medium border-b-2 transition-colors",
-                activeTab === tab.id ? "border-yellow-400 text-yellow-600" : "border-transparent",
-                isDarkMode
-                  ? activeTab === tab.id
-                    ? "text-yellow-400"
-                    : "text-gray-400 hover:text-white"
-                  : activeTab === tab.id
-                    ? "text-yellow-600"
-                    : "text-gray-600 hover:text-gray-900"
+                "px-4 py-2 text-sm font-medium border-t border-x rounded-t-md transition-all relative top-[1px] min-w-[100px]",
+                activeTab === tab.id 
+                  ? "bg-white border-[#d4d4d4] border-b-white text-primary z-10" 
+                  : "bg-transparent border-transparent text-gray-500 hover:bg-white/50 hover:text-gray-700",
+                isDarkMode && activeTab === tab.id && "bg-[#2d2d2d] border-gray-600 border-b-[#2d2d2d] text-white",
+                isDarkMode && activeTab !== tab.id && "text-gray-400 hover:bg-white/10"
               )}
             >
               {tab.label}
@@ -1829,51 +1821,37 @@ export function DealDetailsModal({
               </div>
             </div>
           ) : activeTab === "negocios" && <div className="space-y-6">
-              {/* Pipeline Atual - Nome do Pipeline ao invés de select */}
+              {/* Pipeline do Negócio - Excel Style */}
               <div className="space-y-2">
                 <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                   Pipeline do Negócio
                 </label>
                 <div className={cn(
-                  "px-4 py-3 rounded-lg border font-medium",
-                  isDarkMode 
-                    ? "bg-[#2d2d2d] border-gray-600 text-white" 
-                    : "bg-gray-50 border-gray-200 text-gray-900"
+                  "px-4 py-2 border border-[#d4d4d4] font-medium bg-white rounded-none shadow-sm text-xs",
+                  isDarkMode && "bg-[#2d2d2d] border-gray-600 text-white"
                 )}>
                   {isLoadingData ? 'Carregando...' : (selectedPipeline?.name || 'Pipeline não identificado')}
                 </div>
               </div>
 
               {/* Pipeline Timeline - Baseado na imagem de referência */}
-              <div className="space-y-6">
+              <div className="space-y-4 pb-4">
                 {isLoadingColumns ? (
                   <div className="flex justify-center py-8">
                     <div className="animate-pulse space-y-4 w-full">
-                      <div className="h-4 bg-gray-300 rounded w-1/4"></div>
+                      <div className="h-4 bg-gray-300 w-1/4"></div>
                       <div className="flex justify-between">
                         {[1,2,3,4].map(i => (
                           <div key={i} className="flex flex-col items-center space-y-2">
                             <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                            <div className="h-3 bg-gray-300 rounded w-16"></div>
+                            <div className="h-3 bg-gray-300 w-16"></div>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
                 ) : pipelineSteps.length > 0 ? (
-                  <div className="w-full space-y-4">
-                    {/* Informação da posição atual */}
-                    {selectedColumnId && (
-                      <div className={cn("mb-4 p-3 rounded-lg border",
-                        isDarkMode 
-                          ? "bg-yellow-900/30 border-yellow-700 text-yellow-300" 
-                          : "bg-yellow-50 border-yellow-200 text-yellow-800"
-                      )}>
-                        <p className="text-sm">
-                          <strong>Etapa atual:</strong> {pipelineSteps.find(s => s.isActive)?.name || 'Não definida'}
-                        </p>
-                      </div>
-                    )}
+                  <div className="w-full bg-white border border-[#d4d4d4] p-4 shadow-sm">
                     
                     {/* Pipeline Visual com Ícones */}
                     <PipelineTimeline 
@@ -1885,7 +1863,34 @@ export function DealDetailsModal({
                         isActive: step.isActive
                       }))}
                       currentColumnId={selectedColumnId}
-                      className="py-6"
+                      className="pt-12 pb-8"
+                      onStepClick={async (newColumnId) => {
+                        if (newColumnId === selectedColumnId || !selectedCardId) return;
+                        
+                        try {
+                          const { error } = await supabase
+                            .from('pipeline_cards')
+                            .update({ column_id: newColumnId })
+                            .eq('id', selectedCardId);
+
+                          if (error) throw error;
+
+                          setSelectedColumnId(newColumnId);
+                          toast({
+                            title: "Etapa atualizada",
+                            description: "O negócio foi movido para a nova etapa.",
+                          });
+                          
+                          fetchCardData();
+                        } catch (error) {
+                          console.error('Erro ao mover negócio:', error);
+                          toast({
+                            title: "Erro",
+                            description: "Não foi possível mover o negócio.",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
                     />
                   </div>
                 ) : (
@@ -1902,8 +1907,8 @@ export function DealDetailsModal({
           {activeTab === "atividades" && <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Histórico de Atividades */}
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
+                <div className="flex items-center gap-3 bg-[#f0f0f0] border border-[#d4d4d4] p-3 rounded-none">
+                  <h3 className={cn("text-sm font-bold", isDarkMode ? "text-white" : "text-gray-800")}>
                     Histórico de Atividades
                   </h3>
                   
@@ -1922,25 +1927,25 @@ export function DealDetailsModal({
                         onDelete={handleRequestDeleteActivity}
                       />
                     ))}
-                  </div> : <div className={cn("text-center py-8", isDarkMode ? "text-gray-400" : "text-gray-500")}>
-                    <p>Nenhuma atividade pendente encontrada</p>
+                  </div> : <div className={cn("text-center py-8 border border-[#d4d4d4] bg-white rounded-none", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                    <p className="text-sm">Nenhuma atividade pendente encontrada</p>
                   </div>}
               </div>
 
               {/* Formulário Criar Atividade - Integrado */}
               <div className="space-y-4">
-                <h3 className={cn("text-lg font-semibold mb-4", isDarkMode ? "text-white" : "text-gray-900")}>
+                <h3 className={cn("text-sm font-bold mb-4 bg-[#f0f0f0] border border-[#d4d4d4] p-3 rounded-none", isDarkMode ? "text-white" : "text-gray-800")}>
                   Criar atividade
                 </h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-4 p-4 border border-[#d4d4d4] bg-white shadow-sm">
                   {/* Tipo */}
                   <div className="space-y-2">
-                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                    <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                       Tipo
                     </label>
                     <Select value={activityForm.type} onValueChange={(value) => setActivityForm({...activityForm, type: value})}>
-                      <SelectTrigger className={cn("w-full", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
+                      <SelectTrigger className={cn("w-full h-8 text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
                         <div className="flex items-center gap-2">
                           {(() => {
                             const activityTypes = [
@@ -1955,14 +1960,14 @@ export function DealDetailsModal({
                             const Icon = selectedType?.icon || Clock;
                             return (
                               <>
-                                <Icon className="w-4 h-4" />
+                                <Icon className="w-3.5 h-3.5" />
                                 <span>{selectedType?.label || activityForm.type}</span>
                               </>
                             );
                           })()}
                         </div>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-none border-gray-300">
                         {[
                           { value: "Lembrete", label: "Lembrete", icon: Clock },
                           { value: "Mensagem", label: "Mensagem", icon: MessageSquare },
@@ -1973,9 +1978,9 @@ export function DealDetailsModal({
                         ].map((type) => {
                           const Icon = type.icon;
                           return (
-                            <SelectItem key={type.value} value={type.value}>
+                            <SelectItem key={type.value} value={type.value} className="text-xs cursor-pointer focus:bg-gray-100">
                               <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4" />
+                                <Icon className="w-3.5 h-3.5" />
                                 <span>{type.label}</span>
                               </div>
                             </SelectItem>
@@ -1987,16 +1992,16 @@ export function DealDetailsModal({
 
                   {/* Responsável */}
                   <div className="space-y-2">
-                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                    <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                       Responsável
                     </label>
                     <Select value={activityForm.responsibleId} onValueChange={(value) => setActivityForm({...activityForm, responsibleId: value})}>
-                      <SelectTrigger className={cn("w-full", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
+                      <SelectTrigger className={cn("w-full h-8 text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")}>
                         <SelectValue placeholder={isLoadingUsers ? "Carregando usuários..." : "Selecione um responsável"} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-none border-gray-300">
                         {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
+                          <SelectItem key={user.id} value={user.id} className="text-xs cursor-pointer focus:bg-gray-100">
                             {user.name}
                           </SelectItem>
                         ))}
@@ -2007,14 +2012,14 @@ export function DealDetailsModal({
                   {/* Assunto - não mostrar para comentários */}
                   {activityForm.type !== "Comentários" && (
                     <div className="space-y-2">
-                      <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                      <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                         Assunto
                       </label>
                       <Input 
                         placeholder="Digite o assunto da atividade" 
                         value={activityForm.subject}
                         onChange={(e) => setActivityForm({...activityForm, subject: e.target.value})}
-                        className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
+                        className={cn("h-8 text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
                       />
                     </div>
                   )}
@@ -2023,30 +2028,30 @@ export function DealDetailsModal({
                   {activityForm.type !== "Comentários" && (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                        <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                           Agendar para
                         </label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button 
                               variant="outline" 
-                              className={cn("w-full justify-start text-left font-normal", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
+                              className={cn("w-full justify-start text-left font-normal h-8 text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white hover:bg-gray-700" : "bg-white")}
                               onClick={handleDateTimeClick}
                             >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
                               {selectedDate && selectedTime ? 
                                 `${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} ${selectedTime}` : 
                                 "Selecionar data e hora"
                               }
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                          <PopoverContent className="w-auto p-0 rounded-none border-gray-300" align="start">
                             <Calendar 
                               mode="single" 
                               selected={selectedDate} 
                               onSelect={handleDateSelect} 
                               initialFocus 
-                              className="pointer-events-auto" 
+                              className="pointer-events-auto rounded-none" 
                             />
                           </PopoverContent>
                         </Popover>
@@ -2057,19 +2062,19 @@ export function DealDetailsModal({
                   {/* Upload de arquivo - não mostrar para comentários */}
                   {activityForm.type !== "Comentários" && (
                     <div className="space-y-2">
-                      <div className={cn("border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors", isDarkMode ? "border-gray-600 hover:border-gray-500 bg-[#1f1f1f]" : "border-gray-300 hover:border-gray-400 bg-gray-50")}>
+                      <div className={cn("border border-dashed rounded-none p-4 text-center cursor-pointer transition-colors", isDarkMode ? "border-gray-600 hover:border-gray-500 bg-[#1f1f1f]" : "border-gray-300 hover:border-gray-400 bg-gray-50")}>
                         {attachedFile ? (
                           <div className="flex items-center justify-between">
-                            <span className={cn("text-sm", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                            <span className={cn("text-xs", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                               {attachedFile.name}
                             </span>
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={removeFile}
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 rounded-none hover:bg-gray-100"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         ) : (
@@ -2080,8 +2085,8 @@ export function DealDetailsModal({
                               className="hidden"
                               accept="*/*"
                             />
-                            <Upload className={cn("w-8 h-8 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
-                            <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                            <Upload className={cn("w-6 h-6 mx-auto mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")} />
+                            <p className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
                               Clique aqui ou arraste o documento a ser salvo
                             </p>
                           </label>
@@ -2092,7 +2097,7 @@ export function DealDetailsModal({
 
                   {/* Descrição - obrigatória para comentários */}
                   <div className="space-y-2">
-                    <label className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                    <label className={cn("text-xs font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                       {activityForm.type === "Comentários" ? "Observação *" : "Descrição"}
                     </label>
                     <Textarea 
@@ -2100,13 +2105,13 @@ export function DealDetailsModal({
                       rows={4} 
                       value={activityForm.description}
                       onChange={(e) => setActivityForm({...activityForm, description: e.target.value})}
-                      className={cn(isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
+                      className={cn("text-xs rounded-none border-gray-300", isDarkMode ? "bg-[#2d2d2d] border-gray-600 text-white" : "bg-white")} 
                     />
                   </div>
 
                   {/* Botão Criar Atividade */}
                   <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs rounded-none font-medium shadow-sm" 
                     onClick={handleCreateActivity} 
                     disabled={!contactId || isCreatingActivity}
                   >
@@ -2118,39 +2123,39 @@ export function DealDetailsModal({
 
           {activeTab === "historico" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
+              <div className="flex items-center justify-between bg-[#f0f0f0] border border-[#d4d4d4] p-3 rounded-none">
+                <h3 className={cn("text-sm font-bold", isDarkMode ? "text-white" : "text-gray-800")}>
                   Histórico de eventos
                 </h3>
                 
                 {/* Filtro de eventos */}
                 <Select value={historyFilter} onValueChange={handleHistoryFilterChange}>
-                  <SelectTrigger className="w-[220px]">
+                  <SelectTrigger className="w-[220px] h-8 text-xs rounded-none border-gray-300 bg-white">
                     <SelectValue placeholder="Filtrar por tipo" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="agent_activity">Evento de Agente IA</SelectItem>
-                    <SelectItem value="user_assigned">Conversa Vinculada</SelectItem>
-                    <SelectItem value="queue_transfer">Transferência de Fila</SelectItem>
-                    <SelectItem value="pipeline_transfer">Transferência de Pipeline</SelectItem>
-                    <SelectItem value="column_transfer">Transferência de Etapa</SelectItem>
-                    <SelectItem value="activity_lembrete_created">Lembretes Criados</SelectItem>
-                    <SelectItem value="activity_lembrete_completed">Lembretes Concluídos</SelectItem>
-                    <SelectItem value="activity_mensagem_created">Mensagens Criadas</SelectItem>
-                    <SelectItem value="activity_mensagem_completed">Mensagens Concluídas</SelectItem>
-                    <SelectItem value="activity_ligacao_created">Ligações Criadas</SelectItem>
-                    <SelectItem value="activity_ligacao_completed">Ligações Concluídas</SelectItem>
-                    <SelectItem value="activity_reuniao_created">Reuniões Criadas</SelectItem>
-                    <SelectItem value="activity_reuniao_completed">Reuniões Concluídas</SelectItem>
-                    <SelectItem value="activity_agendamento_created">Agendamentos Criados</SelectItem>
-                    <SelectItem value="activity_agendamento_completed">Agendamentos Concluídos</SelectItem>
-                    <SelectItem value="tag">Tag</SelectItem>
+                  <SelectContent className="rounded-none border-gray-300">
+                    <SelectItem value="todos" className="text-xs cursor-pointer focus:bg-gray-100">Todos</SelectItem>
+                    <SelectItem value="agent_activity" className="text-xs cursor-pointer focus:bg-gray-100">Evento de Agente IA</SelectItem>
+                    <SelectItem value="user_assigned" className="text-xs cursor-pointer focus:bg-gray-100">Conversa Vinculada</SelectItem>
+                    <SelectItem value="queue_transfer" className="text-xs cursor-pointer focus:bg-gray-100">Transferência de Fila</SelectItem>
+                    <SelectItem value="pipeline_transfer" className="text-xs cursor-pointer focus:bg-gray-100">Transferência de Pipeline</SelectItem>
+                    <SelectItem value="column_transfer" className="text-xs cursor-pointer focus:bg-gray-100">Transferência de Etapa</SelectItem>
+                    <SelectItem value="activity_lembrete_created" className="text-xs cursor-pointer focus:bg-gray-100">Lembretes Criados</SelectItem>
+                    <SelectItem value="activity_lembrete_completed" className="text-xs cursor-pointer focus:bg-gray-100">Lembretes Concluídos</SelectItem>
+                    <SelectItem value="activity_mensagem_created" className="text-xs cursor-pointer focus:bg-gray-100">Mensagens Criadas</SelectItem>
+                    <SelectItem value="activity_mensagem_completed" className="text-xs cursor-pointer focus:bg-gray-100">Mensagens Concluídas</SelectItem>
+                    <SelectItem value="activity_ligacao_created" className="text-xs cursor-pointer focus:bg-gray-100">Ligações Criadas</SelectItem>
+                    <SelectItem value="activity_ligacao_completed" className="text-xs cursor-pointer focus:bg-gray-100">Ligações Concluídas</SelectItem>
+                    <SelectItem value="activity_reuniao_created" className="text-xs cursor-pointer focus:bg-gray-100">Reuniões Criadas</SelectItem>
+                    <SelectItem value="activity_reuniao_completed" className="text-xs cursor-pointer focus:bg-gray-100">Reuniões Concluídas</SelectItem>
+                    <SelectItem value="activity_agendamento_created" className="text-xs cursor-pointer focus:bg-gray-100">Agendamentos Criados</SelectItem>
+                    <SelectItem value="activity_agendamento_completed" className="text-xs cursor-pointer focus:bg-gray-100">Agendamentos Concluídos</SelectItem>
+                    <SelectItem value="tag" className="text-xs cursor-pointer focus:bg-gray-100">Tag</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              {/* Timeline de eventos */}
+              {/* Timeline de eventos - Estilo Clean */}
               {(isInitialLoading || isLoadingHistory) ? (
                 <div className="space-y-4">
                   {Array.from({ length: 5 }).map((_, index) => (
@@ -2280,13 +2285,13 @@ export function DealDetailsModal({
                               
                               {/* Conteúdo do evento */}
                               <div className={cn(
-                                "flex-1 rounded-lg p-4 border",
-                                isDarkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-gray-50 border-gray-200"
+                                "flex-1 rounded-none p-4 border border-[#d4d4d4]",
+                                isDarkMode ? "bg-[#1f1f1f] border-gray-700" : "bg-white border-gray-200 shadow-sm"
                               )}>
                                 {/* Título do evento */}
                                 <div className="flex items-start justify-between gap-2 mb-1">
                                   <h4 className={cn(
-                                    "font-medium text-sm",
+                                    "font-bold text-sm",
                                     isDarkMode ? "text-white" : "text-gray-900"
                                   )}>
                                     {eventTitle}
@@ -2295,7 +2300,7 @@ export function DealDetailsModal({
                                 
                                 {/* Descrição */}
                                 <div className={cn(
-                                  "text-sm mb-2",
+                                  "text-xs mb-2",
                                   isDarkMode ? "text-gray-300" : "text-gray-700"
                                 )}>
                                   {event.description.split(/(\*\*.*?\*\*)/).map((part, i) => {
@@ -2313,7 +2318,7 @@ export function DealDetailsModal({
                                     isDarkMode ? "text-gray-500" : "text-gray-400"
                                   )} />
                                   <span className={cn(
-                                    "text-xs",
+                                    "text-[10px]",
                                     isDarkMode ? "text-gray-500" : "text-gray-500"
                                   )}>
                                     {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
@@ -2322,7 +2327,7 @@ export function DealDetailsModal({
 
                                 {(event.user_name || eventMetadata.changed_by_name) && (
                                   <div className={cn(
-                                    "mt-2 text-xs",
+                                    "mt-2 text-[10px]",
                                     isDarkMode ? "text-gray-500" : "text-gray-500"
                                   )}>
                                     Atualizado por: {eventMetadata.changed_by_name || event.user_name}
@@ -2356,36 +2361,38 @@ export function DealDetailsModal({
           )}
 
           {isInitialLoading ? null : activeTab === "historico-atividades" && <div className="space-y-6">
-              <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
-                Histórico de Atividades
-              </h3>
+              <div className="flex items-center gap-3 bg-[#f0f0f0] border border-[#d4d4d4] p-3 rounded-none">
+                <h3 className={cn("text-sm font-bold", isDarkMode ? "text-white" : "text-gray-800")}>
+                  Histórico de Atividades
+                </h3>
+              </div>
               
               {completedActivitiesWithComments.length > 0 ? (
                 <div className="space-y-3">
                   {completedActivitiesWithComments.map(item => (
-                    <div key={item.id} className={cn("border rounded-lg p-4", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-gray-200 bg-gray-50")}>
+                    <div key={item.id} className={cn("border rounded-none p-3", isDarkMode ? "border-gray-600 bg-[#1f1f1f]" : "border-[#d4d4d4] bg-white shadow-sm")}>
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs rounded-none border-gray-300">
                           {item.activity_type}
                         </Badge>
                         {item.type === 'activity' && (
-                          <Badge className="bg-green-100 text-green-800 text-xs">
+                          <Badge className="bg-green-100 text-green-800 text-xs rounded-none border-green-200">
                             Concluída
                           </Badge>
                         )}
-                        <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-600")}>
+                        <span className={cn("text-xs", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                           {item.responsible_name}
                         </span>
                       </div>
-                      <h4 className={cn("font-medium", isDarkMode ? "text-white" : "text-gray-900")}>
+                      <h4 className={cn("font-bold text-sm", isDarkMode ? "text-white" : "text-gray-900")}>
                         {item.subject}
                       </h4>
-                      <div className={cn("text-sm mb-2", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                        <p className="mb-1">Criado em:</p>
-                        <p className="mb-2">{format(new Date(item.date), "dd/MM/yyyy", { locale: ptBR })}</p>
+                      <div className={cn("text-xs mb-2", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                        <p className="mb-0.5">Criado em:</p>
+                        <p className="mb-1">{format(new Date(item.date), "dd/MM/yyyy", { locale: ptBR })}</p>
                         {item.type === 'activity' && item.completed_at && (
                           <>
-                            <p className="mb-1">Concluído em:</p>
+                            <p className="mb-0.5">Concluído em:</p>
                             <p>{format(new Date(item.completed_at), "dd/MM/yyyy", { locale: ptBR })}</p>
                           </>
                         )}
@@ -2393,7 +2400,7 @@ export function DealDetailsModal({
                       
                       {/* Descrição/Comentário */}
                       {item.description && (
-                        <p className={cn("text-sm mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
+                        <p className={cn("text-xs mt-2", isDarkMode ? "text-gray-300" : "text-gray-700")}>
                           {item.description}
                         </p>
                       )}
@@ -2410,7 +2417,7 @@ export function DealDetailsModal({
                                 <img 
                                   src={item.attachment_url} 
                                   alt={item.attachment_name || "Anexo"}
-                                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                                  className="w-20 h-20 object-cover rounded-none cursor-pointer hover:opacity-80 transition-opacity border border-[#d4d4d4]"
                                   onClick={() => setSelectedAttachment({ 
                                     url: item.attachment_url!, 
                                     name: item.attachment_name || "Anexo" 
@@ -2422,22 +2429,22 @@ export function DealDetailsModal({
                             return (
                               <div 
                                 className={cn(
-                                  "w-full sm:w-64 p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-colors",
-                                  isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                                  "w-full sm:w-64 p-2 rounded-none border flex items-center gap-3 cursor-pointer transition-colors",
+                                  isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-[#d4d4d4] bg-gray-50 hover:bg-gray-100"
                                 )}
                                 onClick={() => window.open(item.attachment_url!, '_blank')}
                               >
                                 <div className={cn(
-                                  "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                                  isDarkMode ? "bg-gray-700" : "bg-white border border-gray-200"
+                                  "w-8 h-8 rounded-none flex items-center justify-center flex-shrink-0",
+                                  isDarkMode ? "bg-gray-700" : "bg-white border border-[#d4d4d4]"
                                 )}>
-                                  <FileText className={cn("w-5 h-5", isDarkMode ? "text-blue-400" : "text-blue-600")} />
+                                  <FileText className={cn("w-4 h-4", isDarkMode ? "text-blue-400" : "text-blue-600")} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
+                                  <p className={cn("text-xs font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
                                     {item.attachment_name || "Anexo"}
                                   </p>
-                                  <p className={cn("text-xs truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                                  <p className={cn("text-[10px] truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                                     Clique para visualizar
                                   </p>
                                 </div>
@@ -2459,7 +2466,7 @@ export function DealDetailsModal({
                                 <img 
                                   src={item.file_url} 
                                   alt={item.file_name || "Anexo"}
-                                  className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border border-border"
+                                  className="w-20 h-20 object-cover rounded-none cursor-pointer hover:opacity-80 transition-opacity border border-[#d4d4d4]"
                                   onClick={() => setSelectedAttachment({ 
                                     url: item.file_url!, 
                                     name: item.file_name || "Anexo" 
@@ -2471,22 +2478,22 @@ export function DealDetailsModal({
                             return (
                               <div 
                                 className={cn(
-                                  "w-full sm:w-64 p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-colors",
-                                  isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                                  "w-full sm:w-64 p-2 rounded-none border flex items-center gap-3 cursor-pointer transition-colors",
+                                  isDarkMode ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800" : "border-[#d4d4d4] bg-gray-50 hover:bg-gray-100"
                                 )}
                                 onClick={() => window.open(item.file_url!, '_blank')}
                               >
                                 <div className={cn(
-                                  "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                                  isDarkMode ? "bg-gray-700" : "bg-white border border-gray-200"
+                                  "w-8 h-8 rounded-none flex items-center justify-center flex-shrink-0",
+                                  isDarkMode ? "bg-gray-700" : "bg-white border border-[#d4d4d4]"
                                 )}>
-                                  <FileText className={cn("w-5 h-5", isDarkMode ? "text-blue-400" : "text-blue-600")} />
+                                  <FileText className={cn("w-4 h-4", isDarkMode ? "text-blue-400" : "text-blue-600")} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className={cn("text-sm font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
+                                  <p className={cn("text-xs font-medium truncate", isDarkMode ? "text-gray-200" : "text-gray-700")}>
                                     {item.file_name || "Anexo"}
                                   </p>
-                                  <p className={cn("text-xs truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                                  <p className={cn("text-[10px] truncate", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                                     Clique para visualizar
                                   </p>
                                 </div>
@@ -2500,118 +2507,93 @@ export function DealDetailsModal({
                 </div>
               ) : (
                 <div className={cn(
-                  "text-center py-8 rounded-lg border",
-                  isDarkMode ? "bg-[#1f1f1f] border-gray-700 text-gray-400" : "bg-gray-50 border-gray-200 text-gray-600"
+                  "text-center py-8 rounded-none border",
+                  isDarkMode ? "bg-[#1f1f1f] border-gray-700 text-gray-400" : "bg-white border-[#d4d4d4] text-gray-500"
                 )}>
-                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-40" />
-                  <p>Nenhuma atividade concluída</p>
+                  <Clock className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Nenhuma atividade concluída</p>
                 </div>
               )}
             </div>}
 
           {isInitialLoading ? null : activeTab === "contato" && <div className="space-y-6">
               {/* Informações de Contato */}
-              <div className="space-y-4">
-                <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-white" : "text-gray-900")}>
-                  Informações de Contato
-                </h3>
+              <div className="border border-[#d4d4d4] bg-white rounded-none">
+                <div className="bg-[#f0f0f0] border-b border-[#d4d4d4] p-3">
+                  <h3 className={cn("text-sm font-bold", isDarkMode ? "text-white" : "text-gray-800")}>
+                    Informações de Contato
+                  </h3>
+                </div>
                 
                 {contactData ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Card Email - só exibe se tiver email */}
-                    {contactData.email && (
-                      <div className={cn(
-                        "border rounded-lg p-4 flex items-center gap-3",
-                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                      )}>
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
-                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                        )}>
-                          <Mail className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
-                        </div>
-                        <div className="flex-1">
-                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                            Email
-                          </p>
-                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            {contactData.email}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                  <div className="p-0">
+                    <table className="w-full text-xs border-collapse">
+                      <tbody>
+                        {/* Nome */}
+                        {contactData.name && (
+                          <tr>
+                            <td className={cn("font-bold p-2 border-b border-r w-32 align-top", isDarkMode ? "bg-[#2d2d2d] text-gray-300 border-gray-700" : "bg-gray-50 text-gray-700 border-[#d4d4d4]")}>
+                              Nome
+                            </td>
+                            <td className={cn("p-2 border-b align-top", isDarkMode ? "text-gray-300 border-gray-700" : "text-gray-800 border-[#d4d4d4]")}>
+                              {contactData.name}
+                            </td>
+                          </tr>
+                        )}
 
-                    {/* Card Telefone - só exibe se tiver telefone */}
-                    {contactData.phone && (
-                      <div className={cn(
-                        "border rounded-lg p-4 flex items-center gap-3",
-                        isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                      )}>
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
-                          isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                        )}>
-                          <Phone className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
-                        </div>
-                        <div className="flex-1">
-                          <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                            Telefone
-                          </p>
-                          <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                            {(() => {
-                              const phone = contactData.phone;
-                              // Se começa com 55 (DDI Brasil)
-                              if (phone.startsWith('55')) {
-                                // +55 21 98765-4321 ou +55 21 8765-4321
-                                return phone.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 $1 $2-$3');
-                              }
-                              // Formato padrão (DDD) 9XXXX-XXXX
-                              return phone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3');
-                            })()}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Campos extras - cada campo é exibido individualmente */}
-                    {extraFields.map((field, index) => {
-                      // Cada campo extra é exibido como um card separado
-                      // field_name é o label, field_value é o conteúdo
-                      
-                      // Só renderiza se tiver nome e valor
-                      if (!field.field_name?.trim() || !field.field_value?.trim()) {
-                        return null;
-                      }
-                      
-                      return (
-                        <div 
-                          key={field.id || index}
-                          className={cn(
-                            "border rounded-lg p-4 flex items-center gap-3",
-                            isDarkMode ? "border-gray-600 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-                          )}
-                        >
-                          <div className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center",
-                            isDarkMode ? "bg-gray-700" : "bg-gray-100"
-                          )}>
-                            <FileText className={cn("w-5 h-5", isDarkMode ? "text-gray-300" : "text-gray-600")} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-sm font-medium", isDarkMode ? "text-gray-300" : "text-gray-700")}>
-                              {field.field_name}
-                            </p>
-                            <p className={cn("text-sm", isDarkMode ? "text-gray-400" : "text-gray-600")}>
-                              {field.field_value}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        {/* Email */}
+                        {contactData.email && (
+                          <tr>
+                            <td className={cn("font-bold p-2 border-b border-r w-32 align-top", isDarkMode ? "bg-[#2d2d2d] text-gray-300 border-gray-700" : "bg-gray-50 text-gray-700 border-[#d4d4d4]")}>
+                              E-mail
+                            </td>
+                            <td className={cn("p-2 border-b align-top", isDarkMode ? "text-gray-300 border-gray-700" : "text-gray-800 border-[#d4d4d4]")}>
+                              {contactData.email}
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* Telefone */}
+                        {contactData.phone && (
+                          <tr>
+                            <td className={cn("font-bold p-2 border-b border-r w-32 align-top", isDarkMode ? "bg-[#2d2d2d] text-gray-300 border-gray-700" : "bg-gray-50 text-gray-700 border-[#d4d4d4]")}>
+                              Telefone
+                            </td>
+                            <td className={cn("p-2 border-b align-top", isDarkMode ? "text-gray-300 border-gray-700" : "text-gray-800 border-[#d4d4d4]")}>
+                              {(() => {
+                                const phone = contactData.phone;
+                                if (phone.startsWith('55')) {
+                                  return phone.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '+55 $1 $2-$3');
+                                }
+                                return phone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3');
+                              })()}
+                            </td>
+                          </tr>
+                        )}
+                        
+                        {/* Campos extras */}
+                        {extraFields.map((field, index) => {
+                          if (!field.field_name?.trim() || !field.field_value?.trim()) {
+                            return null;
+                          }
+                          
+                          return (
+                            <tr key={field.id || index}>
+                              <td className={cn("font-bold p-2 border-b border-r w-32 align-top", isDarkMode ? "bg-[#2d2d2d] text-gray-300 border-gray-700" : "bg-gray-50 text-gray-700 border-[#d4d4d4]")}>
+                                {field.field_name}
+                              </td>
+                              <td className={cn("p-2 border-b align-top", isDarkMode ? "text-gray-300 border-gray-700" : "text-gray-800 border-[#d4d4d4]")}>
+                                {field.field_value}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="flex justify-center py-8">
-                    <div className={cn("text-center", isDarkMode ? "text-gray-400" : "text-gray-500")}>
+                    <div className={cn("text-center text-xs", isDarkMode ? "text-gray-400" : "text-gray-500")}>
                       Carregando informações do contato...
                     </div>
                   </div>

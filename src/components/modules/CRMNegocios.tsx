@@ -263,15 +263,15 @@ function DraggableDeal({
     cardStyle.borderColor = statusColor;
   }
 
-  return <Card ref={setNodeRef} style={cardStyle} {...!isSelectionMode && {
+  return <div ref={setNodeRef} style={cardStyle} {...!isSelectionMode && {
     ...attributes,
     ...listeners
-  }} className={cn("hover:shadow-md transition-shadow mb-1.5 md:mb-2 border-l-4 relative min-h-[85px] md:min-h-[95px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30", isDarkMode ? "bg-card border-border" : "bg-card border-border")} onClick={isSelectionMode ? e => {
+  }} className={cn("bg-white border border-[#d4d4d4] border-l-4 shadow-sm rounded-none hover:shadow-md transition-all mb-1.5 md:mb-2 relative min-h-[85px] md:min-h-[95px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30")} onClick={isSelectionMode ? e => {
     e.preventDefault();
     e.stopPropagation();
     onToggleSelection?.();
   } : onClick}>
-    <CardContent className="p-1.5 md:p-2">
+    <div className="p-1.5 md:p-2">
       {isSelectionMode && <div className="absolute top-2 right-2 z-10">
           <input type="checkbox" checked={isSelected} onChange={e => {
           e.stopPropagation();
@@ -439,16 +439,16 @@ function DraggableDeal({
           ))}
           <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
             <PopoverTrigger asChild onClick={e => e.stopPropagation()}>
-              <Button variant="outline" size="sm" className="h-5 px-1.5 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary">
+              <Button variant="outline" size="sm" className="h-5 px-1.5 rounded-none border border-[#d4d4d4] bg-white hover:bg-[#e6f2ff] text-gray-700 shadow-sm">
                 <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="start" onClick={e => e.stopPropagation()}>
-              <Command>
-                <CommandInput placeholder="Buscar tags..." value={searchTerm} onValueChange={setSearchTerm} />
-                <CommandList>
-                  <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
-                  <CommandGroup>
+            <PopoverContent className="w-64 p-0 rounded-none border border-[#d4d4d4]" align="start" onClick={e => e.stopPropagation()}>
+              <Command className="rounded-none bg-white">
+                <CommandInput placeholder="Buscar tags..." value={searchTerm} onValueChange={setSearchTerm} className="h-9 text-xs rounded-none border-b border-[#d4d4d4]" />
+                <CommandList className="max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-transparent">
+                  <CommandEmpty className="py-2 text-xs text-center text-gray-500">Nenhuma tag encontrada.</CommandEmpty>
+                  <CommandGroup className="p-1">
                     {getFilteredTags(searchTerm).map(tag => <CommandItem key={tag.id} onSelect={async () => {
                       try {
                         await addTagToContact(tag.id);
@@ -458,9 +458,9 @@ function DraggableDeal({
                       } catch (error) {
                         console.error('Erro ao adicionar tag:', error);
                       }
-                    }}>
+                    }} className="text-xs rounded-none aria-selected:bg-[#EAA900] aria-selected:text-black cursor-pointer py-1.5 px-2">
                         <div className="flex items-center gap-2 w-full">
-                          <div className="w-3 h-3 rounded-full" style={{
+                          <div className="w-2.5 h-2.5 rounded-none" style={{
                           backgroundColor: tag.color
                         }} />
                           <span>{tag.name}</span>
@@ -595,8 +595,8 @@ function DraggableDeal({
               </div>}
           </div>
         </div>
-      </CardContent>
-    </Card>;
+      </div>
+    </div>;
 }
 
 // Componente para tornar a coluna draggable
@@ -1381,12 +1381,12 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       onDragEnd={handleDragEnd} 
       onDragOver={handleDragOver}
     >
-      {/* Estrutura do layout conforme imagem fornecida */}
-      <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* Excel-like Layout */}
+      <div className="flex flex-col h-full bg-white border border-gray-300 m-2 shadow-sm font-sans text-xs">
         {/* Sticky Header - Fixo no topo, sem scroll horizontal */}
         <div className="flex-shrink-0 bg-background border-b border-border w-full">
           <div className="px-2 md:px-4 py-2">
-            <div className="w-full border rounded-lg p-2 md:p-3 shadow-sm bg-background border-border">
+            <div className="w-full border border-[#d4d4d4] rounded-none p-2 md:p-3 shadow-sm bg-background">
                   
                   {/* Mobile Layout */}
                   {isMobile ? (
@@ -1515,27 +1515,26 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       )}
                     </div>
                   ) : (
-                    /* Desktop/Tablet Layout */
-                    <div className="flex w-full items-center gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        
-                        {/* Settings Button */}
-                        {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsConfigModalOpen(true)}
-                            className="text-primary hover:bg-primary/10"
-                            disabled={!selectedPipeline}
-                          >
-                            <Settings className="w-5 h-5" />
-                          </Button>
-                        )}
+                    /* Desktop/Tablet Layout - Excel Style */
+                    <div className="flex w-full items-center gap-2 overflow-x-auto">
+                      {/* Settings Button */}
+                      {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsConfigModalOpen(true)}
+                          className="h-7 w-7 rounded-none hover:bg-gray-200 text-gray-700 border border-transparent hover:border-gray-300"
+                          disabled={!selectedPipeline}
+                          title="Configurações"
+                        >
+                          <Settings className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
 
                       {/* Pipeline Selector */}
                       <div className="flex-shrink-0">
                         {isLoading ? (
-                          <Skeleton className="h-10 w-[200px]" />
+                          <Skeleton className="h-7 w-[180px]" />
                         ) : pipelines && pipelines.length > 0 ? (
                           <Select
                             value={selectedPipeline?.id || ""}
@@ -1546,118 +1545,111 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                               }
                             }}
                           >
-                            <SelectTrigger className="w-[200px] h-10 font-bold bg-background">
+                            <SelectTrigger className="w-[180px] h-7 text-xs bg-white border-gray-300 rounded-none">
                               <SelectValue placeholder="Selecione um pipeline" />
                             </SelectTrigger>
-                            <SelectContent className="z-50 bg-background">
+                            <SelectContent className="z-50 bg-white border-gray-300 rounded-none">
                               {pipelines.map((pipeline) => (
-                                <SelectItem key={pipeline.id} value={pipeline.id}>
+                                <SelectItem key={pipeline.id} value={pipeline.id} className="text-xs focus:bg-gray-100 cursor-pointer">
                                   {pipeline.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className="text-muted-foreground px-3 py-2">Nenhum pipeline</span>
+                          <span className="text-muted-foreground text-xs px-2">Nenhum pipeline</span>
                         )}
                       </div>
 
-                      {/* Criar Pipeline + Filtrar Buttons */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsCriarPipelineModalOpen(true)}
-                            className="text-primary hover:bg-primary/10 rounded-md h-10 w-10 p-0"
-                          >
-                            <Plus className="w-5 h-5" />
-                          </Button>
-                        )}
+                      <div className="h-4 w-px bg-gray-300 mx-1" />
 
+                      {/* Criar Pipeline */}
+                      {canManagePipelines(selectedWorkspace?.workspace_id || undefined) && (
                         <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => setIsFilterModalOpen(true)}
-                          className="font-medium relative"
-                          disabled={!selectedPipeline}
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsCriarPipelineModalOpen(true)}
+                          className="h-7 w-7 rounded-none hover:bg-gray-200 text-gray-700 border border-transparent hover:border-gray-300"
+                          title="Criar Pipeline"
                         >
-                          <ListFilter className="w-4 h-4 mr-2" />
-                          Filtrar
-                          {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
-                            appliedFilters?.queues && appliedFilters.queues.length > 0 ||
-                            appliedFilters?.status && appliedFilters.status.length > 0 ||
-                            appliedFilters?.selectedDate ||
-                            appliedFilters?.dateRange) && (
-                              <Badge className="ml-2 bg-background text-primary text-xs px-1 py-0 h-auto">
-                                {(appliedFilters?.tags?.length || 0) +
-                                  (appliedFilters?.queues?.length || 0) +
-                                  (appliedFilters?.status?.length || 0) +
-                                  (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
-                              </Badge>
-                            )}
+                          <Plus className="h-3.5 w-3.5" />
                         </Button>
-                      </div>
+                      )}
+
+                      {/* Filter Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsFilterModalOpen(true)}
+                        className="h-7 px-2 text-xs bg-white border-gray-300 rounded-none hover:bg-gray-100 text-gray-700 gap-1"
+                        disabled={!selectedPipeline}
+                      >
+                        <ListFilter className="h-3 w-3" />
+                        Filtrar
+                        {(appliedFilters?.tags && appliedFilters.tags.length > 0 ||
+                          appliedFilters?.queues && appliedFilters.queues.length > 0 ||
+                          appliedFilters?.status && appliedFilters.status.length > 0 ||
+                          appliedFilters?.selectedDate ||
+                          appliedFilters?.dateRange) && (
+                            <Badge className="ml-1 bg-primary text-primary-foreground text-[9px] px-1 py-0 h-3.5 rounded-sm">
+                              {(appliedFilters?.tags?.length || 0) +
+                                (appliedFilters?.queues?.length || 0) +
+                                (appliedFilters?.status?.length || 0) +
+                                (appliedFilters?.selectedDate || appliedFilters?.dateRange ? 1 : 0)}
+                            </Badge>
+                          )}
+                      </Button>
 
                       {/* Search Input */}
-                      <div className="relative flex-1 min-w-[200px] max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <div className="relative flex-1 min-w-[150px] max-w-xs">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
                         <Input
                           type="text"
-                          placeholder="Buscar negócios..."
+                          placeholder="Buscar..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 h-10 border-gray-300 bg-transparent"
+                          className="pl-7 h-7 text-xs bg-white border-gray-300 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
                         />
                       </div>
 
                       {/* Filtro por responsável */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="w-[220px]">
-                          <Select
-                            value={responsibleFilter}
-                            onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
-                          >
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder="Todos os responsáveis" />
-                            </SelectTrigger>
-                            <SelectContent align="end" className="min-w-[220px]">
-                              <SelectItem value="ALL">Todos os responsáveis</SelectItem>
-                              <SelectItem value="UNASSIGNED">
-                                Sem responsável ({unassignedCount})
+                      <div className="w-[180px] flex-shrink-0">
+                        <Select
+                          value={responsibleFilter}
+                          onValueChange={(value) => setResponsibleFilter(value as ResponsibleFilterValue)}
+                        >
+                          <SelectTrigger className="h-7 text-xs bg-white border-gray-300 rounded-none">
+                            <SelectValue placeholder="Responsável" />
+                          </SelectTrigger>
+                          <SelectContent align="end" className="min-w-[180px] bg-white border-gray-300 rounded-none">
+                            <SelectItem value="ALL" className="text-xs focus:bg-gray-100 cursor-pointer">Todos</SelectItem>
+                            <SelectItem value="UNASSIGNED" className="text-xs focus:bg-gray-100 cursor-pointer">
+                              Sem responsável ({unassignedCount})
+                            </SelectItem>
+                            {!isLoadingActiveUsers && responsibleOptions.map(option => (
+                              <SelectItem key={option.id} value={option.id} className="text-xs focus:bg-gray-100 cursor-pointer">
+                                {option.name} {option.dealCount ? `(${option.dealCount})` : ""}
                               </SelectItem>
-                              {isLoadingActiveUsers ? (
-                                <SelectItem value="__loading" disabled>
-                                  Carregando responsáveis...
-                                </SelectItem>
-                              ) : responsibleOptions.length > 0 ? (
-                                responsibleOptions.map(option => (
-                                  <SelectItem key={option.id} value={option.id}>
-                                    {option.name}
-                                    {option.dealCount ? ` (${option.dealCount})` : ""}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="__empty" disabled>
-                                  Nenhum responsável encontrado
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
 
-                    {/* + Coluna Button */}
-                    {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
-                      <Button
-                        onClick={() => setIsAddColumnModalOpen(true)}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium ml-auto"
-                      >
-                        + Coluna
-                      </Button>
-                    )}
-                  </div>
+                      <div className="flex-1" />
+
+                      {/* + Coluna Button */}
+                      {selectedPipeline && canManageColumns(selectedWorkspace?.workspace_id || undefined) && (
+                        <Button
+                          onClick={() => setIsAddColumnModalOpen(true)}
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 hover:bg-gray-200 rounded-none flex items-center gap-1 text-primary hover:text-primary/80"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span className="text-xs font-medium">Coluna</span>
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1807,12 +1799,12 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                           return (
                             <DroppableColumn key={column.id} id={`column-${column.id}`}>
                               <div className="w-full max-w-md h-full flex flex-col pb-2">
-                                <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20")} style={{
+                                <div className="bg-white border border-[#d4d4d4] shadow-sm h-full flex flex-col overflow-hidden" style={{
                                   borderTopColor: column.color,
-                                  borderTopWidth: '4px'
+                                  borderTopWidth: '3px'
                                 }}>
                                   {/* Column Header */}
-                                  <div className="bg-white p-3 pb-2 flex-shrink-0 rounded-t border-b border-border/20">
+                                  <div className="bg-[#f3f3f3] p-2 flex-shrink-0 border-b border-[#d4d4d4]">
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1">
                                         <h3 className="font-semibold text-foreground text-sm mb-1">
@@ -1949,12 +1941,12 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       "flex-shrink-0 h-full flex flex-col pb-2",
                       isTablet ? "w-[calc(50%-0.5rem)] min-w-[220px]" : "w-[240px]"
                     )}>
-                       <div className={cn("bg-card/50 rounded-xl border shadow-sm h-full flex flex-col overflow-hidden transition-colors hover:border-primary/20", `border-t-[${column.color}]`)} style={{
+                       <div className="bg-white border border-[#d4d4d4] shadow-sm h-full flex flex-col overflow-hidden" style={{
                   borderTopColor: column.color,
-                  borderTopWidth: '4px'
+                  borderTopWidth: '3px'
                 }}>
                         {/* Cabeçalho da coluna - fundo branco/claro */}
-                        <div className="bg-white p-3 pb-2 flex-shrink-0 rounded-t border-b border-border/20">
+                        <div className="bg-[#f3f3f3] p-2 flex-shrink-0 border-b border-[#d4d4d4]">
                           {isSelectionMode && selectedColumnForAction === column.id ? <div className="mb-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -2064,9 +2056,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         </div>
                         
                         {/* Corpo da coluna - fundo colorido */}
-                        <div className={cn("flex-1 p-2 pt-3 overflow-y-auto min-h-0", dragOverColumn === column.id ? "opacity-90" : "")} style={{
-                    backgroundColor: `${column.color}10`
-                  }}>
+                        <div className={cn("flex-1 p-2 overflow-y-auto min-h-0 bg-[#f9f9f9]", dragOverColumn === column.id ? "opacity-90" : "")}>
                         {columnCards.length === 0 ? (
                           <div className="flex items-center justify-center h-32 text-center">
                             <p className="text-muted-foreground text-sm">

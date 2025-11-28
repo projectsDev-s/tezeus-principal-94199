@@ -15,15 +15,15 @@ function AnalyticsKPICard({
   icon: Icon,
   isLoading
 }: any) {
-  if (isLoading) return <Skeleton className="h-32" />;
-  return <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-none" />;
+  return <Card className="rounded-none border border-[#d4d4d4] shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-[#f0f0f0] border-b border-[#d4d4d4] p-3">
+        <CardTitle className="text-xs font-bold text-gray-700">{title}</CardTitle>
+        <Icon className="h-3.5 w-3.5 text-gray-500" />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      <CardContent className="p-4">
+        <div className="text-xl font-bold text-gray-900">{value}</div>
+        <p className="text-[10px] text-gray-500 mt-1">{subtitle}</p>
       </CardContent>
     </Card>;
 }
@@ -50,21 +50,19 @@ export function Dashboard({
 
   // Loading state
   if (isLoadingWorkspaces || !selectedWorkspace || isLoading) {
-    return <div className="p-6 space-y-6 bg-background min-h-screen">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
+    return <div className="bg-white border border-[#d4d4d4] m-2 shadow-sm min-h-[calc(100vh-1rem)] flex flex-col">
+        <div className="h-8 bg-primary/10 w-full animate-pulse" />
+        <div className="p-4 space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {Array.from({
+            length: 4
+          }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-none" />)}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-64 w-full rounded-none" />
+            <Skeleton className="h-64 w-full rounded-none" />
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({
-          length: 4
-        }).map((_, i) => <Skeleton key={i} className="h-32" />)}
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-        </div>
-        <Skeleton className="h-80" />
       </div>;
   }
 
@@ -81,73 +79,87 @@ export function Dashboard({
   }].filter(d => d.value > 0);
   const COLORS = ['#3B82F6', '#10B981', '#EF4444']; // Blue, Green, Red
 
-  return <div className="p-6 space-y-6 bg-background min-h-screen">
+  return <div className="flex flex-col h-full bg-white border border-[#d4d4d4] m-2 shadow-sm font-sans text-xs overflow-auto">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-foreground">
-          Relatório de Atividades
+      <div className="bg-primary text-primary-foreground p-2 px-4 border-b border-[#d4d4d4]">
+        <h1 className="text-sm font-bold">
+          Relatórios
         </h1>
-        
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <AnalyticsKPICard title="Conversas Ativas" value={analytics.activeConversations} subtitle={`${analytics.totalConversations} conversas no total`} icon={MessageCircle} isLoading={isLoading} />
-        
-        <AnalyticsKPICard title="Atendimentos em Andamento" value={analytics.dealsInProgress} subtitle="Negócios em pipeline" icon={Users} isLoading={isLoading} />
-        
-        <AnalyticsKPICard title="Vendas Concluídas" value={analytics.completedDeals} subtitle="Deals fechados" icon={TrendingUp} isLoading={isLoading} />
-        
-        <AnalyticsKPICard title="Taxa de Conversão" value={`${analytics.conversionRate.toFixed(1)}%`} subtitle="Vendas vs. Total de closes" icon={Target} isLoading={isLoading} />
-      </div>
+      <div className="p-4 space-y-4">
+        {/* KPI Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <AnalyticsKPICard title="Conversas Ativas" value={analytics.activeConversations} subtitle={`${analytics.totalConversations} conversas no total`} icon={MessageCircle} isLoading={isLoading} />
+          
+          <AnalyticsKPICard title="Atendimentos em Andamento" value={analytics.dealsInProgress} subtitle="Negócios em pipeline" icon={Users} isLoading={isLoading} />
+          
+          <AnalyticsKPICard title="Vendas Concluídas" value={analytics.completedDeals} subtitle="Deals fechados" icon={TrendingUp} isLoading={isLoading} />
+          
+          <AnalyticsKPICard title="Taxa de Conversão" value={`${analytics.conversionRate.toFixed(1)}%`} subtitle="Vendas vs. Total de closes" icon={Target} isLoading={isLoading} />
+        </div>
 
-      {/* Charts Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Deals Status Chart (Pie) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Status dos Negócios</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {pieData.length > 0 ? <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-             </ResponsiveContainer> : <div className="h-full flex items-center justify-center text-muted-foreground">
-                    Sem dados para exibir
-                </div>}
-          </CardContent>
-        </Card>
-
-        {/* Trends Chart (Line) */}
-        <Card>
-            <CardHeader>
-                <CardTitle>Tendência de Conversas (7 dias)</CardTitle>
+        {/* Charts Grid */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Deals Status Chart (Pie) */}
+          <Card className="rounded-none border border-[#d4d4d4] shadow-sm">
+            <CardHeader className="bg-[#f0f0f0] border-b border-[#d4d4d4] p-3 rounded-none">
+              <CardTitle className="text-xs font-bold text-gray-700">Status dos Negócios</CardTitle>
             </CardHeader>
-            <CardContent className="h-[300px]">
-                {analytics.conversationTrends.length > 0 ? <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={analytics.conversationTrends}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" tickFormatter={val => new Date(val).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit'
-              })} />
-                            <YAxis />
-                            <Tooltip labelFormatter={val => new Date(val).toLocaleDateString('pt-BR')} />
-                            <Legend />
-                            <Line type="monotone" dataKey="count" name="Conversas" stroke="#8884d8" strokeWidth={2} activeDot={{
-                r: 8
-              }} />
-                        </LineChart>
-                    </ResponsiveContainer> : <div className="h-full flex items-center justify-center text-muted-foreground">
-                        Sem dados para exibir
-                    </div>}
+            <CardContent className="h-[300px] p-4">
+              {pieData.length > 0 ? <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                      {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: '0px', border: '1px solid #d4d4d4', fontSize: '12px' }} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  </PieChart>
+               </ResponsiveContainer> : <div className="h-full flex items-center justify-center text-muted-foreground text-xs">
+                      Sem dados para exibir
+                  </div>}
             </CardContent>
-        </Card>
+          </Card>
+
+          {/* Trends Chart (Line) */}
+          <Card className="rounded-none border border-[#d4d4d4] shadow-sm">
+              <CardHeader className="bg-[#f0f0f0] border-b border-[#d4d4d4] p-3 rounded-none">
+                  <CardTitle className="text-xs font-bold text-gray-700">Tendência de Conversas (7 dias)</CardTitle>
+              </CardHeader>
+              <CardContent className="h-[300px] p-4">
+                  {analytics.conversationTrends.length > 0 ? <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={analytics.conversationTrends}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis 
+                                dataKey="date" 
+                                tickFormatter={val => new Date(val).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit'
+                                })} 
+                                tick={{ fontSize: 10, fill: '#6b7280' }}
+                                axisLine={{ stroke: '#d4d4d4' }}
+                                tickLine={{ stroke: '#d4d4d4' }}
+                              />
+                              <YAxis 
+                                tick={{ fontSize: 10, fill: '#6b7280' }}
+                                axisLine={{ stroke: '#d4d4d4' }}
+                                tickLine={{ stroke: '#d4d4d4' }}
+                              />
+                              <Tooltip 
+                                labelFormatter={val => new Date(val).toLocaleDateString('pt-BR')} 
+                                contentStyle={{ borderRadius: '0px', border: '1px solid #d4d4d4', fontSize: '12px' }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: '11px' }} />
+                              <Line type="monotone" dataKey="count" name="Conversas" stroke="#8884d8" strokeWidth={2} activeDot={{
+                  r: 6
+                }} dot={{ r: 3 }} />
+                          </LineChart>
+                      </ResponsiveContainer> : <div className="h-full flex items-center justify-center text-muted-foreground text-xs">
+                          Sem dados para exibir
+                      </div>}
+              </CardContent>
+          </Card>
+        </div>
       </div>
     </div>;
 }

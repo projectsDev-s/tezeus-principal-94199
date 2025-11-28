@@ -53,29 +53,29 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Botão circular com + */}
+          {/* Botão quadrado com + (Excel style - Theme Color) */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 rounded-full border border-border hover:bg-accent"
+            className="h-6 w-6 rounded-none border border-primary/30 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3.5 h-3.5" />
           </Button>
           
-          {/* Pill hover */}
+          {/* Tooltip/Pill hover */}
           {isHovered && (
-            <div className="absolute left-8 top-0 flex items-center h-6 px-2 bg-popover border border-dashed border-border rounded-full text-xs text-muted-foreground whitespace-nowrap z-10">
+            <div className="absolute left-8 top-0 flex items-center h-6 px-2 bg-white border border-[#d4d4d4] rounded-none text-xs text-gray-700 whitespace-nowrap z-10 shadow-sm">
               + Adicionar tag
             </div>
           )}
         </div>
       </PopoverTrigger>
       
-      <PopoverContent className="w-64 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Buscar tags..." />
-          <CommandList>
-            <CommandGroup>
+      <PopoverContent className="w-64 p-0 rounded-none border-[#d4d4d4]" align="start">
+        <Command className="rounded-none bg-white">
+          <CommandInput placeholder="Buscar tags..." className="h-9 text-xs rounded-none border-b border-[#d4d4d4]" />
+          <CommandList className="max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-yellow-500 scrollbar-track-transparent">
+            <CommandGroup className="p-1">
               {availableTags.map((tag) => {
                 const isAssigned = assignedTagIds.includes(tag.id);
                 
@@ -84,10 +84,11 @@ export function AddContactTagButton({ contactId, isDarkMode = false, onTagAdded 
                     key={tag.id}
                     onSelect={() => !isAssigned && handleSelectTag(tag.id)}
                     disabled={isAssigned}
+                    className={`rounded-none text-xs px-2 py-1.5 cursor-pointer aria-selected:bg-[#EAA900] aria-selected:text-black ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#EAA900] hover:text-black'}`}
                   >
                     <div className="flex items-center gap-2 w-full">
                       <div 
-                        className="w-3 h-3 rounded-full" 
+                        className="w-2.5 h-2.5 rounded-none border border-gray-300" 
                         style={{ backgroundColor: tag.color }}
                       />
                       <span>{tag.name}</span>
