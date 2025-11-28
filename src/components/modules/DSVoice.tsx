@@ -3,14 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+// Removido Table shadcn em favor de table nativa HTML estilo Excel
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MessageSquare, Mic, Image, FileText, Filter, Play, Settings, Search, Edit, Trash2, Upload, Plus } from "lucide-react";
+import { MessageSquare, Mic, Image, FileText, Filter, Play, Settings, Search, Edit, Trash2, Upload, Plus, GripVertical, Download } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from "@/lib/utils";
 import { useQuickMessages } from "@/hooks/useQuickMessages";
 import { useQuickAudios } from "@/hooks/useQuickAudios";
 import { useQuickMedia } from "@/hooks/useQuickMedia";
 import { useQuickDocuments } from "@/hooks/useQuickDocuments";
 import { useQuickFunnels, FunnelStep, Funnel } from "@/hooks/useQuickFunnels";
+
 const categories = [{
   id: "mensagens",
   label: "Mensagens",
@@ -35,6 +41,56 @@ const categories = [{
 // Ocultado temporariamente - { id: "gatilhos", label: "Gatilhos", icon: Play },
 // Ocultado temporariamente - { id: "configuracoes", label: "Configurações", icon: Settings },
 ];
+
+interface SortableFunnelStepProps {
+  step: any;
+  index: number;
+  itemDetails: any;
+  onDelete: (id: string) => void;
+}
+
+function SortableFunnelStep({ step, index, itemDetails, onDelete }: SortableFunnelStepProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: step.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const Icon = step.type === "mensagens" ? MessageSquare : step.type === "audios" ? Mic : step.type === "midias" ? Image : FileText;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className="p-3 mb-2">
+        <div className="flex items-center gap-3">
+          <div {...attributes} {...listeners} className="cursor-grab hover:text-primary text-muted-foreground touch-none">
+             <GripVertical className="h-4 w-4" />
+          </div>
+          <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
+            {index + 1}
+          </div>
+          <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{itemDetails?.title || 'Item não encontrado'}</p>
+            <p className="text-xs text-muted-foreground">
+              {step.type} • Delay: {step.delayMinutes}min {step.delaySeconds}s
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => onDelete(step.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export function DSVoice() {
   const [activeCategory, setActiveCategory] = useState("mensagens");
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,6 +133,29 @@ export function DSVoice() {
   const [stepMinutes, setStepMinutes] = useState(0);
   const [stepSeconds, setStepSeconds] = useState(0);
   const [editingFunnelId, setEditingFunnelId] = useState<string | null>(null);
+  
+  // Selection states for checkboxes (Excel style)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setFunnelSteps((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over?.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   // Hooks para dados reais
   const {
@@ -376,6 +455,53 @@ export function DSVoice() {
   const filteredMedia = media.filter(mediaItem => mediaItem.title.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredDocuments = documents.filter(doc => doc.title.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredFunnels = funnels.filter(funnel => funnel.title.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  // Renderizador de tabelas Excel
+  const renderTable = (headers: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
+    return (
+      <div className="inline-block min-w-full align-middle">
+        <table className="min-w-full border-collapse bg-white text-xs font-sans">
+          <thead className="bg-[#f3f3f3] sticky top-0 z-10">
+            <tr>
+              {headers.map((header, i) => (
+                <th key={i} className="border border-[#d4d4d4] px-2 py-1 text-left font-semibold text-gray-700 min-w-[120px] group hover:bg-[#e1e1e1] cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>{header}</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+              ))}
+              <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 w-[80px]">
+                <div className="flex items-center justify-between">
+                   <span>Ações</span>
+                   <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={headers.length + 1} className="border border-[#e0e0e0] text-center py-12 bg-gray-50 text-muted-foreground">
+                  Nenhum item encontrado.
+                </td>
+              </tr>
+            ) : (
+              data.map((item) => renderRow(item))
+            )}
+             {/* Empty rows filler */}
+             {data.length > 0 && Array.from({ length: Math.max(0, 15 - data.length) }).map((_, i) => (
+                <tr key={`empty-${i}`} className="h-[32px]">
+                   {headers.map((_, j) => <td key={j} className="border border-[#e0e0e0]"></td>)}
+                   <td className="border border-[#e0e0e0] bg-gray-50"></td>
+                </tr>
+             ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     const loading = messagesLoading || audiosLoading || mediaLoading || documentsLoading || funnelsLoading;
     if (loading) {
@@ -383,229 +509,266 @@ export function DSVoice() {
           <div className="text-muted-foreground">Carregando...</div>
         </div>;
     }
+
     switch (activeCategory) {
       case "mensagens":
-        return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredMessages.length === 0 ? <div className="col-span-full text-center py-8 text-muted-foreground">
-                Nenhuma mensagem rápida encontrada.
-              </div> : filteredMessages.map(message => <Card key={message.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-medium text-purple-900 text-sm leading-tight">{message.title}</h3>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleEditMessage(message)}>
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleDeleteMessage(message.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-xs text-purple-700 leading-relaxed">{message.content}</p>
-                  </CardContent>
-                </Card>)}
-          </div>;
+        return renderTable(
+          ["Título", "Conteúdo"],
+          filteredMessages,
+          (message) => (
+            <tr key={message.id} className="hover:bg-blue-50 group h-[32px]">
+              <td className="border border-[#e0e0e0] px-2 py-0 whitespace-nowrap font-medium">{message.title}</td>
+              <td className="border border-[#e0e0e0] px-2 py-0 max-w-xl truncate" title={message.content}>{message.content}</td>
+              <td className="border border-[#e0e0e0] px-1 py-0 text-center">
+                <div className="flex items-center justify-center gap-1 h-full">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600" onClick={() => handleEditMessage(message)}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600" onClick={() => handleDeleteMessage(message.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          )
+        );
       case "audios":
-        return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredAudios.length === 0 ? <div className="col-span-full text-center py-8 text-muted-foreground">
-                Nenhum áudio rápido encontrado.
-              </div> : filteredAudios.map(audio => <Card key={audio.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-medium text-purple-900 text-sm leading-tight">{audio.title}</h3>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleEditAudio(audio)}>
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleDeleteAudio(audio.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-xs text-purple-700">{audio.file_name}</p>
-                    {audio.duration_seconds && <p className="text-xs text-purple-600 mt-1">
-                        Duração: {Math.floor(audio.duration_seconds / 60)}:{(audio.duration_seconds % 60).toString().padStart(2, '0')}
-                      </p>}
-                  </CardContent>
-                </Card>)}
-          </div>;
+        return renderTable(
+          ["Título", "Arquivo", "Duração"],
+          filteredAudios,
+          (audio) => (
+            <tr key={audio.id} className="hover:bg-blue-50 group h-[32px]">
+              <td className="border border-[#e0e0e0] px-2 py-0 whitespace-nowrap font-medium">{audio.title}</td>
+              <td className="border border-[#e0e0e0] px-2 py-0">{audio.file_name}</td>
+              <td className="border border-[#e0e0e0] px-2 py-0">
+                {audio.duration_seconds
+                  ? `${Math.floor(audio.duration_seconds / 60)}:${(audio.duration_seconds % 60)
+                      .toString()
+                      .padStart(2, '0')}`
+                  : '-'}
+              </td>
+              <td className="border border-[#e0e0e0] px-1 py-0 text-center">
+                <div className="flex items-center justify-center gap-1 h-full">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600" onClick={() => handleEditAudio(audio)}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600" onClick={() => handleDeleteAudio(audio.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          )
+        );
       case "midias":
-        return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredMedia.length === 0 ? <div className="col-span-full text-center py-8 text-muted-foreground">
-                Nenhuma mídia rápida encontrada.
-              </div> : filteredMedia.map(mediaItem => <Card key={mediaItem.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors overflow-hidden">
-                  {mediaItem.file_type.startsWith('image/') && mediaItem.file_url && <div className="w-full h-32 bg-muted relative overflow-hidden">
-                      <img src={mediaItem.file_url} alt={mediaItem.title} className="w-full h-full object-cover" onError={e => {
-                e.currentTarget.style.display = 'none';
-              }} />
-                    </div>}
-                  {mediaItem.file_type.startsWith('video/') && mediaItem.file_url && <div className="w-full h-32 bg-muted relative overflow-hidden">
-                      <video src={mediaItem.file_url} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <Play className="w-8 h-8 text-white" />
-                      </div>
-                    </div>}
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-medium text-purple-900 text-sm leading-tight">{mediaItem.title}</h3>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleEditMedia(mediaItem)}>
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleDeleteMedia(mediaItem.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-xs text-purple-700">{mediaItem.file_name}</p>
-                    <p className="text-xs text-purple-600 mt-1">Tipo: {mediaItem.file_type}</p>
-                  </CardContent>
-                </Card>)}
-          </div>;
+        return renderTable(
+          ["Preview", "Título", "Arquivo", "Tipo"],
+          filteredMedia,
+          (mediaItem) => (
+            <tr key={mediaItem.id} className="hover:bg-blue-50 group h-[40px]">
+              <td className="border border-[#e0e0e0] px-2 py-0 w-[50px]">
+                <div className="w-8 h-8 bg-muted rounded overflow-hidden flex items-center justify-center mx-auto my-0.5">
+                  {mediaItem.file_type.startsWith('image/') && mediaItem.file_url ? (
+                    <img
+                      src={mediaItem.file_url}
+                      alt={mediaItem.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : mediaItem.file_type.startsWith('video/') ? (
+                    <Play className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <Image className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </div>
+              </td>
+              <td className="border border-[#e0e0e0] px-2 py-0 font-medium">{mediaItem.title}</td>
+              <td className="border border-[#e0e0e0] px-2 py-0 truncate max-w-[200px]">{mediaItem.file_name}</td>
+              <td className="border border-[#e0e0e0] px-2 py-0">{mediaItem.file_type}</td>
+              <td className="border border-[#e0e0e0] px-1 py-0 text-center">
+                 <div className="flex items-center justify-center gap-1 h-full">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600" onClick={() => handleEditMedia(mediaItem)}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600" onClick={() => handleDeleteMedia(mediaItem.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          )
+        );
       case "documentos":
-        return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredDocuments.length === 0 ? <div className="col-span-full text-center py-8 text-muted-foreground">
-                Nenhum documento rápido encontrado.
-              </div> : filteredDocuments.map(document => {
-            const getDocIcon = () => {
-              if (document.file_type.includes('pdf')) return <FileText className="w-12 h-12 text-red-600" />;
-              if (document.file_type.includes('excel') || document.file_type.includes('spreadsheet')) return <FileText className="w-12 h-12 text-green-600" />;
-              if (document.file_type.includes('word') || document.file_type.includes('document')) return <FileText className="w-12 h-12 text-blue-600" />;
-              if (document.file_type.includes('powerpoint') || document.file_type.includes('presentation')) return <FileText className="w-12 h-12 text-orange-600" />;
-              return <FileText className="w-12 h-12 text-gray-600" />;
+        return renderTable(
+          ["Tipo", "Título", "Arquivo", "Tamanho"],
+          filteredDocuments,
+          (document) => {
+             const getDocIcon = () => {
+              if (document.file_type.includes('pdf')) return <FileText className="w-4 h-4 text-red-600" />;
+              if (document.file_type.includes('excel') || document.file_type.includes('spreadsheet'))
+                return <FileText className="w-4 h-4 text-green-600" />;
+              if (document.file_type.includes('word') || document.file_type.includes('document'))
+                return <FileText className="w-4 h-4 text-blue-600" />;
+              if (document.file_type.includes('powerpoint') || document.file_type.includes('presentation'))
+                return <FileText className="w-4 h-4 text-orange-600" />;
+              return <FileText className="w-4 h-4 text-gray-600" />;
             };
-            return <Card key={document.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors overflow-hidden">
-                    <div className="w-full h-32 bg-muted flex items-center justify-center">
-                      {getDocIcon()}
-                    </div>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-purple-900 text-sm leading-tight">{document.title}</h3>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleEditDocument(document)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleDeleteDocument(document.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <p className="text-xs text-purple-700">{document.file_name}</p>
-                      <p className="text-xs text-purple-600 mt-1">
-                        {document.file_size && `${(document.file_size / 1024 / 1024).toFixed(2)} MB`}
-                      </p>
-                    </CardContent>
-                  </Card>;
-          })}
-          </div>;
+            return (
+              <tr key={document.id} className="hover:bg-blue-50 group h-[32px]">
+                <td className="border border-[#e0e0e0] px-2 py-0 text-center w-[50px]">{getDocIcon()}</td>
+                <td className="border border-[#e0e0e0] px-2 py-0 font-medium">{document.title}</td>
+                <td className="border border-[#e0e0e0] px-2 py-0 truncate max-w-[200px]">{document.file_name}</td>
+                <td className="border border-[#e0e0e0] px-2 py-0">
+                   {document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : '-'}
+                </td>
+                <td className="border border-[#e0e0e0] px-1 py-0 text-center">
+                  <div className="flex items-center justify-center gap-1 h-full">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600" onClick={() => handleEditDocument(document)}>
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600" onClick={() => handleDeleteDocument(document.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          }
+        );
       case "funis":
-        return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredFunnels.length === 0 ? <div className="col-span-full text-center py-8 text-muted-foreground">
-                {searchTerm ? 'Nenhum funil encontrado.' : 'Nenhum funil criado ainda.'}
-              </div> : filteredFunnels.map(funnel => {
-            // Ordenar steps por order
-            const sortedSteps = [...funnel.steps].sort((a, b) => a.order - b.order);
-            return <Card key={funnel.id} className="bg-purple-100 border-purple-200 hover:bg-purple-50 transition-colors">
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-purple-900 text-sm leading-tight">{funnel.title}</h3>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleEditFunnel(funnel)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-purple-600 hover:text-purple-800" onClick={() => handleDeleteFunnel(funnel.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0 space-y-2">
-                      {sortedSteps.map((step: FunnelStep, index: number) => {
-                  const itemDetails = getItemDetails(step.type, step.item_id);
-                  const delayMinutes = Math.floor(step.delay_seconds / 60);
-                  const delaySeconds = step.delay_seconds % 60;
-                  return <div key={step.id} className="flex items-center gap-2 p-2 bg-purple-50 rounded text-xs">
-                            <div className="flex-shrink-0 bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                              {index + 1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-purple-900 font-medium truncate">{itemDetails?.title || 'Item não encontrado'}</p>
-                              <p className="text-purple-600">
-                                {dbTypeToComponentType(step.type)} • {delayMinutes}m {delaySeconds}s
-                              </p>
-                            </div>
-                          </div>;
-                })}
-                    </CardContent>
-                  </Card>;
-          })}
-          </div>;
+        return renderTable(
+          ["Nome do Funil", "Qtd. Etapas"],
+          filteredFunnels,
+          (funnel) => (
+            <tr key={funnel.id} className="hover:bg-blue-50 group h-[32px]">
+              <td className="border border-[#e0e0e0] px-2 py-0 font-medium">{funnel.title}</td>
+              <td className="border border-[#e0e0e0] px-2 py-0">
+                <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+                  {funnel.steps.length} etapas
+                </span>
+              </td>
+              <td className="border border-[#e0e0e0] px-1 py-0 text-center">
+                <div className="flex items-center justify-center gap-1 h-full">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600" onClick={() => handleEditFunnel(funnel)}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600" onClick={() => handleDeleteFunnel(funnel.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          )
+        );
       case "gatilhos":
-        return <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Gatilhos</h3>
-            </div>
-            <div className="text-center py-8 text-muted-foreground">
-              Funcionalidade em desenvolvimento.
-            </div>
+        return <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+             <Play className="h-10 w-10 mb-2 opacity-20" />
+             <p>Funcionalidade em desenvolvimento.</p>
           </div>;
       case "configuracoes":
-        return <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Configurações</h3>
-            </div>
-            <div className="text-center py-8 text-muted-foreground">
-              Funcionalidade em desenvolvimento.
-            </div>
+        return <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <Settings className="h-10 w-10 mb-2 opacity-20" />
+            <p>Funcionalidade em desenvolvimento.</p>
           </div>;
       default:
         return null;
     }
   };
-  return <div className="h-full flex flex-col bg-background">
-      {/* Categories Tabs */}
-      <div className="border-b">
-        <div className="p-4 pb-0">
-          <div className="flex space-x-1">
-            {categories.map(category => {
-            const Icon = category.icon;
-            return <Button key={category.id} variant={activeCategory === category.id ? "default" : "ghost"} className={cn("flex items-center gap-2 rounded-b-none", activeCategory === category.id ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:text-foreground")} onClick={() => setActiveCategory(category.id)}>
-                  <Icon className="h-4 w-4" />
-                  {category.label}
-                </Button>;
-          })}
+
+  return (
+    <div className="flex flex-col h-full bg-white border border-gray-300 m-2 shadow-sm font-sans text-xs">
+      {/* Excel-like Toolbar (Ribbonish) */}
+      <div className="flex flex-col border-b border-gray-300 bg-[#f8f9fa]">
+        {/* Title Bar / Top Menu */}
+        <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            <span className="font-semibold">Respostas Rápidas</span>
+          </div>
+          <div className="text-[10px] opacity-80">
+             {activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)}
+          </div>
+        </div>
+
+        {/* Tools Bar */}
+        <div className="flex items-center gap-2 p-2 overflow-x-auto">
+           {/* Search Group */}
+           <div className="flex items-center gap-2 border-r border-gray-300 pr-3 mr-1">
+            <div className="relative w-48">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 h-3 w-3" />
+              <Input
+                placeholder="Pesquisar item..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-8 h-7 text-xs border-gray-300 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
+              />
+            </div>
+          </div>
+
+          {/* Actions Group */}
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+              onClick={() => {
+                if (activeCategory === "mensagens") setIsMessageModalOpen(true);
+                else if (activeCategory === "audios") setIsAudioModalOpen(true);
+                else if (activeCategory === "midias") setIsMediaModalOpen(true);
+                else if (activeCategory === "documentos") setIsDocumentModalOpen(true);
+                else if (activeCategory === "funis") setIsFunnelModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 text-primary" />
+              <span className="text-[9px]">Novo Item</span>
+            </Button>
+
+             <Button 
+              size="sm" 
+              variant="ghost"
+              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+            >
+              <Download className="h-4 w-4 text-primary" />
+              <span className="text-[9px]">Exportar</span>
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Header com busca e botão */}
-      <div className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar item" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
-          </div>
-          <Button variant="default" onClick={() => {
-          if (activeCategory === "mensagens") setIsMessageModalOpen(true);else if (activeCategory === "audios") setIsAudioModalOpen(true);else if (activeCategory === "midias") setIsMediaModalOpen(true);else if (activeCategory === "documentos") setIsDocumentModalOpen(true);else if (activeCategory === "funis") setIsFunnelModalOpen(true);
-        }}>
-            Novo Item
-          </Button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 p-6 overflow-auto">
+      {/* Content Area (Table) */}
+      <div className="flex-1 overflow-auto bg-[#e6e6e6]">
         {renderContent()}
       </div>
 
+      {/* Footer Sheets (Categories) */}
+      <div className="flex items-center border-t border-gray-300 bg-[#f0f0f0] px-1 h-8 select-none">
+         <div className="flex items-end h-full gap-1 overflow-x-auto px-1">
+            {categories.map(category => {
+              const Icon = category.icon;
+              const isActive = activeCategory === category.id;
+              return (
+                <div
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 h-[26px] text-xs cursor-pointer border-t border-l border-r rounded-t-sm transition-all",
+                    isActive 
+                      ? "bg-white border-gray-300 border-b-white text-primary font-medium z-10 shadow-sm translate-y-[1px]" 
+                      : "bg-[#e0e0e0] border-transparent text-gray-600 hover:bg-[#e8e8e8]"
+                  )}
+                >
+                  <Icon className="h-3 w-3" />
+                  <span>{category.label}</span>
+                </div>
+              );
+            })}
+         </div>
+      </div>
+
+      {/* Modals - Mantidos iguais */}
+      
       {/* Modal para Mensagens */}
       <Dialog open={isMessageModalOpen} onOpenChange={setIsMessageModalOpen}>
         <DialogContent>
@@ -773,29 +936,24 @@ export function DSVoice() {
 
               {funnelSteps.length === 0 ? <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
                   Nenhuma etapa adicionada ainda.
-                </div> : <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {funnelSteps.map((step, index) => {
-                const itemDetails = getItemDetails(step.type, step.itemId);
-                const Icon = step.type === "mensagens" ? MessageSquare : step.type === "audios" ? Mic : step.type === "midias" ? Image : FileText;
-                return <Card key={step.id} className="p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
-                            {index + 1}
-                          </div>
-                          <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{itemDetails?.title || 'Item não encontrado'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {step.type} • Delay: {step.delayMinutes}min {step.delaySeconds}s
-                            </p>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => setFunnelSteps(funnelSteps.filter(s => s.id !== step.id))}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </Card>;
-              })}
-                </div>}
+                </div> : <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={funnelSteps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {funnelSteps.map((step, index) => {
+                        const itemDetails = getItemDetails(step.type, step.itemId);
+                        return (
+                          <SortableFunnelStep
+                            key={step.id}
+                            step={step}
+                            index={index}
+                            itemDetails={itemDetails}
+                            onDelete={(id) => setFunnelSteps(prev => prev.filter(s => s.id !== id))}
+                          />
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>}
             </div>
 
             <div className="flex gap-2 justify-end pt-4 border-t">
@@ -881,5 +1039,6 @@ export function DSVoice() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>;
+    </div>
+  );
 }

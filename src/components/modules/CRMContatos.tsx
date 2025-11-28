@@ -22,6 +22,7 @@ import {
   Pin,
   Download,
   Upload,
+  Filter,
 } from "lucide-react";
 import { ContactTags } from "@/components/chat/ContactTags";
 import { useContactTags } from "@/hooks/useContactTags";
@@ -1250,33 +1251,42 @@ export function CRMContatos() {
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg border border-border/20 m-4 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <h3 className="text-lg font-bold whitespace-nowrap mr-4">
-          Contatos ({isLoading ? "..." : filteredContacts.length})
-        </h3>
-
-        {/* Search and Filter inputs close to title */}
-        <div className="flex items-center gap-2 mr-8">
-          <div className="relative w-32">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3 w-3" />
-            <Input
-              placeholder="Pesquisar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 text-[10px] h-7"
-            />
+    <div className="flex flex-col h-full bg-white border border-gray-300 m-2 shadow-sm font-sans text-xs">
+      {/* Excel-like Toolbar (Ribbonish) */}
+      <div className="flex flex-col border-b border-gray-300 bg-[#f8f9fa]">
+        {/* Title Bar / Top Menu */}
+        <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="font-semibold">Contatos</span>
           </div>
+          <div className="text-[10px] opacity-80">
+            {isLoading ? "Carregando..." : `${filteredContacts.length} registros`}
+          </div>
+        </div>
 
-          <div className="w-32">
+        {/* Tools Bar */}
+        <div className="flex items-center gap-2 p-2 overflow-x-auto">
+          {/* Search Group */}
+          <div className="flex items-center gap-2 border-r border-gray-300 pr-3 mr-1">
+            <div className="relative w-48">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 h-3 w-3" />
+              <Input
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-7 text-xs border-gray-300 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
+              />
+            </div>
+            
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal text-[10px] h-7">
+                <Button variant="outline" className="h-7 px-3 text-xs border-gray-300 rounded-sm hover:bg-gray-100 text-gray-700 flex gap-1">
+                   <Filter className="h-3 w-3" />
                   {selectedTagIds.length === 0 ? (
-                    <span className="text-muted-foreground">Filtrar Tags</span>
+                    <span>Filtro</span>
                   ) : (
-                    <span>{selectedTagIds.length} tag(s)</span>
+                    <span>{selectedTagIds.length}</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -1328,49 +1338,62 @@ export function CRMContatos() {
               </PopoverContent>
             </Popover>
           </div>
-        </div>
 
-        {/* Other controls */}
-        <div className="flex items-center gap-1 ml-auto flex-wrap">
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-[10px] h-7 px-2"
-            onClick={() => setIsFieldConfigModalOpen(true)}
-          >
-            <Pin className="h-3 w-3 mr-1" />
-            Add Campo Personalizado
-          </Button>
+          {/* Actions Group */}
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+              onClick={() => setIsFieldConfigModalOpen(true)}
+            >
+              <Pin className="h-4 w-4 text-primary" />
+              <span className="text-[9px]">Campos</span>
+            </Button>
 
-          <Button
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-7 px-2"
-            onClick={handleAddContact}
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Adicionar
-          </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+              onClick={handleAddContact}
+            >
+              <Plus className="h-4 w-4 text-primary" />
+              <span className="text-[9px]">Novo</span>
+            </Button>
 
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="text-[10px] h-7 px-2"
-            onClick={handleExportCSV}
-          >
-            <Download className="h-3 w-3 mr-1" />
-            Exportar
-          </Button>
+             <Button 
+              size="sm" 
+              variant="ghost"
+              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+              onClick={handleExportCSV}
+            >
+              <Download className="h-4 w-4 text-primary" />
+              <span className="text-[9px]">Exportar</span>
+            </Button>
 
-          <Button 
-            size="sm" 
-            className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-7 px-2"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            {isImporting ? "Importando..." : "Importar"}
-          </Button>
+             <Button 
+              size="sm" 
+              variant="ghost"
+              className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+            >
+              <Upload className="h-4 w-4 text-primary" />
+              <span className="text-[9px]">{isImporting ? "..." : "Importar"}</span>
+            </Button>
 
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 hover:bg-red-50 hover:text-red-600 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+              disabled={selectedIds.length === 0}
+              onClick={() => setIsBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+              <span className="text-[9px]">Excluir</span>
+            </Button>
+          </div>
+          
           <input
             ref={fileInputRef}
             type="file"
@@ -1378,198 +1401,231 @@ export function CRMContatos() {
             className="hidden"
             onChange={handleImportCSV}
           />
-
-          <Button
-            variant="destructive"
-            size="sm"
-            className="text-[10px] h-7 px-2"
-            disabled={selectedIds.length === 0}
-            onClick={() => setIsBulkDeleteOpen(true)}
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Excluir
-          </Button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg">
-        <Table
-          style={{
-            fontSize: "10px",
-          }}
-        >
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead className="text-center">Número</TableHead>
-              <TableHead className="text-center">Email</TableHead>
-              <TableHead className="text-center">Criado em</TableHead>
-              <TableHead className="text-center">Ações</TableHead>
-              <TableHead className="w-12 text-center">
-                <Checkbox
-                  checked={
-                    filteredContacts.length > 0 && filteredContacts.every((contact) => selectedIds.includes(contact.id))
-                  }
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedIds(filteredContacts.map((contact) => contact.id));
-                    } else {
-                      setSelectedIds([]);
-                    }
-                  }}
-                  className="h-4 w-4"
-                />
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
-                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 w-24 bg-muted animate-pulse rounded mx-auto" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 w-32 bg-muted animate-pulse rounded mx-auto" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-4 w-28 bg-muted animate-pulse rounded mx-auto" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-8 w-16 bg-muted animate-pulse rounded mx-auto" />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="h-4 w-4 bg-muted animate-pulse rounded mx-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </>
-            ) : filteredContacts.length === 0 && !isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <User className="h-12 w-12 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      {searchTerm || selectedTagIds.length > 0
-                        ? "Nenhum contato encontrado com os filtros aplicados"
-                        : "Nenhum contato cadastrado ainda"}
-                    </p>
-                    {!searchTerm && selectedTagIds.length === 0 && (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          Workspace: {selectedWorkspace?.workspace_id || "Não selecionado"} | 
-                          Total: {contacts.length} contatos
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                            onClick={handleAddContact}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar primeiro contato
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              console.log("🔄 [CRMContatos] Refetch manual - contacts:", contacts.length, "filtered:", filteredContacts.length);
-                              fetchContacts();
-                            }}
-                          >
-                            Atualizar
-                          </Button>
-                        </div>
-                      </>
-                    )}
+      {/* Excel Grid Table */}
+      <div className="flex-1 overflow-auto bg-[#e6e6e6]">
+        <div className="inline-block min-w-full align-middle">
+          <table className="min-w-full border-collapse bg-white text-xs font-sans">
+            <thead className="bg-[#f3f3f3] sticky top-0 z-10">
+              <tr>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-left font-semibold text-gray-700 min-w-[200px] group hover:bg-[#e1e1e1] cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>Nome</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredContacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          {contact.profile_image_url ? (
-                            <AvatarImage src={contact.profile_image_url} alt={contact.name} />
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[120px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Número</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[200px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Email</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[140px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Criado em</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[100px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Ações</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 w-10">
+                  <Checkbox
+                    checked={
+                      filteredContacts.length > 0 && filteredContacts.every((contact) => selectedIds.includes(contact.id))
+                    }
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedIds(filteredContacts.map((contact) => contact.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                    className="h-3 w-3 rounded-[2px] border-gray-500 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                  />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="border border-[#e0e0e0] px-2 py-1">
+                        <div className="h-4 w-32 bg-gray-100 animate-pulse rounded-sm" />
+                      </td>
+                      <td className="border border-[#e0e0e0] px-2 py-1 text-center">
+                        <div className="h-4 w-24 bg-gray-100 animate-pulse rounded-sm mx-auto" />
+                      </td>
+                      <td className="border border-[#e0e0e0] px-2 py-1 text-center">
+                        <div className="h-4 w-32 bg-gray-100 animate-pulse rounded-sm mx-auto" />
+                      </td>
+                      <td className="border border-[#e0e0e0] px-2 py-1 text-center">
+                        <div className="h-4 w-28 bg-gray-100 animate-pulse rounded-sm mx-auto" />
+                      </td>
+                      <td className="border border-[#e0e0e0] px-2 py-1 text-center">
+                         <div className="h-4 w-16 bg-gray-100 animate-pulse rounded-sm mx-auto" />
+                      </td>
+                      <td className="border border-[#e0e0e0] px-2 py-1 text-center"></td>
+                    </tr>
+                  ))}
+                </>
+              ) : filteredContacts.length === 0 && !isLoading ? (
+                <tr>
+                  <td colSpan={6} className="border border-[#e0e0e0] text-center py-12 bg-gray-50">
+                    <div className="flex flex-col items-center gap-2">
+                      <User className="h-8 w-8 text-gray-300" />
+                      <p className="text-gray-500 font-medium">
+                        {searchTerm || selectedTagIds.length > 0
+                          ? "Nenhum contato encontrado com os filtros aplicados"
+                          : "Nenhum contato cadastrado ainda"}
+                      </p>
+                      {!searchTerm && selectedTagIds.length === 0 && (
+                        <Button
+                          size="sm"
+                          className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground h-7 text-xs rounded-sm"
+                          onClick={handleAddContact}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Adicionar contato
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredContacts.map((contact, index) => (
+                  <tr key={contact.id} className="hover:bg-blue-50 group h-[32px]">
+                    {/* Name */}
+                    <td className="border border-[#e0e0e0] px-2 py-0 whitespace-nowrap">
+                      <div className="flex items-center gap-2 h-full">
+                        <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-300">
+                           {contact.profile_image_url ? (
+                            <img src={contact.profile_image_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <AvatarFallback>
-                              <User className="h-4 w-4" />
-                            </AvatarFallback>
+                            <span className="text-[9px] font-bold text-gray-500">
+                              {contact.name.charAt(0).toUpperCase()}
+                            </span>
                           )}
-                        </Avatar>
-                        <span className="font-medium">{contact.name}</span>
+                        </div>
+                        <span className="text-gray-900 font-medium truncate">{contact.name}</span>
+                        
+                        {/* Tags inline display */}
+                        {contact.tags.length > 0 && (
+                           <div className="flex gap-0.5 ml-auto">
+                              {contact.tags.slice(0, 2).map((tag, i) => (
+                                <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} title={tag.name} />
+                              ))}
+                           </div>
+                        )}
+                        
+                        {/* Hover Edit Trigger */}
+                        <div className="ml-auto opacity-0 group-hover:opacity-100">
+                           <Popover>
+                            <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-4 w-4 rounded-none hover:bg-gray-200">
+                                <Plus className="h-3 w-3 text-gray-500" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0" align="start" onClick={(e) => e.stopPropagation()}>
+                              <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 ml-11">
-                        <ContactTags contactId={contact.id} onTagRemoved={fetchContacts} />
-                        <Popover>
-                          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 px-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64 p-0" align="start" onClick={(e) => e.stopPropagation()}>
-                            <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
-                          </PopoverContent>
-                        </Popover>
+                    </td>
+
+                    {/* Phone */}
+                    <td className="border border-[#e0e0e0] px-2 py-0 text-right text-gray-600 whitespace-nowrap font-mono">
+                      {contact.phone}
+                    </td>
+
+                    {/* Email */}
+                    <td className="border border-[#e0e0e0] px-2 py-0 text-gray-600 whitespace-nowrap truncate">
+                      {contact.email}
+                    </td>
+
+                    {/* Created At */}
+                    <td className="border border-[#e0e0e0] px-2 py-0 text-center text-gray-500 whitespace-nowrap">
+                      {contact.createdAt}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="border border-[#e0e0e0] px-1 py-0 text-center">
+                      <div className="flex items-center justify-center gap-0.5 h-full">
+                         <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 rounded-sm hover:bg-primary hover:text-primary-foreground text-primary"
+                          onClick={() => {
+                            setSelectedContactForWhatsApp(contact);
+                            setIsWhatsAppModalOpen(true);
+                          }}
+                          title="WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600"
+                          onClick={() => handleEditContact(contact)}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600"
+                          onClick={() => setDeletingContact(contact)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">{contact.phone}</TableCell>
-                  <TableCell className="text-center">{contact.email}</TableCell>
-                  <TableCell className="text-center">{contact.createdAt}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedContactForWhatsApp(contact);
-                          setIsWhatsAppModalOpen(true);
+                    </td>
+
+                    {/* Checkbox */}
+                    <td className="border border-[#e0e0e0] px-1 py-0 text-center bg-gray-50">
+                      <Checkbox
+                        checked={selectedIds.includes(contact.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedIds((prev) => [...prev, contact.id]);
+                          } else {
+                            setSelectedIds((prev) => prev.filter((id) => id !== contact.id));
+                          }
                         }}
-                        title="Iniciar conversa no WhatsApp"
-                      >
-                        <MessageCircle className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEditContact(contact)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeletingContact(contact)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={selectedIds.includes(contact.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedIds((prev) => [...prev, contact.id]);
-                        } else {
-                          setSelectedIds((prev) => prev.filter((id) => id !== contact.id));
-                        }
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                        className="h-3 w-3 rounded-[2px] border-gray-400 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+              {/* Empty rows to fill space like Excel */}
+               {filteredContacts.length > 0 && Array.from({ length: Math.max(0, 20 - filteredContacts.length) }).map((_, i) => (
+                  <tr key={`empty-${i}`} className="h-[32px]">
+                     <td className="border border-[#e0e0e0]"></td>
+                     <td className="border border-[#e0e0e0]"></td>
+                     <td className="border border-[#e0e0e0]"></td>
+                     <td className="border border-[#e0e0e0]"></td>
+                     <td className="border border-[#e0e0e0]"></td>
+                     <td className="border border-[#e0e0e0] bg-gray-50"></td>
+                  </tr>
+               ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Edit Contact Modal */}

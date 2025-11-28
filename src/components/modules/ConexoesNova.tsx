@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Wifi, QrCode, Plus, MoreVertical, Edit3, RefreshCw, Webhook, Star, Bug, ArrowRight, Zap, Cloud, Settings } from 'lucide-react';
+import { Trash2, Wifi, QrCode, Plus, MoreVertical, Edit3, RefreshCw, Webhook, Star, Bug, ArrowRight, Zap, Cloud, Settings, Search, Download, Upload, Filter, Smartphone } from 'lucide-react';
 import { TestWebhookReceptionModal } from "@/components/modals/TestWebhookReceptionModal";
 import { ConfigureZapiWebhookModal } from "@/components/modals/ConfigureZapiWebhookModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,6 +26,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQueues } from '@/hooks/useQueues';
 import { useAuth } from '@/hooks/useAuth';
 import { useWhatsAppProviders } from '@/hooks/useWhatsAppProviders';
+import { cn } from "@/lib/utils";
 
 // Helper functions for phone number formatting
 const normalizePhoneNumber = (phone: string): string => {
@@ -171,6 +172,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSettingDefault, setIsSettingDefault] = useState(false);
   const [confirmInstanceName, setConfirmInstanceName] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Form states
   const [instanceName, setInstanceName] = useState('');
@@ -755,53 +757,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   };
 
-  const forceResyncHistory = async (connection: Connection) => {
-    try {
-      toast({
-        title: 'Sincronizando...',
-        description: 'Iniciando sincronização de histórico',
-      });
-      
-      // Resetar status no banco
-      const { error: updateError } = await supabase
-        .from('connections')
-        .update({ 
-          history_sync_status: 'pending',
-          history_sync_started_at: null 
-        })
-        .eq('id', connection.id);
-      
-      if (updateError) throw updateError;
-      
-      // Chamar edge function diretamente
-      const { data, error: invokeError } = await supabase.functions.invoke('evolution-trigger-history-sync', {
-        body: {
-          instanceName: connection.instance_name,
-          workspaceId: workspaceId,
-          historyDays: connection.history_days || 0,
-          historyRecovery: connection.history_recovery || 'none'
-        }
-      });
-      
-      if (invokeError) throw invokeError;
-      
-      toast({
-        title: 'Sincronização Iniciada',
-        description: `${data?.total || 0} mensagens encontradas para processar`,
-      });
-      
-      // Reload connections
-      loadConnections();
-    } catch (error) {
-      console.error('Error forcing resync:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao forçar ressincronização',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const connectInstance = async (connection: Connection) => {
     try {
       setIsConnecting(true);
@@ -894,30 +849,25 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   };
 
   const startPolling = (connectionId: string) => {
+    // Polling logic remains the same as before
     console.log(`🔄 Starting status check for connection ${connectionId}`);
     
-    // Buscar a conexão para verificar o provider
     const connection = connections.find(c => c.id === connectionId);
     const isZAPI = connection?.provider?.provider === 'zapi';
     
     console.log(`🔌 Polling para provider: ${isZAPI ? 'Z-API' : 'Evolution'}`);
     
-    // Rastrear último status notificado para evitar loops
     let lastNotifiedStatus: string | null = null;
-    let isInitialCheck = true; // Flag para primeira verificação
+    let isInitialCheck = true; 
     
-    // Verificação de status
     const checkStatus = async () => {
       try {
-        // Verificar se a conexão ainda existe
         if (!connection) {
-          console.log(`⚠️ Conexão ${connectionId} não encontrada, cancelando verificação de status`);
           return false;
         }
         
         let connectionStatus;
         
-        // Se for Z-API, usar endpoint específico de force refresh
         if (isZAPI) {
           const { data, error } = await supabase.functions.invoke('force-zapi-status-refresh', {
             body: { connectionId }
@@ -928,7 +878,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             throw new Error(data?.error || 'Erro ao verificar status Z-API');
           }
           
-          // Adaptar resposta Z-API para formato esperado
           connectionStatus = {
             id: connectionId,
             instance_name: connection?.instance_name || '',
@@ -936,15 +885,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             phone_number: data.status?.phone || undefined,
           };
         } else {
-          // Evolution API (comportamento original)
           connectionStatus = await evolutionProvider.getConnectionStatus(connectionId);
         }
         
-        console.log(`📊 Status recebido (${isZAPI ? 'Z-API' : 'Evolution'}):`, connectionStatus);
-        
-        // Atualizar selectedConnection com o status atual
-        // MAS: se o status atual é 'qr' e recebeu 'disconnected', não atualizar
-        // (aguardando usuário escanear o QR code)
         const normalizedStatus = normalizeConnectionStatus(connectionStatus.status);
 
         if (selectedConnection) {
@@ -957,12 +900,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               status: normalizedStatus,
               phone_number: connectionStatus.phone_number || prev.phone_number
             } : null);
-          } else {
-            console.log('⏸️ Status QR mantido, aguardando scan do usuário');
           }
         }
         
-        // Conectado - notificar apenas uma vez
         if (normalizedStatus === 'connected' && lastNotifiedStatus !== 'connected') {
           lastNotifiedStatus = 'connected';
           
@@ -976,11 +916,9 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               : conn
           ));
           
-          // Close modal and update UI
           setIsQRModalOpen(false);
           setSelectedConnection(null);
           
-          // Reload connections (silently)
           await loadConnections();
           
           toast({
@@ -990,20 +928,15 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               'WhatsApp conectado com sucesso!',
           });
           
-          return true; // Indica que conectou
+          return true; 
         } 
         
-        // Desconectado - NÃO notificar na verificação inicial do modal
-        // Só notificar se for uma desconexão que aconteceu durante o processo
-        // E NÃO fechar o modal se o status atual for 'qr' (aguardando scan)
         if (normalizedStatus === 'disconnected' && 
             !isInitialCheck && 
             normalizeConnectionStatus(selectedConnection?.status) !== 'qr' && 
             lastNotifiedStatus !== 'disconnected') {
           lastNotifiedStatus = 'disconnected';
           
-          console.log('⚠️ Desconexão detectada durante processo');
-
           setConnections(prev => prev.map(conn => 
             conn.id === connectionId 
               ? { 
@@ -1025,28 +958,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             variant: "destructive",
           });
           
-          return true; // Indica que finalizou
+          return true; 
         }
         
-        // Após primeira verificação, desabilitar flag
         if (isInitialCheck) {
           isInitialCheck = false;
         }
         
-        return false; // Continua polling
+        return false; 
       } catch (error) {
         console.error('Error polling connection status:', error);
         
-        // Se for erro 404 ou conexão não encontrada
         const errorMessage = error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('Connection not found')) {
-          console.log('⚠️ Conexão não encontrada (404)');
           
-          // Fechar modal
           setIsQRModalOpen(false);
           setSelectedConnection(null);
           
-          // Recarregar lista
           await loadConnections();
           
           toast({
@@ -1055,33 +983,23 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             variant: "destructive"
           });
           
-          return true; // Para o polling
+          return true; 
         }
         
-        return false; // Tentar novamente para outros erros
+        return false; 
       }
     };
     
-    // Verificação única após conexão/desconexão
     checkStatus();
-  };
-
-  const retryConnection = () => {
-    if (selectedConnection) {
-      connectInstance(selectedConnection);
-    }
   };
 
   const disconnectInstance = async (connection: Connection) => {
     try {
       setIsDisconnecting(true);
       
-      // Detectar provider e usar a edge function correta
       const isZapi = connection.provider?.provider === 'zapi';
       
       if (isZapi) {
-        console.log('🔌 Desconectando instância Z-API:', connection.instance_name);
-        
         const { data, error } = await supabase.functions.invoke('disconnect-zapi', {
           body: { connectionId: connection.id }
         });
@@ -1097,9 +1015,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           description: data.message || 'Instância Z-API desconectada com sucesso!',
         });
       } else {
-        console.log('🔌 Desconectando instância Evolution:', connection.instance_name);
-        
-        // Use the dedicated disconnect function for Evolution
         await evolutionProvider.pauseInstance(connection.id);
 
         toast({
@@ -1108,7 +1023,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         });
       }
       
-      // Reload connections to show updated status
       loadConnections();
 
     } catch (error) {
@@ -1124,56 +1038,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   };
 
-  const configureWebhook = async (connection: Connection) => {
-    try {
-      setIsDisconnecting(true); // Reuse loading state
-      
-      console.log('🔧 Configuring webhook for connection:', connection.instance_name);
-      
-      const { data, error } = await supabase.functions.invoke('configure-evolution-webhook', {
-        body: {
-          instance_name: connection.instance_name,
-          workspace_id: workspaceId
-        }
-      });
-
-      if (error) {
-        console.error('Error configuring webhook:', error);
-        toast({
-          title: 'Erro',
-          description: 'Erro ao configurar webhook',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Webhook configured
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Webhook configurado com sucesso! Agora você receberá mensagens.',
-      });
-      
-      // Reload connections to show updated webhook status
-      loadConnections();
-
-    } catch (error) {
-      console.error('Error configuring webhook:', error);
-      toast({
-        title: 'Erro',
-        description: `Erro ao configurar webhook: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDisconnecting(false);
-    }
-  };
-
   const setDefaultConnection = async (connection: Connection) => {
     try {
       setIsSettingDefault(true);
       
-      // Get user data for headers (same pattern as EvolutionProvider)
       const userData = localStorage.getItem('currentUser');
       const currentUserData = userData ? JSON.parse(userData) : null;
       
@@ -1205,7 +1073,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
         description: data.message || `${connection.instance_name} definida como conexão padrão`,
       });
       
-      // Reload connections to update UI
       loadConnections();
       
     } catch (error) {
@@ -1223,11 +1090,11 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
-        return <Badge variant="default" className="bg-green-500">Conectado</Badge>;
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Conectado</Badge>;
       case 'qr':
-        return <Badge variant="secondary">QR Code</Badge>;
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200">QR Code</Badge>;
       case 'connecting':
-        return <Badge variant="outline">Conectando</Badge>;
+        return <Badge variant="outline" className="animate-pulse">Conectando</Badge>;
       case 'disconnected':
         return <Badge variant="destructive">Desconectado</Badge>;
       case 'creating':
@@ -1239,543 +1106,383 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando conexões...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredConnections = connections.filter(conn => 
+    conn.instance_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (conn.phone_number && conn.phone_number.includes(searchTerm))
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Conexões WhatsApp</h2>
-          <p className="text-muted-foreground">
-            Gerencie suas instâncias de WhatsApp
-          </p>
+    <div className="flex flex-col h-full bg-white border border-gray-300 m-2 shadow-sm font-sans text-xs">
+      {/* Excel-like Toolbar (Ribbon) */}
+      <div className="flex flex-col border-b border-gray-300 bg-[#f8f9fa]">
+        {/* Title Bar */}
+        <div className="flex items-center justify-between px-4 py-1 bg-primary text-primary-foreground h-8">
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            <span className="font-semibold">Conexões WhatsApp</span>
+          </div>
+          <div className="text-[10px] opacity-80">
+            {isLoading ? "Carregando..." : `${connections.length} conexões`}
+          </div>
         </div>
-        
-        <div className="flex gap-2">
-          <TestWebhookReceptionModal />
-        </div>
-        
-        <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
-          if (!open) resetModal();
-          setIsCreateModalOpen(open);
-        }}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="inline-block">
-                  <DialogTrigger asChild>
-                    <Button 
-                      disabled={
-                        !canCreateConnections(workspaceId) || 
-                        !usage?.canCreateMore
-                      }
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Adicionar Conexão
-                    </Button>
-                  </DialogTrigger>
-                </div>
-              </TooltipTrigger>
-              {(!canCreateConnections(workspaceId) || !usage?.canCreateMore) && (
-                <TooltipContent>
-                  <p>
-                    {!canCreateConnections(workspaceId) 
-                      ? 'Você não tem permissão para criar conexões' 
-                      : `Seu Limite de Conexões é ${usage?.limit || 1}`
-                    }
-                  </p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-          <DialogContent className="max-w-4xl p-0">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">
-                {isEditMode ? 'Editar Instância' : 'Adicionar Canal de Atendimento'}
-              </h2>
+
+        {/* Tools Bar */}
+        <div className="flex items-center gap-2 p-2 overflow-x-auto">
+          {/* Search Group */}
+          <div className="flex items-center gap-2 border-r border-gray-300 pr-3 mr-1">
+            <div className="relative w-48">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 h-3 w-3" />
+              <Input
+                placeholder="Pesquisar conexão..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-7 text-xs border-gray-300 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
+              />
             </div>
+          </div>
 
-            {/* Stepper */}
-            <div className="px-6 pt-6">
-              <div className="flex items-center justify-center mb-6">
-                <div className="flex items-center">
-                  {/* Step 1 */}
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                      1
+          {/* Actions Group */}
+          <div className="flex items-center gap-1">
+            <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+              if (!open) resetModal();
+              setIsCreateModalOpen(open);
+            }}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="inline-block">
+                      <DialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2 hover:bg-gray-200 rounded-sm flex flex-col items-center justify-center gap-0.5 text-gray-700"
+                          disabled={!canCreateConnections(workspaceId) || !usage?.canCreateMore}
+                        >
+                          <Plus className="h-4 w-4 text-primary" />
+                          <span className="text-[9px]">Adicionar Conexão</span>
+                        </Button>
+                      </DialogTrigger>
                     </div>
-                    <span className="ml-2 text-sm text-foreground">Configuração</span>
-                  </div>
-                  
-                  {/* Connector */}
-                  <div className="w-12 h-px bg-border mx-4"></div>
-                  
-                  {/* Step 2 */}
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full border-2 border-border text-muted-foreground flex items-center justify-center text-sm">
-                      2
-                    </div>
-                    <span className="ml-2 text-sm text-muted-foreground">Finalização</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Form Content - Layout Horizontal */}
-            <div className="flex px-6 space-x-8">
-              {/* Primeira Coluna */}
-              <div className="flex-1 space-y-4">
-                {!isEditMode && (
-                  <div className="p-3 bg-muted/50 rounded-lg border">
-                    <div className="text-sm text-muted-foreground">
-                      {usage === null ? (
-                        'Carregando limites...'
-                      ) : (
-                        <>
-                          Conexões: {usage.current}/{usage.limit}
-                          {usage.current >= usage.limit && (
-                            <span className="text-destructive font-medium ml-1">- Limite atingido</span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!isEditMode && (
-                  <div className={`p-3 rounded-lg border ${!hasActiveProvider && !loadingProvider ? 'bg-destructive/10 border-destructive' : 'bg-muted/50'}`}>
-                    {loadingProvider ? (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        <span className="text-sm">Detectando provider...</span>
-                      </div>
-                    ) : hasActiveProvider ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${selectedProvider === 'zapi' ? 'bg-purple-500' : 'bg-blue-500'}`}></div>
-                          <span className="text-sm font-medium text-foreground">
-                            Provider: {selectedProvider === 'zapi' ? 'Z-API' : 'Evolution API'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Definido nas configurações do workspace
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-destructive">
-                            ⚠️ Nenhum provider ativo configurado
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Configure um provider (Evolution ou Z-API) nas Configurações antes de criar instâncias
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="instanceName" className="text-sm font-medium text-foreground">
-                    Nome *
-                  </Label>
-                  <Input
-                    id="instanceName"
-                    value={instanceName}
-                    onChange={(e) => setInstanceName(e.target.value)}
-                    placeholder="Digite o nome da instância"
-                    disabled={isEditMode && !isEditingZapi}
-                    className="h-11"
-                  />
-                  {isEditMode && !isEditingZapi && (
-                    <p className="text-xs text-muted-foreground">
-                      Renomear disponível apenas para instâncias Z-API.
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className="text-sm font-medium text-foreground">
-                    Número do WhatsApp
-                  </Label>
-                  <Input
-                    id="phoneNumber"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Ex: 5511999999999"
-                    type="tel"
-                    className="h-11"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                  Formato: 55 + DDD + número (será normalizado automaticamente)
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                  <Label htmlFor="queue" className="text-sm font-medium text-foreground">
-                    Fila (Opcional)
-                  </Label>
-                  <Select value={selectedQueueId} onValueChange={setSelectedQueueId}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Nenhuma fila" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {queues.map((queue) => (
-                        <SelectItem key={queue.id} value={queue.id}>
-                          {queue.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    As novas conversas seguirão as regras da fila selecionada
-                  </p>
-                </div>
-              </div>
-
-              {/* Segunda Coluna */}
-              <div className="flex-1 space-y-4">
-                {/* Toggle Switches */}
-                <div className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium text-foreground">
-                        Criar card no CRM automaticamente
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Cria automaticamente um card no pipeline selecionado
+                  </TooltipTrigger>
+                   {(!canCreateConnections(workspaceId) || !usage?.canCreateMore) && (
+                    <TooltipContent>
+                      <p>
+                        {!canCreateConnections(workspaceId) 
+                          ? 'Você não tem permissão para criar conexões' 
+                          : `Seu Limite de Conexões é ${usage?.limit || 1}`
+                        }
                       </p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+              
+              {/* Modal Content Wrapper */}
+              {isCreateModalOpen && (
+                <DialogContent className="max-w-4xl p-0">
+                  {/* Same Modal Logic as before */}
+                   <div className="flex items-center justify-between p-6 border-b border-border">
+                      <h2 className="text-lg font-semibold text-foreground">
+                        {isEditMode ? 'Editar Instância' : 'Adicionar Canal de Atendimento'}
+                      </h2>
                     </div>
-                    <Switch checked={createCrmCard} onCheckedChange={setCreateCrmCard} />
-                  </div>
 
-                  {createCrmCard && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="pipeline" className="text-sm font-medium text-foreground">
-                          Selecionar Pipeline
-                        </Label>
-                        {loadingPipelines ? (
-                          <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
-                            <span className="text-sm text-muted-foreground">
-                              Carregando pipelines...
-                            </span>
+                    <div className="px-6 pt-6">
+                      <div className="flex items-center justify-center mb-6">
+                        <div className="flex items-center">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">1</div>
+                            <span className="ml-2 text-sm text-foreground">Configuração</span>
                           </div>
-                        ) : workspacePipelines.length > 0 ? (
-                          <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-                            <SelectTrigger className="h-11">
-                              <SelectValue placeholder="Selecionar Pipeline" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {workspacePipelines.map((pipeline) => (
-                                <SelectItem key={pipeline.id} value={pipeline.id}>
-                                  {pipeline.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
-                            <span className="text-sm text-muted-foreground flex-1">
-                              Nenhum pipeline encontrado para esta empresa
-                            </span>
-                            {!isInMasterDashboard && (
-                              <Button
-                                asChild
-                                variant="outline"
-                                size="sm"
-                                className="gap-1"
-                              >
-                                <Link to={getNavigationPath('/crm-negocios')}>
-                                  Criar Pipeline
-                                  <ArrowRight className="h-3 w-3" />
-                                </Link>
-                              </Button>
-                            )}
+                          <div className="w-12 h-px bg-border mx-4"></div>
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full border-2 border-border text-muted-foreground flex items-center justify-center text-sm">2</div>
+                            <span className="ml-2 text-sm text-muted-foreground">Finalização</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex px-6 space-x-8">
+                       <div className="flex-1 space-y-4">
+                        {!isEditMode && (
+                          <div className="p-3 bg-muted/50 rounded-lg border">
+                            <div className="text-sm text-muted-foreground">
+                              {usage === null ? 'Carregando limites...' : `Conexões: ${usage.current}/${usage.limit}`}
+                            </div>
                           </div>
                         )}
-                      </div>
-
-                      {selectedPipeline && (
-                        <div className="space-y-2">
-                          <Label htmlFor="column" className="text-sm font-medium text-foreground">
-                            Coluna do Card
-                          </Label>
-                          
-                          {loadingColumns ? (
-                            <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
-                              <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">
-                                Carregando colunas...
-                              </span>
-                            </div>
-                          ) : pipelineColumns.length > 0 ? (
-                            <>
-                              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                                <SelectTrigger className="h-11">
-                                  <SelectValue placeholder="Selecionar Coluna" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {pipelineColumns.map((column) => (
-                                    <SelectItem key={column.id} value={column.id}>
-                                      <div className="flex items-center gap-2">
-                                        <div 
-                                          className="w-3 h-3 rounded-full" 
-                                          style={{ backgroundColor: column.color }}
-                                        />
-                                        {column.name}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <p className="text-xs text-muted-foreground">
-                                Cards serão criados nesta coluna
-                              </p>
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2 p-3 border border-border rounded-md bg-muted/30">
-                              <span className="text-sm text-muted-foreground">
-                                Nenhuma coluna encontrada para este pipeline
-                              </span>
-                            </div>
-                          )}
+                        
+                         <div className="space-y-2">
+                          <Label htmlFor="instanceName">Nome *</Label>
+                          <Input
+                            id="instanceName"
+                            value={instanceName}
+                            onChange={(e) => setInstanceName(e.target.value)}
+                            placeholder="Digite o nome da instância"
+                            disabled={isEditMode && !isEditingZapi}
+                            className="h-11"
+                          />
                         </div>
-                      )}
-                    </>
-                  )}
 
-                </div>
-              </div>
+                         <div className="space-y-2">
+                          <Label htmlFor="phoneNumber">Número do WhatsApp</Label>
+                          <Input
+                            id="phoneNumber"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            placeholder="Ex: 5511999999999"
+                            type="tel"
+                            className="h-11"
+                          />
+                        </div>
+                       </div>
+
+                       <div className="flex-1 space-y-4">
+                         <div className="space-y-4 pt-2">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                  <Label>Criar card no CRM automaticamente</Label>
+                                </div>
+                                <Switch checked={createCrmCard} onCheckedChange={setCreateCrmCard} />
+                            </div>
+                            {createCrmCard && (
+                              <div className="space-y-2">
+                                 <Label>Selecionar Pipeline</Label>
+                                 <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
+                                    <SelectTrigger className="h-11"><SelectValue placeholder="Selecionar Pipeline" /></SelectTrigger>
+                                    <SelectContent>
+                                      {workspacePipelines.map((pipeline) => (
+                                        <SelectItem key={pipeline.id} value={pipeline.id}>{pipeline.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                 </Select>
+                              </div>
+                            )}
+                         </div>
+                       </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-6 border-t border-border mt-6">
+                      <Button variant="outline" disabled={isCreating} onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+                      <Button 
+                        onClick={isEditMode ? editConnection : () => createInstance()} 
+                        disabled={isCreating || loadingProvider}
+                      >
+                        {isCreating ? (isEditMode ? 'Salvando...' : 'Criando...') : (isEditMode ? 'Salvar Alterações' : 'Adicionar')}
+                      </Button>
+                    </div>
+                </DialogContent>
+              )}
+            </Dialog>
+
+            <div className="flex gap-2">
+               <TestWebhookReceptionModal />
             </div>
-            
-            {/* Footer */}
-            <div className="flex items-center justify-between p-6 border-t border-border mt-6">
-              <Button variant="outline" disabled={isCreating}>
-                Voltar
-              </Button>
-              <Button 
-                onClick={isEditMode ? editConnection : () => createInstance()} 
-                disabled={
-                  isCreating || 
-                  loadingProvider ||
-                  (!isEditMode && (!usage?.canCreateMore || !hasActiveProvider))
-                }
-                title={
-                  !isEditMode && !hasActiveProvider
-                    ? 'Configure um provider ativo antes de criar instâncias'
-                    : !isEditMode && !usage?.canCreateMore 
-                      ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` 
-                      : ''
-                }
-              >
-                {isCreating ? (isEditMode ? 'Salvando...' : 'Criando...') : (isEditMode ? 'Salvar Alterações' : 'Adicionar')}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       </div>
 
-      {connections.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Wifi className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhuma conexão encontrada</h3>
-            <p className="text-muted-foreground text-center mb-6">
-              Crie sua primeira conexão WhatsApp para começar a receber mensagens
-            </p>
-            <Button 
-              onClick={() => setIsCreateModalOpen(true)}
-              disabled={!usage?.canCreateMore}
-              title={!usage?.canCreateMore ? `Limite de conexões atingido (${usage?.current || 0}/${usage?.limit || 1})` : ''}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {usage === null 
-                ? 'Carregando...' 
-                : `Adicionar Instância (${usage.current}/${usage.limit})`
-              }
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {connections.map((connection) => (
-            <Card 
-              key={connection.id} 
-              className="relative border-l-4"
-              style={{ 
-                borderLeftColor: getConnectionColor(connection.id, connection.metadata)
-              }}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-sm font-medium">
-                    {connection.instance_name}
-                  </CardTitle>
-                  {/* Provider Badge */}
-                  {connection.provider?.provider === 'zapi' ? (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-500/10 text-blue-600 border-blue-500/30">
-                      <Zap className="w-3 h-3" />
-                      Z-API
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-purple-500/10 text-purple-600 border-purple-500/30">
-                      <Cloud className="w-3 h-3" />
-                      Evolution
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(connection.status)}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setDefaultConnection(connection)}>
-                        <Star className="mr-2 h-4 w-4" />
-                        Definir como Padrão
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openEditModal(connection)}>
-                        <Edit3 className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      {userRole === 'master' && (
-                        <DropdownMenuItem 
-                          onClick={() => openDeleteModal(connection)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir Instância
-                        </DropdownMenuItem>
-                      )}
-                     </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground flex items-center justify-between">
-                    <span>Número: {formatPhoneNumberDisplay(connection.phone_number || '')}</span>
-                    {/* Star icon for default connection */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDefaultConnection(connection)}
-                      disabled={isSettingDefault}
-                      className="h-6 w-6 p-0"
-                      title="Definir como conexão padrão"
-                    >
-                      <Star 
-                        className={`w-3 h-3 transition-colors ${
-                          connection.is_default 
-                            ? 'fill-yellow-500 text-yellow-500' 
-                            : 'text-muted-foreground'
-                        }`} 
-                      />
-                    </Button>
+      {/* Table Area */}
+      <div className="flex-1 overflow-auto bg-[#e6e6e6]">
+        <div className="inline-block min-w-full align-middle">
+          <table className="min-w-full border-collapse bg-white text-xs font-sans">
+            <thead className="bg-[#f3f3f3] sticky top-0 z-10">
+              <tr>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-left font-semibold text-gray-700 min-w-[200px] group hover:bg-[#e1e1e1] cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>Nome da Instância</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
                   </div>
-                  
-                  <div className="flex gap-2 flex-wrap">
-                    {connection.status === 'connected' ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => disconnectInstance(connection)}
-                        disabled={isDisconnecting}
-                        className="flex items-center gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                      >
-                        {isDisconnecting ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            Desconectando...
-                          </>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-left font-semibold text-gray-700 min-w-[150px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Número</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[120px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Status</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[120px] group hover:bg-[#e1e1e1] cursor-pointer">
+                   <div className="flex items-center justify-between">
+                    <span>Provider</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                 <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 w-[50px]">
+                   <div className="flex items-center justify-between">
+                    <span>Padrão</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 w-[140px]">
+                   <div className="flex items-center justify-between">
+                    <span>Ações</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredConnections.length === 0 ? (
+                 <tr>
+                  <td colSpan={6} className="border border-[#e0e0e0] text-center py-12 bg-gray-50 text-muted-foreground">
+                    {isLoading ? "Carregando conexões..." : "Nenhuma conexão encontrada."}
+                  </td>
+                </tr>
+              ) : (
+                filteredConnections.map((connection) => (
+                  <tr key={connection.id} className="hover:bg-blue-50 group h-[40px]">
+                    <td className="border border-[#e0e0e0] px-2 py-0 font-medium align-middle">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getConnectionColor(connection.id, connection.metadata) }} />
+                        {connection.instance_name}
+                      </div>
+                    </td>
+                    <td className="border border-[#e0e0e0] px-2 py-0 align-middle">
+                      {formatPhoneNumberDisplay(connection.phone_number || '')}
+                    </td>
+                    <td className="border border-[#e0e0e0] px-2 py-0 text-center align-middle">
+                       {getStatusBadge(connection.status)}
+                    </td>
+                    <td className="border border-[#e0e0e0] px-2 py-0 text-center align-middle">
+                        {connection.provider?.provider === 'zapi' ? (
+                          <span className="flex items-center justify-center gap-1 text-[10px] font-medium text-blue-600">
+                            <Zap className="w-3 h-3" /> Z-API
+                          </span>
                         ) : (
-                          <>
-                            <Wifi className="w-4 h-4" />
-                            Desconectar
-                          </>
+                          <span className="flex items-center justify-center gap-1 text-[10px] font-medium text-purple-600">
+                            <Cloud className="w-3 h-3" /> Evolution
+                          </span>
                         )}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
+                    </td>
+                    <td className="border border-[#e0e0e0] px-1 py-0 text-center align-middle">
+                       <Button
+                          variant="ghost"
                           size="sm"
-                          onClick={() => connectInstance(connection)}
-                          disabled={isConnecting}
-                          className="flex items-center gap-2"
+                          onClick={() => setDefaultConnection(connection)}
+                          disabled={isSettingDefault}
+                          className="h-6 w-6 p-0 mx-auto"
+                          title="Definir como conexão padrão"
                         >
-                          {isConnecting && selectedConnection?.id === connection.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                              Conectando...
-                            </>
-                          ) : (
-                            <>
-                              <QrCode className="w-4 h-4" />
-                              Conectar
-                            </>
-                          )}
+                          <Star 
+                            className={`w-3.5 h-3.5 transition-colors ${
+                              connection.is_default 
+                                ? 'fill-yellow-500 text-yellow-500' 
+                                : 'text-muted-foreground/30 hover:text-muted-foreground'
+                            }`} 
+                          />
+                        </Button>
+                    </td>
+                    <td className="border border-[#e0e0e0] px-1 py-0 text-center align-middle">
+                      <div className="flex items-center justify-center gap-1 h-full">
+                        {/* Connect/Disconnect/QR Buttons */}
+                        {connection.status === 'connected' ? (
+                            <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => disconnectInstance(connection)}
+                            disabled={isDisconnecting}
+                            className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600"
+                            title="Desconectar"
+                          >
+                            <Wifi className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                           <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => connectInstance(connection)}
+                                disabled={isConnecting}
+                                className="h-6 w-6 rounded-sm hover:bg-green-100 text-green-600"
+                                title="Conectar / QR Code"
+                              >
+                                <QrCode className="h-3.5 w-3.5" />
+                              </Button>
+                              
+                               {connection.provider?.provider === 'zapi' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => refreshQRCode(connection.id)}
+                                    disabled={isRefreshing}
+                                    className="h-6 w-6 rounded-sm hover:bg-blue-100 text-blue-600"
+                                    title="Atualizar QR Code"
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                  </Button>
+                               )}
+                           </>
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditModal(connection)}
+                          className="h-6 w-6 rounded-sm hover:bg-blue-100 text-gray-600"
+                          title="Editar"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
                         </Button>
                         
-                        {/* Botões para Z-API desconectado */}
-                        {connection.provider?.provider === 'zapi' && 
-                         (connection.status === 'disconnected' || connection.status === 'qr') && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => refreshQRCode(connection.id)}
-                              disabled={isRefreshing}
-                              className="flex items-center gap-2"
-                              title="Atualizar QR Code Z-API"
-                            >
-                              {isRefreshing ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                  Atualizando...
-                                </>
-                              ) : (
-                                <>
-                                  <RefreshCw className="w-4 h-4" />
-                                  Atualizar QR
-                                </>
-                              )}
-                            </Button>
-                          </>
+                        {userRole === 'master' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteModal(connection)}
+                            className="h-6 w-6 rounded-sm hover:bg-red-100 text-red-600"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+               {/* Empty rows filler */}
+              {filteredConnections.length > 0 && Array.from({ length: Math.max(0, 15 - filteredConnections.length) }).map((_, i) => (
+                <tr key={`empty-${i}`} className="h-[40px]">
+                   <td className="border border-[#e0e0e0]"></td>
+                   <td className="border border-[#e0e0e0]"></td>
+                   <td className="border border-[#e0e0e0]"></td>
+                   <td className="border border-[#e0e0e0]"></td>
+                   <td className="border border-[#e0e0e0]"></td>
+                   <td className="border border-[#e0e0e0] bg-gray-50"></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
-      {/* QR Code Modal */}
+      {/* Footer Sheets (Categories) */}
+      <div className="flex items-center border-t border-gray-300 bg-[#f0f0f0] px-1 h-8 select-none">
+         <div className="flex items-end h-full gap-1 overflow-x-auto px-1">
+            <div
+              className={cn(
+                "flex items-center gap-1.5 px-4 h-[26px] text-xs cursor-pointer border-t border-l border-r rounded-t-sm transition-all",
+                "bg-white border-gray-300 border-b-white text-primary font-medium z-10 shadow-sm translate-y-[1px]"
+              )}
+            >
+              <Smartphone className="h-3 w-3" />
+              <span>Conexões</span>
+            </div>
+         </div>
+      </div>
+
+      {/* Modals Logic Kept */}
       <Dialog open={isQRModalOpen} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedConnection(null);
-        }
+        if (!open) setSelectedConnection(null);
         setIsQRModalOpen(open);
       }}>
-        <DialogContent className="max-w-4xl">
+         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-primary mb-2">
               Passos para conectar
@@ -1783,45 +1490,28 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           </DialogHeader>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
-            {/* Instruções à esquerda */}
+             {/* Instruções à esquerda */}
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                  1
-                </div>
-                <div>
-                  <p className="font-medium">Abra o <strong>WhatsApp</strong> no seu celular</p>
-                </div>
+               {/* Step 1 */}
+               <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">1</div>
+                <div><p className="font-medium">Abra o <strong>WhatsApp</strong> no seu celular</p></div>
               </div>
-              
+               {/* Step 2 */}
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium">No Android toque em <strong>Menu</strong> : ou no iPhone em <strong>Ajustes</strong></p>
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">2</div>
+                <div><p className="font-medium">No Android toque em <strong>Menu</strong> : ou no iPhone em <strong>Ajustes</strong></p></div>
               </div>
-              
+              {/* Step 3 */}
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium">Toque em <strong>Dispositivos conectados</strong> e depois <strong>Conectar um dispositivo</strong></p>
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">3</div>
+                <div><p className="font-medium">Toque em <strong>Dispositivos conectados</strong> e depois <strong>Conectar um dispositivo</strong></p></div>
               </div>
-              
+               {/* Step 4 */}
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                  4
-                </div>
-                <div>
-                  <p className="font-medium">Escaneie o QR Code à direita para confirmar</p>
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">4</div>
+                <div><p className="font-medium">Escaneie o QR Code à direita para confirmar</p></div>
               </div>
-
-              {/* Botão para atualizar QR Code */}
               <div className="pt-4">
                 <Button 
                   onClick={() => selectedConnection && refreshQRCode(selectedConnection.id)}
@@ -1831,21 +1521,14 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                   className="w-full"
                 >
                   {isRefreshing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Atualizando QR Code...
-                    </>
+                    <><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />Atualizando QR Code...</>
                   ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Atualizar QR Code
-                    </>
+                    <><RefreshCw className="w-4 h-4 mr-2" />Atualizar QR Code</>
                   )}
                 </Button>
               </div>
             </div>
-
-            {/* QR Code à direita */}
+             {/* QR Code à direita */}
             <div className="flex items-center justify-center">
               {selectedConnection?.qr_code ? (
                 <div className="text-center space-y-4">
@@ -1855,9 +1538,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                     className="mx-auto border border-border rounded-lg bg-white p-4"
                     style={{ width: '280px', height: '280px' }}
                   />
-                  <p className="text-sm text-muted-foreground font-medium">
-                    {selectedConnection.instance_name}
-                  </p>
+                  <p className="text-sm text-muted-foreground font-medium">{selectedConnection.instance_name}</p>
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -1867,7 +1548,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
               )}
             </div>
           </div>
-        </DialogContent>
+         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Modal */}
@@ -1886,11 +1567,8 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
                   gerando cobrança referente ao mês vigente. Caso realmente deseje prosseguir, digite o nome da instância para confirmar o cancelamento.
                 </p>
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="confirm-instance" className="text-sm font-medium">
-                  Digite o nome da instância para confirmar:
-                </Label>
+                <Label htmlFor="confirm-instance" className="text-sm font-medium">Digite o nome da instância para confirmar:</Label>
                 <div className="p-2 bg-muted rounded border">
                   <code className="text-sm font-mono">{connectionToDelete?.instance_name}</code>
                 </div>
@@ -1905,16 +1583,10 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmInstanceName('')}>
-              Cancelar
-            </AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setConfirmInstanceName('')}>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={removeConnection}
-              disabled={
-                userRole !== 'master' ||
-                isDisconnecting ||
-                confirmInstanceName !== connectionToDelete?.instance_name
-              }
+              disabled={userRole !== 'master' || isDisconnecting || confirmInstanceName !== connectionToDelete?.instance_name}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             >
               {isDisconnecting ? 'Excluindo...' : 'Excluir Instância'}
@@ -1922,7 +1594,7 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Modal de Configuração de Webhooks Z-API */}
       {connectionToConfigureWebhook && (
         <ConfigureZapiWebhookModal
@@ -1935,7 +1607,6 @@ export function ConexoesNova({ workspaceId }: ConexoesNovaProps) {
           instanceName={connectionToConfigureWebhook.instance_name}
         />
       )}
-
     </div>
   );
 }
