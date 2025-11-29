@@ -1521,8 +1521,15 @@ serve(async (req) => {
         if (method === 'PUT') {
           const columnId = url.searchParams.get('id');
           if (!columnId) {
+            console.error('❌ PUT request to /columns without ID parameter');
+            console.error('Request URL:', url.toString());
+            console.error('Request headers:', Object.fromEntries(req.headers.entries()));
             return new Response(
-              JSON.stringify({ error: 'Column ID required' }),
+              JSON.stringify({ 
+                error: 'Column ID required',
+                message: 'Para atualizar uma coluna, você deve passar o ID como parâmetro na URL: /columns?id=xxx',
+                requestUrl: url.toString()
+              }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
