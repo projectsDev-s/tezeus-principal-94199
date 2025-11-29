@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2, Activity, Bell, AlertTriangle } from 'lucide-react';
+import { Search, Settings, Home, Users, Building2, BarChart3, Settings2, BrainCircuit, LayoutDashboard, UserCircle, ListOrdered, LogOut, ArrowLeft, Edit, Trash2, Activity, Bell, AlertTriangle, Plus, Eye, EyeOff, MoreVertical } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,9 +29,11 @@ import {
 import { WorkspaceUsersModal } from '@/components/modals/WorkspaceUsersModal';
 import { WorkspaceConfigModal } from '@/components/modals/WorkspaceConfigModal';
 import { CreateWorkspaceModal } from '@/components/modals/CreateWorkspaceModal';
-import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RelatoriosAvancados } from '@/components/relatorios-avancados/RelatoriosAvancados';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -282,83 +284,231 @@ export default function MasterDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Header - apenas na aba Empresas */}
+        {/* Excel-style Toolbar - apenas na aba Empresas */}
         {activePage === 'workspaces' && (
-          <header className="bg-card border-b border-border px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold text-foreground">
-                  Workspaces do Master
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Gerencie todas as empresas do sistema
-                </p>
+          <div className="bg-[#f3f3f3] border-b border-[#d4d4d4] px-3 py-1.5 shrink-0">
+            <div className="flex w-full items-center gap-2">
+              {/* Nova Empresa Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCreateWorkspaceModalOpen(true)}
+                className="h-7 w-7 rounded-none hover:bg-gray-200 text-gray-700 border border-transparent hover:border-gray-300"
+                title="Nova Empresa"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+
+              <div className="h-4 w-px bg-gray-300 mx-1" />
+
+              {/* Search Input */}
+              <div className="relative flex-1 min-w-[150px] max-w-xs">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Buscar empresas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-7 h-7 text-xs bg-white border-gray-300 rounded-none focus-visible:ring-1 focus-visible:ring-primary"
+                />
               </div>
-              <div className="flex items-center gap-3">
-                <Button onClick={() => setCreateWorkspaceModalOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Nova Empresa
-                </Button>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Buscar empresa..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-64"
-                  />
-                </div>
-              </div>
+
+              <div className="flex-1" />
+
+              {/* Title */}
+              <span className="text-xs font-semibold text-gray-700">
+                Workspaces do Master
+              </span>
             </div>
-          </header>
+          </div>
         )}
 
         {/* Content Area */}
-        <main className={`flex-1 ${activePage === 'reports' ? 'overflow-hidden flex flex-col' : 'p-6 overflow-auto'}`}>
+        <main className={`flex-1 ${activePage === 'reports' ? 'overflow-hidden flex flex-col' : activePage === 'workspaces' ? 'overflow-hidden flex flex-col bg-white' : 'p-6 overflow-auto'}`}>
           {activePage === 'workspaces' ? (
-            <>
-              {isLoading || isRefreshing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {[...Array(8)].map((_, i) => (
-                    <Skeleton key={i} className="h-64 rounded-lg" />
-                  ))}
-                </div>
-              ) : filteredWorkspaces.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    {searchQuery ? 'Nenhuma empresa encontrada' : 'Nenhuma empresa cadastrada'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {searchQuery 
-                      ? 'Tente ajustar sua busca ou limpar o filtro.'
-                      : 'Comece criando uma nova empresa no sistema.'}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-4 text-sm text-muted-foreground">
-                    Exibindo {filteredWorkspaces.length} de {workspaces.length} empresas
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredWorkspaces.map((workspace) => (
-                      <WorkspaceCard
-                        key={workspace.workspace_id}
-                        workspace={workspace}
-                        onLogin={handleLogin}
-                        onViewReports={handleViewUsers}
-                        onViewWorkspace={handleViewWorkspace}
-                        onViewConfig={handleViewConfig}
-                        onEdit={handleEditWorkspace}
-                        onDelete={handleDeleteWorkspace}
-                        onToggleActive={handleToggleActive}
-                      />
+            <div className="h-full flex flex-col">
+              {/* Excel-style Table */}
+              <div className="flex-1 overflow-auto p-4">
+                {isLoading || isRefreshing ? (
+                  <div className="bg-white border border-[#d4d4d4] shadow-sm">
+                    <div className="grid grid-cols-7 bg-[#f3f3f3] border-b border-[#d4d4d4]">
+                      {['Nome', 'Status', 'Conexões', 'Usuários', 'Negócios', 'Criado em', 'Ações'].map((header) => (
+                        <div key={header} className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4] last:border-r-0">
+                          {header}
+                        </div>
+                      ))}
+                    </div>
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="grid grid-cols-7 border-b border-[#d4d4d4] animate-pulse">
+                        {[...Array(7)].map((_, j) => (
+                          <div key={j} className="px-3 py-2.5 border-r border-[#d4d4d4] last:border-r-0">
+                            <div className="h-4 bg-gray-200 rounded" />
+                          </div>
+                        ))}
+                      </div>
                     ))}
                   </div>
-                </>
-              )}
-            </>
+                ) : filteredWorkspaces.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 bg-white border-2 border-dashed border-[#d4d4d4]">
+                    <Building2 className="h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Nenhuma empresa encontrada</h3>
+                    <p className="text-gray-500 mb-4">
+                      {searchQuery ? "Tente uma busca diferente" : "Comece criando uma nova empresa"}
+                    </p>
+                    {!searchQuery && (
+                      <Button 
+                        onClick={() => setCreateWorkspaceModalOpen(true)}
+                        className="h-7 px-3 text-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Nova Empresa
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white border border-[#d4d4d4] shadow-sm">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-7 bg-[#f3f3f3] border-b border-[#d4d4d4] sticky top-0 z-10">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4]">
+                        Nome
+                      </div>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4]">
+                        Status
+                      </div>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4]">
+                        Conexões
+                      </div>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4]">
+                        Usuários
+                      </div>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4]">
+                        Negócios
+                      </div>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700 border-r border-[#d4d4d4]">
+                        Criado em
+                      </div>
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-700">
+                        Ações
+                      </div>
+                    </div>
+
+                    {/* Table Body */}
+                    {filteredWorkspaces.map((workspace) => (
+                      <div
+                        key={workspace.workspace_id}
+                        className="grid grid-cols-7 border-b border-[#d4d4d4] hover:bg-gray-50 transition-colors"
+                      >
+                        {/* Nome */}
+                        <div className="px-3 py-2.5 text-xs border-r border-[#d4d4d4] flex items-center gap-2">
+                          <Building2 className="h-3.5 w-3.5 text-gray-500" />
+                          <span className="font-medium">{workspace.name}</span>
+                        </div>
+
+                        {/* Status */}
+                        <div className="px-3 py-2.5 text-xs border-r border-[#d4d4d4] flex items-center">
+                          <Badge 
+                            variant={workspace.is_active ? "default" : "secondary"}
+                            className="text-[10px] px-1.5 py-0 h-5"
+                          >
+                            {workspace.is_active ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </div>
+
+                        {/* Conexões */}
+                        <div className="px-3 py-2.5 text-xs border-r border-[#d4d4d4]">
+                          {workspace.connections_count || 0}
+                        </div>
+
+                        {/* Usuários */}
+                        <div className="px-3 py-2.5 text-xs border-r border-[#d4d4d4]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewUsers(workspace)}
+                            className="h-5 px-2 text-[10px] hover:bg-gray-200"
+                          >
+                            <Users className="h-3 w-3 mr-1" />
+                            Ver
+                          </Button>
+                        </div>
+
+                        {/* Negócios */}
+                        <div className="px-3 py-2.5 text-xs border-r border-[#d4d4d4]">
+                          -
+                        </div>
+
+                        {/* Criado em */}
+                        <div className="px-3 py-2.5 text-xs text-gray-500 border-r border-[#d4d4d4]">
+                          {formatDistanceToNow(new Date(workspace.created_at), {
+                            addSuffix: true,
+                            locale: ptBR,
+                          })}
+                        </div>
+
+                        {/* Ações */}
+                        <div className="px-3 py-2.5 text-xs flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleLogin(workspace)}
+                            className="h-6 px-2 text-[10px] hover:bg-gray-200"
+                            title="Entrar na empresa"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewConfig(workspace)}
+                            className="h-6 px-2 text-[10px] hover:bg-gray-200"
+                            title="Configurações"
+                          >
+                            <Settings className="h-3 w-3" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-gray-200"
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditWorkspace(workspace)}>
+                                <Edit className="mr-2 h-3.5 w-3.5" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleToggleActive(workspace)}>
+                                {workspace.is_active ? (
+                                  <>
+                                    <EyeOff className="mr-2 h-3.5 w-3.5" />
+                                    Desativar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="mr-2 h-3.5 w-3.5" />
+                                    Ativar
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteWorkspace(workspace)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           ) : activePage === 'reports' ? (
             <RelatoriosAvancados workspaces={workspaces} />
           ) : activePage === 'ds-agent' ? (
