@@ -82,7 +82,7 @@ async function getConversationProviderType(
       .from('conversations')
       .select('id, connection_id')
       .eq('id', conversationId)
-      .maybeSingle();
+      .maybeSingle() as { data: { id: string; connection_id: string } | null; error: any };
 
     if (conversationError || !conversation?.connection_id) {
       console.warn('⚠️ Não foi possível obter connection_id da conversa:', conversationError);
@@ -93,7 +93,7 @@ async function getConversationProviderType(
       .from('connections')
       .select('id, provider:whatsapp_providers!connections_provider_id_fkey(provider)')
       .eq('id', conversation.connection_id)
-      .maybeSingle();
+      .maybeSingle() as { data: { id: string; provider: { provider: string } } | null; error: any };
 
     if (connectionError || !connection?.provider?.provider) {
       console.warn('⚠️ Não foi possível obter provider da conexão:', connectionError);
@@ -241,7 +241,7 @@ serve(async (req) => {
       console.log('📌 messageId é UUID válido, buscando por id');
       const result = await supabase
         .from('messages')
-        .select('id, external_id, workspace_id, content, conversation_id')
+        .select('id, external_id, workspace_id, content, conversation_id, message_type')
         .eq('id', messageId)
         .maybeSingle();
       existingMessage = result.data;
@@ -251,7 +251,7 @@ serve(async (req) => {
       console.log('📌 messageId não é UUID, buscando por external_id');
       const result = await supabase
         .from('messages')
-        .select('id, external_id, workspace_id, content, conversation_id')
+        .select('id, external_id, workspace_id, content, conversation_id, message_type')
         .eq('external_id', messageId)
         .maybeSingle();
       existingMessage = result.data;
@@ -450,7 +450,7 @@ serve(async (req) => {
     let audioConversionDetails: Record<string, string> | null = null;
 
     if (isOutbound && isAudioMessage) {
-      providerType = await getConversationProviderType(supabase, existingMessage.conversation_id);
+      providerType = await getConversationProviderType(supabase as any, existingMessage.conversation_id);
       console.log('🔌 Provider detectado para conversa:', providerType);
       
       if (providerType === 'zapi' && !allowedZapiAudioMimeTypes.has(rawMimeType)) {
