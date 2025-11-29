@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over, rectIntersection, CollisionDetection } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1039,6 +1039,29 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     }
     return columnCards;
   };
+  // ✅ Detecção de colisão customizada para colunas
+  const customCollisionDetection: CollisionDetection = useCallback((args) => {
+    // Se estamos arrastando uma coluna, filtrar apenas colunas como alvos
+    if (draggedColumn) {
+      // Filtrar apenas droppables que são colunas
+      const columnDroppables = args.droppableContainers.filter(container => 
+        container.id.toString().startsWith('column-')
+      );
+      
+      // Criar um novo args com apenas as colunas
+      const filteredArgs = {
+        ...args,
+        droppableContainers: columnDroppables
+      };
+      
+      // Usar rectIntersection para melhor detecção em elementos grandes
+      return rectIntersection(filteredArgs);
+    }
+    
+    // Para cards, usar o algoritmo padrão
+    return closestCenter(args);
+  }, [draggedColumn]);
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const activeId = event.active.id as string;
     
@@ -1401,7 +1424,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
   return (
     <DndContext 
       sensors={sensors} 
-      collisionDetection={closestCenter} 
+      collisionDetection={customCollisionDetection} 
       onDragStart={handleDragStart} 
       onDragEnd={handleDragEnd} 
       onDragOver={handleDragOver}
