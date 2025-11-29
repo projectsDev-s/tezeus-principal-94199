@@ -52,6 +52,7 @@ interface Contact {
   createdAt: string;
   created_at?: string; // Campo original para exportação
   tags: Array<{
+    id: string;
     name: string;
     color: string;
   }>;
@@ -261,6 +262,7 @@ export function CRMContatos() {
           contactTagsData
             .filter((ct) => ct.contact_id === contact.id)
             .map((ct) => ({
+              id: ct.tags?.id || "",
               name: ct.tags?.name || "",
               color: ct.tags?.color || "#808080",
             })) || [];
@@ -397,6 +399,7 @@ export function CRMContatos() {
             contactTagsData
               .filter((ct) => ct.contact_id === contact.id)
               .map((ct) => ({
+                id: ct.tags?.id || "",
                 name: ct.tags?.name || "",
                 color: ct.tags?.color || "#808080",
               })) || [];
