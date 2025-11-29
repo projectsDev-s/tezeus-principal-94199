@@ -1149,11 +1149,10 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
       }
 
       for (const update of updates) {
-        await supabase.functions.invoke('pipeline-management/columns', {
+        await supabase.functions.invoke(`pipeline-management/columns?id=${update.id}`, {
           method: 'PUT',
           headers: getHeaders,
           body: {
-            id: update.id,
             order_position: update.order_position
           }
         });
