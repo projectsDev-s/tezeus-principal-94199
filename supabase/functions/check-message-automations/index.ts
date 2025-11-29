@@ -37,6 +37,7 @@ serve(async (req) => {
         description, 
         conversation_id, 
         contact_id,
+        moved_to_column_at,
         pipelines!inner(workspace_id)
       `)
       .eq('contact_id', contactId)
@@ -120,38 +121,9 @@ serve(async (req) => {
         const requiredMessageCount = triggerConfig.message_count || 1;
         console.log(`📊 Mensagens necessárias: ${requiredMessageCount}`);
 
-        // Buscar quando o card entrou na coluna atual
-        // Primeiro tenta buscar histórico de entrada na coluna
-        const { data: cardHistory } = await supabase
-          .from('pipeline_card_history')
-          .select('changed_at, metadata')
-          .eq('card_id', card.id)
-          .order('changed_at', { ascending: false });
-
-        let columnEntryDate: string;
-        
-        // Procurar o último registro onde o card foi movido para a coluna atual
-        const columnEntry = cardHistory?.find((h: any) => {
-          const metadata = h.metadata || {};
-          const newColumnId = metadata.new_column_id || metadata.newColumnId;
-          return newColumnId === card.column_id;
-        });
-
-        if (columnEntry) {
-          columnEntryDate = columnEntry.changed_at;
-          console.log('✅ Histórico encontrado - card entrou na coluna em:', columnEntryDate);
-        } else {
-          // Se não encontrar histórico, usar updated_at do card (última modificação)
-          console.log('⚠️ Histórico não encontrado, usando updated_at do card');
-          const { data: cardData } = await supabase
-            .from('pipeline_cards')
-            .select('updated_at')
-            .eq('id', card.id)
-            .single();
-          
-          columnEntryDate = cardData?.updated_at || new Date().toISOString();
-        }
-
+        // Usar moved_to_column_at como timestamp de entrada na coluna
+        // Este campo é atualizado sempre que o card é movido, garantindo unicidade
+        const columnEntryDate = card.moved_to_column_at || new Date().toISOString();
         console.log(`📅 Card entrou na coluna em: ${columnEntryDate}`);
 
         // Usar conversation_id do card ou o passado como parâmetro
