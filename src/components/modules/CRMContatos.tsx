@@ -1539,14 +1539,33 @@ export function CRMContatos() {
                               <Badge
                                 key={`${contact.id}-tag-${i}`}
                                 variant="outline"
-                                className="h-5 rounded-none border text-[10px] font-semibold tracking-tight px-2 py-0 flex items-center"
+                                className="h-5 rounded-none border text-[10px] font-semibold tracking-tight px-2 py-0 flex items-center gap-1"
                                 style={{
                                   borderColor: tag.color,
                                   color: tag.color,
                                   backgroundColor: tag.color ? `${tag.color}15` : 'transparent'
                                 }}
                               >
-                                {tag.name}
+                                <span className="truncate max-w-[120px]">{tag.name}</span>
+                                <button
+                                  className="ml-1 rounded-sm hover:bg-black/10 transition-colors flex items-center justify-center"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      await supabase
+                                        .from('contact_tags')
+                                        .delete()
+                                        .eq('contact_id', contact.id)
+                                        .eq('tag_id', tag.id);
+                                      await fetchContacts();
+                                    } catch (error) {
+                                      console.error('Erro ao remover tag:', error);
+                                    }
+                                  }}
+                                  title="Remover tag"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
                               </Badge>
                             ))
                           ) : (

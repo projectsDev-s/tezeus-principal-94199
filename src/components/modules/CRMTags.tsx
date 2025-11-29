@@ -303,9 +303,9 @@ export function CRMTags() {
                           borderColor: tag.color,
                           color: tag.color
                         }}
-                        className="text-[10px] px-2 py-0 h-5 rounded-full font-medium border"
+                        className="rounded-none border px-2 py-0.5 text-[11px] font-semibold h-5 inline-flex items-center gap-1"
                       >
-                        {tag.name}
+                        <span className="truncate max-w-[180px]">{tag.name}</span>
                       </Badge>
                     </td>
 
