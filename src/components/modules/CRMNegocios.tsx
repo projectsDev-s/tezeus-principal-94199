@@ -617,22 +617,30 @@ function SortableColumnWrapper({ id, children }: SortableColumnWrapperProps) {
     isDragging,
   } = useSortable({ id });
 
-  const transformString = CSS.Transform.toString(transform);
-  const baseTransform = transformString === 'none' ? undefined : transformString;
-  const draggingTransform = baseTransform ? `${baseTransform} scale(1.02)` : 'scale(1.02)';
-
   const style: React.CSSProperties = {
-    transform: isDragging ? draggingTransform : baseTransform,
-    transition: transition || 'transform 200ms ease',
-    opacity: isDragging ? 0.85 : 1,
-    zIndex: isDragging ? 40 : 'auto',
-    boxShadow: isDragging ? '0 20px 40px rgba(15, 23, 42, 0.35)' : undefined,
+    transform: CSS.Transform.toString(transform),
+    // ✅ Transição suave e natural
+    transition: isDragging 
+      ? 'none' // Sem transição durante drag para resposta imediata
+      : transition || 'transform 250ms cubic-bezier(0.4, 0, 0.2, 1)', // Transição suave ao soltar
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+    cursor: isDragging ? 'grabbing' : undefined,
+    // ✅ Sombra mais sutil e profissional
+    boxShadow: isDragging 
+      ? '0 8px 24px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.08)' 
+      : undefined,
+    // ✅ Escala sutil durante drag
+    scale: isDragging ? '1.03' : '1',
   };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} className="relative group">
       {children}
-      <div {...listeners} className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 rounded hover:bg-background shadow-sm">
+      <div 
+        {...listeners} 
+        className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/80 backdrop-blur-sm rounded hover:bg-background shadow-sm border border-border/50"
+      >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
     </div>
@@ -845,11 +853,18 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     fetchAgentId();
   }, [selectedConversationForAgent]);
 
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 8
-    }
-  }));
+  // ✅ Sensor otimizado para drag fluido e natural
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        // ✅ Menor distância = mais responsivo
+        distance: 3,
+        // ✅ Delay sutil para diferenciar click de drag
+        delay: 50,
+        tolerance: 5,
+      }
+    })
+  );
 
   // 🔥 Buscar contagens de automações por coluna
   useEffect(() => {
