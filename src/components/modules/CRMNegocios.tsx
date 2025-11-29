@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter, DragOverEvent, Active, Over, rectIntersection, CollisionDetection } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -617,22 +617,30 @@ function SortableColumnWrapper({ id, children }: SortableColumnWrapperProps) {
     isDragging,
   } = useSortable({ id });
 
-  const transformString = CSS.Transform.toString(transform);
-  const baseTransform = transformString === 'none' ? undefined : transformString;
-  const draggingTransform = baseTransform ? `${baseTransform} scale(1.02)` : 'scale(1.02)';
-
   const style: React.CSSProperties = {
-    transform: isDragging ? draggingTransform : baseTransform,
-    transition: transition || 'transform 200ms ease',
-    opacity: isDragging ? 0.85 : 1,
-    zIndex: isDragging ? 40 : 'auto',
-    boxShadow: isDragging ? '0 20px 40px rgba(15, 23, 42, 0.35)' : undefined,
+    transform: CSS.Transform.toString(transform),
+    // ✅ Transição suave e natural
+    transition: isDragging 
+      ? 'none' // Sem transição durante drag para resposta imediata
+      : transition || 'transform 250ms cubic-bezier(0.4, 0, 0.2, 1)', // Transição suave ao soltar
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+    cursor: isDragging ? 'grabbing' : undefined,
+    // ✅ Sombra mais sutil e profissional
+    boxShadow: isDragging 
+      ? '0 8px 24px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.08)' 
+      : undefined,
+    // ✅ Escala sutil durante drag
+    scale: isDragging ? '1.03' : '1',
   };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} className="relative group">
       {children}
-      <div {...listeners} className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 rounded hover:bg-background shadow-sm">
+      <div 
+        {...listeners} 
+        className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-background/80 backdrop-blur-sm rounded hover:bg-background shadow-sm border border-border/50"
+      >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
     </div>
@@ -845,11 +853,27 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     fetchAgentId();
   }, [selectedConversationForAgent]);
 
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 8
-    }
-  }));
+  // ✅ Sensor otimizado para drag fluido e natural
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        // ✅ Menor distância = mais responsivo
+        distance: 3,
+        // ✅ Delay sutil para diferenciar click de drag
+        delay: 50,
+        tolerance: 5,
+      }
+    })
+  );
+
+  // ✅ CRÍTICO: Limpar estado do drag quando colunas mudarem
+  // Isso previne o bug de travamento na segunda movimentação
+  useEffect(() => {
+    console.log('🔄 Colunas atualizadas, limpando estado do drag');
+    setDraggedColumn(null);
+    setActiveId(null);
+    setDragOverColumn(null);
+  }, [columns.map(c => c.id).join('-')]);
 
   // 🔥 Buscar contagens de automações por coluna
   useEffect(() => {
@@ -1015,8 +1039,38 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     }
     return columnCards;
   };
+  // ✅ Detecção de colisão customizada para colunas
+  const customCollisionDetection: CollisionDetection = useCallback((args) => {
+    // Se estamos arrastando uma coluna, filtrar apenas colunas como alvos
+    if (draggedColumn) {
+      // Filtrar apenas droppables que são colunas
+      const columnDroppables = args.droppableContainers.filter(container => 
+        container.id.toString().startsWith('column-')
+      );
+      
+      // Criar um novo args com apenas as colunas
+      const filteredArgs = {
+        ...args,
+        droppableContainers: columnDroppables
+      };
+      
+      // Usar rectIntersection para melhor detecção em elementos grandes
+      return rectIntersection(filteredArgs);
+    }
+    
+    // Para cards, usar o algoritmo padrão
+    return closestCenter(args);
+  }, [draggedColumn]);
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const activeId = event.active.id as string;
+    
+    console.log('🎬 handleDragStart:', { activeId });
+    
+    // ✅ Limpar TODOS os estados de drag antes de iniciar novo
+    setDraggedColumn(null);
+    setActiveId(null);
+    setDragOverColumn(null);
     
     // Verificar se é uma coluna sendo arrastada
     if (activeId.startsWith('column-')) {
@@ -1026,6 +1080,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       return;
     }
     
+    // Se não é coluna, é card
     setActiveId(activeId);
   }, []);
   const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -1044,8 +1099,20 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       over
     } = event;
     
+    console.log('🎯 handleDragEnd iniciado:', {
+      activeId: active.id,
+      overId: over?.id,
+      isDraggedColumn: !!draggedColumn
+    });
+    
+    // ✅ SEMPRE limpar estados do drag IMEDIATAMENTE (não esperar async)
+    const wasDraggingColumn = draggedColumn;
+    setDraggedColumn(null);
+    setActiveId(null);
+    setDragOverColumn(null);
+    
     // Verificar se é reordenamento de colunas
-    if (draggedColumn && over && active.id !== over.id) {
+    if (wasDraggingColumn && over && active.id !== over.id) {
       const oldIndex = columns.findIndex(col => `column-${col.id}` === active.id);
       const newIndex = columns.findIndex(col => `column-${col.id}` === over.id);
       
@@ -1054,34 +1121,33 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
         
         console.log('🔄 Reordenando colunas otimisticamente:', {
           from: oldIndex,
-          to: newIndex
+          to: newIndex,
+          oldId: columns[oldIndex].id,
+          newPosition: newIndex
         });
         
         try {
-          await reorderColumns(newColumns);
+          // ✅ Fire and forget - não bloquear a UI
+          reorderColumns(newColumns);
         } catch (error) {
           console.error('❌ Erro na atualização otimista:', error);
         }
       }
       
-      setDraggedColumn(null);
+      return; // ✅ Return early para colunas
+    }
+    
+    // Resto do código para drag de cards
+    if (!over) {
       return;
     }
     
-    if (!over) {
-      setActiveId(null);
-      setDragOverColumn(null);
-      setDraggedColumn(null);
-      return;
-    }
     const activeId = active.id as string;
     const overId = over.id as string;
 
     // Encontrar o card que está sendo movido
     const activeCard = cards.find(card => `card-${card.id}` === activeId);
     if (!activeCard) {
-      setActiveId(null);
-      setDragOverColumn(null);
       return;
     }
 
@@ -1111,12 +1177,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       // Não precisa await - deixar executar em background
       moveCardOptimistic(activeCard.id, newColumnId);
     }
-
-    // Limpar estados do drag imediatamente
-    setActiveId(null);
-    setDragOverColumn(null);
-    setDraggedColumn(null);
-  }, [cards, columns, draggedColumn, moveCardOptimistic, reorderColumns, refreshCurrentPipeline]);
+  }, [cards, columns, draggedColumn, moveCardOptimistic, reorderColumns]);
   const openCardDetails = (card: any) => {
     console.log('🔍 Abrindo detalhes do card:', card);
     console.log('📋 Card completo:', {
@@ -1363,7 +1424,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
   return (
     <DndContext 
       sensors={sensors} 
-      collisionDetection={closestCenter} 
+      collisionDetection={customCollisionDetection} 
       onDragStart={handleDragStart} 
       onDragEnd={handleDragEnd} 
       onDragOver={handleDragOver}
@@ -1904,6 +1965,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       ) : (
                         /* Tablet/Desktop: Multiple Columns */
                         <SortableContext 
+                          key={columns.map(col => col.id).join('-')}
                           items={columns.map(col => `column-${col.id}`)}
                           strategy={horizontalListSortingStrategy}
                         >

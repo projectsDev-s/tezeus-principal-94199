@@ -1133,12 +1133,12 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
   // Função reorderColumns como useCallback para evitar problemas com dependências
   const reorderColumns = useCallback(async (newColumns: PipelineColumn[]) => {
     try {
-      console.log('🔄 Reordering columns from context');
+      console.log('🔄 Reordenando colunas otimisticamente');
       
-      // Atualizar estado local primeiro  
+      // ✅ Atualizar estado local IMEDIATAMENTE para UX fluida
       setColumns(newColumns);
       
-      // Atualizar no backend
+      // Atualizar no backend em paralelo (não bloqueia UI)
       const updates = newColumns.map((col, index) => ({
         id: col.id,
         order_position: index
@@ -1148,41 +1148,39 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Headers not available');
       }
 
-      for (const update of updates) {
-        await supabase.functions.invoke('pipeline-management/columns', {
-          method: 'PUT',
-          headers: getHeaders,
-          body: {
-            id: update.id,
-            order_position: update.order_position
-          }
-        });
-      }
+      // 🚀 Fazer todas as requisições em PARALELO ao invés de sequencial
+      await Promise.all(
+        updates.map(update =>
+          supabase.functions.invoke(`pipeline-management/columns?id=${update.id}`, {
+            method: 'PUT',
+            headers: getHeaders,
+            body: {
+              order_position: update.order_position
+            }
+          })
+        )
+      );
 
-      // Re-fetch para garantir sincronização
-      if (selectedPipeline?.id) {
-        await fetchColumns(selectedPipeline.id);
-        await fetchCards(selectedPipeline.id);
-      }
+      // ✅ Não fazer re-fetch - deixar o realtime sincronizar naturalmente
+      console.log('✅ Colunas reordenadas no backend');
       
-      console.log('✅ Colunas reordenadas com sucesso');
-      toast({
-        title: "Sucesso",
-        description: "Ordem das colunas atualizada",
-      });
+      // ✅ SEM TOAST - ação é instantânea e não precisa de feedback
     } catch (error) {
       console.error('❌ Erro ao reordenar colunas:', error);
+      
+      // Só mostrar toast em caso de ERRO
       toast({
-        title: "Erro", 
-        description: "Erro ao reordenar colunas",
+        title: "Erro ao reordenar", 
+        description: "Não foi possível salvar a nova ordem",
         variant: "destructive",
       });
+      
       // Reverter para o estado anterior em caso de erro
       if (selectedPipeline?.id) {
         await fetchColumns(selectedPipeline.id);
       }
     }
-  }, [getHeaders, selectedPipeline, fetchColumns, fetchCards, toast]);
+  }, [getHeaders, selectedPipeline, fetchColumns, toast]);
 
   // ✅ DEBUG: Monitorar mudanças nos cards para verificar se realtime está funcionando
   useEffect(() => {
