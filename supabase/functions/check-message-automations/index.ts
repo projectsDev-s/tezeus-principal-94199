@@ -183,19 +183,22 @@ serve(async (req) => {
           continue;
         }
 
-        // 🔒 Verificar se já foi executada NESTA entrada na coluna
-        // A automação só pode ser executada UMA VEZ por entrada na coluna
-        const { data: existingExecutions, error: existingExecError } = await supabase
-          .from('automation_executions')
-          .select('id, executed_at')
-          .eq('card_id', card.id)
-          .eq('column_id', card.column_id)
-          .eq('automation_id', automation.id)
-          .eq('trigger_type', 'message_received')
-          .gte('executed_at', columnEntryDate); // ✅ APENAS execuções após entrada atual
+        const entryTimestamp = new Date(columnEntryDate).getTime();
+        const executionKey = `msg_${card.id}_${card.column_id}_${automation.id}_${entryTimestamp}`;
 
-        if ((existingExecutions?.length || 0) > 0) {
-          console.log(`🚫 Automação "${automation.name}" já foi executada recentemente nesta coluna (sem novas mensagens suficientes)`);
+        const { data: existingExecution, error: existingExecError } = await supabase
+          .from('automation_executions')
+          .select('id')
+          .eq('id', executionKey)
+          .maybeSingle();
+
+        if (existingExecError && existingExecError.code !== 'PGRST116') {
+          console.error('❌ Erro ao verificar execuções existentes:', existingExecError);
+          continue;
+        }
+
+        if (existingExecution) {
+          console.log(`🚫 Automação "${automation.name}" já executada para esta entrada (chave ${executionKey})`);
           continue;
         }
 
@@ -205,6 +208,7 @@ serve(async (req) => {
         const { error: execError } = await supabase
           .from('automation_executions')
           .insert({
+            id: executionKey,
             card_id: card.id,
             column_id: card.column_id,
             automation_id: automation.id,
@@ -213,6 +217,10 @@ serve(async (req) => {
           });
 
         if (execError) {
+          if (execError.code === '23505') {
+            console.log(`🚫 Execução duplicada detectada (chave ${executionKey}), ignorando.`);
+            continue;
+          }
           console.error(`❌ Erro ao registrar execução:`, execError);
           continue; // Pula para próxima automação se não conseguir registrar
         }
