@@ -36,7 +36,7 @@ export function useNotifications() {
         .from('notifications')
         .select(`
           *,
-          conversations!inner(assigned_user_id)
+          conversations!inner(assigned_user_id, unread_count, status)
         `)
         .eq('workspace_id', selectedWorkspace.workspace_id)
         .eq('status', 'unread');
@@ -76,7 +76,56 @@ export function useNotifications() {
         return assignedUserId === user?.id;
       });
 
-      const formattedNotifications: NotificationMessage[] = filteredData.map((notif: any) => ({
+      const staleNotificationIds: string[] = [];
+      const conversationUsage = new Map<string, { allowed: number; used: number }>();
+
+      const sanitizedNotifications = filteredData.filter((notif: any) => {
+        const conv = notif.conversations;
+        if (!conv) {
+          staleNotificationIds.push(notif.id);
+          return false;
+        }
+
+        const conversationId = notif.conversation_id;
+        const status = (conv.status || '').toLowerCase();
+        const allowed = Math.max(conv.unread_count ?? 0, 0);
+        const isConversationClosed = ['closed', 'archived'].includes(status);
+
+        if (allowed <= 0 || isConversationClosed) {
+          staleNotificationIds.push(notif.id);
+          return false;
+        }
+
+        const usage = conversationUsage.get(conversationId) || { allowed, used: 0 };
+
+        // Atualiza allowed caso unread_count tenha mudado desde o primeiro registro
+        usage.allowed = Math.max(allowed, 0);
+
+        if (usage.used < usage.allowed) {
+          usage.used += 1;
+          conversationUsage.set(conversationId, usage);
+          return true;
+        }
+
+        staleNotificationIds.push(notif.id);
+        return false;
+      });
+
+      if (staleNotificationIds.length > 0) {
+        try {
+          await supabase
+            .from('notifications')
+            .update({
+              status: 'read',
+              read_at: new Date().toISOString()
+            })
+            .in('id', staleNotificationIds);
+        } catch (cleanupError) {
+          console.error('⚠️ [useNotifications] Falha ao limpar notificações obsoletas:', cleanupError);
+        }
+      }
+
+      const formattedNotifications: NotificationMessage[] = sanitizedNotifications.map((notif: any) => ({
         id: notif.id,
         conversationId: notif.conversation_id,
         contactId: notif.contact_id,

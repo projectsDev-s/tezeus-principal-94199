@@ -19,6 +19,7 @@ import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { PromptEditorModal } from "./PromptEditorModal";
 import { ActionPreviewDisplay } from "@/components/ui/action-preview-display";
 import { useQueryClient } from '@tanstack/react-query';
+import { generateRandomId } from "@/lib/generate-random-id";
 
 interface CriarAgenteModalProps {
   open: boolean;
@@ -153,7 +154,7 @@ Exemplo: [ENVIE PARA O TOOL \`info-adicionais\` (METODO POST) o id: campo-empres
 
     try {
       // 1. Gerar ID do agente
-      const agentId = crypto.randomUUID();
+      const agentId = generateRandomId();
 
       // 2. Upload do arquivo de conhecimento (se houver)
       if (knowledgeFile) {

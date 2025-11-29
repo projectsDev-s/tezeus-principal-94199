@@ -12,11 +12,11 @@ export const MessageStatusIndicator = ({ status, className }: MessageStatusIndic
       case 'sending':
         return <Clock className="w-3.5 h-3.5 text-white/70" />; // ✅ Removido animate-spin
       case 'sent':
-        return <Check className="w-3.5 h-3.5 text-white/90" />;
+        return <Check className="w-3.5 h-3.5 text-gray-600" />;
       case 'delivered':
-        return <CheckCheck className="w-3.5 h-3.5 text-white/90" />;
+        return <CheckCheck className="w-3.5 h-3.5 text-gray-600" />;
       case 'read':
-        return <CheckCheck className="w-3.5 h-3.5 text-blue-400" />;
+        return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />;
       case 'failed':
         return <X className="w-3.5 h-3.5 text-destructive" />;
       default:

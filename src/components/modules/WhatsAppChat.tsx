@@ -5,6 +5,7 @@ import { getConnectionColor } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/avatarUtils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -73,6 +74,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { generateRandomId } from "@/lib/generate-random-id";
 
 type ConversationMessage = ReturnType<typeof useConversationMessages>['messages'][number];
 type DisplayMessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
@@ -90,28 +92,6 @@ export function WhatsAppChat({
   const { notifications } = useRealtimeNotifications();
   const { markContactAsRead } = useNotifications();
   
-  useEffect(() => {
-    console.log('🔔 [WhatsAppChat] Notificações MUDARAM:', {
-      total: notifications.length,
-      timestamp: new Date().toISOString(),
-      notifications: notifications.map(n => ({
-        conversationId: n.conversationId,
-        content: n.content
-      }))
-    });
-  }, [notifications]);
-  
-  // Criar mapa de conversas com notificações não lidas
-  const conversationNotifications = useMemo(() => {
-    const map = new Map<string, number>();
-    notifications.forEach(notif => {
-      const currentCount = map.get(notif.conversationId) || 0;
-      map.set(notif.conversationId, currentCount + 1);
-    });
-    console.log('🔔 [WhatsAppChat] Mapa de notificações RECALCULADO:', Array.from(map.entries()));
-    return map;
-  }, [notifications]);
-  
   // Usar hook completo de conversas
   const {
     conversations,
@@ -124,6 +104,39 @@ export function WhatsAppChat({
     loading,
     sendMessage
   } = useWhatsAppConversations();
+  
+  useEffect(() => {
+    console.log('🔔 [WhatsAppChat] Notificações MUDARAM:', {
+      total: notifications.length,
+      timestamp: new Date().toISOString(),
+      notifications: notifications.map(n => ({
+        conversationId: n.conversationId,
+        content: n.content
+      }))
+    });
+  }, [notifications]);
+  
+  const conversationNotifications = useMemo(() => {
+    const map = new Map<string, number>();
+
+    conversations.forEach(conversation => {
+      const unread = Math.max(conversation.unread_count ?? 0, 0);
+      if (unread > 0) {
+        map.set(conversation.id, unread);
+      }
+    });
+
+    notifications.forEach(notif => {
+      if (map.has(notif.conversationId)) {
+        return;
+      }
+      const currentCount = map.get(notif.conversationId) || 0;
+      map.set(notif.conversationId, currentCount + 1);
+    });
+
+    console.log('🔔 [WhatsAppChat] Mapa de notificações RECALCULADO:', Array.from(map.entries()));
+    return map;
+  }, [conversations, notifications]);
   
   // Debug: Detectar mudanças no array de conversas
   useEffect(() => {
@@ -195,7 +208,7 @@ export function WhatsAppChat({
   } = useToast();
   
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
-  const [messageText, setMessageText] = useState("");
+  const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -204,6 +217,22 @@ export function WhatsAppChat({
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeletingConversation, setIsDeletingConversation] = useState(false);
+  const messageText = selectedConversation ? (messageDrafts[selectedConversation.id] ?? "") : "";
+
+  const updateMessageDraft = useCallback((conversationId: string, value: string) => {
+    setMessageDrafts(prev => {
+      if (prev[conversationId] === value) return prev;
+      return { ...prev, [conversationId]: value };
+    });
+  }, []);
+
+  const clearMessageDraft = useCallback((conversationId: string) => {
+    setMessageDrafts(prev => {
+      if (!(conversationId in prev)) return prev;
+      const { [conversationId]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
 
   // Verificar se há agente ativo na conversa selecionada
   const { hasAgent, isLoading: agentLoading, agent } = useWorkspaceAgent(selectedConversation?.id);
@@ -517,6 +546,7 @@ export function WhatsAppChat({
         description: "O atendimento foi removido com sucesso.",
       });
 
+      clearMessageDraft(conversationId);
       setDeleteDialogOpen(false);
       setSelectedConversation(null);
       clearMessages();
@@ -533,6 +563,7 @@ export function WhatsAppChat({
       setIsDeletingConversation(false);
     }
   }, [
+    clearMessageDraft,
     clearMessages,
     fetchConversations,
     selectedConversation,
@@ -560,19 +591,22 @@ export function WhatsAppChat({
 
   // ✅ Enviar mensagem - OTIMIZADO
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedConversation || isSending) return;
+    if (!selectedConversation || isSending) return;
     
-    const messageKey = `${selectedConversation.id}-${messageText.trim()}`;
+    const trimmedMessage = messageText.trim();
+    if (!trimmedMessage) return;
+    
+    const messageKey = `${selectedConversation.id}-${trimmedMessage}`;
     if (sendingRef.current.has(messageKey)) return;
     
     setIsSending(true);
     sendingRef.current.add(messageKey);
     
-    const textToSend = messageText.trim();
-    setMessageText('');
+    const textToSend = trimmedMessage;
+    clearMessageDraft(selectedConversation.id);
     
     try {
-      const clientMessageId = crypto.randomUUID();
+      const clientMessageId = generateRandomId();
       
       // ✅ Mensagem otimista - começa com 'sending'
       const optimisticMessage = {
@@ -664,7 +698,7 @@ export function WhatsAppChat({
     sendingRef.current.add(messageKey);
     
     try {
-      const clientMessageId = crypto.randomUUID();
+      const clientMessageId = generateRandomId();
       
       const optimisticMessage = {
         id: clientMessageId,
@@ -721,7 +755,7 @@ export function WhatsAppChat({
     
     try {
       // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
-      const clientMessageId = crypto.randomUUID();
+      const clientMessageId = generateRandomId();
       
       const optimisticMessage = {
         id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
@@ -784,7 +818,7 @@ export function WhatsAppChat({
     
     try {
       // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
-      const clientMessageId = crypto.randomUUID();
+      const clientMessageId = generateRandomId();
       
       const optimisticMessage = {
         id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
@@ -847,7 +881,7 @@ export function WhatsAppChat({
     
     try {
       // ✅ Gerar clientMessageId ANTES de criar mensagem otimista
-      const clientMessageId = crypto.randomUUID();
+      const clientMessageId = generateRandomId();
       
       const optimisticMessage = {
         id: clientMessageId, // ✅ Usar clientMessageId como ID temporário
@@ -1021,7 +1055,7 @@ export function WhatsAppChat({
                 sender_type: 'agent',
                 file_url: msg.file_url,
                 file_name: msg.file_name,
-                clientMessageId: crypto.randomUUID() // ✅ ETAPA 2
+                clientMessageId: generateRandomId() // ✅ ETAPA 2
               },
               headers: {
                 'x-system-user-id': user?.id || '',
@@ -1163,8 +1197,21 @@ export function WhatsAppChat({
 
   // Gravação de áudio (microfone)
   const startRecording = async () => {
+    const hasNavigator = typeof navigator !== 'undefined';
+    const mediaDevices = hasNavigator ? navigator.mediaDevices : undefined;
+    const getUserMedia = mediaDevices?.getUserMedia?.bind(mediaDevices);
+
+    if (!getUserMedia) {
+      toast({
+        title: "Gravação indisponível",
+        description: "Seu navegador não suporta captura de áudio neste ambiente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await getUserMedia({
         audio: true
       });
       const mediaRecorder = new MediaRecorder(stream);
@@ -1245,10 +1292,14 @@ export function WhatsAppChat({
           }
         } = supabase.storage.from('whatsapp-media').getPublicUrl(filePath);
         if (selectedConversation) {
+          const draftText = messageText.trim();
+          const audioContent = draftText || '[AUDIO]';
+          const clientMessageId = generateRandomId();
           const optimisticMessage = {
-            id: `temp-audio-${Date.now()}`,
+            id: clientMessageId,
+            external_id: clientMessageId,
             conversation_id: selectedConversation.id,
-            content: messageText.trim() || '[AUDIO]',
+            content: audioContent,
             message_type: 'audio' as const,
             sender_type: 'agent' as const,
             sender_id: user?.id,
@@ -1259,7 +1310,7 @@ export function WhatsAppChat({
             workspace_id: selectedWorkspace?.workspace_id || ''
           };
           addMessage(optimisticMessage);
-          setMessageText('');
+          clearMessageDraft(selectedConversation.id);
           try {
             const {
               data: sendResult,
@@ -1267,12 +1318,13 @@ export function WhatsAppChat({
             } = await supabase.functions.invoke('test-send-msg', {
               body: {
                 conversation_id: selectedConversation.id,
-                content: messageText.trim() || '[AUDIO]',
+                content: audioContent,
                 message_type: 'audio',
                 sender_id: user?.id,
                 sender_type: 'agent',
                 file_url: publicUrl,
-                file_name: fileName
+                file_name: fileName,
+                clientMessageId
               },
               headers: {
                 'x-system-user-id': user?.id || '',
@@ -1282,7 +1334,7 @@ export function WhatsAppChat({
             });
             if (sendError) {
               console.error('❌ Erro ao enviar áudio:', sendError);
-              updateMessage(optimisticMessage.id, {
+              updateMessage(clientMessageId, {
                 status: 'failed'
               });
               toast({
@@ -1292,14 +1344,14 @@ export function WhatsAppChat({
               });
             } else {
               console.log('✅ Áudio enviado com sucesso');
-              updateMessage(optimisticMessage.id, {
+              updateMessage(clientMessageId, {
                 status: 'sent',
-                id: sendResult?.message?.id || optimisticMessage.id
+                external_id: sendResult?.message?.external_id || sendResult?.message?.id || clientMessageId
               });
             }
           } catch (err) {
             console.error('Erro ao enviar áudio:', err);
-            updateMessage(optimisticMessage.id, {
+            updateMessage(clientMessageId, {
               status: 'failed'
             });
             toast({
@@ -1917,10 +1969,6 @@ export function WhatsAppChat({
                             </div>
                           )}
                           
-                          {/* WhatsApp status icon */}
-                          <svg className="absolute -bottom-1 -right-1 w-4 h-4 text-green-600 bg-white rounded-full p-0.5 shadow-sm" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16.75 13.96c.25.13.41.2.46.3.06.11.04.61-.21 1.18-.2.56-1.24 1.1-1.7 1.12-.46.02-.47.36-2.96-.73-2.49-1.09-3.99-3.75-4.11-3.92-.12-.17-.96-1.38-.92-2.61.05-1.22.69-1.8.95-2.04.24-.26.51-.29.68-.26h.47c.15 0 .36-.06.55.45l.69 1.87c.06.13.1.28.01.44l-.27.41-.39.42c-.12.12-.26.25-.12.5.12.26.62 1.09 1.32 1.78.91.88 1.71 1.17 1.95 1.3.24.14.39.12.54-.04l.81-.94c.19-.25.35-.19.58-.11l1.67.88M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10c-1.97 0-3.8-.57-5.35-1.55L2 22l1.55-4.65A9.969 9.969 0 0 1 2 12 10 10 0 0 1 12 2m0 2a8 8 0 0 0-8 8c0 1.72.54 3.31 1.46 4.61L4.5 19.5l2.89-.96A7.95 7.95 0 0 0 12 20a8 8 0 0 0 8-8 8 8 0 0 0-8-8z" />
-                          </svg>
                         </div>
                       </div>
                     </div>
@@ -2103,7 +2151,11 @@ export function WhatsAppChat({
                       {selectedConversation.contact?.name}
                     </h3>
                     <div className="flex items-center gap-2">
-                      <ContactTags contactId={selectedConversation.contact.id} isDarkMode={isDarkMode} onTagRemoved={() => {
+                    <ContactTags 
+                      contactId={selectedConversation.contact.id} 
+                      conversationId={selectedConversation.id}
+                      isDarkMode={isDarkMode} 
+                      onTagRemoved={() => {
                     // Refresh conversations after removing tag
                     fetchConversations();
                   }} />
@@ -2385,7 +2437,7 @@ export function WhatsAppChat({
                       ) : (
                         <div className="flex flex-col min-w-[120px]">
                     <p className={cn(
-                      "text-xs leading-relaxed text-gray-900 break-words",
+                      "text-xs leading-relaxed text-gray-900 break-words whitespace-pre-wrap",
                       message.origem_resposta === 'automatica' && "text-green-900"
                     )}>{message.content}</p>
                     
@@ -2468,7 +2520,7 @@ export function WhatsAppChat({
               sendingRef.current.add(messageKey);
               
               // Usar UUID único para prevenir duplicação
-              const clientMessageId = crypto.randomUUID();
+              const clientMessageId = generateRandomId();
               
               const optimisticMessage = {
                 id: clientMessageId,
@@ -2555,17 +2607,22 @@ export function WhatsAppChat({
                     </svg>
                   </Button>
                   <div className="flex-1">
-                    <Input 
+                    <Textarea 
                       placeholder="Digite sua mensagem..." 
                       value={messageText} 
-                      onChange={e => setMessageText(e.target.value)} 
+                      rows={1}
+                      onChange={e => {
+                        if (selectedConversation) {
+                          updateMessageDraft(selectedConversation.id, e.target.value);
+                        }
+                      }} 
                       onKeyDown={e => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
                           handleSendMessage();
                         }
                       }} 
-                      className="resize-none h-9 text-xs rounded-none border-gray-300 focus-visible:ring-0 focus-visible:border-primary bg-white shadow-sm" 
+                      className="h-9 min-h-[36px] max-h-32 text-xs rounded-none border-gray-300 focus-visible:ring-0 focus-visible:border-primary bg-white shadow-sm resize-none" 
                     />
                   </div>
                   <Button onClick={startRecording} size="icon" variant="secondary" title="Gravar áudio" className="h-9 w-9 rounded-none border border-[#d4d4d4] hover:bg-gray-200 bg-white shadow-none">

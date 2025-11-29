@@ -148,7 +148,7 @@ function DroppableColumn({
   } = useDroppable({
     id: id
   });
-  return <div ref={setNodeRef} className={`h-full ${isOver ? 'bg-blue-50' : ''}`}>
+  return <div ref={setNodeRef} className={`h-full transition-colors duration-200 ${isOver ? 'bg-primary/5' : ''}`}>
       {children}
     </div>;
 }
@@ -197,8 +197,20 @@ function DraggableDeal({
   const resolvedWorkspaceId = workspaceId ?? selectedWorkspace?.workspace_id ?? null;
   const [isTagPopoverOpen, setIsTagPopoverOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [visibleTagId, setVisibleTagId] = React.useState<string | null>(null);
-  const [hideTimeout, setHideTimeout] = React.useState<NodeJS.Timeout | null>(null);
+  const [expandedTags, setExpandedTags] = React.useState<Record<string, boolean>>({});
+  const toggleTagExpansion = React.useCallback((tagId: string) => {
+    setExpandedTags(prev => ({
+      ...prev,
+      [tagId]: !prev[tagId]
+    }));
+  }, []);
+  const removeTagFromExpansion = React.useCallback((tagId: string) => {
+    setExpandedTags(prev => {
+      if (!(tagId in prev)) return prev;
+      const { [tagId]: _, ...rest } = prev;
+      return rest;
+    });
+  }, []);
   const {
     contactTags,
     availableTags,
@@ -373,70 +385,60 @@ function DraggableDeal({
         {/* Área central para tags do contato */}
         <div className="mb-1.5 min-h-[20px] flex items-center justify-between gap-2">
           <div className="flex items-center flex-wrap gap-1 flex-1 min-w-0">
-          {contactTags.map(tag => (
-            <div
-              key={tag.id}
-              className="relative cursor-pointer flex items-center"
-              onMouseEnter={() => {
-                if (hideTimeout) {
-                  clearTimeout(hideTimeout);
-                  setHideTimeout(null);
-                }
-                setVisibleTagId(tag.id);
-              }}
-              onMouseLeave={() => {
-                const timeout = setTimeout(() => {
-                  setVisibleTagId(null);
-                }, 1000);
-                setHideTimeout(timeout);
-              }}
-            >
-              <Tag 
-                className="w-3 h-3 flex-shrink-0" 
-                style={{ color: tag.color }} 
-                fill={tag.color}
-              />
-              <span 
-                onMouseEnter={() => {
-                  if (hideTimeout) {
-                    clearTimeout(hideTimeout);
-                    setHideTimeout(null);
-                  }
-                }}
-                onMouseLeave={() => {
-                  const timeout = setTimeout(() => {
-                    setVisibleTagId(null);
-                  }, 1000);
-                  setHideTimeout(timeout);
-                }}
-                className={`absolute left-3 top-1/2 -translate-y-1/2 -translate-x-1 whitespace-nowrap transition-all duration-300 ease-out px-1.5 py-0.5 rounded-full z-[9999] flex items-center gap-0.5 text-xs ${
-                  visibleTagId === tag.id ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none"
-                }`}
-                style={{ 
-                  backgroundColor: 'white',
-                  borderColor: tag.color,
-                  color: tag.color,
-                  border: `1px solid ${tag.color}`
-                }}
-              >
-                {tag.name}
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
-                      await refreshTags();
-                    } catch (error) {
-                      console.error('Erro ao remover tag:', error);
-                    }
-                  }}
-                  className="hover:bg-black/10 rounded-full p-0.5 transition-colors flex-shrink-0 pointer-events-auto"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            </div>
-          ))}
+          {contactTags.slice(0, 10).map(tag => {
+            const isExpanded = expandedTags[tag.id];
+            return (
+              <div key={tag.id} className="flex items-center">
+                {isExpanded ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-none border px-2 py-0.5 text-[11px] font-semibold h-5 flex items-center gap-1"
+                    style={{
+                      borderColor: tag.color,
+                      color: tag.color,
+                      backgroundColor: tag.color ? `${tag.color}15` : 'transparent'
+                    }}
+                  >
+                    <span className="truncate max-w-[110px]">{tag.name}</span>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await supabase.from('contact_tags').delete().eq('contact_id', deal.contact?.id).eq('tag_id', tag.id);
+                          removeTagFromExpansion(tag.id);
+                          await refreshTags();
+                        } catch (error) {
+                          console.error('Erro ao remover tag:', error);
+                        }
+                      }}
+                      className="rounded-sm hover:bg-black/10 flex items-center justify-center"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleTagExpansion(tag.id);
+                      }}
+                      className="rounded-sm hover:bg-black/10 flex items-center justify-center"
+                    >
+                      <Tag className="w-3 h-3" style={{ color: tag.color }} />
+                    </button>
+                  </Badge>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTagExpansion(tag.id);
+                    }}
+                    className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  >
+                    <Tag className="w-3 h-3" style={{ color: tag.color }} fill={tag.color} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
           <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
             <PopoverTrigger asChild onClick={e => e.stopPropagation()}>
               <Button variant="outline" size="sm" className="h-5 px-1.5 rounded-none border border-[#d4d4d4] bg-white hover:bg-[#e6f2ff] text-gray-700 shadow-sm">
@@ -615,16 +617,22 @@ function SortableColumnWrapper({ id, children }: SortableColumnWrapperProps) {
     isDragging,
   } = useSortable({ id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+  const transformString = CSS.Transform.toString(transform);
+  const baseTransform = transformString === 'none' ? undefined : transformString;
+  const draggingTransform = baseTransform ? `${baseTransform} scale(1.02)` : 'scale(1.02)';
+
+  const style: React.CSSProperties = {
+    transform: isDragging ? draggingTransform : baseTransform,
+    transition: transition || 'transform 200ms ease',
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 40 : 'auto',
+    boxShadow: isDragging ? '0 20px 40px rgba(15, 23, 42, 0.35)' : undefined,
   };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} className="relative group">
       {children}
-      <div {...listeners} className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 rounded hover:bg-background">
+      <div {...listeners} className="cursor-grab active:cursor-grabbing absolute top-3 right-12 z-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 rounded hover:bg-background shadow-sm">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
     </div>
@@ -684,7 +692,8 @@ function CRMNegociosContent({
     moveCardOptimistic,
     getCardsByColumn,
     updateCard,
-    refreshCurrentPipeline
+    refreshCurrentPipeline,
+    reorderColumns
   } = usePipelinesContext();
   const {
     activeUsers,
@@ -1048,30 +1057,8 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
           to: newIndex
         });
         
-        // ✅ Atualização otimística - reordenar imediatamente
         try {
-          const headers = getHeaders ? getHeaders() : {};
-          const updates = newColumns.map((col, index) => ({
-            id: col.id,
-            order_position: index
-          }));
-
-          // Atualizar o backend em background (não bloqueante)
-          supabase.functions.invoke('pipeline-management-columns-reorder', {
-            method: 'POST',
-            headers,
-            body: { columns: updates }
-          }).then(({ error }) => {
-            if (error) {
-              console.error('❌ Erro ao reordenar colunas no backend:', error);
-              // Silenciosamente falhar - a UI já está atualizada otimisticamente
-            } else {
-              console.log('✅ Colunas reordenadas no backend');
-            }
-          });
-
-          // Atualizar imediatamente no contexto local
-          refreshCurrentPipeline();
+          await reorderColumns(newColumns);
         } catch (error) {
           console.error('❌ Erro na atualização otimista:', error);
         }
@@ -1129,7 +1116,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     setActiveId(null);
     setDragOverColumn(null);
     setDraggedColumn(null);
-  }, [cards, columns, draggedColumn, moveCardOptimistic, getHeaders, refreshCurrentPipeline]);
+  }, [cards, columns, draggedColumn, moveCardOptimistic, reorderColumns, refreshCurrentPipeline]);
   const openCardDetails = (card: any) => {
     console.log('🔍 Abrindo detalhes do card:', card);
     console.log('📋 Card completo:', {
@@ -1933,15 +1920,19 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                 currency: 'BRL'
               }).format(value);
             };
+            const isColumnBeingDragged = draggedColumn === column.id;
+            const isColumnDropTarget = !!draggedColumn && dragOverColumn === column.id;
             return (
               <SortableColumnWrapper key={column.id} id={`column-${column.id}`}>
                 <DroppableColumn id={`column-${column.id}`}>
                     {/* Coluna individual - responsiva */}
                     <div className={cn(
-                      "flex-shrink-0 h-full flex flex-col pb-2",
-                      isTablet ? "w-[calc(50%-0.5rem)] min-w-[220px]" : "w-[240px]"
+                      "flex-shrink-0 h-full flex flex-col pb-2 transition-all duration-200",
+                      isTablet ? "w-[calc(50%-0.5rem)] min-w-[220px]" : "w-[240px]",
+                      isColumnBeingDragged && "scale-[1.02] ring-2 ring-primary/50 shadow-2xl",
+                      isColumnDropTarget && "ring-2 ring-primary/40 bg-primary/5"
                     )}>
-                       <div className="bg-white border border-[#d4d4d4] shadow-sm h-full flex flex-col overflow-hidden" style={{
+                       <div className="bg-white border border-[#d4d4d4] shadow-sm h-full flex flex-col overflow-hidden transition-colors duration-200" style={{
                   borderTopColor: column.color,
                   borderTopWidth: '3px'
                 }}>
@@ -2056,7 +2047,10 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                         </div>
                         
                         {/* Corpo da coluna - fundo colorido */}
-                        <div className={cn("flex-1 p-2 overflow-y-auto min-h-0 bg-[#f9f9f9]", dragOverColumn === column.id ? "opacity-90" : "")}>
+                        <div className={cn(
+                          "flex-1 p-2 overflow-y-auto min-h-0 bg-[#f9f9f9] transition-all duration-200",
+                          !draggedColumn && dragOverColumn === column.id && "ring-1 ring-primary/10 bg-primary/5"
+                        )}>
                         {columnCards.length === 0 ? (
                           <div className="flex items-center justify-center h-32 text-center">
                             <p className="text-muted-foreground text-sm">
@@ -2174,65 +2168,88 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
 </div>
 
 <DragOverlay>
-          {activeId && (() => {
-          const activeCard = cards.find(card => `card-${card.id}` === activeId);
-          if (activeCard) {
-            const activeColumn = columns.find(col => col.id === activeCard.column_id);
-            const productRelations = Array.isArray((activeCard as any).products) ? (activeCard as any).products : [];
-            const primaryProduct = productRelations.length > 0 ? productRelations[0] : null;
-            const productId = primaryProduct?.product_id || null;
-            const productName = primaryProduct?.product?.name || null;
-            const productValue = primaryProduct?.total_value ?? primaryProduct?.unit_value ?? primaryProduct?.product?.value ?? null;
-            const effectiveValue = activeCard.value ?? productValue ?? 0;
-            const deal: Deal = {
-              id: activeCard.id,
-              name: activeCard.title,
-              value: effectiveValue,
-              stage: activeColumn?.name || "",
-              status: activeCard.status,
-              responsible: activeCard.responsible_user?.name || (activeCard.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
-              responsible_avatar: (activeCard.responsible_user as any)?.avatar,
-              tags: Array.isArray(activeCard.tags) ? activeCard.tags : [],
-              priority: 'medium',
-              created_at: activeCard.created_at,
-              contact: activeCard.contact,
-              conversation: activeCard.conversation || (activeCard.conversation_id ? {
-                id: activeCard.conversation_id
-              } : undefined),
-              product_id: productId || undefined,
-              product_name: productName || undefined,
-              product_value: productValue ?? null,
-              hasProduct: !!productId
-            };
-            return <div className="w-[300px]">
-              <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} workspaceId={effectiveWorkspaceId} onChatClick={dealData => {
-              console.log('🎯 CRM DragOverlay: Abrindo chat para deal:', dealData);
-              setSelectedChatCard(dealData);
-              setIsChatModalOpen(true);
-            }} onValueClick={dealData => {
-              if (dealData.hasProduct) {
-                toast({
-                  title: "Produto vinculado",
-                  description: "Desvincule o produto para definir um valor manual.",
-                });
-                setSelectedCardForProduct({
-                  id: dealData.id,
-                  value: dealData.value,
-                  productId: dealData.product_id || null
-                });
-                setIsVincularProdutoModalOpen(true);
-                return;
-              }
-              setSelectedCardForValue(dealData);
-              setIsSetValueModalOpen(true);
-            }} onConfigureAgent={(conversationId) => {
-              setSelectedConversationForAgent(conversationId);
-              setAgentModalOpen(true);
-            }} />
-            </div>;
-          }
-          return null;
-        })()}
+          {draggedColumn ? (() => {
+            const column = columns.find(col => col.id === draggedColumn);
+            if (!column) return null;
+            const overlayCards = getFilteredCards(column.id);
+            const totalValue = overlayCards.reduce((sum, card) => sum + (card.value || 0), 0);
+            return (
+              <div className="w-[260px] rounded-md border-2 border-primary bg-white shadow-2xl p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-gray-900 truncate">{column.name}</h4>
+                  <Badge variant="outline" className="rounded-none text-[10px] px-2 py-0">
+                    {overlayCards.length} {overlayCards.length === 1 ? 'negócio' : 'negócios'}
+                  </Badge>
+                </div>
+                <div className="text-xs text-muted-foreground flex items-center justify-between">
+                  <span>Total</span>
+                  <span className="font-semibold text-gray-900">{formatCurrency(totalValue)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: column.color }} />
+                  Arraste para reordenar etapas
+                </div>
+              </div>
+            );
+          })() : activeId ? (() => {
+            const activeCard = cards.find(card => `card-${card.id}` === activeId);
+            if (activeCard) {
+              const activeColumn = columns.find(col => col.id === activeCard.column_id);
+              const productRelations = Array.isArray((activeCard as any).products) ? (activeCard as any).products : [];
+              const primaryProduct = productRelations.length > 0 ? productRelations[0] : null;
+              const productId = primaryProduct?.product_id || null;
+              const productName = primaryProduct?.product?.name || null;
+              const productValue = primaryProduct?.total_value ?? primaryProduct?.unit_value ?? primaryProduct?.product?.value ?? null;
+              const effectiveValue = activeCard.value ?? productValue ?? 0;
+              const deal: Deal = {
+                id: activeCard.id,
+                name: activeCard.title,
+                value: effectiveValue,
+                stage: activeColumn?.name || "",
+                status: activeCard.status,
+                responsible: activeCard.responsible_user?.name || (activeCard.conversation?.assigned_user_id ? "Atribuído" : "Não atribuído"),
+                responsible_avatar: (activeCard.responsible_user as any)?.avatar,
+                tags: Array.isArray(activeCard.tags) ? activeCard.tags : [],
+                priority: 'medium',
+                created_at: activeCard.created_at,
+                contact: activeCard.contact,
+                conversation: activeCard.conversation || (activeCard.conversation_id ? {
+                  id: activeCard.conversation_id
+                } : undefined),
+                product_id: productId || undefined,
+                product_name: productName || undefined,
+                product_value: productValue ?? null,
+                hasProduct: !!productId
+              };
+              return <div className="w-[300px]">
+                <DraggableDeal deal={deal} isDarkMode={isDarkMode} onClick={() => {}} columnColor={activeColumn?.color} workspaceId={effectiveWorkspaceId} onChatClick={dealData => {
+                console.log('🎯 CRM DragOverlay: Abrindo chat para deal:', dealData);
+                setSelectedChatCard(dealData);
+                setIsChatModalOpen(true);
+              }} onValueClick={dealData => {
+                if (dealData.hasProduct) {
+                  toast({
+                    title: "Produto vinculado",
+                    description: "Desvincule o produto para definir um valor manual.",
+                  });
+                  setSelectedCardForProduct({
+                    id: dealData.id,
+                    value: dealData.value,
+                    productId: dealData.product_id || null
+                  });
+                  setIsVincularProdutoModalOpen(true);
+                  return;
+                }
+                setSelectedCardForValue(dealData);
+                setIsSetValueModalOpen(true);
+              }} onConfigureAgent={(conversationId) => {
+                setSelectedConversationForAgent(conversationId);
+                setAgentModalOpen(true);
+              }} />
+              </div>;
+            }
+            return null;
+          })() : null}
       </DragOverlay>
 
       {/* Modais */}

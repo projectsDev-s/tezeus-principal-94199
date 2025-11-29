@@ -1416,6 +1416,12 @@ export function CRMContatos() {
                     <div className="w-[1px] h-3 bg-gray-400 mx-1" />
                   </div>
                 </th>
+                <th className="border border-[#d4d4d4] px-2 py-1 text-left font-semibold text-gray-700 min-w-[200px] group hover:bg-[#e1e1e1] cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span>Tags</span>
+                    <div className="w-[1px] h-3 bg-gray-400 mx-1" />
+                  </div>
+                </th>
                 <th className="border border-[#d4d4d4] px-2 py-1 text-center font-semibold text-gray-700 min-w-[120px] group hover:bg-[#e1e1e1] cursor-pointer">
                    <div className="flex items-center justify-between">
                     <span>Número</span>
@@ -1465,6 +1471,9 @@ export function CRMContatos() {
                       <td className="border border-[#e0e0e0] px-2 py-1">
                         <div className="h-4 w-32 bg-gray-100 animate-pulse rounded-sm" />
                       </td>
+                      <td className="border border-[#e0e0e0] px-2 py-1">
+                        <div className="h-4 w-32 bg-gray-100 animate-pulse rounded-sm" />
+                      </td>
                       <td className="border border-[#e0e0e0] px-2 py-1 text-center">
                         <div className="h-4 w-24 bg-gray-100 animate-pulse rounded-sm mx-auto" />
                       </td>
@@ -1483,7 +1492,7 @@ export function CRMContatos() {
                 </>
               ) : filteredContacts.length === 0 && !isLoading ? (
                 <tr>
-                  <td colSpan={6} className="border border-[#e0e0e0] text-center py-12 bg-gray-50">
+                  <td colSpan={7} className="border border-[#e0e0e0] text-center py-12 bg-gray-50">
                     <div className="flex flex-col items-center gap-2">
                       <User className="h-8 w-8 text-gray-300" />
                       <p className="text-gray-500 font-medium">
@@ -1520,29 +1529,40 @@ export function CRMContatos() {
                           )}
                         </div>
                         <span className="text-gray-900 font-medium truncate">{contact.name}</span>
-                        
-                        {/* Tags inline display */}
-                        {contact.tags.length > 0 && (
-                           <div className="flex gap-0.5 ml-auto">
-                              {contact.tags.slice(0, 2).map((tag, i) => (
-                                <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} title={tag.name} />
-                              ))}
-                           </div>
-                        )}
-                        
-                        {/* Hover Edit Trigger */}
-                        <div className="ml-auto opacity-0 group-hover:opacity-100">
-                           <Popover>
-                            <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-4 w-4 rounded-none hover:bg-gray-200">
-                                <Plus className="h-3 w-3 text-gray-500" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-0" align="start" onClick={(e) => e.stopPropagation()}>
-                              <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
-                            </PopoverContent>
-                          </Popover>
+                      </div>
+                    </td>
+                    <td className="border border-[#e0e0e0] px-2 py-0 whitespace-nowrap align-top">
+                      <div className="flex items-start gap-1 h-full">
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {contact.tags.length > 0 ? (
+                            contact.tags.slice(0, 10).map((tag, i) => (
+                              <Badge
+                                key={`${contact.id}-tag-${i}`}
+                                variant="outline"
+                                className="h-5 rounded-none border text-[10px] font-semibold tracking-tight px-2 py-0 flex items-center"
+                                style={{
+                                  borderColor: tag.color,
+                                  color: tag.color,
+                                  backgroundColor: tag.color ? `${tag.color}15` : 'transparent'
+                                }}
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-gray-400 italic">Sem tags</span>
+                          )}
                         </div>
+                        <Popover>
+                          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-sm hover:bg-gray-200">
+                              <Plus className="h-3 w-3 text-gray-500" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0" align="start" onClick={(e) => e.stopPropagation()}>
+                            <ContactTagSelector contactId={contact.id} onTagAdded={fetchContacts} />
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </td>
 

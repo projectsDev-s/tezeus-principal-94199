@@ -429,7 +429,7 @@ export function DealDetailsModal({
   const [isMovingCard, setIsMovingCard] = useState(false);
   const [targetStepAnimation, setTargetStepAnimation] = useState<string | null>(null);
   const { toast } = useToast();
-  const { selectedPipeline, moveCardOptimistic, updateCard } = usePipelinesContext();
+  const { selectedPipeline, moveCardOptimistic, updateCard, refreshCurrentPipeline } = usePipelinesContext();
   const { columns, isLoading: isLoadingColumns } = usePipelineColumns(selectedPipelineId);
   const { getHeaders } = useWorkspaceHeaders();
   const queryClient = useQueryClient();
@@ -1882,6 +1882,7 @@ export function DealDetailsModal({
                           });
                           
                           fetchCardData();
+                          refreshCurrentPipeline?.();
                         } catch (error) {
                           console.error('Erro ao mover negócio:', error);
                           toast({

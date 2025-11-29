@@ -14,6 +14,7 @@ import { useWorkspaceConnections } from "@/hooks/useWorkspaceConnections";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generateRandomId } from "@/lib/generate-random-id";
 const roleLabels = {
   user: 'Usuário',
   admin: 'Administrador',
@@ -241,7 +242,7 @@ export function WorkspaceUsersPage({
     try {
       // Upload avatar if there's a file
       if (avatarFile) {
-        const tempUserId = crypto.randomUUID();
+        const tempUserId = generateRandomId();
         const uploadedUrl = await uploadAvatar(avatarFile, tempUserId);
         if (uploadedUrl) {
           finalFormData.avatar = uploadedUrl;

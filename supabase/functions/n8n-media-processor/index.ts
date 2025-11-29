@@ -6,6 +6,107 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const allowedZapiAudioMimeTypes = new Set(['audio/aac', 'audio/mp4', 'audio/amr', 'audio/mpeg']);
+const mimeToExtensionMap: Record<string, string> = {
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'audio/wav': 'wav',
+  'audio/aac': 'aac',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/amr': 'amr'
+};
+
+let ffmpegModulePromise: Promise<any> | null = null;
+let ffmpegInstance: any | null = null;
+
+async function getFfmpegInstance() {
+  if (!ffmpegModulePromise) {
+    ffmpegModulePromise = import('https://esm.sh/@ffmpeg/ffmpeg@0.12.10?target=deno');
+  }
+  const { createFFmpeg } = await ffmpegModulePromise;
+
+  if (!ffmpegInstance) {
+    ffmpegInstance = createFFmpeg({
+      log: false,
+      corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js'
+    });
+  }
+
+  if (!ffmpegInstance.isLoaded()) {
+    await ffmpegInstance.load();
+  }
+
+  return ffmpegInstance;
+}
+
+function getExtensionFromMime(mime?: string | null) {
+  if (!mime) return 'bin';
+  const cleanMime = mime.split(';')[0].trim().toLowerCase();
+  return mimeToExtensionMap[cleanMime] || 'bin';
+}
+
+async function convertAudioToMp3(buffer: Uint8Array, sourceMime?: string | null) {
+  try {
+    const ffmpeg = await getFfmpegInstance();
+    const inputExtension = getExtensionFromMime(sourceMime);
+    const inputFile = `input.${inputExtension}`;
+    const outputFile = 'output.mp3';
+
+    ffmpeg.FS('writeFile', inputFile, buffer);
+    await ffmpeg.run('-y', '-i', inputFile, '-vn', '-ar', '44100', '-ac', '2', '-b:a', '128k', outputFile);
+    const convertedData = ffmpeg.FS('readFile', outputFile);
+
+    try {
+      ffmpeg.FS('unlink', inputFile);
+      ffmpeg.FS('unlink', outputFile);
+    } catch (_) {
+      // Ignore cleanup errors
+    }
+
+    return new Uint8Array(convertedData);
+  } catch (error) {
+    console.error('❌ [n8n-media-processor] Falha ao converter áudio para MP3:', error);
+    return null;
+  }
+}
+
+async function getConversationProviderType(
+  supabase: ReturnType<typeof createClient>,
+  conversationId?: string | null
+): Promise<'evolution' | 'zapi' | null> {
+  if (!conversationId) return null;
+
+  try {
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('id, connection_id')
+      .eq('id', conversationId)
+      .maybeSingle();
+
+    if (conversationError || !conversation?.connection_id) {
+      console.warn('⚠️ Não foi possível obter connection_id da conversa:', conversationError);
+      return null;
+    }
+
+    const { data: connection, error: connectionError } = await supabase
+      .from('connections')
+      .select('id, provider:whatsapp_providers!connections_provider_id_fkey(provider)')
+      .eq('id', conversation.connection_id)
+      .maybeSingle();
+
+    if (connectionError || !connection?.provider?.provider) {
+      console.warn('⚠️ Não foi possível obter provider da conexão:', connectionError);
+      return null;
+    }
+
+    return connection.provider.provider as 'evolution' | 'zapi';
+  } catch (error) {
+    console.error('❌ Erro ao resolver provider da conversa:', error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -336,6 +437,40 @@ serve(async (req) => {
       fromBuffer: detectedMimeType,
       rawMimeTypeUsed: rawMimeType
     });
+
+    let sanitizedMimeType = rawMimeType.split(';')[0].trim().toLowerCase();
+    if (!sanitizedMimeType) {
+      sanitizedMimeType = 'application/octet-stream';
+    }
+    rawMimeType = sanitizedMimeType;
+
+    const normalizedMessageType = (messageType || existingMessage.message_type || '').toLowerCase();
+    const isAudioMessage = rawMimeType.startsWith('audio/') || normalizedMessageType === 'audio' || normalizedMessageType === 'ptt';
+    let providerType: 'evolution' | 'zapi' | null = null;
+    let audioConversionDetails: Record<string, string> | null = null;
+
+    if (isOutbound && isAudioMessage) {
+      providerType = await getConversationProviderType(supabase, existingMessage.conversation_id);
+      console.log('🔌 Provider detectado para conversa:', providerType);
+      
+      if (providerType === 'zapi' && !allowedZapiAudioMimeTypes.has(rawMimeType)) {
+        console.log('🎯 Convertendo áudio para formato suportado pela Z-API (mp3)...');
+        const convertedBuffer = await convertAudioToMp3(uint8Array, rawMimeType);
+        if (convertedBuffer) {
+          uint8Array = convertedBuffer;
+          rawMimeType = 'audio/mpeg';
+          audioConversionDetails = {
+            provider: providerType,
+            from: sanitizedMimeType,
+            to: rawMimeType,
+            strategy: 'ffmpeg-mp3',
+            converted_at: new Date().toISOString()
+          };
+        } else {
+          console.warn('⚠️ Conversão de áudio falhou, mantendo formato original');
+        }
+      }
+    }
     
     // CRÍTICO: Sempre normalizar o MIME type para tipos aceitos pelo Supabase Storage
     const { mime: finalMimeType, extension: defaultExtension } = normalizeMimeType(rawMimeType);
@@ -412,7 +547,8 @@ serve(async (req) => {
         metadata: {
           original_file_name: finalFileName,
           file_size: uint8Array.length,
-          processed_at: new Date().toISOString()
+          processed_at: new Date().toISOString(),
+          ...(audioConversionDetails ? { audio_conversion: audioConversionDetails } : {})
         }
       })
       .eq('id', existingMessage.id);

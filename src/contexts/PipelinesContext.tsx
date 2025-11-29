@@ -4,6 +4,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { usePipelineRealtime } from '@/hooks/usePipelineRealtime';
+import { generateRandomId } from '@/lib/generate-random-id';
 
 const parseFunctionErrorBody = (error: any) => {
   const body = error?.context?.body;
@@ -421,7 +422,7 @@ export function PipelinesProvider({ children }: { children: React.ReactNode }) {
     if (!getHeaders || !selectedPipeline) throw new Error('Requirements not met');
 
     // Criar card otimista imediatamente no front-end
-    const tempCardId = crypto.randomUUID();
+    const tempCardId = generateRandomId();
     const optimisticCard: PipelineCard = {
       id: tempCardId,
       pipeline_id: selectedPipeline.id,

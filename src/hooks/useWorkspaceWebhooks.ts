@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { WorkspaceWebhook, WebhookLog, WorkspaceInstance, TestWebhookResponse } from '@/types/webhook';
+import { generateRandomId } from '@/lib/generate-random-id';
 
 export const useWorkspaceWebhooks = (workspaceId?: string) => {
   const [webhookConfig, setWebhookConfig] = useState<WorkspaceWebhook | null>(null);
@@ -55,7 +56,7 @@ export const useWorkspaceWebhooks = (workspaceId?: string) => {
         } else if (secretsData?.webhook_url) {
           console.log('Found webhook URL in secrets, migrating to settings...');
           // Generate a random secret for the migration
-          const newSecret = crypto.randomUUID();
+          const newSecret = generateRandomId();
           
           // Migrate from secrets to settings
           const { data: migratedData, error: migrateError } = await supabase
@@ -225,7 +226,7 @@ export const useWorkspaceWebhooks = (workspaceId?: string) => {
     
     setIsLoading(true);
     try {
-      const newSecret = crypto.randomUUID();
+      const newSecret = generateRandomId();
       const { data, error } = await supabase
         .from('workspace_webhook_settings')
         .update({ 

@@ -62,6 +62,27 @@ export const useAuthState = () => {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const syncUserContext = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { error } = await supabase.rpc('set_current_user_context', {
+          user_id: user.id,
+          user_email: user.email,
+        });
+
+        if (error) {
+          console.error('Erro ao sincronizar contexto do usuário:', error);
+        }
+      } catch (contextError) {
+        console.error('Exceção ao definir contexto do usuário:', contextError);
+      }
+    };
+
+    syncUserContext();
+  }, [user?.id, user?.email]);
+
   const login = async (email: string, password: string) => {
     try {
       // Validar credenciais via sistema customizado

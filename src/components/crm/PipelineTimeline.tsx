@@ -37,7 +37,8 @@ export function PipelineTimeline({ columns, currentColumnId, className, onStepCl
         
         const isPast = currentIndex !== -1 && index < currentIndex;
         const isCurrent = index === currentIndex;
-        const isFuture = currentIndex !== -1 && index > currentIndex;
+        const isFuture = currentIndex !== -1 ? index > currentIndex : true;
+        const futureOpacity = isFuture ? (currentIndex === -1 ? 0.6 : 0.85 - Math.min(index - currentIndex, 3) * 0.1) : 1;
         
         // Determina o gradiente da linha baseado nos estados
         const nextColumn = columns[index + 1];
@@ -78,7 +79,8 @@ export function PipelineTimeline({ columns, currentColumnId, className, onStepCl
                   isCurrent && "scale-110"
                 )}
                 style={{
-                  color: isPast || isCurrent ? (isPast ? 'hsl(var(--muted-foreground))' : column.color) : 'hsl(var(--muted))',
+                  color: isPast || isCurrent ? (isPast ? 'hsl(var(--muted-foreground))' : column.color) : `hsl(var(--muted))`,
+                  opacity: isFuture ? futureOpacity : 1
                 }}
               >
                 <Icon className="h-6 w-6" strokeWidth={2} />
@@ -111,7 +113,7 @@ export function PipelineTimeline({ columns, currentColumnId, className, onStepCl
                   <div
                     className="w-[15px] h-[15px] rounded-full transition-all duration-200 group-hover:border-gray-400"
                     style={{ 
-                      border: '3px solid hsl(var(--border))',
+                      border: `3px solid rgba(148, 163, 184, ${futureOpacity})`,
                       backgroundColor: 'transparent'
                     }}
                   />
@@ -126,7 +128,7 @@ export function PipelineTimeline({ columns, currentColumnId, className, onStepCl
                   isFuture && "text-muted",
                   isCurrent && "font-bold"
                 )}
-                style={isCurrent ? { color: column.color } : {}}
+                style={isCurrent ? { color: column.color } : isFuture ? { opacity: futureOpacity } : {}}
               >
                 {column.name}
               </span>

@@ -10,12 +10,25 @@ interface Tag {
   workspace_id?: string | null;
 }
 
-interface ConversationTag {
+export interface ConversationTag {
   id: string;
   conversation_id: string;
   tag_id: string;
   tag: Tag;
 }
+
+export interface ConversationTagEventDetail {
+  conversationId: string;
+  contactId?: string | null;
+  tagId: string;
+  conversationTag?: ConversationTag;
+  tag?: Tag;
+}
+
+export const CONVERSATION_TAG_EVENTS = {
+  added: 'conversation-tag-added',
+  removed: 'conversation-tag-removed',
+} as const;
 
 export function useConversationTags(conversationId?: string) {
   const [conversationTags, setConversationTags] = useState<ConversationTag[]>([]);
@@ -106,12 +119,19 @@ export function useConversationTags(conversationId?: string) {
       if (convError) throw convError;
       
       // Add tag to conversation
-      const { error: convTagError } = await supabase
+      const { data: convTagData, error: convTagError } = await supabase
         .from('conversation_tags')
         .insert({
           conversation_id: conversationId,
           tag_id: tagId
-        });
+        })
+        .select(`
+          id,
+          conversation_id,
+          tag_id,
+          tag:tags(id, name, color, workspace_id)
+        `)
+        .single();
 
       if (convTagError) throw convTagError;
 
@@ -132,7 +152,47 @@ export function useConversationTags(conversationId?: string) {
         }
       }
 
-      await fetchConversationTags();
+      const normalizedTag: ConversationTag = convTagData ? {
+        id: convTagData.id,
+        conversation_id: convTagData.conversation_id,
+        tag_id: convTagData.tag_id,
+        tag: {
+          id: convTagData.tag.id,
+          name: convTagData.tag.name,
+          color: convTagData.tag.color,
+          workspace_id: convTagData.tag.workspace_id ?? null,
+        }
+      } : {
+        id: `temp-${conversationId}-${tagId}`,
+        conversation_id: conversationId,
+        tag_id: tagId,
+        tag: availableTags.find(tag => tag.id === tagId) || {
+          id: tagId,
+          name: 'Tag',
+          color: '#999999',
+          workspace_id: workspaceId,
+        }
+      };
+
+      setConversationTags(prev => {
+        if (prev.some(tag => tag.tag_id === tagId)) {
+          return prev;
+        }
+        return [...prev, normalizedTag];
+      });
+
+      if (typeof window !== 'undefined') {
+        const eventDetail: ConversationTagEventDetail = {
+          conversationId,
+          contactId: convData.contact_id ?? null,
+          tagId,
+          conversationTag: normalizedTag,
+          tag: normalizedTag.tag
+        };
+        window.dispatchEvent(new CustomEvent(CONVERSATION_TAG_EVENTS.added, {
+          detail: eventDetail
+        }));
+      }
       
       return true;
     } catch (error: any) {
@@ -165,6 +225,22 @@ export function useConversationTags(conversationId?: string) {
   useEffect(() => {
     fetchConversationTags();
   }, [fetchConversationTags]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !conversationId) return;
+
+    const handleTagRemoved = (event: Event) => {
+      const customEvent = event as CustomEvent<ConversationTagEventDetail>;
+      if (customEvent.detail?.conversationId !== conversationId) return;
+      setConversationTags(prev => prev.filter(tag => tag.tag_id !== customEvent.detail.tagId));
+    };
+
+    window.addEventListener(CONVERSATION_TAG_EVENTS.removed, handleTagRemoved as EventListener);
+
+    return () => {
+      window.removeEventListener(CONVERSATION_TAG_EVENTS.removed, handleTagRemoved as EventListener);
+    };
+  }, [conversationId]);
 
   return {
     conversationTags,
