@@ -866,6 +866,15 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
     })
   );
 
+  // ✅ CRÍTICO: Limpar estado do drag quando colunas mudarem
+  // Isso previne o bug de travamento na segunda movimentação
+  useEffect(() => {
+    console.log('🔄 Colunas atualizadas, limpando estado do drag');
+    setDraggedColumn(null);
+    setActiveId(null);
+    setDragOverColumn(null);
+  }, [columns.map(c => c.id).join('-')]);
+
   // 🔥 Buscar contagens de automações por coluna
   useEffect(() => {
     const fetchAutomationCounts = async () => {
@@ -1033,6 +1042,13 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const activeId = event.active.id as string;
     
+    console.log('🎬 handleDragStart:', { activeId });
+    
+    // ✅ Limpar TODOS os estados de drag antes de iniciar novo
+    setDraggedColumn(null);
+    setActiveId(null);
+    setDragOverColumn(null);
+    
     // Verificar se é uma coluna sendo arrastada
     if (activeId.startsWith('column-')) {
       const columnId = activeId.replace('column-', '');
@@ -1041,6 +1057,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       return;
     }
     
+    // Se não é coluna, é card
     setActiveId(activeId);
   }, []);
   const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -1059,8 +1076,20 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       over
     } = event;
     
+    console.log('🎯 handleDragEnd iniciado:', {
+      activeId: active.id,
+      overId: over?.id,
+      isDraggedColumn: !!draggedColumn
+    });
+    
+    // ✅ SEMPRE limpar estados do drag IMEDIATAMENTE (não esperar async)
+    const wasDraggingColumn = draggedColumn;
+    setDraggedColumn(null);
+    setActiveId(null);
+    setDragOverColumn(null);
+    
     // Verificar se é reordenamento de colunas
-    if (draggedColumn && over && active.id !== over.id) {
+    if (wasDraggingColumn && over && active.id !== over.id) {
       const oldIndex = columns.findIndex(col => `column-${col.id}` === active.id);
       const newIndex = columns.findIndex(col => `column-${col.id}` === over.id);
       
@@ -1069,34 +1098,33 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
         
         console.log('🔄 Reordenando colunas otimisticamente:', {
           from: oldIndex,
-          to: newIndex
+          to: newIndex,
+          oldId: columns[oldIndex].id,
+          newPosition: newIndex
         });
         
         try {
-          await reorderColumns(newColumns);
+          // ✅ Fire and forget - não bloquear a UI
+          reorderColumns(newColumns);
         } catch (error) {
           console.error('❌ Erro na atualização otimista:', error);
         }
       }
       
-      setDraggedColumn(null);
+      return; // ✅ Return early para colunas
+    }
+    
+    // Resto do código para drag de cards
+    if (!over) {
       return;
     }
     
-    if (!over) {
-      setActiveId(null);
-      setDragOverColumn(null);
-      setDraggedColumn(null);
-      return;
-    }
     const activeId = active.id as string;
     const overId = over.id as string;
 
     // Encontrar o card que está sendo movido
     const activeCard = cards.find(card => `card-${card.id}` === activeId);
     if (!activeCard) {
-      setActiveId(null);
-      setDragOverColumn(null);
       return;
     }
 
@@ -1126,12 +1154,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
       // Não precisa await - deixar executar em background
       moveCardOptimistic(activeCard.id, newColumnId);
     }
-
-    // Limpar estados do drag imediatamente
-    setActiveId(null);
-    setDragOverColumn(null);
-    setDraggedColumn(null);
-  }, [cards, columns, draggedColumn, moveCardOptimistic, reorderColumns, refreshCurrentPipeline]);
+  }, [cards, columns, draggedColumn, moveCardOptimistic, reorderColumns]);
   const openCardDetails = (card: any) => {
     console.log('🔍 Abrindo detalhes do card:', card);
     console.log('📋 Card completo:', {
@@ -1919,6 +1942,7 @@ const [selectedCardForProduct, setSelectedCardForProduct] = useState<{
                       ) : (
                         /* Tablet/Desktop: Multiple Columns */
                         <SortableContext 
+                          key={columns.map(col => col.id).join('-')}
                           items={columns.map(col => `column-${col.id}`)}
                           strategy={horizontalListSortingStrategy}
                         >
