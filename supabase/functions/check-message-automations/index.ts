@@ -6,6 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function generateDeterministicUUID(input: string) {
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+  // Ajustar bits para UUID v5
+  hashArray[6] = (hashArray[6] & 0x0f) | 0x50;
+  hashArray[8] = (hashArray[8] & 0x3f) | 0x80;
+
+  const hex = hashArray.map((b) => b.toString(16).padStart(2, '0'));
+  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -157,11 +170,12 @@ serve(async (req) => {
 
         const entryTimestamp = new Date(columnEntryDate).getTime();
         const executionKey = `msg_${card.id}_${card.column_id}_${automation.id}_${entryTimestamp}`;
+        const deterministicId = await generateDeterministicUUID(executionKey);
 
         const { data: existingExecution, error: existingExecError } = await supabase
           .from('automation_executions')
           .select('id')
-          .eq('id', executionKey)
+          .eq('id', deterministicId)
           .maybeSingle();
 
         if (existingExecError && existingExecError.code !== 'PGRST116') {
@@ -180,7 +194,7 @@ serve(async (req) => {
         const { error: execError } = await supabase
           .from('automation_executions')
           .insert({
-            id: executionKey,
+            id: deterministicId,
             card_id: card.id,
             column_id: card.column_id,
             automation_id: automation.id,
