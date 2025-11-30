@@ -275,15 +275,30 @@ function DraggableDeal({
     cardStyle.borderColor = statusColor;
   }
 
-  return <div ref={setNodeRef} style={cardStyle} {...!isSelectionMode && {
-    ...attributes,
-    ...listeners
-  }} className={cn("bg-white border border-[#d4d4d4] border-l-4 shadow-sm rounded-none hover:shadow-md transition-all mb-1.5 md:mb-2 relative min-h-[85px] md:min-h-[95px]", !isSelectionMode && "cursor-pointer", isSelectionMode && "cursor-pointer hover:bg-accent/50", isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30")} onClick={isSelectionMode ? e => {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggleSelection?.();
-  } : onClick}>
-    <div className="p-1.5 md:p-2">
+  const dragHandleProps = !isSelectionMode ? listeners : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={cardStyle}
+      {...attributes}
+      className={cn(
+        "bg-white border border-[#d4d4d4] border-l-4 shadow-sm rounded-none hover:shadow-md transition-all mb-1.5 md:mb-2 relative min-h-[85px] md:min-h-[95px]",
+        !isSelectionMode && "cursor-pointer",
+        isSelectionMode && "cursor-pointer hover:bg-accent/50",
+        isSelected && isSelectionMode && "ring-2 ring-primary bg-accent/30"
+      )}
+      onClick={
+        isSelectionMode
+          ? e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelection?.();
+            }
+          : onClick
+      }
+    >
+      <div className="p-1.5 md:p-2">
       {isSelectionMode && <div className="absolute top-2 right-2 z-10">
           <input type="checkbox" checked={isSelected} onChange={e => {
           e.stopPropagation();
@@ -353,7 +368,13 @@ function DraggableDeal({
           {/* Nome + Produto/Valor na MESMA LINHA */}
           <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
             {/* Nome do cliente à esquerda */}
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <div
+              className={cn(
+                "flex items-center gap-1.5 flex-1 min-w-0",
+                !isSelectionMode && "cursor-grab active:cursor-grabbing select-none"
+              )}
+              {...dragHandleProps}
+            >
               <h3 className={cn("text-xs font-medium truncate", "text-foreground")}>
                 {deal.contact?.name || deal.name}
               </h3>
@@ -598,7 +619,8 @@ function DraggableDeal({
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }
 
 // Componente para tornar a coluna draggable
